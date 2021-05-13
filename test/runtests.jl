@@ -10,7 +10,7 @@ using Test
 
     for T in [Float64, Float32, Float16]
         for k in 0:25
-            z = exp(big(π)im/10)
+            z = exp(k*big(π)im/10)
             for m in [0, 1, 2, 3, 4, 1_000]
                 mine, theirs, ϵ = complex_powers_comparison(z, m, T)
                 @test mine ≈ theirs rtol=2ϵ
