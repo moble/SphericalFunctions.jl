@@ -8,7 +8,7 @@ Note that `z` is assumed to be normalized, with complex amplitude approximately 
 
 See also: [`complex_powers`](@ref)
 """
-function complex_powers!(zpowers::Vector{Complex{T}}, z::Complex{T}) where {T}
+function complex_powers!(zpowers::Vector{Complex{T}}, z::Complex{T}) where {T<:Real}
     Base.require_one_based_indexing(zpowers)
     @fastmath @inbounds begin
         M = length(zpowers)
@@ -69,7 +69,7 @@ about 50% larger, which occurs as the phase approaches multiples of π/2.
 
 See also: [`complex_powers!`](@ref)
 """
-function complex_powers(z::Complex{T}, m::Int) where {T}
+function complex_powers(z::Complex{T}, m::Int) where {T<:Real}
     if abs(z) ≉ one(z)
         throw(DomainError("z = $z",
             "This function is only valid for `z` with complex amplitude approximately 1; "
