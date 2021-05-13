@@ -9,20 +9,22 @@ Note that `z` is assumed to be normalized, with complex amplitude approximately 
 See also: [`complex_powers`](@ref)
 """
 function complex_powers!(zpowers::Vector{Complex{T}}, z::Complex{T}) where {T}
-    M = length(zpowers) - 1
-    if M < 0
-        return zpowers
-    end
-    θ = one(z)
-    @inbounds zpowers[1] = θ
-    if M < 1
-        return zpowers
-    end
-    if M < 2
-        @inbounds zpowers[2] = z
-        return zpowers
-    end
+    Base.require_one_based_indexing(zpowers)
     @fastmath @inbounds begin
+        M = length(zpowers)
+        if M == 0
+            return zpowers
+        end
+        M -= 1
+        θ = one(z)
+        zpowers[1] = θ
+        if M == 0
+            return zpowers
+        end
+        if M == 1
+            zpowers[2] = z
+            return zpowers
+        end
         while z.re<0 || z.im<0
             θ *= 1im
             z /= 1im
