@@ -1,5 +1,7 @@
 module Spherical
 
-# Write your package code here.
+export complex_powers, complex_powers!
 
-end
+include("complex_powers.jl")
+
+end # module
