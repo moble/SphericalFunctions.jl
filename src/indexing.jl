@@ -160,40 +160,43 @@ function WignerHindex(ℓ, m′, m, m′ₘₐₓ=nothing)
 end
 
 
+"""
+    WignerDsize(ℓₘᵢₙ, m′ₘₐₓ, ℓₘₐₓ=-1)
+
+Compute total size of Wigner 𝔇 matrix
+
+Parameters
+----------
+ℓₘᵢₙ : int
+    Integer satisfying 0 <= ℓₘᵢₙ <= ℓₘₐₓ
+m′ₘₐₓ : int, optional
+    Integer satisfying 0 <= m′ₘₐₓ.  Defaults to ℓₘₐₓ.
+ℓₘₐₓ : int
+    Integer satisfying 0 <= ℓₘᵢₙ <= ℓₘₐₓ
+
+Returns
+-------
+i : int
+    Total size of Wigner 𝔇 matrix arranged as described below
+
+See Also
+--------
+WignerDrange : Array of (ℓ, m', m) indices corresponding to the 𝔇 matrix
+WignerDindex : Index of a particular element of the 𝔇 matrix
+
+Notes
+-----
+This assumes that the Wigner 𝔇 matrix is arranged as
+
+    [
+        𝔇(ℓ, m′, m)
+        for ℓ in range(ℓₘᵢₙ, ℓₘₐₓ+1)
+        for m′ in range(-min(ℓ, m′ₘₐₓ), min(ℓ, m′ₘₐₓ)+1)
+        for m in range(-ℓ, ℓ+1)
+    ]
+
+"""
 function WignerDsize(ℓₘᵢₙ, m′ₘₐₓ, ℓₘₐₓ=-1)
-    """Compute total size of Wigner 𝔇 matrix
-
-    Parameters
-    ----------
-    ℓₘᵢₙ : int
-        Integer satisfying 0 <= ℓₘᵢₙ <= ℓₘₐₓ
-    m′ₘₐₓ : int, optional
-        Integer satisfying 0 <= m′ₘₐₓ.  Defaults to ℓₘₐₓ.
-    ℓₘₐₓ : int
-        Integer satisfying 0 <= ℓₘᵢₙ <= ℓₘₐₓ
-
-    Returns
-    -------
-    i : int
-        Total size of Wigner 𝔇 matrix arranged as described below
-
-    See Also
-    --------
-    WignerDrange : Array of (ℓ, m', m) indices corresponding to the 𝔇 matrix
-    WignerDindex : Index of a particular element of the 𝔇 matrix
-
-    Notes
-    -----
-    This assumes that the Wigner 𝔇 matrix is arranged as
-
-        [
-            𝔇(ℓ, m′, m)
-            for ℓ in range(ℓₘᵢₙ, ℓₘₐₓ+1)
-            for m′ in range(-min(ℓ, m′ₘₐₓ), min(ℓ, m′ₘₐₓ)+1)
-            for m in range(-ℓ, ℓ+1)
-        ]
-
-    """
     # from sympy import symbols, summation, horner
     # from sympy.printing.pycode import pycode
     # ℓ,m′,m,ℓₘᵢₙ,ℓₘₐₓ,m′ₘₐₓ = symbols('ℓ,m′,m,ℓₘᵢₙ,ℓₘₐₓ,m′ₘₐₓ', integer=True)
@@ -264,35 +267,38 @@ function WignerDsize(ℓₘᵢₙ, m′ₘₐₓ, ℓₘₐₓ=-1)
 end
 
 
+"""
+    WignerDrange(ℓₘᵢₙ, m′ₘₐₓ, ℓₘₐₓ=-1)
+
+Create an array of (ℓ, m', m) indices as in 𝔇 array
+
+Parameters
+----------
+ℓₘᵢₙ : int
+    Integer satisfying 0 <= ℓₘᵢₙ <= ℓₘₐₓ
+m′ₘₐₓ : int, optional
+    Integer satisfying 0 <= m′ₘₐₓ.  Default is ℓₘₐₓ.
+ℓₘₐₓ : int
+    Integer satisfying 0 <= ℓₘᵢₙ <= ℓₘₐₓ
+
+See Also
+--------
+WignerDsize : Total size of 𝔇 array
+WignerDindex : Index inside these wedges
+
+Notes
+-----
+This assumes that the Wigner 𝔇 matrix is arranged as
+
+    [
+        𝔇(ℓ, m′, m)
+        for ℓ in range(ℓₘᵢₙ, ℓₘₐₓ+1)
+        for m′ in range(-min(ℓ, m′ₘₐₓ), min(ℓ, m′ₘₐₓ)+1)
+        for m in range(-ℓ, ℓ+1)
+    ]
+
+"""
 function WignerDrange(ℓₘᵢₙ, m′ₘₐₓ, ℓₘₐₓ=-1)
-    """Create an array of (ℓ, m', m) indices as in 𝔇 array
-
-    Parameters
-    ----------
-    ℓₘᵢₙ : int
-        Integer satisfying 0 <= ℓₘᵢₙ <= ℓₘₐₓ
-    m′ₘₐₓ : int, optional
-        Integer satisfying 0 <= m′ₘₐₓ.  Default is ℓₘₐₓ.
-    ℓₘₐₓ : int
-        Integer satisfying 0 <= ℓₘᵢₙ <= ℓₘₐₓ
-
-    See Also
-    --------
-    WignerDsize : Total size of 𝔇 array
-    WignerDindex : Index inside these wedges
-
-    Notes
-    -----
-    This assumes that the Wigner 𝔇 matrix is arranged as
-
-        [
-            𝔇(ℓ, m′, m)
-            for ℓ in range(ℓₘᵢₙ, ℓₘₐₓ+1)
-            for m′ in range(-min(ℓ, m′ₘₐₓ), min(ℓ, m′ₘₐₓ)+1)
-            for m in range(-ℓ, ℓ+1)
-        ]
-
-    """
     if ℓₘₐₓ < 0
         ℓₘₐₓ = m′ₘₐₓ
     end
