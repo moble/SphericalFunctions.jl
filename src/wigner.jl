@@ -75,3 +75,4 @@ function Base.show(io::IO, workspace::WignerWorkspace)
 end
 
 include("wignerHrecursions.jl")
+include("wignerfunctions.jl")

@@ -24,16 +24,6 @@ elements.
 
 """
 
-const sqrt3 = √3
-const inverse_sqrt2 = inv(√2)
-
-
-ϵ(m) = (m <= 0 ? 1 : (isodd(m) ? -1 : 1))
-
-
-"""Return sign of input, with sign(0)=1"""
-sign(m) = (m < 0 ? -1 : 1)
-
 
 """Return flat index into arrray of [n, m] pairs.
 
@@ -85,15 +75,23 @@ end
 
 
 @inbounds function _step_2!(w::WignerWorkspace, expiβ::Complex)
-    """Compute values H^{0,m}_{n}(β)for m=0,...,n and H^{0,m}_{n+1}(β) for m=0,...,n+1 using Eq. (32):
+    """Compute values H^{0,m}_{n}(β)for m=0,...,n and H^{0,m}_{n+1}(β) for m=0,...,n+1
+
+     Uses Eq. (32) of Gumerov-Duraiswami (2014) [arxiv:1403.7698]:
 
         H^{0,m}_{n}(β) = (-1)^m √((n-|m|)! / (n+|m|)!) P^{|m|}_{n}(cos β)
-                       = (-1)^m (sin β)^m P̂^{|m|}_{n}(cos β) / √(k (2n+1))
+                       = (-1)^m (sin β)^m P̃^{|m|}_{n}(cos β) / √(k (2n+1))
 
-    This function computes the associated Legendre functions directly by recursion
-    as explained by Holmes and Featherstone (2002), doi:10.1007/s00190-002-0216-2.
-    Note that I had to adjust certain steps for consistency with the notation
-    assumed by arxiv:1403.7698 -- mostly involving factors of (-1)**m.
+    Here, k=1 for m=0, and k=2 for m>0, and
+
+        P̃ = √{k(2n+1)(n-m)!/(n+m)!} P / (sin β)^m
+
+    We use the modified associated Legendre functions P̃ because, as explained by
+    Holmes and Featherstone (2002) [doi:10.1007/s00190-002-0216-2], it is possible
+    to compute these values very efficiently and accurately, while also delaying
+    the onset of overflow and underflow.  Note that I had to adjust certain steps
+    for consistency with the notation assumed by arxiv:1403.7698 — mostly
+    involving factors of (-1)^m.
 
     NOTE: Though not specified in arxiv:1403.7698, there is not enough information
     for step 4 unless we also use symmetry to set H^{1,0}_{n} here.  Similarly,
@@ -130,19 +128,31 @@ end
             gi = gvalues[nn_index-1]
             # m = n
             H[n0n_index] = constant * Hwedge[nm10nm1_index]
+            # if !isfinite(H[n0n_index])
+            #     println(("m = n", H[n0n_index], constant, Hwedge[nm10nm1_index]))
+            # end
             # m = n-1
             H[n0n_index-1] = gi * cosβ * H[n0n_index]
+            # if !isfinite(H[n0n_index-1])
+            #     println(("m = n-1", "n=$n", H[n0n_index-1], gi, cosβ, H[n0n_index]))
+            # end
             # m = n-2, ..., 1
             for i in 2:n-1
                 gi = gvalues[nn_index-i]
                 hi = hvalues[nn_index-i]
                 H[n0n_index-i] = gi * cosβ * H[n0n_index-i+1] - hi * sinβ^2 * H[n0n_index-i+2]
+                # if !isfinite(H[n0n_index-i])
+                #     println(("m = n-2, ..., 1", "n=$n", "i=$i", H[n0n_index-i], gi, cosβ, H[n0n_index-i+1], hi, sinβ^2, H[n0n_index-i+2]))
+                # end
             end
             # m = 0, with normalization
             constant = 1 / √TW(4n+2)
             gi = gvalues[nn_index-n]
             hi = hvalues[nn_index-n]
             H[n0n_index-n] = (gi * cosβ * H[n0n_index-n+1] - hi * sinβ^2 * H[n0n_index-n+2]) * constant
+            # if !isfinite(H[n0n_index-n])
+            #     println(("m = 0", "n=$n", H[n0n_index-n], gi, cosβ, H[n0n_index-n+1], hi, sinβ, sinβ^2, H[n0n_index-n+2], constant))
+            # end
             # Now, loop back through, correcting the normalization for this row, except for n=n element
             prefactor = constant
             for i in 1:n-1
@@ -354,11 +364,68 @@ end
 end
 
 
+"""
+    H!(w::WignerWorkspace, expiβ::Complex)
+
+Compute (a quarter of) the H matrix
+
+WARNING: The returned array will be a view into the `workspace` variable (see
+below for an explanation of that).  If you need to call this function again
+using the same workspace before extracting all information from the first call,
+you should use `numpy.copy` to make a separate copy of the result.
+
+Parameters
+----------
+expiβ : array_like
+    Value of exp(i*β) on which to evaluate the H matrix.
+
+Returns
+-------
+Hwedge : array
+    This is a 1-dimensional array of floats; see below.
+workspace : array_like, optional
+    A working array like the one returned by Wigner.new_workspace().  If not
+    present, this object's default workspace will be used.  Note that it is not
+    safe to use the same workspace on multiple threads.  Also see the WARNING
+    above.
+
+See Also
+--------
+d : Compute the full Wigner d matrix
+D : Compute the full Wigner 𝔇 matrix
+rotate : Avoid computing the full 𝔇 matrix and rotate modes directly
+evaluate : Avoid computing the full 𝔇 matrix and evaluate modes directly
+
+Notes
+-----
+H is related to Wigner's (small) d via
+
+    dₗⁿᵐ = ϵₙ ϵ₋ₘ Hₗⁿᵐ,
+
+where
+
+         ⎧ 1 for k≤0
+    ϵₖ = ⎨
+         ⎩ (-1)ᵏ for k>0
+
+H has various advantages over d, including the fact that it can be efficiently
+and robustly valculated via recurrence relations, and the following symmetry
+relations:
+
+    H^{m', m}_n(β) = H^{m, m'}_n(β)
+    H^{m', m}_n(β) = H^{-m', -m}_n(β)
+    H^{m', m}_n(β) = (-1)^{n+m+m'} H^{-m', m}_n(π - β)
+    H^{m', m}_n(β) = (-1)^{m+m'} H^{m', m}_n(-β)
+
+Because of these symmetries, we only need to evaluate at most 1/4 of all the
+elements.
+
+"""
 function H!(w::WignerWorkspace, expiβ::Complex)
     _step_1!(w)
     _step_2!(w, expiβ)
     _step_3!(w, expiβ)
     _step_4!(w)
     _step_5!(w)
-    w.Hwedge, w.Hextra
+    w.Hwedge
 end
