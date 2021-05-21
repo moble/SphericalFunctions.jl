@@ -13,7 +13,7 @@ SUITE["complex_powers"] = BenchmarkGroup(["recursions", "complex"])
 for T in [big, Float64, Float32, Float16]
     z = exp(T(6)im/5)
     m = 10_000
-    zpowers = Array{typeof(z)}(undef, m+1)
+    zpowers = zeros(typeof(z), m+1)
     SUITE["complex_powers"][T] = @benchmarkable complex_powers!($zpowers, $z)
 end
 

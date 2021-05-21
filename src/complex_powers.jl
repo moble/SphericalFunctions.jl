@@ -76,7 +76,7 @@ function complex_powers(z::Complex{T}, m::Int) where {T<:Real}
             * "abs(z) = $(abs(z))"
         ))
     end
-    zpowers = Array{typeof(z)}(undef, m+1)
+    zpowers = zeros(typeof(z), m+1)
     complex_powers!(zpowers, z)
 end
 

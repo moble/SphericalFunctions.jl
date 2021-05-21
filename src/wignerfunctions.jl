@@ -77,7 +77,7 @@ end
 
 
 function d!(w::WignerWorkspace, β::Real)
-    d = Array{T(w.W)}(undef, Wignerdsize(w.W))
+    d = zeros(T(w.W), Wignerdsize(w.W))
     d!(w, expiβ, out)
 end
 
@@ -186,6 +186,6 @@ end
 
 
 function D!(w::WignerWorkspace, R::Quaternion)
-    𝔇 = Array{Complex{T(w.W)}}(undef, WignerDsize(w.W))
+    𝔇 = zeros(Complex{T(w.W)}, WignerDsize(w.W))
     D!(𝔇, w, R)
 end

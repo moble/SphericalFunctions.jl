@@ -120,15 +120,17 @@ end
                 n0n_index = n + 1
                 H = Hextra
             end
-            aₙ = √((2n+1)/TW(2n-1))
-            bₙ = √((2*(n-1)*(2n+1))/TW(n*(2n-1)))
             nm10nm1_index = WignerHindex(n-1, 0, n-1, mp_max)
+            inv2n = inv(TW(2n))
+            aₙ = √((2n+1)/TW(2n-1))
+            bₙ = aₙ * √((2*(n-1))/TW(n))
+
             # m = n
-            eₙₘ = √TW((2n)*(2n+1)) / (2n)
+            eₙₘ = inv2n * √TW((2n)*(2n+1))
             H[n0n_index] = sinβ * eₙₘ * Hwedge[nm10nm1_index]
             # m = n-1
-            eₙₘ = √TW((2n-2)*(2n+1)) / (2n)
-            cₙₘ = √TW(2n+1) / n
+            eₙₘ = inv2n * √TW((2n-2)*(2n+1))
+            cₙₘ = 2inv2n * √TW(2n+1)
             H[n0n_index-1] = cosβ * cₙₘ * Hwedge[nm10nm1_index] + sinβ * eₙₘ * Hwedge[nm10nm1_index-1]
             # m = n-2, ..., 2
             for i in 2:n-2
@@ -136,9 +138,9 @@ end
                 # cₙₘ = √(((n+m)*(n-m)*(2n+1)) / TW(2n-1)) / n
                 # dₙₘ = √(((n-m)*(n-m-1)*(2n+1)) / TW(2n-1)) / (2n)
                 # eₙₘ = √(((n+m)*(n+m-1)*(2n+1)) / TW(2n-1)) / (2n)
-                cₙₘ = √(((2n-i)*(i)*(2n+1)) / TW(2n-1)) / n
-                dₙₘ = √(((i)*(i-1)*(2n+1)) / TW(2n-1)) / (2n)
-                eₙₘ = √(((2n-i)*(2n-i-1)*(2n+1)) / TW(2n-1)) / (2n)
+                cₙₘ = 2inv2n * aₙ * √TW((2n-i)*i)
+                dₙₘ = inv2n * aₙ * √TW(i*(i-1))
+                eₙₘ = inv2n * aₙ * √TW((2n-i)*(2n-i-1))
                 H[n0n_index-i] = (
                     cosβ * cₙₘ * Hwedge[nm10nm1_index-i+1]
                     - sinβ * (
@@ -148,9 +150,9 @@ end
                 )
             end
             # m = 1
-            cₙₘ = √(((n+1)*(n-1)*(2n+1)) / TW(2n-1)) / n
-            dₙₘ = √(((n-1)*(n-2)*(2n+1)) / TW(2n-1)) / (2n)
-            eₙₘ = √((2*(n+1)*(n)*(2n+1)) / TW(2n-1)) / (2n)
+            cₙₘ = 2inv2n * aₙ * √TW((n+1)*(n-1))
+            dₙₘ = inv2n * aₙ * √TW((n-1)*(n-2))
+            eₙₘ = inv2n * aₙ * √TW(2n*(n+1))
             H[n0n_index-n+1] = (
                 cosβ * cₙₘ * Hwedge[nm10nm1_index-n+2]
                 - sinβ * (
@@ -159,22 +161,25 @@ end
                 )
             )
             # m = 0, with normalization
-            cₙₘ = √((2n+1) / TW(2n-1))
-            dₙₘ = √(((n)*(n-1)*(2n+1)) / TW(2n-1)) / (2n)
+            cₙₘ = aₙ
+            dₙₘ = inv2n * aₙ * √TW(n*(n-1))
             eₙₘ = dₙₘ
             H[n0n_index-n] = (
                 aₙ * cosβ * Hwedge[nm10nm1_index-n+1]
                 - bₙ * sinβ * Hwedge[nm10nm1_index-n+2] / 2
             )
+
             # Supply extra edge cases as noted in docstring
             if n <= n_max
                 Hv[nm_index(n, 1)] = Hwedge[WignerHindex(n, 0, 1, mp_max)]
                 Hv[nm_index(n, 0)] = Hwedge[WignerHindex(n, 0, 1, mp_max)]
             end
         end
+
         # Supply extra edge cases as noted in docstring
         Hv[nm_index(1, 1)] = Hwedge[WignerHindex(1, 0, 1, mp_max)]
         Hv[nm_index(1, 0)] = Hwedge[WignerHindex(1, 0, 1, mp_max)]
+
         # Normalize, changing P̄ to H values
         for n in 1:n_max+1
             if n <= n_max

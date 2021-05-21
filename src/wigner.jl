@@ -53,13 +53,14 @@ struct WignerWorkspace{ℓₘᵢₙ, ℓₘₐₓ, m′ₘₐₓ, T<:Real}
     zᵧpowers::Vector{Complex{T}}
     z::Vector{Complex{T}}
     function WignerWorkspace(W::Type{Wigner{ℓₘᵢₙ, ℓₘₐₓ, m′ₘₐₓ, T}}) where {ℓₘᵢₙ, ℓₘₐₓ, m′ₘₐₓ, T<:Real}
-        new{ℓₘᵢₙ, ℓₘₐₓ, m′ₘₐₓ, T}(W,
-            Array{T}(undef, WignerHsize(W)),
-            Array{T}(undef, (ℓₘₐₓ + 1)^2),
-            Array{T}(undef, ℓₘₐₓ + 2),
-            Array{Complex{T}}(undef, ℓₘₐₓ + 1),
-            Array{Complex{T}}(undef, ℓₘₐₓ + 1),
-            Array{Complex{T}}(undef, 3)
+        new{ℓₘᵢₙ, ℓₘₐₓ, m′ₘₐₓ, T}(
+            W,
+            zeros(T, WignerHsize(W)),
+            zeros(T, (ℓₘₐₓ + 1)^2),
+            zeros(T, ℓₘₐₓ + 2),
+            zeros(Complex{T}, ℓₘₐₓ + 1),
+            zeros(Complex{T}, ℓₘₐₓ + 1),
+            zeros(Complex{T}, 3)
         )
     end
 end
