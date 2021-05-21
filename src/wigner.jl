@@ -43,12 +43,6 @@ end
 @generated function d(::Type{W}) where {W<:Wigner}
     [(m<0 ? -1 : 1) * (√T(W)((n-m) * (n+m+1))) / 2 for n in 0:ℓₘₐₓ(W)+1 for m in -n:n]
 end
-@generated function g(::Type{W}) where {W<:Wigner}
-    [2(m+1) / √T(W)((n-m)*(n+m+1)) for n in 0:ℓₘₐₓ(W)+1 for m in -n:n]
-end
-@generated function h(::Type{W}) where {W<:Wigner}
-    [n==m ? T(W)(NaN) : √((n+m+2)*(n-m-1) / T(W)((n-m)*(n+m+1))) for n in 0:ℓₘₐₓ(W)+1 for m in -n:n]
-end
 
 struct WignerWorkspace{ℓₘᵢₙ, ℓₘₐₓ, m′ₘₐₓ, T<:Real}
     W::Type{Wigner{ℓₘᵢₙ, ℓₘₐₓ, m′ₘₐₓ, T}}
