@@ -87,11 +87,9 @@ end
         P̄ = √{k(2n+1)(n-m)!/(n+m)!} P
 
     We use the "fully normalized" associated Legendre functions (fnALF) P̄ because,
-    as explained by Xi et al. (2020) [https://doi.org/10.1007/s00190-019-01331-0],
+    as explained by Xing et al. (2020) [https://doi.org/10.1007/s00190-019-01331-0],
     it is possible to compute these values very efficiently and accurately, while
-    also delaying the onset of overflow and underflow.  Note that I had to adjust
-    certain steps for consistency with the notation assumed by arxiv:1403.7698 —
-    mostly involving factors of (-1)^m.
+    also delaying the onset of overflow and underflow.
 
     NOTE: Though not specified in arxiv:1403.7698, there is not enough information
     for step 4 unless we also use symmetry to set H^{1,0}_{n} here.  Similarly,
@@ -99,12 +97,27 @@ end
     from its symmetric equivalent H^{0, 1}_{n} in this step.
 
     """
-    n_max, mp_max = ℓₘₐₓ(w.W), m′ₘₐₓ(w.W)
+    n_max, mp_max, TW = ℓₘₐₓ(w.W), m′ₘₐₓ(w.W), T(w.W)
     Hwedge, Hextra, Hv = w.Hwedge, w.Hextra, w.Hv
     cosβ = expiβ.re
     sinβ = expiβ.im
-    TW = T(w.W)
     sqrt3 = √TW(3)
+
+    # The general expressions for the constants are Eq. (13) of Xing et al.:
+    #
+    #   aₙ = √((2n+1)/TW(2n-1))
+    #   bₙ = √(2*(n-1)*(2n+1)/TW(n*(2n-1)))
+    #   cₙₘ = √(((n+m)*(n-m)*(2n+1)) / TW(2n-1)) / n
+    #   dₙₘ = √(((n-m)*(n-m-1)*(2n+1)) / TW(2n-1)) / (2n)
+    #   eₙₘ = √(((n+m)*(n+m-1)*(2n+1)) / TW(2n-1)) / (2n)
+    #
+    # Below, I factor aₙ out of each of these expressions, along with 1/2n where
+    # relevant, to avoid divisions.
+    #
+    # We initialize with Eq. (14), then step through with Eq. (12), to compute all
+    # values of P̄.  Finally, we normalize everything again to compute the H
+    # values.
+
 
     if n_max > 0
         # n = 1
@@ -128,16 +141,15 @@ end
             # m = n
             eₙₘ = inv2n * √TW((2n)*(2n+1))
             H[n0n_index] = sinβ * eₙₘ * Hwedge[nm10nm1_index]
+
             # m = n-1
             eₙₘ = inv2n * √TW((2n-2)*(2n+1))
             cₙₘ = 2inv2n * √TW(2n+1)
             H[n0n_index-1] = cosβ * cₙₘ * Hwedge[nm10nm1_index] + sinβ * eₙₘ * Hwedge[nm10nm1_index-1]
+
             # m = n-2, ..., 2
             for i in 2:n-2
                 # m = n-i
-                # cₙₘ = √(((n+m)*(n-m)*(2n+1)) / TW(2n-1)) / n
-                # dₙₘ = √(((n-m)*(n-m-1)*(2n+1)) / TW(2n-1)) / (2n)
-                # eₙₘ = √(((n+m)*(n+m-1)*(2n+1)) / TW(2n-1)) / (2n)
                 cₙₘ = 2inv2n * aₙ * √TW((2n-i)*i)
                 dₙₘ = inv2n * aₙ * √TW(i*(i-1))
                 eₙₘ = inv2n * aₙ * √TW((2n-i)*(2n-i-1))
@@ -149,6 +161,7 @@ end
                     )
                 )
             end
+
             # m = 1
             cₙₘ = 2inv2n * aₙ * √TW((n+1)*(n-1))
             dₙₘ = inv2n * aₙ * √TW((n-1)*(n-2))
@@ -160,7 +173,8 @@ end
                     - eₙₘ * Hwedge[nm10nm1_index-n+1]
                 )
             )
-            # m = 0, with normalization
+
+            # m = 0
             cₙₘ = aₙ
             dₙₘ = inv2n * aₙ * √TW(n*(n-1))
             eₙₘ = dₙₘ
@@ -221,6 +235,8 @@ end
     Hextra = w.Hextra
     cosβ = expiβ.re
     sinβ = expiβ.im
+    cosβ₊ = (1+cosβ)/2
+    cosβ₋ = (1-cosβ)/2
 
     if n_max > 0 && mp_max > 0
         for n in 1:n_max
@@ -242,9 +258,9 @@ end
                 a8 = avalues[i+i4]
                 Hwedge[i+i1] = inverse_b5 * (
                     (
-                          b6 * (1-cosβ) * H2[i+i2+2]
-                        - b7 * (1+cosβ) * H2[i+i2]
-                    ) / 2
+                          b6 * cosβ₋ * H2[i+i2+2]
+                        - b7 * cosβ₊ * H2[i+i2]
+                    )
                     - a8 * sinβ * H2[i+i2+1]
                 )
             end
