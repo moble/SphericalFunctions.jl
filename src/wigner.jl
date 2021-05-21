@@ -1,5 +1,7 @@
-### TODO: Merge the Wigner and WignerWorkspace types; there's no real reason for the singleton
-
+### TODO:
+### 1. Merge the Wigner and WignerWorkspace types; there's no real reason for the singleton
+### 2. Test speeds without caching a, b, d
+### 3. Separate ALF computation to separate module
 
 struct Wigner{ℓₘᵢₙ, ℓₘₐₓ, m′ₘₐₓ, T<:Real} end
 function Wigner(ℓₘᵢₙ, ℓₘₐₓ, m′ₘₐₓ=typemax(Int), T::Type{<:Real}=Float64)
@@ -22,10 +24,10 @@ function Wigner(ℓₘᵢₙ, ℓₘₐₓ, m′ₘₐₓ=typemax(Int), T::Type{
 end
 
 # Access type parameters
-@generated ℓₘᵢₙ(::Type{W}) where {W<:Wigner} = W.parameters[1]
-@generated ℓₘₐₓ(::Type{W}) where {W<:Wigner} = W.parameters[2]
-@generated m′ₘₐₓ(::Type{W}) where {W<:Wigner} = W.parameters[3]
-@generated T(::Type{W}) where {W<:Wigner} = W.parameters[4]
+@generated ℓₘᵢₙ(::Type{<:Wigner{ℓₘᵢₙW, ℓₘₐₓ, m′ₘₐₓ, T}}) where {ℓₘᵢₙW, ℓₘₐₓ, m′ₘₐₓ, T<:Real} = ℓₘᵢₙW
+@generated ℓₘₐₓ(::Type{<:Wigner{ℓₘᵢₙ, ℓₘₐₓW, m′ₘₐₓ, T}}) where {ℓₘᵢₙ, ℓₘₐₓW, m′ₘₐₓ, T<:Real} = ℓₘₐₓW
+@generated m′ₘₐₓ(::Type{<:Wigner{ℓₘᵢₙ, ℓₘₐₓ, m′ₘₐₓW, T}}) where {ℓₘᵢₙ, ℓₘₐₓ, m′ₘₐₓW, T<:Real} = m′ₘₐₓW
+@generated T(::Type{<:Wigner{ℓₘᵢₙ, ℓₘₐₓ, m′ₘₐₓ, TW}}) where {ℓₘᵢₙ, ℓₘₐₓ, m′ₘₐₓ, TW<:Real} = TW
 
 # Access pre-computed array sizes
 @generated WignerHsize(::Type{W}) where {W<:Wigner} = WignerHsize(m′ₘₐₓ(W), ℓₘₐₓ(W))
