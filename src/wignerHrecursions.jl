@@ -182,6 +182,131 @@ end
 end
 
 
+function _step_2a!(w::WignerWorkspace, expiβ::Complex)
+    """Compute values H^{0,m}_{n}(β)for m=0,...,n and H^{0,m}_{n+1}(β) for m=0,...,n+1
+
+     Uses Eq. (32) of Gumerov-Duraiswami (2014) [arxiv:1403.7698]:
+
+        H^{0,m}_{n}(β) = (-1)^m √((n-|m|)! / (n+|m|)!) P^{|m|}_{n}(cos β)
+                       = (-1)^m P̄^{|m|}_{n}(cos β) / √(k (2n+1))
+
+    Here, k=1 for m=0, and k=2 for m>0, and
+
+        P̄ = √{k(2n+1)(n-m)!/(n+m)!} P
+
+    We use the "fully normalized" associated Legendre functions (fnALF) P̄ because,
+    as explained by Xi et al. (2020) [https://doi.org/10.1007/s00190-019-01331-0],
+    it is possible to compute these values very efficiently and accurately, while
+    also delaying the onset of overflow and underflow.  Note that I had to adjust
+    certain steps for consistency with the notation assumed by arxiv:1403.7698 —
+    mostly involving factors of (-1)^m.
+
+    NOTE: Though not specified in arxiv:1403.7698, there is not enough information
+    for step 4 unless we also use symmetry to set H^{1,0}_{n} here.  Similarly,
+    step 5 needs additional information, which depends on setting H^{0, -1}_{n}
+    from its symmetric equivalent H^{0, 1}_{n} in this step.
+
+    """
+    n_max, mp_max = ℓₘₐₓ(w.W), m′ₘₐₓ(w.W)
+    Hwedge, Hextra, Hv = w.Hwedge, w.Hextra, w.Hv
+    cosβ = expiβ.re
+    sinβ = expiβ.im
+    TW = T(w.W)
+    sqrt3 = √TW(3)
+
+    if n_max > 0
+        # n = 1
+        n0n_index = WignerHindex(1, 0, 1, mp_max)
+        Hwedge[n0n_index] = sqrt3 * sinβ
+        Hwedge[n0n_index-1] = sqrt3 * cosβ
+        # n = 2, ..., n_max+1
+        for n in 2:n_max+1
+            if n <= n_max
+                n0n_index = WignerHindex(n, 0, n, mp_max)
+                H = Hwedge
+            else
+                n0n_index = n + 1
+                H = Hextra
+            end
+            aₙ = √((2n+1)/TW(2n-1))
+            bₙ = √((2*(n-1)*(2n+1))/TW(n*(2n-1)))
+            nm10nm1_index = WignerHindex(n-1, 0, n-1, mp_max)
+            # m = n
+            eₙₘ = √TW((2n)*(2n+1)) / (2n)
+            H[n0n_index] = sinβ * eₙₘ * Hwedge[nm10nm1_index]
+            # m = n-1
+            eₙₘ = √TW((2n-2)*(2n+1)) / (2n)
+            cₙₘ = √TW(2n+1) / n
+            H[n0n_index-1] = cosβ * cₙₘ * Hwedge[nm10nm1_index] + sinβ * eₙₘ * Hwedge[nm10nm1_index-1]
+            # m = n-2, ..., 2
+            for i in 2:n-2
+                # m = n-i
+                # cₙₘ = √(((n+m)*(n-m)*(2n+1)) / TW(2n-1)) / n
+                # dₙₘ = √(((n-m)*(n-m-1)*(2n+1)) / TW(2n-1)) / (2n)
+                # eₙₘ = √(((n+m)*(n+m-1)*(2n+1)) / TW(2n-1)) / (2n)
+                cₙₘ = √(((2n-i)*(i)*(2n+1)) / TW(2n-1)) / n
+                dₙₘ = √(((i)*(i-1)*(2n+1)) / TW(2n-1)) / (2n)
+                eₙₘ = √(((2n-i)*(2n-i-1)*(2n+1)) / TW(2n-1)) / (2n)
+                H[n0n_index-i] = (
+                    cosβ * cₙₘ * Hwedge[nm10nm1_index-i+1]
+                    - sinβ * (
+                        dₙₘ * Hwedge[nm10nm1_index-i+2]
+                        - eₙₘ * Hwedge[nm10nm1_index-i]
+                    )
+                )
+            end
+            # m = 1
+            cₙₘ = √(((n+1)*(n-1)*(2n+1)) / TW(2n-1)) / n
+            dₙₘ = √(((n-1)*(n-2)*(2n+1)) / TW(2n-1)) / (2n)
+            eₙₘ = √((2*(n+1)*(n)*(2n+1)) / TW(2n-1)) / (2n)
+            H[n0n_index-n+1] = (
+                cosβ * cₙₘ * Hwedge[nm10nm1_index-n+2]
+                - sinβ * (
+                    dₙₘ * Hwedge[nm10nm1_index-n+3]
+                    - eₙₘ * Hwedge[nm10nm1_index-n+1]
+                )
+            )
+            # m = 0, with normalization
+            cₙₘ = √((2n+1) / TW(2n-1))
+            dₙₘ = √(((n)*(n-1)*(2n+1)) / TW(2n-1)) / (2n)
+            eₙₘ = dₙₘ
+            H[n0n_index-n] = (
+                aₙ * cosβ * Hwedge[nm10nm1_index-n+1]
+                - bₙ * sinβ * Hwedge[nm10nm1_index-n+2] / 2
+            )
+            # Supply extra edge cases as noted in docstring
+            if n <= n_max
+                Hv[nm_index(n, 1)] = Hwedge[WignerHindex(n, 0, 1, mp_max)]
+                Hv[nm_index(n, 0)] = Hwedge[WignerHindex(n, 0, 1, mp_max)]
+            end
+        end
+        # Supply extra edge cases as noted in docstring
+        Hv[nm_index(1, 1)] = Hwedge[WignerHindex(1, 0, 1, mp_max)]
+        Hv[nm_index(1, 0)] = Hwedge[WignerHindex(1, 0, 1, mp_max)]
+        # Normalize, changing P̄ to H values
+        for n in 1:n_max+1
+            if n <= n_max
+                n00_index = WignerHindex(n, 0, 0, mp_max)
+                H = Hwedge
+            else
+                n00_index = 1
+                H = Hextra
+            end
+            const0 = inv(√TW(2n+1))
+            const1 = inv(√TW(4n+2))
+            H[n00_index] *= const0
+            for m in 1:n
+                H[n00_index+m] *= const1
+            end
+            if n <= n_max
+                Hv[nm_index(n, 1)] *= -const1
+                Hv[nm_index(n, 0)] *= -const1
+            end
+        end
+    end
+end
+
+
 @inbounds function _step_3!(w::WignerWorkspace, expiβ::Complex)
     """Use relation (41) to compute H^{1,m}_{n}(β) for m=1,...,n.  Using symmetry and shift
     of the indices this relation can be written as
@@ -421,9 +546,13 @@ Because of these symmetries, we only need to evaluate at most 1/4 of all the
 elements.
 
 """
-function H!(w::WignerWorkspace, expiβ::Complex)
+function H!(w::WignerWorkspace, expiβ::Complex, a=true)
     _step_1!(w)
-    _step_2!(w, expiβ)
+    if a
+        _step_2a!(w, expiβ)
+    else
+        _step_2!(w, expiβ)
+    end
     _step_3!(w, expiβ)
     _step_4!(w)
     _step_5!(w)
