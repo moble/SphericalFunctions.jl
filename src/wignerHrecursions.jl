@@ -68,13 +68,13 @@ Assumes array is ordered as
 nmpm_index(n, mp, m) = (((4n + 6) * n + 6mp + 5) * n + 3(m + mp)) ÷ 3 + 1
 
 
-@inbounds function _step_1!(w::WignerWorkspace)
+@inbounds function _step_1!(w::Wigner)
     """If n=0 set H_{0}^{0,0}=1."""
     w.Hwedge[1] = 1
 end
 
 
-@inbounds function _step_2!(w::WignerWorkspace, expiβ::Complex)
+@inbounds function _step_2!(w::Wigner, expiβ::Complex)
     """Compute values H^{0,m}_{n}(β)for m=0,...,n and H^{0,m}_{n+1}(β) for m=0,...,n+1
 
      Uses Eq. (32) of Gumerov-Duraiswami (2014) [arxiv:1403.7698]:
@@ -97,7 +97,7 @@ end
     from its symmetric equivalent H^{0, 1}_{n} in this step.
 
     """
-    n_max, mp_max, TW = ℓₘₐₓ(w.W), m′ₘₐₓ(w.W), T(w.W)
+    n_max, mp_max, TW = ℓₘₐₓ(w), m′ₘₐₓ(w), T(w)
     Hwedge, Hextra, Hv = w.Hwedge, w.Hextra, w.Hv
     cosβ = expiβ.re
     sinβ = expiβ.im
@@ -218,7 +218,7 @@ end
 end
 
 
-@inbounds function _step_3!(w::WignerWorkspace, expiβ::Complex)
+@inbounds function _step_3!(w::Wigner, expiβ::Complex)
     """Use relation (41) to compute H^{1,m}_{n}(β) for m=1,...,n.  Using symmetry and shift
     of the indices this relation can be written as
 
@@ -227,10 +227,10 @@ end
                                    − a^{m}_{n} sinβ H^{0, m}_{n+1}
 
     """
-    avalues = a(w.W)
-    bvalues = b(w.W)
-    n_max = ℓₘₐₓ(w.W)
-    mp_max = m′ₘₐₓ(w.W)
+    avalues = a(w)
+    bvalues = b(w)
+    n_max = ℓₘₐₓ(w)
+    mp_max = m′ₘₐₓ(w)
     Hwedge = w.Hwedge
     Hextra = w.Hextra
     cosβ = expiβ.re
@@ -269,7 +269,7 @@ end
 end
 
 
-@inbounds function _step_4!(w::WignerWorkspace)
+@inbounds function _step_4!(w::Wigner)
     """Recursively compute H^{m'+1, m}_{n}(β) for m'=1,...,n−1, m=m',...,n using relation (50) resolved
     with respect to H^{m'+1, m}_{n}:
 
@@ -280,7 +280,7 @@ end
     (where the last term drops out for m=n).
 
     """
-    dvalues, n_max, mp_max = d(w.W), ℓₘₐₓ(w.W), m′ₘₐₓ(w.W)
+    dvalues, n_max, mp_max = d(w), ℓₘₐₓ(w), m′ₘₐₓ(w)
     Hwedge, Hv = w.Hwedge, w.Hv
 
     if n_max > 0 && mp_max > 0
@@ -328,7 +328,7 @@ end
 end
 
 
-@inbounds function _step_5!(w::WignerWorkspace)
+@inbounds function _step_5!(w::Wigner)
     """Recursively compute H^{m'−1, m}_{n}(β) for m'=−1,...,−n+1, m=−m',...,n using relation (50)
     resolved with respect to H^{m'−1, m}_{n}:
 
@@ -343,7 +343,7 @@ end
     also requires setting the (m',m)=(0,-1) components before beginning this loop.
 
     """
-    dvalues, n_max, mp_max = d(w.W), ℓₘₐₓ(w.W), m′ₘₐₓ(w.W)
+    dvalues, n_max, mp_max = d(w), ℓₘₐₓ(w), m′ₘₐₓ(w)
     Hwedge, Hv = w.Hwedge, w.Hv
 
     if n_max > 0 && mp_max > 0
@@ -403,7 +403,7 @@ end
 
 
 """
-    H!(w::WignerWorkspace, expiβ::Complex)
+    H!(w, expiβ)
 
 Compute (a quarter of) the H matrix
 
@@ -459,7 +459,7 @@ Because of these symmetries, we only need to evaluate at most 1/4 of all the
 elements.
 
 """
-function H!(w::WignerWorkspace, expiβ::Complex)
+function H!(w::Wigner, expiβ::Complex)
     _step_1!(w)
     _step_2!(w, expiβ)
     _step_3!(w, expiβ)

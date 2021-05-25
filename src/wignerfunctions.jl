@@ -50,10 +50,10 @@ The result is returned in a 1-dimensional array ordered as
     ]
 
 """
-function d!(d, w::WignerWorkspace, expiβ::Complex)
-    ell_min = ℓₘᵢₙ(w.W)
-    ell_max = ℓₘₐₓ(w.W)
-    mp_max = m′ₘₐₓ(w.W)
+function d!(d, w::Wigner, expiβ::Complex)
+    ell_min = ℓₘᵢₙ(w)
+    ell_max = ℓₘₐₓ(w)
+    mp_max = m′ₘₐₓ(w)
     if mp_max < ell_max
         throw(DomainError("ℓₘₐₓ = $ℓₘₐₓ",
                           "Cannot compute full d matrix up to ℓₘₐₓ with m′ₘₐₓ only $(mp_max)"
@@ -76,8 +76,8 @@ function d!(d, w::WignerWorkspace, expiβ::Complex)
 end
 
 
-function d!(w::WignerWorkspace, β::Real)
-    d = zeros(T(w.W), Wignerdsize(w.W))
+function d!(w::Wigner, β::Real)
+    d = zeros(T(w), Wignerdsize(w))
     d!(w, expiβ, out)
 end
 
@@ -133,10 +133,10 @@ array ordered as
     ]
 
 """
-function D!(𝔇, w::WignerWorkspace, R::Quaternion)
-    ell_min = ℓₘᵢₙ(w.W)
-    ell_max = ℓₘₐₓ(w.W)
-    mp_max = m′ₘₐₓ(w.W)
+function D!(𝔇, w::Wigner, R::Quaternion)
+    ell_min = ℓₘᵢₙ(w)
+    ell_max = ℓₘₐₓ(w)
+    mp_max = m′ₘₐₓ(w)
     if mp_max < ell_max
         throw(DomainError("ℓₘₐₓ = $ℓₘₐₓ",
                           "Cannot compute full d matrix up to ℓₘₐₓ with m′ₘₐₓ only $(mp_max)"
@@ -185,7 +185,7 @@ function D!(𝔇, w::WignerWorkspace, R::Quaternion)
 end
 
 
-function D!(w::WignerWorkspace, R::Quaternion)
-    𝔇 = zeros(Complex{T(w.W)}, WignerDsize(w.W))
+function D!(w::Wigner, R::Quaternion)
+    𝔇 = zeros(Complex{T(w)}, WignerDsize(w))
     D!(𝔇, w, R)
 end
