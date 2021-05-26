@@ -1,3 +1,6 @@
 /Manifest.toml
 /.benchmarkci
 /benchmark/*.json
+
+# Ignore Julia memory profiler files
+**/*.jl.*.mem
