@@ -68,13 +68,13 @@ Assumes array is ordered as
 nmpm_index(n, mp, m) = (((4n + 6) * n + 6mp + 5) * n + 3(m + mp)) ÷ 3 + 1
 
 
-@inbounds function _step_1!(w::Wigner)
+@inbounds function _step_1!(w::WignerMatrixCalculator)
     """If n=0 set H_{0}^{0,0}=1."""
     w.Hwedge[1] = 1
 end
 
 
-@inbounds function _step_2!(w::Wigner, expiβ::Complex)
+@inbounds function _step_2!(w::WignerMatrixCalculator, expiβ::Complex)
     """Compute values H^{0,m}_{n}(β)for m=0,...,n and H^{0,m}_{n+1}(β) for m=0,...,n+1
 
      Uses Eq. (32) of Gumerov-Duraiswami (2014) [arxiv:1403.7698]:
@@ -218,7 +218,7 @@ end
 end
 
 
-@inbounds function _step_3!(w::Wigner, expiβ::Complex)
+@inbounds function _step_3!(w::WignerMatrixCalculator, expiβ::Complex)
     """Use relation (41) to compute H^{1,m}_{n}(β) for m=1,...,n.  Using symmetry and shift
     of the indices this relation can be written as
 
@@ -269,7 +269,7 @@ end
 end
 
 
-@inbounds function _step_4!(w::Wigner)
+@inbounds function _step_4!(w::WignerMatrixCalculator)
     """Recursively compute H^{m'+1, m}_{n}(β) for m'=1,...,n−1, m=m',...,n using relation (50) resolved
     with respect to H^{m'+1, m}_{n}:
 
@@ -297,7 +297,7 @@ end
                 i6 = nm_index(n, mp-1)
                 inverse_d5 = inv(dvalues[i5])
                 d6 = dvalues[i6]
-                for i in [0]
+                let i=0
                     d7 = dvalues[i+i6]
                     d8 = dvalues[i+i5]
                     Hv[i+nm_index(n, mp+1)] = inverse_d5 * (
@@ -316,7 +316,7 @@ end
                     )
                 end
                 # m = n
-                for i in [n-mp]
+                let i=n-mp
                     Hwedge[i+i1] = inverse_d5 * (
                           d6 * Hwedge[i+i2]
                         - dvalues[i+i6] * Hwedge[i+i3]
@@ -328,7 +328,7 @@ end
 end
 
 
-@inbounds function _step_5!(w::Wigner)
+@inbounds function _step_5!(w::WignerMatrixCalculator)
     """Recursively compute H^{m'−1, m}_{n}(β) for m'=−1,...,−n+1, m=−m',...,n using relation (50)
     resolved with respect to H^{m'−1, m}_{n}:
 
@@ -363,7 +363,7 @@ end
                 i8 = nm_index(n, -mp)
                 inverse_d5 = inv(dvalues[i5])
                 d6 = dvalues[i6]
-                for i in [0]
+                let i=0
                     d7 = dvalues[i+i7]
                     d8 = dvalues[i+i8]
                     if mp == 0
@@ -390,7 +390,7 @@ end
                     )
                 end
                 # m = n
-                for i in [n+mp]
+                let i=n+mp
                     Hwedge[i+i1] = inverse_d5 * (
                           d6 * Hwedge[i+i2]
                         + dvalues[i+i7] * Hwedge[i+i3]
@@ -459,7 +459,7 @@ Because of these symmetries, we only need to evaluate at most 1/4 of all the
 elements.
 
 """
-function H!(w::Wigner, expiβ::Complex)
+function H!(w::WignerMatrixCalculator, expiβ::Complex)
     _step_1!(w)
     _step_2!(w, expiβ)
     _step_3!(w, expiβ)

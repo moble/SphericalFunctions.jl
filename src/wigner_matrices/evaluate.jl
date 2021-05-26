@@ -1,3 +1,29 @@
+### TODO:
+### 1. Test speeds without caching a, b, d; maybe switch
+### 2. Separate ALF computation to a different module
+### 3. Compute H directly inside D array
+### 4. Test skipping all the complicated indexing tricks; use fancy indexing
+### 5. Allow specifying the extent of recursion / iterating over ℓ matrices
+
+
+### NOTES:
+### 1. Caching coefficients provides a ~11% speedup at low ℓ, but that falls off
+###    as ℓ increases, reaching ~4% around ℓ=512.
+### 2. This is probably a much more significant advantage for ALFs.
+
+
+
+module WignerMatrices
+
+export WignerMatrixCalculator, H!, d!, D!
+
+using ..Spherical: complex_powers!
+using Quaternionic: Quaternion, to_euler_phases!
+
+include("indexing.jl")
+include("calculator.jl")
+include("Hrecursions.jl")
+
 
 ϵ(m) = (m <= 0 ? 1 : (isodd(m) ? -1 : 1))
 
@@ -50,7 +76,7 @@ The result is returned in a 1-dimensional array ordered as
     ]
 
 """
-function d!(d, w::Wigner, expiβ::Complex)
+function d!(d, w::WignerMatrixCalculator, expiβ::Complex)
     ell_min = ℓₘᵢₙ(w)
     ell_max = ℓₘₐₓ(w)
     mp_max = m′ₘₐₓ(w)
@@ -76,7 +102,7 @@ function d!(d, w::Wigner, expiβ::Complex)
 end
 
 
-function d!(w::Wigner, β::Real)
+function d!(w::WignerMatrixCalculator, β::Real)
     d = zeros(T(w), Wignerdsize(w))
     d!(w, expiβ, out)
 end
@@ -133,7 +159,7 @@ array ordered as
     ]
 
 """
-function D!(𝔇, w::Wigner, R::Quaternion)
+function D!(𝔇, w::WignerMatrixCalculator, R::Quaternion)
     ell_min = ℓₘᵢₙ(w)
     ell_max = ℓₘₐₓ(w)
     mp_max = m′ₘₐₓ(w)
@@ -185,7 +211,10 @@ function D!(𝔇, w::Wigner, R::Quaternion)
 end
 
 
-function D!(w::Wigner, R::Quaternion)
+function D!(w::WignerMatrixCalculator, R::Quaternion)
     𝔇 = zeros(Complex{T(w)}, WignerDsize(w))
     D!(𝔇, w, R)
 end
+
+
+end  # module WignerMatrices
