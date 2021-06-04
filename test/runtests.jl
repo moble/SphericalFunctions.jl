@@ -4,3 +4,4 @@ using Test
 
 include("complex_powers.jl")
 include("indexing.jl")
+include("alf.jl")
