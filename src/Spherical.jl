@@ -5,6 +5,7 @@ export WignerMatrixCalculator, H!, d!, D!
 export ALFRecursionCoefficients, ALFrecurse!, ALFcompute!
 
 
+include("utils.jl")
 include("complex_powers.jl")
 include("indexing.jl")
 include("wigner_matrices/evaluate.jl")
