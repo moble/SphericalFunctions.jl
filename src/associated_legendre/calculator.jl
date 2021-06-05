@@ -28,12 +28,23 @@ struct ALFRecursionCoefficients{T<:Real}
     b::Vector{T}
     cde::Matrix{T}
 end
-ALFRecursionCoefficients(nmax, T=Float64) = ALFRecursionCoefficients{T}(
-    nmax,
-    [a(n, T) for n in 1:nmax+1],
-    [b(n, T) for n in 1:nmax+1],
-    reshape([f(n, m, T) for n in 1:nmax+1 for m in 1:n for f in [c, d, e]], 3, :)
-)
+function ALFRecursionCoefficients(nmax, ::Type{T}=Float64) where {T<:Real}
+    avalues = Vector{T}(undef, nmax+1)
+    bvalues = Vector{T}(undef, nmax+1)
+    cdevalues = Matrix{T}(undef, 3, (nmax*(nmax+3))÷2+1)
+    i = 0
+    @inbounds for n in 1:(nmax+1)
+        avalues[n] = a(n, T)
+        bvalues[n] = b(n, T)
+        for m in 1:n
+            i+=1
+            cdevalues[1, i] = c(n, m, T)
+            cdevalues[2, i] = d(n, m, T)
+            cdevalues[3, i] = e(n, m, T)
+        end
+    end
+    ALFRecursionCoefficients{T}(nmax, avalues, bvalues, cdevalues)
+end
 Base.show(io::IO, r::ALFRecursionCoefficients) = print(io, "$(typeof(r))($(r.nmax))")
 
 
@@ -136,7 +147,7 @@ function ALFcompute!(P̄::Vector{T}, expiβ::Complex{T}, nmax::Int, recursion_co
             ALFrecurse!(P̄ₙ, P̄ₙ₋₁, n, t, u, aₙ, bₙ, cdeₙ)
         end
         if nmax > recursion_coefficients.nmax
-            for n in recursion_coefficients.nmax+1:nmax
+            for n in max(2,recursion_coefficients.nmax+1):nmax
                 P̄ₙ₋₁.offset = P̄ₙ.offset
                 P̄ₙ.offset -= n
                 ALFrecurse!(P̄ₙ, P̄ₙ₋₁, n, t, u)
@@ -144,6 +155,21 @@ function ALFcompute!(P̄::Vector{T}, expiβ::Complex{T}, nmax::Int, recursion_co
         end
     end
 end
+function ALFcompute!(P̄::Vector{T}, expiβ::Complex{T}, nmax::Int) where {T<:Real}
+    recursion_coefficients = ALFRecursionCoefficients(0, T)
+    ALFcompute!(P̄, expiβ, nmax, recursion_coefficients)
+end
 
+
+function ALFcompute(expiβ::Complex{T}, nmax::Int, recursion_coefficients::ALFRecursionCoefficients{T}) where {T<:Real}
+    min_length = (nmax * (nmax + 3)) ÷ 2 + 1
+    P̄ = Vector{T}(undef, min_length)
+    ALFcompute!(P̄, expiβ, nmax, recursion_coefficients)
+    P̄
+end
+function ALFcompute(expiβ::Complex{T}, nmax::Int) where {T<:Real}
+    recursion_coefficients = ALFRecursionCoefficients(0, T)
+    ALFcompute(expiβ, nmax, recursion_coefficients)
+end
 
 end  # module ALF
