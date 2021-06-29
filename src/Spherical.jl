@@ -7,6 +7,8 @@ export WignerMatrixCalculator, H!, d!, D!
 export ALFRecursionCoefficients, ALFrecurse!, ALFcompute!
 export fejer1, fejer2, clenshaw_curtis
 
+const MachineFloat = Union{Float16, Float32, Float64}
+
 
 include("utils.jl")
 include("complex_powers.jl")

@@ -7,7 +7,7 @@ This function uses [Waldvogel's method](https://doi.org/10.1007/s10543-006-0045-
 
 The type `T` may be any `AbstractFloat`, but defaults to `Float64`.
 """
-function fejer1(n, ::Type{T}=Float64) where {T<:AbstractFloats}
+function fejer1(n, ::Type{T}=Float64) where {T<:AbstractFloat}
     v = Vector{complex(T)}(undef, n)
     complex_powers!(@view(v[1:(n-1)÷2+1]), exp(im*(π/T(n))))
     @inbounds begin
@@ -41,7 +41,7 @@ weight corresponding to the ϑ=0 or π nodes, which both have weight 0.
 The type `T` may be any `AbstractFloat`, but defaults to `Float64`.
 
 """
-function fejer2(n, ::Type{T}) where {T<:AbstractFloats}
+function fejer2(n, ::Type{T}) where {T<:AbstractFloat}
     # General function for any type of float
     v = Vector{complex(T)}(undef, n)
     @inbounds begin
@@ -60,7 +60,7 @@ function fejer2(n, ::Type{T}) where {T<:AbstractFloats}
     w[2:end]
 end
 
-function fejer2(n, ::Type{T}=Float64) where {T<:MachineFloats}
+function fejer2(n, ::Type{T}=Float64) where {T<:MachineFloat}
     # Specialized to "machine" floats; significant reduction in memory and increase in speed
     v = Vector{T}(undef, n÷2 + 1)
     @inbounds begin
@@ -87,7 +87,7 @@ This function uses [Waldvogel's method](https://doi.org/10.1007/s10543-006-0045-
 The type `T` may be any `AbstractFloat`, but defaults to `Float64`.
 
 """
-function clenshaw_curtis(n, ::Type{T}) where {T<:AbstractFloats}
+function clenshaw_curtis(n, ::Type{T}) where {T<:AbstractFloat}
     # General function for any type of float
     nmod2 = n % 2
     w₀ᶜᶜ = inv(T(n^2 - 1 + nmod2))
@@ -109,7 +109,7 @@ function clenshaw_curtis(n, ::Type{T}) where {T<:AbstractFloats}
     [w; w[1]]
 end
 
-function clenshaw_curtis(n, ::Type{T}=Float64) where {T<:MachineFloats}
+function clenshaw_curtis(n, ::Type{T}=Float64) where {T<:MachineFloat}
     # Specialized to "machine" floats; significant reduction in memory and increase in speed
     nmod2 = n % 2
     w₀ᶜᶜ = inv(T(n^2 - 1 + nmod2))
