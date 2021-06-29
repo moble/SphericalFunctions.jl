@@ -1,5 +1,11 @@
 # Spherical Functions
 
+[![Test Status](https://github.com/moble/Spherical.jl/workflows/tests/badge.svg)](https://github.com/moble/Spherical.jl/actions)
+[![Test Coverage](https://codecov.io/gh/moble/Spherical.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/moble/Spherical.jl)
+[![Documentation
+Status](https://github.com/moble/Spherical.jl/workflows/docs/badge.svg)](https://moble.github.io/Spherical.jl/dev)
+
+
 Julia package for evaluating and transforming Wigner's 𝔇 matrices, Wigner's 3-j symbols, and
 spin-weighted (and scalar) spherical harmonics.  These functions are evaluated directly in terms of
 quaternions, as well as in the more standard forms of spherical coordinates and Euler
@@ -46,141 +52,3 @@ passing them to these algorithms if higher orders are needed.  (Though using `Bi
 achieve a similar objective, it would probably be far slower.)  The actual recommendation of
 Fukushima is more sophisticated — just using X-numbers in the core calculation — but it looks like
 this probably wouldn't be *too* much slower.
-
-
-## Usage
-
-#### Functions of angles or rotations
-
-Currently, due to the nature of recursions, this module does not allow
-calculation of individual elements, but returns ranges of results.  For
-example, when computing Wigner's 𝔇 matrix, all matrices up to a given ℓ will be
-returned; when evaluating a spin-weighted spherical harmonic, all harmonics up
-to a given ℓ will be returned.  Fortunately, this is usually what is required
-in any case.
-
-To calculate Wigner's d or 𝔇 matrix or spin-weighted spherical harmonics, first
-construct a `Wigner` object.
-
-```python
-using Spherical
-ell_max = 16  # Use the largest ℓ value you expect to need
-wigner = Wigner(ell_max)
-```
-
-This module takes input as quaternions.  The `Quaternionic` module has [various
-ways of constructing
-quaternions](https://quaternionic.readthedocs.io/en/latest/#rotations),
-including direct construction or conversion from rotation matrices, axis-angle
-representation, Euler angles,<sup>[1](#euler-angles-are-awful)</sup> or
-spherical coordinates, among others:
-
-```python
-R = quaternionic.array([1, 2, 3, 4]).normalized
-R = quaternionic.array.from_axis_angle(vec)
-R = quaternionic.array.from_euler_angles(alpha, beta, gamma)
-R = quaternionic.array.from_spherical_coordinates(theta, phi)
-```
-
-Mode weights can be rotated as
-
-```python
-wigner.rotate(modes, R)
-```
-
-or evaluated as
-
-```python
-wigner.evaluate(modes, R)
-```
-
-We can compute the 𝔇 matrix as
-
-```python
-D = wigner.D(R)
-```
-
-which can be indexed as
-
-```python
-D[wigner.Dindex(ell, mp, m)]
-```
-
-or we can compute the spin-weighted spherical harmonics as
-
-```python
-Y = wigner.sYlm(s, R)
-```
-
-which can be indexed as
-
-```python
-Y[wigner.Yindex(ell, m)]
-```
-
-Note that, if relevant, it is probably more efficient to use the `rotate` and
-`evaluate` methods than to use `D` or `Y`.
-
-The packages
-[`FastTransforms.jl`](https://JuliaApproximation.github.io/JuliaApproximation/FastTransforms.jl/)
-and
-[`FastSphericalHarmonics.jl`](https://eschnett.github.io/FastSphericalHarmonics.jl/)
-(which is largely a wrapper for the former) also have many of these functions —
-possibly in more efficient forms — for `Float64` types.
-
-
-
-#### Clebsch-Gordan and 3-j symbols
-
-It is possible to compute individual values of the 3-j or Clebsch-Gordan
-symbols:
-
-```python
-w3j = spherical.Wigner3j(j_1, j_2, j_3, m_1, m_2, m_3)
-cg = spherical.clebsch_gordan(j_1, m_1, j_2, m_2, j_3, m_3)
-```
-
-However, when more than one element is needed (as is typically the case), it is
-much more efficient to compute a range of values:
-
-```python
-calc3j = spherical.Wigner3jCalculator(j2_max, j3_max)
-w3j = calc3j.calculate(j2, j3, m2, m3)
-```
-
-Note that [this package](https://github.com/Jutho/WignerSymbols.jl) seems to do
-a clever job of evaluating these quantities in terms of [rational
-roots](https://github.com/Jutho/RationalRoots.jl).  I haven't used or examined
-the package otherwise, so I can't really vouch for it, but this seems like a
-clever idea.
-
-
-## Acknowledgments
-
-I very much appreciate Barry Wardell's help in sorting out the relationships
-between my conventions and those of other people and software packages
-(especially Mathematica's crazy conventions).
-
-This code is, of course, hosted on github.  Because it is an open-source
-project, the hosting is free, and all the wonderful features of github are
-available, including free wiki space and web page hosting, pull requests, a
-nice interface to the git logs, etc.
-
-The work of creating this code was supported in part by the Sherman Fairchild
-Foundation and by NSF Grants No. PHY-1306125 and AST-1333129.
-
-
-<br/>
-
----
-
-###### <sup>1</sup> Euler angles are awful
-
-Euler angles are pretty much
-[the worst things ever](http://moble.github.io/spherical/#euler-angles)
-and it makes me feel bad even supporting them.  Quaternions are
-faster, more accurate, basically free of singularities, more
-intuitive, and generally easier to understand.  You can work entirely
-without Euler angles (I certainly do).  You absolutely never need
-them.  But if you're so old fashioned that you really can't give them
-up, they are fully supported.

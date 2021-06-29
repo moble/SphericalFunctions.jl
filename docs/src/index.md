@@ -3,7 +3,7 @@
 Julia package for evaluating and transforming Wigner's 𝔇 matrices, Wigner's 3-j symbols, and
 spin-weighted (and scalar) spherical harmonics.  These functions are evaluated directly in terms of
 quaternions, as well as in the more standard forms of spherical coordinates and Euler
-angles.<sup>[1](#1-euler-angles-are-awful)</sup>
+angles.[^1]
 
 These quantities are computed using recursion relations, which makes it possible to compute to very
 high ℓ values.  Unlike direct evaluation of individual elements, which will generally cause overflow
@@ -38,3 +38,12 @@ The following list contains the public functions inside the `Spherical` module.
 ```@index
 Modules = [Spherical]
 ```
+
+
+[^1]:
+    Euler angles are pretty much [the worst things
+    ever](http://moble.github.io/spherical/#euler-angles) and it makes me feel bad even supporting
+    them.  Quaternions are faster, more accurate, basically free of singularities, more intuitive,
+    and generally easier to understand.  You can work entirely without Euler angles (I certainly
+    do).  You absolutely never need them.  But if you're so old fashioned that you really can't give
+    them up, they are fully supported.
