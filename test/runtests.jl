@@ -1,5 +1,5 @@
 using Spherical
-using Test
+using Test, Random, FastTransforms
 
 
 enabled_tests = lowercase.(ARGS)
