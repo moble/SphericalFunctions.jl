@@ -1,6 +1,6 @@
 @testset verbose=true "indexing" begin
-    import Spherical: WignerHsize, WignerHrange, WignerHindex
-    import Spherical: WignerDsize, WignerDrange, WignerDindex
+    import Spherical.WignerMatrices: WignerHsize, WignerHrange, WignerHindex
+    import Spherical.WignerMatrices: WignerDsize, WignerDrange, WignerDindex
     import Spherical: Ysize, Yrange, Yindex
     import Spherical: theta_phi
 
