@@ -8,7 +8,7 @@ Note that `z` is assumed to be normalized, with complex amplitude approximately 
 
 See also: [`complex_powers`](@ref)
 """
-function complex_powers!(zpowers::Vector{Complex{T}}, z::Complex{T}) where {T<:Real}
+function complex_powers!(zpowers::AbstractVector{Complex{T}}, z::Complex{T}) where {T<:Real}
     Base.require_one_based_indexing(zpowers)
     @fastmath @inbounds begin
         M = length(zpowers)
