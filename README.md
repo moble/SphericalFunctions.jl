@@ -121,6 +121,13 @@ Y[wigner.Yindex(ell, m)]
 Note that, if relevant, it is probably more efficient to use the `rotate` and
 `evaluate` methods than to use `D` or `Y`.
 
+The packages
+[`FastTransforms.jl`](https://JuliaApproximation.github.io/JuliaApproximation/FastTransforms.jl/)
+and
+[`FastSphericalHarmonics.jl`](https://eschnett.github.io/FastSphericalHarmonics.jl/)
+(which is largely a wrapper for the former) also have many of these functions —
+possibly in more efficient forms — for `Float64` types.
+
 
 
 #### Clebsch-Gordan and 3-j symbols
@@ -140,6 +147,12 @@ much more efficient to compute a range of values:
 calc3j = spherical.Wigner3jCalculator(j2_max, j3_max)
 w3j = calc3j.calculate(j2, j3, m2, m3)
 ```
+
+Note that [this package](https://github.com/Jutho/WignerSymbols.jl) seems to do
+a clever job of evaluating these quantities in terms of [rational
+roots](https://github.com/Jutho/RationalRoots.jl).  I haven't used or examined
+the package otherwise, so I can't really vouch for it, but this seems like a
+clever idea.
 
 
 ## Acknowledgments
