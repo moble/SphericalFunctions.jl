@@ -15,7 +15,7 @@
 
 module WignerMatrices
 
-export WignerMatrixCalculator, H!, d!, D!, ϵ, WignerHindex
+export WignerMatrixCalculator, H!, d!, D!, ϵ, WignerHindex, _WignerHindex
 
 using ..Spherical: complex_powers!
 using Quaternionic: Quaternion, to_euler_phases!
