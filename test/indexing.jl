@@ -1,7 +1,7 @@
 @testset verbose=true "indexing" begin
     import Spherical.WignerMatrices: WignerHsize, WignerHrange, WignerHindex
     import Spherical.WignerMatrices: WignerDsize, WignerDrange, WignerDindex
-    import Spherical: Ysize, Yrange, Yindex
+    import Spherical: Ysize, Yrange, Yindex, deduce_limits
     import Spherical: theta_phi
 
     ell_max = 16
@@ -215,6 +215,27 @@
                 a = Ysize(ell_min, ell_max)
                 b = size(Yrange(ell_min, ell_max))[1]
                 @test a == b
+            end
+        end
+    end
+
+    @testset "deduce_limits" begin
+        for ℓmax in 0:4096
+            for ℓmin in 0:min(2, ℓmax)
+                deduced = deduce_limits(Ysize(ℓmin, ℓmax), nothing)
+                @test deduced == (ℓmin, ℓmax)
+            end
+        end
+        for ℓmax in 0:ell_max
+            for ℓmin in [0]
+                deduced = deduce_limits(Ysize(ℓmin, ℓmax))
+                @test deduced == (ℓmin, ℓmax)
+            end
+        end
+        for ℓmax in 0:ell_max
+            for ℓmin in 0:ℓmax
+                deduced = deduce_limits(Ysize(ℓmin, ℓmax), ℓmin)
+                @test deduced == (ℓmin, ℓmax)
             end
         end
     end

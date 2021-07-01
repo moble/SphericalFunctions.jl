@@ -48,6 +48,35 @@ end
 
 
 """
+    deduce_limits(ysize, [ℓmin])
+
+Deduce the value of `(ℓmin, ℓmax)` that produces ``Y`` arrays of the given size.
+
+If `ℓmin` is not given, it is assumed to be 0.  If it is set to `nothing`, the
+smallest possible value of `ℓmin` will be used.  However, note that this is not
+a well-posed problem; multiple combinations of `(ℓmin, ℓmax)` can give rise to
+``Y`` arrays of the same size.
+
+See also [`Ysize`](@ref)
+"""
+function deduce_limits(ysize, ℓmin=0)
+    if ℓmin === nothing
+        maxℓmax = (ysize-1) ÷ 2
+        ℓmin_range = 0:maxℓmax
+    else
+        ℓmin_range = [ℓmin]
+    end
+    for ℓmin in ℓmin_range
+        ℓmax = round(Int, √(ysize + ℓmin^2) - 1, RoundDown)
+        if ℓmax * (ℓmax + 2) - ℓmin^2 + 1 == ysize
+            return (ℓmin, ℓmax)
+        end
+    end
+    error("Input size $ysize does not correspond to a possible array of modes with ℓmin=$ℓmin")
+end
+
+
+"""
     Yrange(ℓₘᵢₙ, ℓₘₐₓ)
 
 Create an array of (ℓ, m) indices as in Y array
@@ -141,11 +170,7 @@ function Yindex(ℓ, m, ℓₘᵢₙ=0)
     #     (Ysize.subs(ℓₘₐₓ, ℓ-1) + summation(1, (m′, -ℓ, m)) - 1).expand().simplify(),
     #     (ℓₘₐₓ, ℓ, m)
     # )
-    if ℓ > ℓₘᵢₙ
-        return ℓ*(ℓ + 1) - ℓₘᵢₙ^2 + m + 1
-    else
-        return m + ℓ + 1
-    end
+    return ℓ*(ℓ + 1) - ℓₘᵢₙ^2 + m + 1
 end
 
 
