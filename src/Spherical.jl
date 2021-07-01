@@ -1,6 +1,6 @@
 module Spherical
 
-using FastTransforms
+using FastTransforms, LinearAlgebra
 
 export complex_powers, complex_powers!
 export WignerMatrixCalculator, H!, d!, D!
@@ -12,16 +12,20 @@ const MachineFloat = Union{Float16, Float32, Float64}
 
 
 include("utils.jl")
+
 include("complex_powers.jl")
+
 include("indexing.jl")
+
 include("wigner_matrices/evaluate.jl")
-include("associated_legendre/calculator.jl")
-include("weights.jl")
-include("map2salm.jl")
-
-
 using .WignerMatrices
+
+include("associated_legendre/calculator.jl")
 using .AssociatedLegendreFunction: ALFRecursionCoefficients, ALFrecurse!, ALFcompute!
+
+include("weights.jl")
+
+include("map2salm.jl")
 
 
 end # module
