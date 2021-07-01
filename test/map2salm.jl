@@ -4,7 +4,7 @@
 
     function sYlm(s::Int, ell::Int, m::Int, theta::T, phi::T) where {T<:Real}
         # Eqs. (II.7) and (II.8) of https://arxiv.org/abs/0709.0093v3
-        # Note theie weird definition w.r.t. `-s`
+        # Note their weird definition w.r.t. `-s`
         k_min = max(0, m + s)
         k_max = min(ell + m, ell + s)
         sin_half_theta, cos_half_theta = sincos(theta / 2)
