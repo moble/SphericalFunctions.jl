@@ -6,7 +6,7 @@ export complex_powers, complex_powers!
 export WignerMatrixCalculator, H!, d!, D!
 export ALFRecursionCoefficients, ALFrecurse!, ALFcompute!
 export fejer1, fejer2, clenshaw_curtis
-export map2salm
+export map2salm, map2salm!, plan_map2salm
 
 const MachineFloat = Union{Float16, Float32, Float64}
 
