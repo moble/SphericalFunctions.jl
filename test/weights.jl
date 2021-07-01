@@ -13,8 +13,8 @@
         wᶜᶜ(k, n) = (c(k, n)/T(n)) * (1 - sum(b(j, n) * cos(2j*ϑ(k, n))/T(4j^2-1) for j ∈ 1:(n÷2)))  # Eq. (4) of Waldvogel; k ∈ 0:n
 
         for n in [3, 10, 11, 12, 13, 170, 171, 1070, 1071]
-            @test size(fejer1(n)) == (n+1,)
-            @test size(fejer1(n, T)) == (n+1,)
+            @test size(fejer1(n)) == (n,)
+            @test size(fejer1(n, T)) == (n,)
             @test eltype(fejer1(n)) === Float64
             @test eltype(fejer1(n, T)) === T
             @test fejer1(n) ≈ fejer1(n, T) rtol=2max(eps(Float64), eps(T))
@@ -24,10 +24,10 @@
             #     println("rtol: ", maximum(abs.(v1 .- v2) ./ abs.(v1)) / ϵ)
             #     println()
             # end
-            @test fejer1(n, T) ≈ wᶠ¹.(0:n, n) rtol=ϵ atol=ϵ
+            @test fejer1(n, T) ≈ wᶠ¹.(0:n-1, n-1) rtol=ϵ atol=ϵ
 
-            @test size(fejer2(n)) == (n-1,)
-            @test size(fejer2(n, T)) == (n-1,)
+            @test size(fejer2(n)) == (n,)
+            @test size(fejer2(n, T)) == (n,)
             @test eltype(fejer2(n)) === Float64
             @test eltype(fejer2(n, T)) === T
             @test fejer2(n) ≈ fejer2(n, T) rtol=2max(eps(Float64), eps(T))
@@ -37,10 +37,10 @@
             #     println("rtol: ", maximum(abs.(v1 .- v2) ./ abs.(v1)) / ϵ)
             #     println()
             # end
-            @test fejer2(n, T) ≈ wᶠ².(1:n-1, n) rtol=ϵ atol=ϵ
+            @test fejer2(n, T) ≈ wᶠ².(1:n, n+1) rtol=ϵ atol=ϵ
 
-            @test size(clenshaw_curtis(n)) == (n+1,)
-            @test size(clenshaw_curtis(n, T)) == (n+1,)
+            @test size(clenshaw_curtis(n)) == (n,)
+            @test size(clenshaw_curtis(n, T)) == (n,)
             @test eltype(clenshaw_curtis(n)) === Float64
             @test eltype(clenshaw_curtis(n, T)) === T
             @test clenshaw_curtis(n) ≈ clenshaw_curtis(n, T) rtol=2max(eps(Float64), eps(T))
@@ -50,7 +50,7 @@
             #     println("rtol: ", maximum(abs.(v1 .- v2) ./ abs.(v1)) / ϵ)
             #     println()
             # end
-            @test clenshaw_curtis(n, T) ≈ wᶜᶜ.(0:n, n) rtol=ϵ atol=ϵ
+            @test clenshaw_curtis(n, T) ≈ wᶜᶜ.(0:n-1, n-1) rtol=ϵ atol=ϵ
         end
     end
 
@@ -64,9 +64,9 @@
             w2 = fejerweights2(μ2)
             wc = clenshawcurtisweights(μ1)
 
-            @test w1 ≈ fejer1(N)[1:end-1] rtol=ϵ atol=ϵ
-            @test w2 ≈ fejer2(N+1) rtol=ϵ atol=ϵ
-            @test wc ≈ clenshaw_curtis(N-1) rtol=ϵ atol=ϵ
+            @test w1 ≈ fejer1(N+1)[1:end-1] rtol=ϵ atol=ϵ
+            @test w2 ≈ fejer2(N) rtol=ϵ atol=ϵ
+            @test wc ≈ clenshaw_curtis(N) rtol=ϵ atol=ϵ
         end
     end
 end
