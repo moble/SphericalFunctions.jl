@@ -158,7 +158,7 @@ This assumes that the modes are arranged (with fixed s value) as
     ]
 
 """
-function Yindex(ℓ, m, ℓₘᵢₙ=0)
+@inline function Yindex(ℓ, m, ℓₘᵢₙ=0)
     # from sympy import symbols, summation, horner
     # from sympy.printing.pycode import pycode
     # ℓ,m,m′,ℓₘᵢₙ, = symbols('ℓ,m,m′,ℓₘᵢₙ', integer=True)
@@ -174,37 +174,27 @@ function Yindex(ℓ, m, ℓₘᵢₙ=0)
 end
 
 
-"""Construct (theta, phi) grid
+"""
+    theta_phi(Nθ, Nϕ, [T=Float64])
 
-This grid is in the order expected by spinsfast
+Construct (theta, phi) grid in `spinsfast` order.
 
-Parameters
-----------
-n_theta : int
-    Number of points in the theta direction
-n_phi : int
-    Number of points in the phi direction
-
-Returns
--------
-theta_phi_grid : ndarray
-    Array of pairs of floats giving the respective [theta, phi] pairs.  The
-    shape of this array is (n_theta, n_phi, 2).
-
-Notes
------
-The array looks like
-
-    [
-        [θ, ϕ]
-        for ϕ ∈ [0, 2π)
-        for θ ∈ [0, π]
-    ]
-
-(note the open and closed endpoints, respectively), where ϕ and θ are uniformly
-sampled in their respective ranges.
+Note that this order is different from the one assumed by this package;
+use [`phi_theta`](@ref) for the opposite ordering.
 
 """
-function theta_phi(nθ, nϕ)
-    [[θ, ϕ][i] for θ in range(0, π, length=nθ), ϕ in range(0, 2π, length=nϕ+1)[begin:end-1], i in 1:2]
+function theta_phi(nθ, nϕ, T=Float64)
+    [[θ, ϕ][i] for θ in range(0, T(π), length=nθ), ϕ in range(0, 2*T(π), length=nϕ+1)[begin:end-1], i in 1:2]
+end
+
+"""
+    phi_theta(Nϕ, Nθ, [T=Float64])
+
+Construct (phi, theta) grid in order expected by this package.
+
+See also [`theta_phi`](@ref) for the opposite ordering.
+
+"""
+function phi_theta(nϕ, nθ, T=Float64)
+    [[ϕ, θ][i] for ϕ in range(0, 2*T(π), length=nϕ+1)[begin:end-1], θ in range(0, T(π), length=nθ), i in 1:2]
 end

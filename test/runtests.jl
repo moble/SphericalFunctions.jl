@@ -27,6 +27,7 @@ end
     addtests("indexing.jl")
     addtests("alf.jl")
     addtests("weights.jl")
+    addtests("map2salm.jl")
 end
 
 

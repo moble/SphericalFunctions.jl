@@ -1,24 +1,3 @@
-struct PlanMap2Salm{T<:Real}
-    spin
-    ℓmax
-    ℓmin
-    Nφ
-    Nϑ
-    Nextra
-    G
-    m′max
-    wigner
-    weight
-    expiθ
-    ϵs
-    extra_dims
-end
-
-macro unpackPlan(q)  # Stolen from https://stackoverflow.com/a/67138749/1194883
-    code =  Expr(:block, [ :($field = $q.$field) for field in fieldnames(PlanMap2Salm) ]...)
-    esc(code)
-end
-
 @doc raw"""
     map2salm(map, spin, ℓmax, [ℓmin])
     map2salm(map, plan)
@@ -89,13 +68,27 @@ function plan_map2salm(map::AbstractArray{Complex{T}}, spin::Int, ℓmax::Int, �
     return (spin, ℓmax, ℓmin, Nφ, Nϑ, Nextra, G, m′max, wigner, weight, expiθ, ϵs, extra_dims)
 end
 
-function map2salm!(
-    salm::AbstractArray{Complex{T}},
-    map::AbstractArray{Complex{T}},
-    (spin, ℓmax, ℓmin, Nφ, Nϑ, Nextra, G, m′max, wigner, weight, expiθ, ϵs, extra_dims)
-) where {T<:Real}
-    @assert size(salm) == (Ysize(ℓmin, ℓmax), Nextra...)
 
+function computeG!(
+    G::AbstractArray{Complex{T}},
+    map::AbstractArray{Complex{T}},
+    weight::AbstractArray{T},
+    Nϑ, extra_dims
+) where {T<:Real}
+    @inbounds for extra ∈ extra_dims
+        for ϑ ∈ 1:Nϑ
+            G[:, ϑ, extra...] = weight[ϑ] * fft(map[:, ϑ, extra...])
+        end
+    end
+end
+
+
+function computeG!(
+    G::AbstractArray{Complex{T}},
+    map::AbstractArray{Complex{T}},
+    weight::AbstractArray{T},
+    Nϑ, extra_dims
+) where {T<:MachineFloat}
     fftplan = plan_fft(map[:, 1, first(extra_dims)...])
     @inbounds for extra ∈ extra_dims
         for ϑ ∈ 1:Nϑ
@@ -103,18 +96,49 @@ function map2salm!(
             @views G[:, ϑ, extra...] *= weight[ϑ]
         end
     end
+end
+
+
+function map2salm!(
+    salm::AbstractArray{Complex{T}},
+    map::AbstractArray{Complex{T}},
+    (spin, ℓmax, ℓmin, Nφ, Nϑ, Nextra, G, m′max, wigner, weight, expiθ, ϵs, extra_dims)
+) where {T<:Real}
+    @assert size(salm) == (Ysize(ℓmin, ℓmax), Nextra...)
+
+    absspin = abs(spin)
+
+    # @inbounds for extra ∈ extra_dims
+    #     for ϑ ∈ 1:Nϑ
+    #         G[:, ϑ, extra...] = weight[ϑ] * fft(map[:, ϑ, extra...])
+    #     end
+    # end
+
+    # fftplan = plan_fft(map[:, 1, first(extra_dims)...])
+    # @inbounds for extra ∈ extra_dims
+    #     for ϑ ∈ 1:Nϑ
+    #         @views mul!(G[:, ϑ, extra...], fftplan, map[:, ϑ, extra...])
+    #         @views G[:, ϑ, extra...] *= weight[ϑ]
+    #     end
+    # end
+
+    computeG!(G, map, weight, Nϑ, extra_dims)
 
     @inbounds for ϑ ∈ 1:Nϑ
         H!(wigner, expiθ[ϑ])  # Not thread safe
         for extra ∈ extra_dims
-            for ℓ ∈ abs(spin):ℓmax
-                sqrt_factor = √((2ℓ+1)*T(π)) / (2ℓmax+1)
+            for ℓ ∈ absspin:ℓmax
+                sqrt_factor = √((2ℓ+1)*T(π)) / Nϑ
+
+                i0 = WignerHindex(ℓ, spin, 0, m′max)
+                # i₊ = i0
+                # i₋ = i0
 
                 let m=0
                     λ_factor = ϵs * sqrt_factor
 
                     salm[Yindex(ℓ, m, ℓmin), extra...] +=
-                        G[m+1, ϑ, extra...] * λ_factor * wigner.Hwedge[WignerHindex(ℓ, spin, -m, m′max)]
+                        G[m+1, ϑ, extra...] * λ_factor * wigner.Hwedge[i0]
                 end
 
                 for m ∈ 1:ℓ
@@ -127,6 +151,30 @@ function map2salm!(
                         G[Nφ-m+1, ϑ, extra...] * ϵ(-m) * λ_factor * wigner.Hwedge[WignerHindex(ℓ, spin, m, m′max)]
                 end
 
+                # for m ∈ 1:min(ℓ, absspin)
+                #     i₊ += ℓ-m
+                #     i₋ -= ℓ-m
+                #     λ_factor = ϵs * sqrt_factor
+
+                #     salm[Yindex(ℓ, m, ℓmin), extra...] +=
+                #         G[m+1, ϑ, extra...] * ϵ(m) * λ_factor * wigner.Hwedge[i₊]
+
+                #     salm[Yindex(ℓ, -m, ℓmin), extra...] +=
+                #         G[Nφ-m+1, ϑ, extra...] * ϵ(-m) * λ_factor * wigner.Hwedge[i₋]
+                # end
+
+                # for m ∈ absspin+1:ℓ
+                #     i₊ += 1
+                #     i₋ -= 1
+                #     λ_factor = ϵs * sqrt_factor
+
+                #     salm[Yindex(ℓ, m, ℓmin), extra...] +=
+                #         G[m+1, ϑ, extra...] * ϵ(m) * λ_factor * wigner.Hwedge[i₊]
+
+                #     salm[Yindex(ℓ, -m, ℓmin), extra...] +=
+                #         G[Nφ-m+1, ϑ, extra...] * ϵ(-m) * λ_factor * wigner.Hwedge[i₋]
+                # end
+
             end
         end
     end
@@ -137,62 +185,3 @@ function map2salm(map::AbstractArray{Complex{T}}, plan) where {T<:Real}
     map2salm!(salm, map, plan)
     return salm
 end
-
-
-# # function map2salm(map::AbstractArray{Complex{T}}, spin::Int, ℓmax::Int, ℓmin::Int=abs(spin)) where {T<:Real}
-# #     goodies = map2salm_goodies(map, spin, ℓmax, ℓmin)
-# #     _map2salm(goodies...)
-# # end
-
-# function map2salm_goodies(map::AbstractArray{Complex{T}}, spin::Int, ℓmax::Int, ℓmin::Int=abs(spin)) where {T<:Real}
-#     Nφ, Nϑ, Nextra... = size(map)
-#     G = Array{complex(T)}(undef, (Nφ, Nϑ, Nextra...));
-#     modes = zeros(complex(T), (Ysize(ℓmin, ℓmax), Nextra...))
-#     m′max = abs(spin)
-#     wigner = WignerMatrixCalculator(ℓmin, ℓmax, m′max, T)
-#     weight = clenshaw_curtis(Nϑ, T)
-#     expiθ = complex_powers(exp(im * (π / T(Nϑ-1))), Nϑ-1)
-#     ϵs = Spherical.WignerMatrices.ϵ(-spin)
-#     extra_dims = Base.Iterators.product((1:e for e in Nextra)...)
-
-#     (T, map, spin, ℓmax, ℓmin, Nφ, Nϑ, Nextra, G, modes, m′max, wigner, weight, expiθ, ϵs, extra_dims)
-# end
-
-# function _map2salm(T, map, spin, ℓmax, ℓmin, Nφ, Nϑ, Nextra, G, modes, m′max, wigner, weight, expiθ, ϵs, extra_dims)
-#     plan = plan_fft(map[:, 1, first(extra_dims)...])
-#     @inbounds for extra ∈ extra_dims
-#         for ϑ ∈ 1:Nϑ
-#             @views mul!(G[:, ϑ, extra...], plan, map[:, ϑ, extra...])
-#             @views G[:, ϑ, extra...] *= weight[ϑ]
-#         end
-#     end
-
-#     @inbounds for ϑ ∈ 1:Nϑ
-#         H!(wigner, expiθ[ϑ])  # Not thread safe
-#         for extra ∈ extra_dims
-#             for ℓ ∈ abs(spin):ℓmax
-#                 sqrt_factor = √((2ℓ+1)*T(π)) / (2ℓmax+1)
-
-#                 let m=0
-#                     λ_factor = ϵs * sqrt_factor
-
-#                     modes[Yindex(ℓ, m, ℓmin), extra...] +=
-#                         G[m+1, ϑ, extra...] * λ_factor * wigner.Hwedge[WignerHindex(ℓ, spin, -m, m′max)]
-#                 end
-
-#                 for m ∈ 1:ℓ
-#                     λ_factor = ϵs * sqrt_factor
-
-#                     modes[Yindex(ℓ, m, ℓmin), extra...] +=
-#                         G[m+1, ϑ, extra...] * ϵ(m) * λ_factor * wigner.Hwedge[WignerHindex(ℓ, spin, -m, m′max)]
-
-#                     modes[Yindex(ℓ, -m, ℓmin), extra...] +=
-#                         G[Nφ-m+1, ϑ, extra...] * ϵ(-m) * λ_factor * wigner.Hwedge[WignerHindex(ℓ, spin, m, m′max)]
-#                 end
-
-#             end
-#         end
-#     end
-
-#     return modes
-# end
