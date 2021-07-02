@@ -25,11 +25,11 @@ include("calculator.jl")
 include("Hrecursions.jl")
 
 
-ϵ(m) = (m <= 0 ? 1 : (isodd(m) ? -1 : 1))
+@inline ϵ(m) = (m <= 0 ? 1 : (isodd(m) ? -1 : 1))
 
 
 """Return sign of input, with sign(0)=1"""
-sign(m) = (m < 0 ? -1 : 1)
+@inline sign(m) = (m < 0 ? -1 : 1)
 
 
 """Compute Wigner's d matrix dˡₘₚ,ₘ(β)
