@@ -128,53 +128,44 @@ function map2salm!(
         H!(wigner, expiθ[ϑ])  # Not thread safe
         for extra ∈ extra_dims
             for ℓ ∈ absspin:ℓmax
-                sqrt_factor = √((2ℓ+1)*T(π)) / Nϑ
+                λ_factor = ϵs * √((2ℓ+1)*T(π)) / Nϑ
 
                 i0 = WignerHindex(ℓ, spin, 0, m′max)
-                # i₊ = i0
-                # i₋ = i0
 
                 let m=0
-                    λ_factor = ϵs * sqrt_factor
-
                     salm[Yindex(ℓ, m, ℓmin), extra...] +=
                         G[m+1, ϑ, extra...] * λ_factor * wigner.Hwedge[i0]
                 end
 
-                for m ∈ 1:ℓ
-                    λ_factor = ϵs * sqrt_factor
-
-                    salm[Yindex(ℓ, m, ℓmin), extra...] +=
-                        G[m+1, ϑ, extra...] * ϵ(m) * λ_factor * wigner.Hwedge[WignerHindex(ℓ, spin, -m, m′max)]
-
-                    salm[Yindex(ℓ, -m, ℓmin), extra...] +=
-                        G[Nφ-m+1, ϑ, extra...] * ϵ(-m) * λ_factor * wigner.Hwedge[WignerHindex(ℓ, spin, m, m′max)]
+                i₊ = i0
+                i₋ = i0
+                if !signbit(spin)
+                    for m ∈ 1:min(ℓ, absspin)
+                        i₊ -= ℓ-m+2
+                        i₋ += ℓ-m+1
+                        salm[Yindex(ℓ, m, ℓmin), extra...] +=
+                            G[m+1, ϑ, extra...] * ϵ(m) * λ_factor * wigner.Hwedge[i₊]
+                        salm[Yindex(ℓ, -m, ℓmin), extra...] +=
+                            G[Nφ-m+1, ϑ, extra...] * ϵ(-m) * λ_factor * wigner.Hwedge[i₋]
+                    end
+                else
+                    for m ∈ 1:min(ℓ, absspin)
+                        i₊ += ℓ-m+1
+                        i₋ -= ℓ-m+2
+                        salm[Yindex(ℓ, m, ℓmin), extra...] +=
+                            G[m+1, ϑ, extra...] * ϵ(m) * λ_factor * wigner.Hwedge[i₊]
+                        salm[Yindex(ℓ, -m, ℓmin), extra...] +=
+                            G[Nφ-m+1, ϑ, extra...] * ϵ(-m) * λ_factor * wigner.Hwedge[i₋]
+                    end
                 end
-
-                # for m ∈ 1:min(ℓ, absspin)
-                #     i₊ += ℓ-m
-                #     i₋ -= ℓ-m
-                #     λ_factor = ϵs * sqrt_factor
-
-                #     salm[Yindex(ℓ, m, ℓmin), extra...] +=
-                #         G[m+1, ϑ, extra...] * ϵ(m) * λ_factor * wigner.Hwedge[i₊]
-
-                #     salm[Yindex(ℓ, -m, ℓmin), extra...] +=
-                #         G[Nφ-m+1, ϑ, extra...] * ϵ(-m) * λ_factor * wigner.Hwedge[i₋]
-                # end
-
-                # for m ∈ absspin+1:ℓ
-                #     i₊ += 1
-                #     i₋ -= 1
-                #     λ_factor = ϵs * sqrt_factor
-
-                #     salm[Yindex(ℓ, m, ℓmin), extra...] +=
-                #         G[m+1, ϑ, extra...] * ϵ(m) * λ_factor * wigner.Hwedge[i₊]
-
-                #     salm[Yindex(ℓ, -m, ℓmin), extra...] +=
-                #         G[Nφ-m+1, ϑ, extra...] * ϵ(-m) * λ_factor * wigner.Hwedge[i₋]
-                # end
-
+                for m ∈ absspin+1:ℓ
+                    i₊ += 1
+                    i₋ += 1
+                    salm[Yindex(ℓ, m, ℓmin), extra...] +=
+                        G[m+1, ϑ, extra...] * ϵ(m) * λ_factor * wigner.Hwedge[i₊]
+                    salm[Yindex(ℓ, -m, ℓmin), extra...] +=
+                        G[Nφ-m+1, ϑ, extra...] * ϵ(-m) * λ_factor * wigner.Hwedge[i₋]
+                end
             end
         end
     end

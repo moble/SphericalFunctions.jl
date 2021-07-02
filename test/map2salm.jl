@@ -19,6 +19,8 @@
             )) *
             exp(im * m * phi)
     end
+
+    # Eqs. (II.9) through (II.13) of https://arxiv.org/abs/0709.0093v3
     m2Y22(iota::T, phi) where T = sqrt(5 / (64 * T(π))) * (1 + cos(iota)) ^ 2 * exp(im * 2phi)
     m2Y21(iota::T, phi) where T = sqrt(5 / (16 * T(π))) * sin(iota) * (1 + cos(iota)) * exp(im * phi)
     m2Y20(iota::T, phi) where T = sqrt(15 / (32 * T(π))) * sin(iota) ^ 2
@@ -26,6 +28,8 @@
     m2Y2m2(iota::T, phi) where T = sqrt(5 / (64 * T(π))) * (1 - cos(iota)) ^ 2 * exp(im * -2phi)
 
     @testset "Input expressions $T" for T in [BigFloat, Float64, Float32]
+        # These are just internal consistency tests of the sYlm function
+        # above, against the explicit expressions `mY2.`
         s = -2
         ℓ = 2
         Nϑ = 18
@@ -38,6 +42,7 @@
     end
 
     @testset "map2salm $T" for T in [BigFloat, Float64, Float32]
+        # These test the ability of map2salm to precisely decompose the results of `sYlm`.
         ℓmax = 7
         Nϑ = 2ℓmax + 2
         Nφ = 2ℓmax + 2
@@ -53,6 +58,7 @@
                     end
                 end
             end
-        end        
+        end
     end
+
 end
