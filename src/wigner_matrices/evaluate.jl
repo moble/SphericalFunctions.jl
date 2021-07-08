@@ -13,12 +13,10 @@
 
 
 
-module WignerMatrices
-
-export WignerMatrixCalculator, H!, d!, D!, ϵ, WignerHindex, _WignerHindex
+export WignerMatrixCalculator, H!, d!, D!, Y!, ϵ, WignerHindex, _WignerHindex
 
 using ..Spherical: complex_powers!
-using Quaternionic: Quaternion, to_euler_phases!
+using Quaternionic: AbstractQuaternion, to_euler_phases!
 
 include("indexing.jl")
 include("calculator.jl")
@@ -32,35 +30,38 @@ include("Hrecursions.jl")
 @inline sign(m) = (m < 0 ? -1 : 1)
 
 
-"""Compute Wigner's d matrix dˡₘₚ,ₘ(β)
+"""
+    d!(d, wigner, expiβ)
 
-Parameters
-----------
-expiβ : array_like
+Compute Wigner's d matrix dˡₘₚ,ₘ(β)
+
+# Parameters
+
+* expiβ : array_like
     Values of expi(i*β) on which to evaluate the d matrix.
-out : array_like, optional
+* out : array_like, optional
     Array into which the d values should be written.  It should be an array of
     floats, with size `self.dsize`.  If not present, the array will be created.
     In either case, the array will also be returned.
-workspace : array_like, optional
+* workspace : array_like, optional
     A working array like the one returned by Wigner.new_workspace().  If not
     present, this object's default workspace will be used.  Note that it is not
     safe to use the same workspace on multiple threads.
 
-Returns
--------
-d : array
+# Returns
+
+* d : array
     This is a 1-dimensional array of floats; see below.
 
-See Also
---------
-H : Compute a portion of the H matrix
-D : Compute the full Wigner 𝔇 matrix
-rotate : Avoid computing the full 𝔇 matrix and rotate modes directly
-evaluate : Avoid computing the full 𝔇 matrix and evaluate modes directly
+# See Also
 
-Notes
------
+* H : Compute a portion of the H matrix
+* D : Compute the full Wigner 𝔇 matrix
+* rotate : Avoid computing the full 𝔇 matrix and rotate modes directly
+* evaluate : Avoid computing the full 𝔇 matrix and evaluate modes directly
+
+# Notes
+
 This function is the preferred method of computing the d matrix for large ell
 values.  In particular, above ell≈32 standard formulas become completely
 unusable because of numerical instabilities and overflow.  This function uses
@@ -114,35 +115,35 @@ end
 
 Compute Wigner's 𝔇 matrix
 
-Parameters
-----------
-𝔇 : array_like, optional
+# Parameters
+
+* 𝔇 : array_like, optional
     Array into which the 𝔇 values should be written.  It should be an array of
     complex, with size `self.Dsize`.  If not present, the array will be
     created.  In either case, the array will also be returned.
-workspace : optional
+* workspace : optional
     A working array like the one returned by Wigner.new_workspace().  If not
     present, this object's default workspace will be used.  Note that it is not
     safe to use the same workspace on multiple threads.
-R : Quaternion
+* R : Quaternion
     Array to be interpreted as a quaternionic array (thus its final dimension
     must have size 4), representing the rotations on which the 𝔇 matrix will be
     evaluated.
 
-Returns
--------
-D : array
+# Returns
+
+* D : array
     This is a 1-dimensional array of complex; see below.
 
-See Also
---------
-H : Compute a portion of the H matrix
-d : Compute the full Wigner d matrix
-rotate : Avoid computing the full 𝔇 matrix and rotate modes directly
-evaluate : Avoid computing the full 𝔇 matrix and evaluate modes directly
+# See Also
 
-Notes
------
+* H : Compute a portion of the H matrix
+* d : Compute the full Wigner d matrix
+* rotate : Avoid computing the full 𝔇 matrix and rotate modes directly
+* evaluate : Avoid computing the full 𝔇 matrix and evaluate modes directly
+
+# Notes
+
 This function is the preferred method of computing the 𝔇 matrix for large ell
 values.  In particular, above ell≈32 standard formulas become completely
 unusable because of numerical instabilities and overflow.  This function uses
@@ -159,12 +160,12 @@ array ordered as
     ]
 
 """
-function D!(𝔇, w::WignerMatrixCalculator, R::Quaternion)
+function D!(𝔇, w::WignerMatrixCalculator, R::AbstractQuaternion)
     ell_min = ℓₘᵢₙ(w)
     ell_max = ℓₘₐₓ(w)
     mp_max = m′ₘₐₓ(w)
     if mp_max < ell_max
-        throw(DomainError("ℓₘₐₓ = $ℓₘₐₓ",
+        throw(DomainError("ℓₘₐₓ = $(ell_max)",
                           "Cannot compute full d matrix up to ℓₘₐₓ with m′ₘₐₓ only $(mp_max)"
         ))
     end
@@ -211,10 +212,94 @@ function D!(𝔇, w::WignerMatrixCalculator, R::Quaternion)
 end
 
 
-function D!(w::WignerMatrixCalculator, R::Quaternion)
+function D!(w::WignerMatrixCalculator, R::AbstractQuaternion)
     𝔇 = zeros(Complex{T(w)}, WignerDsize(w))
     D!(𝔇, w, R)
 end
 
 
-end  # module WignerMatrices
+@doc raw"""
+    Y!(Y, wigner, s, R)
+    Y!(wigner, s, R)
+
+Evaluate (and write into `Y`, if present) the values of ``{}_{s}Y_{\ell,
+m}(R)`` for the input value of `s`, for all ``(\ell, m)`` throughout the range
+specified by `wigner`.  `R` is assumed to be a unit quaternion (which may be
+`Rotor`, or simply a `Quaternion`).  If `R` does not have unit magnitude, the
+output elements will be too large by a factor ``|R|^{\ell}``.  If `Y` is not
+present, a new array will be created.
+
+The spherical harmonics of spin weight ``s`` are related to Wigner's
+``\mathfrak{D}`` matrix as
+```math
+\begin{aligned}
+{}_{s}Y_{\ell, m}(R)
+  &= (-1)^s \sqrt{\frac{2\ell+1}{4\pi}} \mathfrak{D}^{(\ell)}_{m, -s}(R) \\
+  &= (-1)^s \sqrt{\frac{2\ell+1}{4\pi}} \bar{\mathfrak{D}}^{(\ell)}_{-s, m}(\bar{R}).
+\end{aligned}
+```
+"""
+function Y!(Y, w::WignerMatrixCalculator, s::Int, R::AbstractQuaternion)
+    if length(Y) < Ysize(w)
+        error("Input `Y` has length $(length(Y)); it should be at least $(Ysize(w))")
+    end
+    ell_min = ℓₘᵢₙ(w)
+    ell_max = ℓₘₐₓ(w)
+    mp_max = m′ₘₐₓ(w)
+    if mp_max < abs(s)
+        throw(DomainError("ℓₘₐₓ = $(ell_max)",
+                          "Cannot compute sYlm for spin weight $s with m′ₘₐₓ only $(mp_max)"
+        ))
+    end
+
+    to_euler_phases!(w.z, R)
+    H!(w, w.z[2])
+    complex_powers!(w.zₐpowers, w.z[1])
+    complex_powers!(w.zᵧpowers, w.z[3])
+
+    # Yˡₘₚ,ₘ(R) = dˡₘₚ,ₘ(R) exp[iϕₐ(m-mp)+iϕₛ(m+mp)] = dˡₘₚ,ₘ(R) exp[i(ϕₛ+ϕₐ)m+i(ϕₛ-ϕₐ)mp]
+    # exp[iϕₛ] = R̂ₛ = hat(R[0] + 1j * R[3]) = zp
+    # exp[iϕₐ] = R̂ₐ = hat(R[2] + 1j * R[1]) = zm.conjugate()
+    # exp[i(ϕₛ+ϕₐ)] = zp * zm.conjugate() = z[2] = zᵧ
+    # exp[i(ϕₛ-ϕₐ)] = zp * zm = z[0] = zₐ
+    i_D = 1
+    @inbounds for ell in ell_min:ell_max
+        if ell < abs(s)
+            for mp in -ell:ell
+                Y[i_D] = 0
+                i_D += 1
+            end
+        else
+            factor = (isodd(s) ? -1 : 1) * √((2ell+1)/(4T(w)(π)))
+            for mp in -ell:-1
+                i_H = WignerHindex(ell, mp, -s, mp_max)
+                if -s < 0
+                    Y[i_D] = factor * ϵ(mp) * ϵ(s) * w.Hwedge[i_H] * conj(w.zᵧpowers[s+1]) * conj(w.zₐpowers[-mp+1])
+                    # println((ell, mp, i_D, factor, ϵ(mp), ϵ(s), w.Hwedge[i_H], conj(w.zᵧpowers[s+1]), conj(w.zₐpowers[-mp+1])))
+                else
+                    Y[i_D] = factor * ϵ(mp) * ϵ(s) * w.Hwedge[i_H] * w.zᵧpowers[-s+1] * conj(w.zₐpowers[-mp+1])
+                    # println((ell, mp, i_D, factor, ϵ(mp), ϵ(s), w.Hwedge[i_H], w.zᵧpowers[-s+1], conj(w.zₐpowers[-mp+1])))
+                end
+                i_D += 1
+            end
+            for mp in 0:ell
+                i_H = WignerHindex(ell, mp, -s, mp_max)
+                if -s < 0
+                    Y[i_D] = factor * ϵ(mp) * ϵ(s) * w.Hwedge[i_H] * conj(w.zᵧpowers[s+1]) * w.zₐpowers[mp+1]
+                    # println((ell, mp, i_D, factor, ϵ(mp), ϵ(s), w.Hwedge[i_H], conj(w.zᵧpowers[s+1]), w.zₐpowers[mp+1]))
+                else
+                    Y[i_D] = factor * ϵ(mp) * ϵ(s) * w.Hwedge[i_H] * w.zᵧpowers[-s+1] * w.zₐpowers[mp+1]
+                    # println((ell, mp, i_D, factor, ϵ(mp), ϵ(s), w.Hwedge[i_H], w.zᵧpowers[-s+1], w.zₐpowers[mp+1]))
+                end
+                i_D += 1
+            end
+        end
+    end
+    Y
+end
+
+
+function Y!(w::WignerMatrixCalculator, s::Int, R::AbstractQuaternion)
+    Y = zeros(Complex{T(w)}, Ysize(w))
+    Y!(Y, w, s, R)
+end
