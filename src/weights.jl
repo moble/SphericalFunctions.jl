@@ -13,24 +13,24 @@ method](https://doi.org/10.1007/s10543-006-0045-4).
 The type `T` may be any `AbstractFloat`, but defaults to `Float64`.
 """
 function fejer1(n, ::Type{T}=Float64) where {T<:AbstractFloat}
-    v = Vector{complex(T)}(undef, n-1)
-    complex_powers!(@view(v[1:(n-2)÷2+1]), exp(im*(π/T(n-1))))
+    v = Vector{complex(T)}(undef, n)
+    complex_powers!(@view(v[1:(n-1)÷2+1]), exp(im*(π/T(n))))
     @inbounds begin
         v[1] = 2
-        for k = 1 : (n-2)÷2
+        for k = 1 : (n-1)÷2
             v[k+1] *= 2 / T(1 - 4k^2)
         end
-        if iseven(n-1)
-            let k = (n-1) ÷ 2
+        if iseven(n)
+            let k = n ÷ 2
                 v[k+1] = 0
             end
         end
-        for k = 1 : (n-2)÷2
-            v[n-k] = conj(v[k+1])
+        for k = 1 : (n-1)÷2
+            v[n+1-k] = conj(v[k+1])
         end
         w = real(ifft(v))
     end
-    [w; w[1]]
+    w
 end
 
 

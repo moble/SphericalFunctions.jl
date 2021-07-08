@@ -45,7 +45,7 @@ of them, like the ``H`` matrices.
 
 
 ```@autodocs
-Modules = [Spherical.WignerMatrices]
+Modules = [Spherical]
 Pages   = ["wigner_matrices/indexing.jl", "wigner_matrices/Hrecursions.jl"]
 Order   = [:module, :type, :constant, :function, :macro]
 ```

@@ -24,7 +24,7 @@
             #     println("rtol: ", maximum(abs.(v1 .- v2) ./ abs.(v1)) / ϵ)
             #     println()
             # end
-            @test fejer1(n, T) ≈ wᶠ¹.(0:n-1, n-1) rtol=ϵ atol=ϵ
+            @test fejer1(n, T) ≈ wᶠ¹.(0:n-1, n) rtol=ϵ atol=ϵ
 
             @test size(fejer2(n)) == (n,)
             @test size(fejer2(n, T)) == (n,)
@@ -64,7 +64,7 @@
             w2 = fejerweights2(μ2)
             wc = clenshawcurtisweights(μ1)
 
-            @test w1 ≈ fejer1(N+1)[1:end-1] rtol=ϵ atol=ϵ
+            @test w1 ≈ fejer1(N) rtol=ϵ atol=ϵ
             @test w2 ≈ fejer2(N) rtol=ϵ atol=ϵ
             @test wc ≈ clenshaw_curtis(N) rtol=ϵ atol=ϵ
         end

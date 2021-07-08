@@ -4,7 +4,7 @@ using FastTransforms, LinearAlgebra
 
 export complex_powers, complex_powers!
 export theta_phi, phi_theta
-export WignerMatrixCalculator, H!, d!, D!
+export WignerMatrixCalculator, H!, d!, D!, Y!
 export ALFRecursionCoefficients, ALFrecurse!, ALFcompute!
 export fejer1, fejer2, clenshaw_curtis
 export map2salm, map2salm!, plan_map2salm
@@ -19,7 +19,6 @@ include("complex_powers.jl")
 include("indexing.jl")
 
 include("wigner_matrices/evaluate.jl")
-using .WignerMatrices
 
 include("associated_legendre/calculator.jl")
 using .AssociatedLegendreFunction: ALFRecursionCoefficients, ALFrecurse!, ALFcompute!

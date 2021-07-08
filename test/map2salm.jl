@@ -32,7 +32,7 @@
         # above, against the explicit expressions `mY2.`
         s = -2
         ℓ = 2
-        Nϑ = 18
+        Nϑ = 17
         Nφ = 18
         for (m, m2Y2m) in [(2, m2Y22), (1, m2Y21), (0, m2Y20), (-1, m2Y2m1), (-2, m2Y2m2)]
             f1 = mapslices(ϕθ -> sYlm(s, ℓ, m, ϕθ[2], ϕθ[1]), phi_theta(Nφ, Nϑ, T), dims=[3])
@@ -44,7 +44,7 @@
     @testset "map2salm $T" for T in [BigFloat, Float64, Float32]
         # These test the ability of map2salm to precisely decompose the results of `sYlm`.
         ℓmax = 7
-        Nϑ = 2ℓmax + 2
+        Nϑ = 2ℓmax + 1
         Nφ = 2ℓmax + 2
         for s in -2:2
             for ℓmin in 0:abs(s)
@@ -54,7 +54,12 @@
                         computed = map2salm(f, s, ℓmax, ℓmin)
                         expected = zeros(Complex{T}, size(computed))
                         expected[Spherical.Yindex(ℓ, m, ℓmin)] = one(T)
-                        @test computed ≈ expected atol=20eps(T) rtol=20eps(T)
+                        # if ≉(computed, expected, atol=30eps(T), rtol=30eps(T))
+                        #     println("computed = $computed")
+                        #     println("expected = $expected")
+                        #     println("max_diff = ", maximum(abs, computed .- expected), ";")
+                        # end
+                        @test computed ≈ expected atol=30eps(T) rtol=30eps(T)
                     end
                 end
             end

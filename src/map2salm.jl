@@ -62,7 +62,7 @@ function plan_map2salm(map::AbstractArray{Complex{T}}, spin::Int, ℓmax::Int, �
     wigner = WignerMatrixCalculator(ℓmin, ℓmax, m′max, T)
     weight = clenshaw_curtis(Nϑ, T)
     expiθ = complex_powers(exp(im * (π / T(Nϑ-1))), Nϑ-1)
-    ϵs = Spherical.WignerMatrices.ϵ(-spin)
+    ϵs = Spherical.ϵ(-spin)
     extra_dims = Base.Iterators.product((1:e for e in Nextra)...)
 
     return (spin, ℓmax, ℓmin, Nφ, Nϑ, Nextra, G, m′max, wigner, weight, expiθ, ϵs, extra_dims)
@@ -104,23 +104,11 @@ function map2salm!(
     map::AbstractArray{Complex{T}},
     (spin, ℓmax, ℓmin, Nφ, Nϑ, Nextra, G, m′max, wigner, weight, expiθ, ϵs, extra_dims)
 ) where {T<:Real}
-    @assert size(salm) == (Ysize(ℓmin, ℓmax), Nextra...)
+    s1 = size(salm)
+    s2 = (Ysize(ℓmin, ℓmax), Nextra...)
+    @assert s1==s2 "size(salm)=$s1  !=  (Ysize(ℓmin, ℓmax), Nextra...)=$s2"
 
     absspin = abs(spin)
-
-    # @inbounds for extra ∈ extra_dims
-    #     for ϑ ∈ 1:Nϑ
-    #         G[:, ϑ, extra...] = weight[ϑ] * fft(map[:, ϑ, extra...])
-    #     end
-    # end
-
-    # fftplan = plan_fft(map[:, 1, first(extra_dims)...])
-    # @inbounds for extra ∈ extra_dims
-    #     for ϑ ∈ 1:Nϑ
-    #         @views mul!(G[:, ϑ, extra...], fftplan, map[:, ϑ, extra...])
-    #         @views G[:, ϑ, extra...] *= weight[ϑ]
-    #     end
-    # end
 
     computeG!(G, map, weight, Nϑ, extra_dims)
 
@@ -128,7 +116,7 @@ function map2salm!(
         H!(wigner, expiθ[ϑ])  # Not thread safe
         for extra ∈ extra_dims
             for ℓ ∈ absspin:ℓmax
-                λ_factor = ϵs * √((2ℓ+1)*T(π)) / Nϑ
+                λ_factor = ϵs * √((2ℓ+1)*T(π)) / Nφ
 
                 i0 = WignerHindex(ℓ, spin, 0, m′max)
 
@@ -146,7 +134,7 @@ function map2salm!(
                         salm[Yindex(ℓ, m, ℓmin), extra...] +=
                             G[m+1, ϑ, extra...] * ϵ(m) * λ_factor * wigner.Hwedge[i₊]
                         salm[Yindex(ℓ, -m, ℓmin), extra...] +=
-                            G[Nφ-m+1, ϑ, extra...] * ϵ(-m) * λ_factor * wigner.Hwedge[i₋]
+                            G[Nφ-m+1, ϑ, extra...] * λ_factor * wigner.Hwedge[i₋]
                     end
                 else
                     for m ∈ 1:min(ℓ, absspin)
@@ -155,7 +143,7 @@ function map2salm!(
                         salm[Yindex(ℓ, m, ℓmin), extra...] +=
                             G[m+1, ϑ, extra...] * ϵ(m) * λ_factor * wigner.Hwedge[i₊]
                         salm[Yindex(ℓ, -m, ℓmin), extra...] +=
-                            G[Nφ-m+1, ϑ, extra...] * ϵ(-m) * λ_factor * wigner.Hwedge[i₋]
+                            G[Nφ-m+1, ϑ, extra...] * λ_factor * wigner.Hwedge[i₋]
                     end
                 end
                 for m ∈ absspin+1:ℓ
@@ -164,7 +152,7 @@ function map2salm!(
                     salm[Yindex(ℓ, m, ℓmin), extra...] +=
                         G[m+1, ϑ, extra...] * ϵ(m) * λ_factor * wigner.Hwedge[i₊]
                     salm[Yindex(ℓ, -m, ℓmin), extra...] +=
-                        G[Nφ-m+1, ϑ, extra...] * ϵ(-m) * λ_factor * wigner.Hwedge[i₋]
+                        G[Nφ-m+1, ϑ, extra...] * λ_factor * wigner.Hwedge[i₋]
                 end
             end
         end
