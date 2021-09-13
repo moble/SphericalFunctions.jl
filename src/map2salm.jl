@@ -118,15 +118,15 @@ function map2salm!(
             for ℓ ∈ absspin:ℓmax
                 λ_factor = ϵs * √((2ℓ+1)*T(π)) / Nφ
 
-                i0 = WignerHindex(ℓ, spin, 0, m′max)
+                i₀ = WignerHindex(ℓ, spin, 0, m′max)
 
                 let m=0
                     salm[Yindex(ℓ, m, ℓmin), extra...] +=
-                        G[m+1, ϑ, extra...] * λ_factor * wigner.Hwedge[i0]
+                        G[m+1, ϑ, extra...] * λ_factor * wigner.Hwedge[i₀]
                 end
 
-                i₊ = i0
-                i₋ = i0
+                i₊ = i₀
+                i₋ = i₀
                 if !signbit(spin)
                     for m ∈ 1:min(ℓ, absspin)
                         i₊ -= ℓ-m+2
