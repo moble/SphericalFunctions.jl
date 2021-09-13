@@ -1,6 +1,7 @@
 module Spherical
 
-using FastTransforms, LinearAlgebra
+using FastTransforms, LinearAlgebra, ProgressMeter
+import Base.Threads: @threads, nthreads
 
 export complex_powers, complex_powers!
 export theta_phi, phi_theta
