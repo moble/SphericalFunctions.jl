@@ -114,7 +114,7 @@ function map2salm!(
 
     @inbounds for ϑ ∈ 1:Nϑ
         H!(wigner, expiθ[ϑ])  # Not thread safe
-        for extra ∈ extra_dims
+        @threads for extra ∈ extra_dims
             for ℓ ∈ absspin:ℓmax
                 λ_factor = ϵs * √((2ℓ+1)*T(π)) / Nφ
 
