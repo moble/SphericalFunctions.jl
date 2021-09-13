@@ -51,14 +51,23 @@
                 for ℓ in abs(s):ℓmax
                     for m in -ℓ:ℓ
                         f = mapslices(ϕθ -> sYlm(s, ℓ, m, ϕθ[2], ϕθ[1]), phi_theta(Nφ, Nϑ, T), dims=[3])
-                        computed = map2salm(f, s, ℓmax, ℓmin)
+                        computed = map2salm(f, s, ℓmax; ℓmin)
                         expected = zeros(Complex{T}, size(computed))
                         expected[Spherical.Yindex(ℓ, m, ℓmin)] = one(T)
-                        # if ≉(computed, expected, atol=30eps(T), rtol=30eps(T))
-                        #     println("computed = $computed")
-                        #     println("expected = $expected")
-                        #     println("max_diff = ", maximum(abs, computed .- expected), ";")
-                        # end
+                        if ≉(computed, expected, atol=30eps(T), rtol=30eps(T))
+                            @show T
+                            @show ℓmax
+                            @show Nϑ
+                            @show Nφ
+                            @show s
+                            @show ℓmin
+                            @show ℓ
+                            @show m
+                            println("computed = $computed")
+                            println("expected = $expected")
+                            println("max_diff = ", maximum(abs, computed .- expected), ";")
+                            println()
+                        end
                         @test computed ≈ expected atol=30eps(T) rtol=30eps(T)
                     end
                 end
