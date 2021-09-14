@@ -1,4 +1,4 @@
-module Spherical
+module SphericalFunctions
 
 using FastTransforms, LinearAlgebra, ProgressMeter
 import Base.Threads: @threads, nthreads

@@ -62,7 +62,7 @@ function plan_map2salm(map::AbstractArray{Complex{T}}, spin::Int, ℓmax::Int, �
     wigner = WignerMatrixCalculator(ℓmin, ℓmax, m′max, T)
     weight = clenshaw_curtis(Nϑ, T)
     expiθ = complex_powers(exp(im * (π / T(Nϑ-1))), Nϑ-1)
-    ϵs = Spherical.ϵ(-spin)
+    ϵs = SphericalFunctions.ϵ(-spin)
     extra_dims = Base.Iterators.product((1:e for e in Nextra)...)
     fftplan = T<:MachineFloat ? plan_fft(map[:, 1, first(extra_dims)...]) : nothing
 

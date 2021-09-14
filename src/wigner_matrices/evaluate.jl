@@ -15,7 +15,7 @@
 
 export WignerMatrixCalculator, H!, d!, D!, Y!, ϵ, WignerHindex, _WignerHindex
 
-using ..Spherical: complex_powers!
+using ..SphericalFunctions: complex_powers!
 using Quaternionic: AbstractQuaternion, to_euler_phases!
 
 include("indexing.jl")

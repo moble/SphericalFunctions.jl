@@ -9,7 +9,7 @@ for specific values of the arguments, which will compute the function values for
 of) indices.
 
 ```@autodocs
-Modules = [Spherical.AssociatedLegendreFunction]
+Modules = [SphericalFunctions.AssociatedLegendreFunction]
 Pages   = ["src/associated_legendre/calculator.jl"]
 ```
 
@@ -23,6 +23,6 @@ Pages   = ["wigner_matrices/calculator.jl", "wigner_matrices/evaluate.jl"]
 
 
 ```@autodocs
-Modules = [Spherical]
+Modules = [SphericalFunctions]
 Pages   = ["map2salm.jl"]
 ```

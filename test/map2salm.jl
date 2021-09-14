@@ -53,7 +53,7 @@
                         f = mapslices(ϕθ -> sYlm(s, ℓ, m, ϕθ[2], ϕθ[1]), phi_theta(Nφ, Nϑ, T), dims=[3])
                         computed = map2salm(f, s, ℓmax; ℓmin)
                         expected = zeros(Complex{T}, size(computed))
-                        expected[Spherical.Yindex(ℓ, m, ℓmin)] = one(T)
+                        expected[SphericalFunctions.Yindex(ℓ, m, ℓmin)] = one(T)
                         if ≉(computed, expected, atol=30eps(T), rtol=30eps(T))
                             @show T
                             @show ℓmax

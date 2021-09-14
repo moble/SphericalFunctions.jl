@@ -12,7 +12,7 @@ cache their values.  While a naive approach is generally quite accurate, and rea
 do a little better with a specialized routine.
 
 ```@autodocs
-Modules = [Spherical]
+Modules = [SphericalFunctions]
 Pages   = ["complex_powers.jl"]
 Order   = [:module, :type, :constant, :function, :macro]
 ```
@@ -21,7 +21,7 @@ Order   = [:module, :type, :constant, :function, :macro]
 ## Quadrature weights
 
 ```@autodocs
-Modules = [Spherical]
+Modules = [SphericalFunctions]
 Pages   = ["weights.jl"]
 Order   = [:module, :type, :constant, :function, :macro]
 ```
@@ -32,7 +32,7 @@ Order   = [:module, :type, :constant, :function, :macro]
 By ``Y`` data, we mean anything indexed like ``Y_{\ell, m}`` modes.
 
 ```@autodocs
-Modules = [Spherical]
+Modules = [SphericalFunctions]
 Pages   = ["indexing.jl"]
 Order   = [:module, :type, :constant, :function, :macro]
 ```
@@ -45,7 +45,7 @@ of them, like the ``H`` matrices.
 
 
 ```@autodocs
-Modules = [Spherical]
+Modules = [SphericalFunctions]
 Pages   = ["wigner_matrices/indexing.jl", "wigner_matrices/Hrecursions.jl"]
 Order   = [:module, :type, :constant, :function, :macro]
 ```

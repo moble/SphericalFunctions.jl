@@ -1,11 +1,11 @@
 ### These benchmarks can be run from the top-level directory of this repo with
 ###
-###     julia -e 'using PkgBenchmark; results=benchmarkpkg("Spherical"); export_markdown("benchmark/results.md", results)'
+###     julia -e 'using PkgBenchmark; results=benchmarkpkg("SphericalFunctions"); export_markdown("benchmark/results.md", results)'
 ###
 ### This runs the benchmarks (possibly tuning them automatically first), and writes the results to a nice markdown file.
 
 using BenchmarkTools
-using Spherical
+using SphericalFunctions
 
 const SUITE = BenchmarkGroup()
 

@@ -1,9 +1,9 @@
 # Introduction
 
-Julia package for evaluating and transforming Wigner's 𝔇 matrices, Wigner's 3-j symbols, and
-spin-weighted (and scalar) spherical harmonics.  These functions are evaluated directly in terms of
-quaternions, as well as in the more standard forms of spherical coordinates and Euler
-angles.[^1]
+Julia package for evaluating and transforming Wigner's 𝔇 matrices, and spin-weighted spherical
+harmonics (which includes the ordinary scalar spherical harmonics).  These functions are evaluated
+directly in terms of quaternions, as well as in the more standard forms of spherical coordinates and
+Euler angles.[^1]
 
 These quantities are computed using recursion relations, which makes it possible to compute to very
 high ℓ values.  Unlike direct evaluation of individual elements, which will generally cause overflow
@@ -22,7 +22,7 @@ Note that numerous other packages cover some of these use cases, including
 [`FastTransforms.jl`](https://JuliaApproximation.github.io/JuliaApproximation/FastTransforms.jl/),
 [`FastSphericalHarmonics.jl`](https://eschnett.github.io/FastSphericalHarmonics.jl/), and [this
 package](https://github.com/Jutho/WignerSymbols.jl).  However, I need support for higher-precision
-numbers — even at the cost of speed — which is what this package provides.
+numbers — even at the cost of some speed — which is what this package provides.
 
 
 ## Contents
@@ -33,17 +33,19 @@ Depth = 4
 
 ## Function list
 
-The following list contains the public functions inside the `Spherical` module.
+The following list contains the public functions inside the `SphericalFunctions` module.
 
 ```@index
-Modules = [Spherical]
+Modules = [SphericalFunctions]
 ```
 
 
 [^1]:
-    Euler angles are pretty much [the worst things
-    ever](http://moble.github.io/spherical/#euler-angles) and it makes me feel bad even supporting
-    them.  Quaternions are faster, more accurate, basically free of singularities, more intuitive,
-    and generally easier to understand.  You can work entirely without Euler angles (I certainly
-    do).  You absolutely never need them.  But if you're so old fashioned that you really can't give
-    them up, they are fully supported.
+    Euler angles are quite generally a very poor choice for computing with rotations.  (The only
+    context in which they may be preferred is when *analytically* integrating some analytically
+    known functions.)  Almost universally, it is best to use quaternions when computing with
+    rotations.  All the computations done within this package use quaternions; the user interfaces
+    involving Euler angles essentially convert to/from quaternions.  While the calculations needed
+    for those conversions would still need to be done if this package used Euler angles internally —
+    meaning that this approach is as efficient as any — that work can be avoided entirely if you
+    work with quaternions directly.

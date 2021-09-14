@@ -1,15 +1,15 @@
-using Documenter, Spherical
+using Documenter, SphericalFunctions
 
-DocMeta.setdocmeta!(Spherical, :DocTestSetup, :(using Spherical); recursive=true)
+DocMeta.setdocmeta!(SphericalFunctions, :DocTestSetup, :(using SphericalFunctions); recursive=true)
 
 makedocs(
-    sitename="Spherical.jl",
-    modules = [Spherical],
+    sitename="SphericalFunctions.jl",
+    modules = [SphericalFunctions],
     format = Documenter.HTML(
         prettyurls = !("local" in ARGS),  # Use clean URLs, unless built as a "local" build
         edit_link = "main",  # Link out to "main" branch on github
         #= UNCOMMENT ONCE STABLE:
-        canonical = "https://moble.github.io/Spherical.jl/stable/",
+        canonical = "https://moble.github.io/SphericalFunctions.jl/stable/",
         warn_outdated = true,
         :UNCOMMENT ONCE STABLE =#
     ),
@@ -22,6 +22,6 @@ makedocs(
 )
 
 deploydocs(
-    repo="github.com/moble/Spherical.jl.git",
+    repo="github.com/moble/SphericalFunctions.jl.git",
     devbranch="main"
 )

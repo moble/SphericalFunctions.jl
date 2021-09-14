@@ -1,4 +1,4 @@
-using Spherical
+using SphericalFunctions
 using Test, Random, FastTransforms
 
 

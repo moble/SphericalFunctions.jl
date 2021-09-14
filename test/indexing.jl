@@ -1,8 +1,8 @@
 @testset verbose=true "indexing" begin
-    import Spherical: WignerHsize, WignerHrange, WignerHindex
-    import Spherical: WignerDsize, WignerDrange, WignerDindex
-    import Spherical: Ysize, Yrange, Yindex, deduce_limits
-    import Spherical: theta_phi
+    import SphericalFunctions: WignerHsize, WignerHrange, WignerHindex
+    import SphericalFunctions: WignerDsize, WignerDrange, WignerDindex
+    import SphericalFunctions: Ysize, Yrange, Yindex, deduce_limits
+    import SphericalFunctions: theta_phi
 
     ell_max = 16
     ell_max_slow = ell_max ÷ 2

@@ -563,7 +563,7 @@ git-tree-sha1 = "a322a9493e49c5f3a10b50df3aedaf1cdb3244b7"
 uuid = "276daf66-3868-5448-9aa4-cd146d93841b"
 version = "1.6.1"
 
-[[Spherical]]
+[[SphericalFunctions]]
 deps = ["FastTransforms", "LinearAlgebra", "OffsetArrays", "ProgressMeter", "Quaternionic", "Random"]
 path = ".."
 uuid = "af6d55de-b1f7-4743-b797-0829a72cf84e"
