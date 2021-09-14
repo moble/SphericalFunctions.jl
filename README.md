@@ -9,7 +9,11 @@ Status](https://github.com/moble/SphericalFunctions.jl/workflows/docs/badge.svg)
 Julia package for evaluating and transforming Wigner's 𝔇 matrices, and spin-weighted spherical
 harmonics (which includes the ordinary scalar spherical harmonics).  These functions are evaluated
 directly in terms of quaternions, as well as in the more standard forms of spherical coordinates and
-Euler angles.<sup>[1](#1-euler-angles-are-inadequate)</sup>
+Euler angles.<sup>[1](#1-euler-angles-are-inadequate)</sup> Among other applications, those
+functions permit "synthesis" (evaluation of the spin-weighted spherical functions) of spin-weighted
+spherical harmonic coefficients on regular or distorted grids.  This package also includes functions
+enabling efficient "analysis" (decomposition into mode coefficients) of functions evaluated on
+regular grids to high order and accuracy.
 
 These quantities are computed using recursion relations, which makes it possible to compute to very
 high ℓ values.  Unlike direct evaluation of individual elements, which will generally cause overflow
@@ -61,6 +65,11 @@ passing them to these algorithms if higher orders are needed.  (Though using `Bi
 achieve a similar objective, it would probably be far slower.)  The actual recommendation of
 Fukushima is more sophisticated — just using X-numbers in the core calculation — but it looks like
 the simpler approach wouldn't be *too* much slower.
+
+The other major functionality of this package is `map2salm`, which decomposes function values on
+regular grids into mode weights (coefficients).  The approach used here is taken from [Reinecke and
+Seljebotn](https://dx.doi.org/10.1051/0004-6361/201321494), with weights based on [Waldvogel's
+method](https://doi.org/10.1007/s10543-006-0045-4).
 
 
 <br/>

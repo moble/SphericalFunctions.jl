@@ -3,7 +3,10 @@
 Julia package for evaluating and transforming Wigner's 𝔇 matrices, and spin-weighted spherical
 harmonics (which includes the ordinary scalar spherical harmonics).  These functions are evaluated
 directly in terms of quaternions, as well as in the more standard forms of spherical coordinates and
-Euler angles.[^1]
+Euler angles.[^1] Among other applications, those functions permit "synthesis" (evaluation of the
+spin-weighted spherical functions) of spin-weighted spherical harmonic coefficients on regular or
+distorted grids.  This package also includes functions enabling efficient "analysis" (decomposition
+into mode coefficients) of functions evaluated on regular grids to high order and accuracy.
 
 These quantities are computed using recursion relations, which makes it possible to compute to very
 high ℓ values.  Unlike direct evaluation of individual elements, which will generally cause overflow
