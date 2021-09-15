@@ -19,13 +19,13 @@ significantly greater accuracy (but no greater range) than `Float64`.  The resul
 roughly ℓ times the precision of the input quaternion.
 
 The conventions for this package are described in detail on [this
-page](http://moble.github.io/spherical/).
+page](https://moble.github.io/spherical/).
 
 Note that numerous other packages cover some of these use cases, including
-[`FastTransforms.jl`](https://JuliaApproximation.github.io/JuliaApproximation/FastTransforms.jl/),
-[`FastSphericalHarmonics.jl`](https://eschnett.github.io/FastSphericalHarmonics.jl/), and [this
-package](https://github.com/Jutho/WignerSymbols.jl).  However, I need support for higher-precision
-numbers — even at the cost of some speed — which is what this package provides.
+[`FastTransforms.jl`](https://JuliaApproximation.github.io/FastTransforms.jl/),
+[`FastSphericalHarmonics.jl`](https://eschnett.github.io/FastSphericalHarmonics.jl/dev/), and
+[`WignerSymbols.jl`](https://github.com/Jutho/WignerSymbols.jl).  However, I need support for
+higher-precision numbers — even at the cost of some speed — which is what this package provides.
 
 
 ## Contents

@@ -26,11 +26,11 @@ will work, and achieve significantly greater accuracy but no greater ℓ range t
 results are accurate to roughly ℓ times the precision of the input quaternion.
 
 The conventions for this package are described in detail on [this
-page](http://moble.github.io/spherical_functions/).
+page](https://moble.github.io/spherical_functions/).
 
 Note that numerous other packages cover some of these use cases, including
-[`FastTransforms.jl`](https://JuliaApproximation.github.io/JuliaApproximation/FastTransforms.jl/),
-[`FastSphericalHarmonics.jl`](https://eschnett.github.io/FastSphericalHarmonics.jl/), and
+[`FastTransforms.jl`](https://JuliaApproximation.github.io/FastTransforms.jl/),
+[`FastSphericalHarmonics.jl`](https://eschnett.github.io/FastSphericalHarmonics.jl/dev/), and
 [`WignerSymbols.jl`](https://github.com/Jutho/WignerSymbols.jl).  However, I need support for
 quaternions (via [`Quaternionic.jl`](https://github.com/moble/Quaternionic.jl)) and for
 higher-precision numbers — even at the cost of a very slight decrease in speed in some cases — which
