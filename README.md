@@ -73,7 +73,9 @@ method](https://doi.org/10.1007/s10543-006-0045-4).
 
 
 <br/>
+
 ---
+
 ###### <sup>1</sup> Euler angles are inadequate
 
 Euler angles are quite generally a very poor choice for computing with rotations.  (The only context
