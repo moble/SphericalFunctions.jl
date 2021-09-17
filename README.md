@@ -4,6 +4,7 @@
 [![Test Coverage](https://codecov.io/gh/moble/SphericalFunctions.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/moble/SphericalFunctions.jl)
 [![Documentation
 Status](https://github.com/moble/SphericalFunctions.jl/workflows/docs/badge.svg)](https://moble.github.io/SphericalFunctions.jl/dev)
+[![DOI](https://zenodo.org/badge/381490836.svg)](https://zenodo.org/badge/latestdoi/381490836)
 
 
 Julia package for evaluating and transforming Wigner's 𝔇 matrices, and spin-weighted spherical
