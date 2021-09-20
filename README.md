@@ -1,11 +1,11 @@
 # Spherical Functions in Julia
 
-[![Test Status](https://github.com/moble/SphericalFunctions.jl/workflows/tests/badge.svg)](https://github.com/moble/SphericalFunctions.jl/actions)
-[![Test Coverage](https://codecov.io/gh/moble/SphericalFunctions.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/moble/SphericalFunctions.jl)
+<a href="https://zenodo.org/badge/latestdoi/381490836"><img align="right" hspace="0" alt="Latest DOI" src="https://zenodo.org/badge/381490836.svg"></a>
+<a href="https://moble.github.io/SphericalFunctions.jl/stable/"><img align="right" hspace="0" alt="Stable docs" src="https://img.shields.io/badge/docs-stable-blue.svg"></a>
 [![Documentation
 Status](https://github.com/moble/SphericalFunctions.jl/workflows/docs/badge.svg)](https://moble.github.io/SphericalFunctions.jl/dev)
-[![DOI](https://zenodo.org/badge/381490836.svg)](https://zenodo.org/badge/latestdoi/381490836)
-
+[![Test Status](https://github.com/moble/SphericalFunctions.jl/workflows/tests/badge.svg)](https://github.com/moble/SphericalFunctions.jl/actions)
+[![Test Coverage](https://codecov.io/gh/moble/SphericalFunctions.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/moble/SphericalFunctions.jl)
 
 Julia package for evaluating and transforming Wigner's 𝔇 matrices, and spin-weighted spherical
 harmonics (which includes the ordinary scalar spherical harmonics).  These functions are evaluated
