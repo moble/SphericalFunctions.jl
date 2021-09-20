@@ -27,26 +27,15 @@ Order   = [:module, :type, :constant, :function, :macro]
 ```
 
 
-## ``Y`` data
+## ``Y`` and ``D`` data
 
-By ``Y`` data, we mean anything indexed like ``Y_{\ell, m}`` modes.
-
-```@autodocs
-Modules = [SphericalFunctions]
-Pages   = ["indexing.jl"]
-Order   = [:module, :type, :constant, :function, :macro]
-```
-
-
-## ``D`` data
-
-By ``D`` data, we mean anything indexed like Wigner's ``\mathfrak{D}`` matrices, or special subsets
-of them, like the ``H`` matrices.
-
+By ``Y`` data, we mean anything indexed like ``Y_{\ell, m}`` modes; by ``D``
+data, we mean anything indexed like Wigner's ``\mathfrak{D}`` matrices, or
+special subsets of them, like the ``H`` matrices.
 
 ```@autodocs
 Modules = [SphericalFunctions]
-Pages   = ["wigner_matrices/indexing.jl", "wigner_matrices/Hrecursions.jl"]
+Pages   = ["indexing.jl", "wigner_matrices/indexing.jl", "wigner_matrices/Hrecursions.jl"]
 Order   = [:module, :type, :constant, :function, :macro]
 ```
 

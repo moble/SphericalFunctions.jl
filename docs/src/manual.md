@@ -14,7 +14,7 @@ Pages   = ["src/associated_legendre/calculator.jl"]
 ```
 
 ```@autodocs
-Modules = [WignerMatrices]
+Modules = [SphericalFunctions]
 Pages   = ["wigner_matrices/calculator.jl", "wigner_matrices/evaluate.jl"]
 ```
 
