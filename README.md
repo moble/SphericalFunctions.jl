@@ -41,7 +41,8 @@ are what this package provides.
 ## Installation
 
 ```bash
-julia -e 'using Pkg; pkg"add https://github.com/moble/SphericalFunctions.jl.git"'
+using Pkg
+Pkg.add("SphericalFunctions")
 ```
 
 ## References
