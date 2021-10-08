@@ -1,7 +1,7 @@
 name = "SphericalFunctions"
 uuid = "af6d55de-b1f7-4743-b797-0829a72cf84e"
 authors = ["Michael Boyle <michael.oliver.boyle@gmail.com>"]
-version = "0.3.1"
+version = "0.3.2"
 
 [deps]
 FastTransforms = "057dd010-8810-581a-b7be-e3fc3b93f78c"
@@ -15,7 +15,7 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 FastTransforms = "0.12"
 OffsetArrays = "1.10"
 ProgressMeter = "1"
-Quaternionic = "0.2"
+Quaternionic = "0.2, 0.3"
 julia = "1.6"
 
 [extras]
