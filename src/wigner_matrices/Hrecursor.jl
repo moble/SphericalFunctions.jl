@@ -7,11 +7,10 @@ end
 
 
 function H2!(
-    Hwedge::AbstractVector{T}, Hextra::AbstractVector{T},
-    (a,b,d), ℓₘₐₓ, m′ₘₐₓ, expiβ::Complex{T}, Hindex=WignerHindex,
+    Hwedge::AbstractVector{T}, Hextra::AbstractVector{T}, expiβ::Complex{T},
+    ℓₘₐₓ, m′ₘₐₓ, (a,b,d), Hindex=WignerHindex
 ) where {T<:Real}
     @assert size(Hwedge) == (Hindex(ℓₘₐₓ, ℓₘₐₓ, ℓₘₐₓ, m′ₘₐₓ),)
-    @assert size(Hextra) == (ℓₘₐₓ + 2,)
 
     sqrt3 = √T(3)
     cosβ = expiβ.re
@@ -27,16 +26,17 @@ function H2!(
 
             if m′ₘₐₓ ≥ 0
                 # Step 2: Compute H^{0,m}_{n}(β) for m=0,...,n and H^{0,m}_{n+1}(β) for m=0,...,n+1
+                nₘₐₓstep2 = m′ₘₐₓ>0 ? ℓₘₐₓ+1 : ℓₘₐₓ
                 # n = 1
                 n0n_index = Hindex(1, 0, 1, m′ₘₐₓ)
                 Hwedge[n0n_index] = sqrt3 * sinβ
                 Hwedge[n0n_index-1] = sqrt3 * cosβ
-                # n = 2, ..., ℓₘₐₓ+1
-                for n in 2:ℓₘₐₓ+1
+                # n = 2, ..., ℓₘₐₓ, ℓₘₐₓ+1?
+                for n in 2:nₘₐₓstep2
                     if n <= ℓₘₐₓ
                         n0n_index = Hindex(n, 0, n, m′ₘₐₓ)
                         H = Hwedge
-                    else
+                    else  # n == ℓₘₐₓ+1
                         n0n_index = n + 1
                         H = Hextra
                     end
@@ -96,11 +96,11 @@ function H2!(
                 end  # Step 2
 
                 # Normalize, changing P̄ to H values
-                for n in 1:ℓₘₐₓ+1
+                for n in 1:nₘₐₓstep2
                     if n <= ℓₘₐₓ
                         n00_index = Hindex(n, 0, 0, m′ₘₐₓ)
                         H = Hwedge
-                    else
+                    else  # n == ℓₘₐₓ+1
                         n00_index = 1
                         H = Hextra
                     end
@@ -122,7 +122,7 @@ function H2!(
                     if n+1 <= ℓₘₐₓ
                         i2 = Hindex(n+1, 0, 0, m′ₘₐₓ)
                         H2 = Hwedge
-                    else
+                    else  # n+1 == ℓₘₐₓ+1
                         i2 = 1
                         H2 = Hextra
                     end
@@ -134,10 +134,8 @@ function H2!(
                         b7 = b[i+i3]
                         a8 = a[i+i4]
                         Hwedge[i+i1] = inverse_b5 * (
-                            (
-                                b6 * cosβ₋ * H2[i+i2+2]
-                                - b7 * cosβ₊ * H2[i+i2]
-                            )
+                            b6 * cosβ₋ * H2[i+i2+2]
+                            - b7 * cosβ₊ * H2[i+i2]
                             - a8 * sinβ * H2[i+i2+1]
                         )
                     end
