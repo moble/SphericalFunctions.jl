@@ -1,9 +1,16 @@
-function H!(
-    Hwedge::AbstractVector{T}, Hextra::AbstractVector{T}, Hv::AbstractVector{T},
+function abd(ℓₘₐₓ, T)
+    a = [√((n+1+m) * (n+1-m) / T((2n+1)*(2n+3))) for n in 0:ℓₘₐₓ+1 for m in 0:n]
+    b = [(m<0 ? -1 : 1) * √((n-m-1) * (n-m) / T((2n-1)*(2n+1))) for n in 0:ℓₘₐₓ+1 for m in -n:n]
+    d = [(m<0 ? -1 : 1) * (√T((n-m) * (n+m+1))) / 2 for n in 0:ℓₘₐₓ+1 for m in -n:n]
+    (a, b, d)
+end
+
+
+function H2!(
+    Hwedge::AbstractVector{T}, Hextra::AbstractVector{T},
     (a,b,d), ℓₘₐₓ, m′ₘₐₓ, expiβ::Complex{T}, Hindex=WignerHindex,
 ) where {T<:Real}
     @assert size(Hwedge) == (Hindex(ℓₘₐₓ, ℓₘₐₓ, ℓₘₐₓ, m′ₘₐₓ),)
-    @assert size(Hv) == ((ℓₘₐₓ + 1)^2,)
     @assert size(Hextra) == (ℓₘₐₓ + 2,)
 
     sqrt3 = √T(3)
@@ -86,16 +93,7 @@ function H!(
                         - bₙ * sinβ * Hwedge[nm10nm1_index-n+2] / 2
                     )
 
-                    # Supply extra edge cases as noted in docstring
-                    if n <= ℓₘₐₓ
-                        Hv[nm_index(n, 1)] = Hwedge[Hindex(n, 0, 1, m′ₘₐₓ)]
-                        Hv[nm_index(n, 0)] = Hwedge[Hindex(n, 0, 1, m′ₘₐₓ)]
-                    end
                 end  # Step 2
-
-                # Supply extra edge cases as noted in docstring
-                Hv[nm_index(1, 1)] = Hwedge[Hindex(1, 0, 1, m′ₘₐₓ)]
-                Hv[nm_index(1, 0)] = Hwedge[Hindex(1, 0, 1, m′ₘₐₓ)]
 
                 # Normalize, changing P̄ to H values
                 for n in 1:ℓₘₐₓ+1
@@ -111,10 +109,6 @@ function H!(
                     H[n00_index] *= const0
                     for m in 1:n
                         H[n00_index+m] *= const1
-                    end
-                    if n <= ℓₘₐₓ
-                        Hv[nm_index(n, 1)] *= -const1
-                        Hv[nm_index(n, 0)] *= -const1
                     end
                 end
             end  # if m′ₘₐₓ ≥ 0
@@ -163,13 +157,6 @@ function H!(
                         d6 = d[i6]
                         d7 = d6
                         d8 = d[i5]
-                        let i=0
-                            Hv[i+nm_index(n, mp+1)] = inverse_d5 * (
-                                d6 * Hwedge[i+i2]
-                                - d7 * Hv[i+nm_index(n, mp)]
-                                + d8 * Hwedge[i+i4]
-                            )
-                        end
                         for i in 1:n-mp-1
                             d7 = d8
                             d8 = d[i+i5]
@@ -206,21 +193,6 @@ function H!(
                         d6 = d[i6]
                         d7 = d[i7]
                         d8 = d[i8]
-                        let i=0
-                            if mp == 0
-                                Hv[i+nm_index(n, mp-1)] = inverse_d5 * (
-                                    d6 * Hv[i+nm_index(n, mp+1)]
-                                    + d7 * Hv[i+nm_index(n, mp)]
-                                    - d8 * Hwedge[i+i4]
-                                )
-                            else
-                                Hv[i+nm_index(n, mp-1)] = inverse_d5 * (
-                                    d6 * Hwedge[i+i2]
-                                    + d7 * Hv[i+nm_index(n, mp)]
-                                    - d8 * Hwedge[i+i4]
-                                )
-                            end
-                        end
                         for i in 1:n+mp-1
                             d7 = d8
                             d8 = d[i+i8]
