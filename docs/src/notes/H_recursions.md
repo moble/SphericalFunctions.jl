@@ -152,3 +152,22 @@ divisions and square-roots, which can be very costly to compute.  It can be
 advantageous to pre-compute the constants, and simply index the pre-computed
 arrays rather than re-computing them on each recursion.
 
+*If* we include the cost of computing all these constants in a single call to
+the ``H`` recurrence, it can be much cheaper to compute each constant as needed
+within the algorithm, rather than computing them all at once at the beginning
+of the algorithm — but only for very small computations, such as those
+involving ``n_{\mathrm{max}} ≈ 10``.  Beyond this, despite the storage
+penalties for all those constants, it turns out to be better to pre-compute
+them.  However, it should be noted that the fractional cost of storing the
+constants is ``\sim 1/n_{\mathrm{max}}`` compared to just storing ``H`` itself,
+so this will never be a very significant amount of space.
+
+On the other hand, if we can pre-compute the constants just once, and store
+them between multiple calls to the ``H`` recurrence, then it is always
+advantageous to do so — typically by factors of 2 or 3 in speed.  The only
+difficulty here is ensuring that each call to the recurrence has access to the
+constants, which can be a little awkward when using multiple processes and/or
+threads.  However, it should be thread safe, since we only need to read those
+constants within the ``H`` recurrence.  All in all, I conclude that it is
+probably not worth the effort to maintain separate versions of the recurrence
+for pre-computed and on-the-fly constants.
