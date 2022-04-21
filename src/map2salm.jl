@@ -64,8 +64,10 @@ created for each thread that will use one, or locks should be used to ensure
 that a single `plan` is not used at the same time on different threads.
 
 """
-function plan_map2salm(map::AbstractArray{Complex{T}}, spin::Int, ℓmax::Int, ℓmin::Int=abs(spin)) where {T<:Real}
-    Nφ, Nϑ, Nextra... = size(map)
+function plan_map2salm(
+    map_data::AbstractArray{Complex{T}}, spin::Int, ℓmax::Int, ℓmin::Int=abs(spin)
+) where {T<:Real}
+    Nφ, Nϑ, Nextra... = size(map_data)
     Gs = [Array{complex(T)}(undef, (Nφ,)) for i = 1:nthreads()]
     m′max = abs(spin)
     wigner = WignerMatrixCalculator(ℓmin, ℓmax, m′max, T)
@@ -73,7 +75,7 @@ function plan_map2salm(map::AbstractArray{Complex{T}}, spin::Int, ℓmax::Int, �
     expiθ = complex_powers(exp(im * (π / T(Nϑ-1))), Nϑ-1)
     ϵs = SphericalFunctions.ϵ(-spin)
     extra_dims = Base.Iterators.product((1:e for e in Nextra)...)
-    fftplan = T<:MachineFloat ? plan_fft(map[:, 1, first(extra_dims)...]) : nothing
+    fftplan = T<:MachineFloat ? plan_fft(map_data[:, 1, first(extra_dims)...]) : nothing
 
     return (spin, ℓmax, ℓmin, Nφ, Nϑ, Nextra, Gs, m′max, wigner, weight, expiθ, ϵs, extra_dims, fftplan)
 end
