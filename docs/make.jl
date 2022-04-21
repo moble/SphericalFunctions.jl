@@ -14,8 +14,12 @@ makedocs(
         "Introduction" => "index.md",
         "Basics" => "manual.md",
         "Utilities" => "utilities.md",
+        "Notes" => map(
+            s -> "notes/$(s)",
+            sort(readdir(joinpath(@__DIR__, "src/notes")))
+        ),
     ],
-    # doctest = false
+    #doctest = false
 )
 
 deploydocs(
