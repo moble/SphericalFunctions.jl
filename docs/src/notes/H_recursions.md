@@ -14,9 +14,9 @@ where
 ```math
 \epsilon_k =
   \begin{cases}
-  1 & k\leq 0, \\
-  (-1)^k & k > 0.
-\end{cases}
+    1 & k\leq 0, \\
+    (-1)^k & k > 0.
+  \end{cases}
 ```
 
 ``H`` has various advantages over ``d``, including the fact that it can be efficiently
@@ -35,7 +35,7 @@ relations:
 Because of these symmetries, we only need to evaluate at most 1/4 of all the
 elements.
 
-## Steps to compute $H$
+## Steps to compute ``H``
 
 The following describes various details that are not spelled out correctly by
 [Gumerov and Duraiswami](https://arxiv.org/abs/1403.7698).  All equation
