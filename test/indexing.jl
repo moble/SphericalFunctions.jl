@@ -8,18 +8,18 @@
     ell_max_slow = ell_max ÷ 2
 
     @testset "WignerHrange" begin
-        r(mp_max, ell_max) = hcat([
+        r1(mp_max, ell_max) = hcat([
             [ell, mp, m] for ell in 0:ell_max
                 for mp in -min(ell, mp_max):min(ell, mp_max)
                     for m in abs(mp):ell
                         ]...)'
         for ell_max in 0:ell_max
             a = WignerHrange(ell_max)  # Implicitly, mp_max=ell_max
-            b = r(ell_max, ell_max)
+            b = r1(ell_max, ell_max)
             @test a == b
             for mp_max in 0:ell_max
                 a = WignerHrange(mp_max, ell_max)
-                b = r(mp_max, ell_max)
+                b = r1(mp_max, ell_max)
                 @test a == b
             end
         end
@@ -79,7 +79,7 @@
     end
 
     @testset "WignerDrange" begin
-        function r(ell_min, mp_max, ell_max)
+        function r2(ell_min, mp_max, ell_max)
             a = [
                 [ℓ, mp, m]
                 for ℓ in ell_min:ell_max
@@ -92,11 +92,11 @@
         for ell_max in 0:ell_max_slow÷2
             for ell_min in 0:ell_max
                 a = WignerDrange(ell_min, ell_max)  # Implicitly, mp_max=ell_max
-                b = r(ell_min, ell_max, ell_max)
+                b = r2(ell_min, ell_max, ell_max)
                 @test a == b
                 for mp_max in 0:ell_max
                     a = WignerDrange(ell_min, mp_max, ell_max)
-                    b = r(ell_min, mp_max, ell_max)
+                    b = r2(ell_min, mp_max, ell_max)
                     @test a == b
                 end
             end
@@ -146,16 +146,6 @@
     end
 
     @testset "WignerDindex" begin
-        function r(ell_min, mp_max, ell_max)
-            a = [
-                [ℓ, mp, m]
-                for ℓ in ell_min:ell_max
-                for mp in -min(ℓ, mp_max):min(ℓ, mp_max)
-                for m in -ℓ:ℓ
-            ]
-            collect(transpose(reshape(collect(Iterators.flatten(a)), (3, length(a)))))
-        end
-
         for ellmax in 0:ell_max_slow
             r = WignerDrange(0, ellmax)
             for ell in 0:ellmax
@@ -192,7 +182,7 @@
     end
 
     @testset "Yrange" begin
-        function r(ell_min, ell_max)
+        function r3(ell_min, ell_max)
             a = [
                 [ℓ, m]
                 for ℓ in ell_min:ell_max
@@ -203,7 +193,7 @@
         for ell_max in 0:ell_max
             for ell_min in 0:ell_max
                 a = Yrange(ell_min, ell_max)
-                b = r(ell_min, ell_max)
+                b = r3(ell_min, ell_max)
                 @test a == b
             end
         end
