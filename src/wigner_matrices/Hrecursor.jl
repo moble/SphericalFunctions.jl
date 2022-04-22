@@ -7,7 +7,8 @@ end
 
 
 function H2!(
-    Hwedge::AbstractVector{T}, expiβ::Complex{T}, ℓₘₐₓ, m′ₘₐₓ, (a,b,d), Hindex=WignerHindex
+    Hwedge::AbstractVector{T}, expiβ::Complex{T}, ℓₘₐₓ::Integer, m′ₘₐₓ::Integer,
+    (a,b,d), Hindex=WignerHindex
 ) where {T<:Real}
     m′ₘₐₓ = abs(m′ₘₐₓ)
     @assert m′ₘₐₓ ≤ ℓₘₐₓ
@@ -103,6 +104,16 @@ function H2!(
                         # value of eₙₘ.  It only occurs when ℓₘₐₓ == 1, so there's no point
                         # trying to be too clever about avoiding the previous calculation
                         HΨ = (
+                            cosβ * cₙₘ * Hwedge[nm10nm1_index-n+2]
+                            + sinβ * eₙₘ * Hwedge[nm10nm1_index-n+1]
+                        )
+                    elseif n == 2
+                        # This avoids accessing un-initialized data at
+                        # `Hwedge[nm10nm1_index-n+3]`, even though dₙₘ==0 in this case.
+                        # We could remove this if case, and just use the case below
+                        # without any negative consequences, if we knew that element
+                        # did not contain NaN or Inf.
+                        Hwedge[n0n_index-n+1] = (
                             cosβ * cₙₘ * Hwedge[nm10nm1_index-n+2]
                             + sinβ * eₙₘ * Hwedge[nm10nm1_index-n+1]
                         )
