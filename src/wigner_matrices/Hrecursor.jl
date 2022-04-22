@@ -1,7 +1,7 @@
 function abd(ℓₘₐₓ, T)
-    a = [√((n+1+m) * (n+1-m) / T((2n+1)*(2n+3))) for n in 0:ℓₘₐₓ+1 for m in 0:n]
-    b = [(m<0 ? -1 : 1) * √((n-m-1) * (n-m) / T((2n-1)*(2n+1))) for n in 0:ℓₘₐₓ+1 for m in -n:n]
-    d = [(m<0 ? -1 : 1) * (√T((n-m) * (n+m+1))) / 2 for n in 0:ℓₘₐₓ+1 for m in -n:n]
+    a = [√((n+1+m)*(n+1-m)/T((2n+1)*(2n+3))) for n in 0:ℓₘₐₓ+1 for m in 0:n]
+    b = [(m<0 ? -1 : 1) * √((n-m-1)*(n-m)/T((2n-1)*(2n+1))) for n in 0:ℓₘₐₓ+1 for m in -n:n]
+    d = [(m<0 ? -1 : 1) * (√T((n-m)*(n+m+1))) / 2 for n in 0:ℓₘₐₓ+1 for m in -n:n]
     (a, b, d)
 end
 
@@ -38,7 +38,7 @@ function H2!(
         if ℓₘₐₓ > 0
 
             begin
-                # Step 2: Compute H^{0,m}_{n}(β) for m=0,...,n and H^{0,m}_{n+1}(β) for m=0,...,n+1
+                # Step 2: Compute H^{0,m}_{n}(β) for m=0,...,n and n=1,...,ℓₘₐₓ,ℓₘₐₓ+1?
                 nₘₐₓstep2 = m′ₘₐₓ>0 ? ℓₘₐₓ+1 : ℓₘₐₓ
                 # n = 1
                 n0n_index = Hindex(1, 0, 1, m′ₘₐₓ)
@@ -46,10 +46,11 @@ function H2!(
                 Hwedge[n0n_index-1] = sqrt3 * cosβ
                 # n = 2, ..., ℓₘₐₓ, ℓₘₐₓ+1?
                 for n in 2:nₘₐₓstep2
-                    if n <= ℓₘₐₓ
-                        n0n_index = Hindex(n, 0, n, m′ₘₐₓ)
-                    else  # n == ℓₘₐₓ+1  &&  m′ₘₐₓ > 0
+                    superjacent = n > ℓₘₐₓ
+                    if superjacent
                         n0n_index = Hindex(n-1, -1, n-1, m′ₘₐₓ)+2
+                    else
+                        n0n_index = Hindex(n, 0, n, m′ₘₐₓ)
                     end
                     nm10nm1_index = Hindex(n-1, 0, n-1, m′ₘₐₓ)
                     inv2n = inv(T(2n))
@@ -58,22 +59,22 @@ function H2!(
 
                     # m = n
                     eₙₘ = inv2n * √T(2n*(2n+1))
-                    if n <= ℓₘₐₓ
-                        Hwedge[n0n_index] = sinβ * eₙₘ * Hwedge[nm10nm1_index]
-                    else  # n == ℓₘₐₓ+1  &&  m′ₘₐₓ > 0
+                    if superjacent
                         HΩ = sinβ * eₙₘ * Hwedge[nm10nm1_index]
+                    else
+                        Hwedge[n0n_index] = sinβ * eₙₘ * Hwedge[nm10nm1_index]
                     end
 
                     # m = n-1
                     eₙₘ = inv2n * √T((2n-2)*(2n+1))
                     cₙₘ = 2inv2n * √T(2n+1)
-                    if n <= ℓₘₐₓ
-                        Hwedge[n0n_index-1] = (
+                    if superjacent
+                        HΨ = (
                             cosβ * cₙₘ * Hwedge[nm10nm1_index]
                             + sinβ * eₙₘ * Hwedge[nm10nm1_index-1]
                         )
-                    else  # n == ℓₘₐₓ+1  &&  m′ₘₐₓ > 0
-                        HΨ = (
+                    else
+                        Hwedge[n0n_index-1] = (
                             cosβ * cₙₘ * Hwedge[nm10nm1_index]
                             + sinβ * eₙₘ * Hwedge[nm10nm1_index-1]
                         )
@@ -97,18 +98,19 @@ function H2!(
                     cₙₘ = 2inv2n * aₙ * √T((n+1)*(n-1))
                     dₙₘ = inv2n * aₙ * √T((n-1)*(n-2))
                     eₙₘ = inv2n * aₙ * √T(2n*(n+1))
-                    if n <= ℓₘₐₓ || ℓₘₐₓ > 1
+                    if superjacent && ℓₘₐₓ == 1
+                        # This rare case repeats the calculation of HΨ, but with a different
+                        # value of eₙₘ.  It only occurs when ℓₘₐₓ == 1, so there's no point
+                        # trying to be too clever about avoiding the previous calculation
+                        HΨ = (
+                            cosβ * cₙₘ * Hwedge[nm10nm1_index-n+2]
+                            + sinβ * eₙₘ * Hwedge[nm10nm1_index-n+1]
+                        )
+                    else
                         Hwedge[n0n_index-n+1] = (
                             cosβ * cₙₘ * Hwedge[nm10nm1_index-n+2]
                             - sinβ * (
                                 dₙₘ * Hwedge[nm10nm1_index-n+3]
-                                - eₙₘ * Hwedge[nm10nm1_index-n+1]
-                            )
-                        )
-                    else
-                        HΨ = (
-                            cosβ * cₙₘ * Hwedge[nm10nm1_index-n+2]
-                            - sinβ * (
                                 - eₙₘ * Hwedge[nm10nm1_index-n+1]
                             )
                         )
