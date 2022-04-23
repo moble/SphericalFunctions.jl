@@ -9,17 +9,17 @@ import ..OffsetVec, ..OffsetMat
 
 # These functions implement Eqs. (13), absorbing a factor of 1/2 into b, and converting to the
 # relevant float type where needed.
-@inline a(n, ::Type{T}) where {T<:Real} = √((2n+1)/T(2n-1))
-@inline b(n, ::Type{T}) where {T<:Real} = √((n-1)*(2n+1)/T(2n*(2n-1)))
-@inline c(n, m, ::Type{T}) where {T<:Real} = √((n+m)*(n-m)*(2n+1) / T(2n-1)) / n
-@inline d(n, m, ::Type{T}) where {T<:Real} = √((n-m)*(n-m-1)*(2n+1) / T(2n-1)) / (2n)
-@inline e(n, m, ::Type{T}) where {T<:Real} = √((n+m)*(n+m-1)*(m!=1 ? 1 : 2)*(2n+1) / T(2n-1)) / (2n)
+@inline a(n, ::Type{T}) where {T<:Real} = √((2n + 1) / T(2n - 1))
+@inline b(n, ::Type{T}) where {T<:Real} = √((n - 1) * (2n + 1) / T(2n * (2n - 1)))
+@inline c(n, m, ::Type{T}) where {T<:Real} = √((n + m) * (n - m) * (2n + 1) / T(2n - 1)) / n
+@inline d(n, m, ::Type{T}) where {T<:Real} = √((n - m) * (n - m - 1) * (2n + 1) / T(2n - 1)) / (2n)
+@inline e(n, m, ::Type{T}) where {T<:Real} = √((n + m) * (n + m - 1) * (m != 1 ? 1 : 2) * (2n + 1) / T(2n - 1)) / (2n)
 
 # These are more efficient to compute than the above, because they involve no division and fewer T-multiplications
-@inline b̂(n, ::Type{T}) where {T<:Real} = √T(2n*(n-1))  # b = b̂ * a / 2n
-@inline ĉ(n, m, ::Type{T}) where {T<:Real} = √T(4*(n+m)*(n-m))  # c = ĉ * a / 2n
-@inline d̂(n, m, ::Type{T}) where {T<:Real} = √T((n-m)*(n-m-1))  # d = d̂ * a / 2n
-@inline ê(n, m, ::Type{T}) where {T<:Real} = √T((n+m)*(n+m-1)*(m!=1 ? 1 : 2))  # e = ê * a / 2n
+@inline b̂(n, ::Type{T}) where {T<:Real} = √T(2n * (n - 1))  # b = b̂ * a / 2n
+@inline ĉ(n, m, ::Type{T}) where {T<:Real} = √T(4 * (n + m) * (n - m))  # c = ĉ * a / 2n
+@inline d̂(n, m, ::Type{T}) where {T<:Real} = √T((n - m) * (n - m - 1))  # d = d̂ * a / 2n
+@inline ê(n, m, ::Type{T}) where {T<:Real} = √T((n + m) * (n + m - 1) * (m != 1 ? 1 : 2))  # e = ê * a / 2n
 
 
 struct ALFRecursionCoefficients{T<:Real}
@@ -29,15 +29,15 @@ struct ALFRecursionCoefficients{T<:Real}
     cde::Matrix{T}
 end
 function ALFRecursionCoefficients(nmax, ::Type{T}=Float64) where {T<:Real}
-    avalues = Vector{T}(undef, nmax+1)
-    bvalues = Vector{T}(undef, nmax+1)
-    cdevalues = Matrix{T}(undef, 3, (nmax*(nmax+3))÷2+1)
+    avalues = Vector{T}(undef, nmax + 1)
+    bvalues = Vector{T}(undef, nmax + 1)
+    cdevalues = Matrix{T}(undef, 3, (nmax * (nmax + 3)) ÷ 2 + 1)
     i = 0
     @inbounds for n in 1:(nmax+1)
         avalues[n] = a(n, T)
         bvalues[n] = b(n, T)
         for m in 1:n
-            i+=1
+            i += 1
             cdevalues[1, i] = c(n, m, T)
             cdevalues[2, i] = d(n, m, T)
             cdevalues[3, i] = e(n, m, T)
@@ -50,7 +50,7 @@ Base.show(io::IO, r::ALFRecursionCoefficients) = print(io, "$(typeof(r))($(r.nma
 
 function ALFrecurse!(P̄ₙ::AbstractVector{T}, P̄ₙ₋₁::AbstractVector{T}, n::Int, t::T, u::T, aₙ::T, bₙ::T, cdeₙ::AbstractMatrix{T}) where {T<:Real}
     @fastmath @inbounds begin
-        let m=0
+        let m = 0
             # Eq. (12a); note that we absorbed a factor of 1/2 into the definition of b
             P̄ₙ[m] = t * aₙ * P̄ₙ₋₁[m] - u * bₙ * P̄ₙ₋₁[m+1]
         end
@@ -61,13 +61,13 @@ function ALFrecurse!(P̄ₙ::AbstractVector{T}, P̄ₙ₋₁::AbstractVector{T},
             eₙₘ = cdeₙ[3, m]
             P̄ₙ[m] = t * cₙₘ * P̄ₙ₋₁[m] - u * (dₙₘ * P̄ₙ₋₁[m+1] - eₙₘ * P̄ₙ₋₁[m-1])
         end
-        let m=n-1
+        let m = n - 1
             # Eq. (12b)
             cₙₘ = cdeₙ[1, m]
             eₙₘ = cdeₙ[3, m]
             P̄ₙ[m] = t * cₙₘ * P̄ₙ₋₁[m] + u * eₙₘ * P̄ₙ₋₁[m-1]
         end
-        let m=n
+        let m = n
             # Eq. (12b)
             eₙₘ = cdeₙ[3, m]
             P̄ₙ[m] = u * eₙₘ * P̄ₙ₋₁[m-1]
@@ -81,7 +81,7 @@ function ALFrecurse!(P̄ₙ::AbstractVector{T}, P̄ₙ₋₁::AbstractVector{T},
         aₙ = a(n, T)
         aₙ_over_2n = aₙ / T(2n)
         bₙ = b̂(n, T) * aₙ_over_2n
-        let m=0
+        let m = 0
             # Eq. (12a); note that we absorbed a factor of 1/2 into the definition of b
             P̄ₙ[m] = t * aₙ * P̄ₙ₋₁[m] - u * bₙ * P̄ₙ₋₁[m+1]
         end
@@ -92,13 +92,13 @@ function ALFrecurse!(P̄ₙ::AbstractVector{T}, P̄ₙ₋₁::AbstractVector{T},
             êₙₘ = ê(n, m, T)
             P̄ₙ[m] = (t * ĉₙₘ * P̄ₙ₋₁[m] - u * (d̂ₙₘ * P̄ₙ₋₁[m+1] - êₙₘ * P̄ₙ₋₁[m-1])) * aₙ_over_2n
         end
-        let m=n-1
+        let m = n - 1
             # Eq. (12b)
             ĉₙₘ = ĉ(n, m, T)
             êₙₘ = ê(n, m, T)
             P̄ₙ[m] = (t * ĉₙₘ * P̄ₙ₋₁[m] + u * êₙₘ * P̄ₙ₋₁[m-1]) * aₙ_over_2n
         end
-        let m=n
+        let m = n
             # Eq. (12b)
             êₙₘ = ê(n, m, T)
             P̄ₙ[m] = u * êₙₘ * P̄ₙ₋₁[m-1] * aₙ_over_2n
@@ -135,7 +135,7 @@ function ALFcompute!(P̄::Vector{T}, expiβ::Complex{T}, nmax::Int, recursion_co
     if length(P̄) < min_length
         throw(ArgumentError("Length of P̄ ($(length(P̄))) must be at least $min_length for nmax=$nmax"))
     end
-    
+
     P̄ₙ₋₁ = OffsetVec(P̄, -1)  # -(n*(n-1))÷2-1
     P̄ₙ = OffsetVec(P̄, -1)  # -(n*(n+1))÷2-1
     cdeₙ = OffsetMat(recursion_coefficients.cde, 0, 0)  # -(n*(n-1))÷2
@@ -157,13 +157,13 @@ function ALFcompute!(P̄::Vector{T}, expiβ::Complex{T}, nmax::Int, recursion_co
         for n in 2:min(nmax, recursion_coefficients.nmax)
             aₙ = recursion_coefficients.a[n]
             bₙ = recursion_coefficients.b[n]
-            cdeₙ.offset2 -= (n-1)
+            cdeₙ.offset2 -= (n - 1)
             P̄ₙ₋₁.offset = P̄ₙ.offset
             P̄ₙ.offset -= n
             ALFrecurse!(P̄ₙ, P̄ₙ₋₁, n, t, u, aₙ, bₙ, cdeₙ)
         end
         if nmax > recursion_coefficients.nmax
-            for n in max(2,recursion_coefficients.nmax+1):nmax
+            for n in max(2, recursion_coefficients.nmax + 1):nmax
                 P̄ₙ₋₁.offset = P̄ₙ.offset
                 P̄ₙ.offset -= n
                 ALFrecurse!(P̄ₙ, P̄ₙ₋₁, n, t, u)
