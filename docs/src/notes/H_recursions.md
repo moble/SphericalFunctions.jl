@@ -47,13 +47,18 @@ computations of spin-weighted spherical harmonics of weight ``s``, we only need
 to compute values with ``|m'| ≤ |s|``, which constitutes a dramatic savings
 when ``|s| ≪ ℓₘₐₓ``.  The data are stored in the array `Hwedge`.
 
-However, some parts of this calculation require terms corresponding to ``m =
-|m'|-1``, which are retained in an additional array `Hv` (because they track
-the V-shaped bottom of `Hwedge`).
-
-Finally, some parts of this calculation require calculating terms with
+However, some parts of this calculation require calculating terms with
 ``m=n+1`` — whereas such elements of ``d`` and ``\mathfrak{D}`` are considered
-zero.  For this purpose, we define additional storage: `Hextra`.
+zero.  For this purpose, we need additional storage.  Rather than allocating
+extra space, or requiring some additional workspace to be passed in, we can
+actually use parts of the input ``H`` data space for temporary storage while
+these extra terms are needed, which is before those parts of the storage are
+needed.  Specifically, we need this additional storage for
+``H^{0, m}_{n_\mathrm{max}+1}`` with ``m \in [0, n_\mathrm{max}+1]``, and we
+can use the storage destined for ``H^{-1, m}_{n_\mathrm{max}}`` with
+``m \in [1, n_\mathrm{max}]``.  But this leaves two more indices, which we just
+store as individual variables — `HΩ` and `HΨ` — representing the last and
+second-to-last of these additional elements stored.
 
 
 ### Step 1
@@ -85,11 +90,54 @@ al. (2020)](https://doi.org/10.1007/s00190-019-01331-0), it is possible to
 compute these values very efficiently and accurately, while also delaying the
 onset of overflow and underflow.
 
-NOTE: Though not specified by Gumerov and Duraiswami, there is not enough
-information for step 4 unless we also use symmetry to set ``H^{1,0}_{n}`` here.
-Similarly, step 5 needs additional information, which depends on setting
-``H^{0, -1}_{n}`` from its symmetric equivalent ``H^{0, 1}_{n}`` in this step.
+The algorithm Xing et al. describe as the best for computing ``P̄`` is due to
+Belikov (1991), and is given by them as
+```math
+\begin{aligned}
+  P̄^{0}_{0} &= 1 \\
+  P̄^{0}_{1} &= \sqrt{3} \cos β \\
+  P̄^{1}_{1} &= \sqrt{3} \sin β \\
+  P̄^{0}_{n} &= a_n \cos β P̄^{0}_{n-1} - b_n \frac{\sin β}{2} P̄^{1}_{n-1} \\
+  P̄^{m}_{n} &=
+    c_{n,m} \cos β P̄^{m}_{n-1}
+    - \sin β \left[ d_{n,m} P̄^{m+1}_{n-1} - e_{n,m} P̄^{m-1}_{n-1} \right],
+\end{aligned}
+```
+where the coefficients are given by
+```math
+\begin{aligned}
+  a_n &= \sqrt{\frac{2n+1}{2n-1}} \\
+  b_n &= \sqrt{\frac{2(n-1)(2n+1)}{n(2n-1)}} \\
+  c_{n,m} &= \frac{1}{n} \sqrt{\frac{(n+m)(n-m)(2n+1)}{2n-1}} \\
+  d_{n,m} &= \frac{1}{2n} \sqrt{\frac{(n-m)(n-m-1)(2n+1)}{2n-1}} \\
+  e_{n,m} &= \frac{1}{2n} \sqrt{\frac{2}{2-\delta_0^{m-1}}} \sqrt{\frac{(n+m)(n+m-1)(2n+1)}{2n-1}}.
+\end{aligned}
+```
 
+Now, we can directly obtain a recurrence relation for
+``H^{0,m}_{n} = P̄^{|m|}_{n} / \sqrt{k_m (2n+1)} `` from those expressions:
+```math
+\begin{aligned}
+  H^{0,0}_{0} &= 1 \\
+  H^{0,0}_{1} &= \cos β \\
+  H^{0,1}_{1} &= \sqrt{1/2} \sin β \\
+  H^{0,0}_{n} &= ā_n \cos β H^{0,0}_{n-1} - b̄_n \sin β H^{0,1}_{n-1} \\
+  H^{0,m}_{n} &=
+    c̄_{n,m} \cos β H^{0,m}_{n-1}
+    - \sin β \left[ d̄_{n,m} H^{0,m+1}_{n-1} - ē_{n,m} H^{0,m-1}_{n-1} \right],
+\end{aligned}
+```
+where the coefficients are given by
+```math
+\begin{aligned}
+  b̄_n &= \sqrt{\frac{n-1}{n}} \\
+  c̄_{n,m} &= \frac{1}{n} \sqrt{(n+m)*(n-m)} \\
+  d̄_{n,m} &= \frac{1}{2n} \sqrt{(n-m)*(n-m-1)} \\
+  ē_{n,m} &= \frac{1}{2n} \sqrt{(n+m)*(n+m-1)}.
+\end{aligned}
+```
+Note that the coefficients all simplified (in fact, ``a_n`` disappeared), without any
+increase in the complexity of the recurrence relations themselves.
 
 ### Step 3
 Compute ``H^{1,m}_{n}(β)`` for ``m=1,\ldots,n`` using relation (41).  Symmetry
@@ -159,7 +207,7 @@ of the algorithm — but only for very small computations, such as those
 involving ``n_{\mathrm{max}} ≈ 10``.  Beyond this, despite the storage
 penalties for all those constants, it turns out to be better to pre-compute
 them.  However, it should be noted that the fractional cost of storing the
-constants is ``\sim 1/n_{\mathrm{max}}`` compared to just storing ``H`` itself,
+constants is ``\sim 3/n_{\mathrm{max}}`` compared to just storing ``H`` itself,
 so this will never be a very significant amount of space.
 
 On the other hand, if we can pre-compute the constants just once, and store

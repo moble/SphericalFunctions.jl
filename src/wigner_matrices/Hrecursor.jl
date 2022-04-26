@@ -14,7 +14,7 @@ function H2!(
     @assert m′ₘₐₓ ≤ ℓₘₐₓ
     @assert size(Hwedge) == (Hindex(ℓₘₐₓ, m′ₘₐₓ, ℓₘₐₓ, m′ₘₐₓ),)
 
-    sqrt3 = √T(3)
+    invsqrt2 = inv(√T(2))
     cosβ = expiβ.re
     sinβ = expiβ.im
     cosβ₊ = (1+cosβ)/2
@@ -42,124 +42,66 @@ function H2!(
                 # Step 2: Compute H^{0,m}_{n}(β) for m=0,...,n and n=1,...,ℓₘₐₓ,ℓₘₐₓ+1?
                 nₘₐₓstep2 = m′ₘₐₓ>0 ? ℓₘₐₓ+1 : ℓₘₐₓ
                 # n = 1
-                n0n_index = Hindex(1, 0, 1, m′ₘₐₓ)
-                Hwedge[n0n_index] = sqrt3 * sinβ
-                Hwedge[n0n_index-1] = sqrt3 * cosβ
+                n0n_index = Hindex(1, 0, 0, m′ₘₐₓ)
+                Hwedge[n0n_index] = cosβ
+                Hwedge[n0n_index+1] = invsqrt2 * sinβ
                 # n = 2, ..., ℓₘₐₓ, ℓₘₐₓ+1?
                 for n in 2:nₘₐₓstep2
                     superjacent = n > ℓₘₐₓ
                     if superjacent
-                        n0n_index = Hindex(n-1, -1, n-1, m′ₘₐₓ)+2
-                    else
-                        n0n_index = Hindex(n, 0, n, m′ₘₐₓ)
-                    end
-                    nm10nm1_index = Hindex(n-1, 0, n-1, m′ₘₐₓ)
-                    inv2n = inv(T(2n))
-                    aₙ = √(T(2n+1)/(2n-1))
-                    bₙ = aₙ * √(T(2n-2)/n)
-
-                    # m = n
-                    eₙₘ = inv2n * √T(2n*(2n+1))
-                    if superjacent
-                        HΩ = sinβ * eₙₘ * Hwedge[nm10nm1_index]
-                    else
-                        Hwedge[n0n_index] = sinβ * eₙₘ * Hwedge[nm10nm1_index]
-                    end
-
-                    # m = n-1
-                    eₙₘ = inv2n * √T((2n-2)*(2n+1))
-                    cₙₘ = 2inv2n * √T(2n+1)
-                    if superjacent
-                        HΨ = (
-                            cosβ * cₙₘ * Hwedge[nm10nm1_index]
-                            + sinβ * eₙₘ * Hwedge[nm10nm1_index-1]
-                        )
-                    else
-                        Hwedge[n0n_index-1] = (
-                            cosβ * cₙₘ * Hwedge[nm10nm1_index]
-                            + sinβ * eₙₘ * Hwedge[nm10nm1_index-1]
-                        )
-                    end
-
-                    # m = n-2, ..., 2
-                    for i in 2:n-2
-                        # m = n-i
-                        cₙₘ = 2inv2n * aₙ * √T((2n-i)*i)
-                        dₙₘ = inv2n * aₙ * √T(i*(i-1))
-                        eₙₘ = inv2n * aₙ * √T((2n-i)*(2n-i-1))
-                        Hwedge[n0n_index-i] = (
-                            cosβ * cₙₘ * Hwedge[nm10nm1_index-i+1]
-                            - sinβ * (
-                                dₙₘ * Hwedge[nm10nm1_index-i+2]
-                                - eₙₘ * Hwedge[nm10nm1_index-i]
-                            )
-                        )
-                    end
-
-                    cₙₘ = 2inv2n * aₙ * √T((n+1)*(n-1))
-                    dₙₘ = inv2n * aₙ * √T((n-1)*(n-2))
-                    eₙₘ = inv2n * aₙ * √T(2n*(n+1))
-                    if superjacent && ℓₘₐₓ == 1
-                        # This rare case repeats the calculation of HΨ, but with a different
-                        # value of eₙₘ.  It only occurs when ℓₘₐₓ == 1, so there's no point
-                        # trying to be too clever about avoiding the previous calculation
-                        HΨ = (
-                            cosβ * cₙₘ * Hwedge[nm10nm1_index-n+2]
-                            + sinβ * eₙₘ * Hwedge[nm10nm1_index-n+1]
-                        )
-                    elseif n == 2
-                        # This avoids accessing un-initialized data at
-                        # `Hwedge[nm10nm1_index-n+3]`, even though dₙₘ==0 in this case.
-                        # We could remove this if case, and just use the case below
-                        # without any negative consequences, if we knew that element
-                        # did not contain NaN or Inf.
-                        Hwedge[n0n_index-n+1] = (
-                            cosβ * cₙₘ * Hwedge[nm10nm1_index-n+2]
-                            + sinβ * eₙₘ * Hwedge[nm10nm1_index-n+1]
-                        )
-                    else
-                        Hwedge[n0n_index-n+1] = (
-                            cosβ * cₙₘ * Hwedge[nm10nm1_index-n+2]
-                            - sinβ * (
-                                dₙₘ * Hwedge[nm10nm1_index-n+3]
-                                - eₙₘ * Hwedge[nm10nm1_index-n+1]
-                            )
-                        )
-                    end
-
-                    # m = 0
-                    cₙₘ = aₙ
-                    dₙₘ = inv2n * aₙ * √T(n*(n-1))
-                    eₙₘ = dₙₘ
-                    Hwedge[n0n_index-n] = (
-                        aₙ * cosβ * Hwedge[nm10nm1_index-n+1]
-                        - bₙ * sinβ * Hwedge[nm10nm1_index-n+2] / 2
-                    )
-
-                end  # Step 2 recurrence
-
-                # Normalize, changing P̄ to H values
-                for n in 1:nₘₐₓstep2
-                    const0 = inv(√T(2n+1))
-                    const1 = inv(√T(4n+2))
-                    if n <= ℓₘₐₓ
-                        n00_index = Hindex(n, 0, 0, m′ₘₐₓ)
-                        Hwedge[n00_index] *= const0
-                        for m in 1:n
-                            Hwedge[n00_index+m] *= const1
-                        end
-                    else  # n == ℓₘₐₓ+1  &&  m′ₘₐₓ > 0
                         n00_index = Hindex(n-1, -1, 1, m′ₘₐₓ)
-                        Hwedge[n00_index] *= const0
-                        for m in 1:n-2
-                            Hwedge[n00_index+m] *= const1
-                        end
-                        HΨ *= const1
-                        HΩ *= const1
+                    else
+                        n00_index = Hindex(n, 0, 0, m′ₘₐₓ)
                     end
-                end  # Step 2 normalization
+                    nm100_index = Hindex(n-1, 0, 0, m′ₘₐₓ)
+                    inv2n = inv(T(2n))
+                    b̄ₙ = √(T(n-1)/n)
 
-            end  # if m′ₘₐₓ ≥ 0
+                    # H^{0,0}_{n} = cosβ H^{0,0}_{n-1} - b̄ₙ sinβ H^{0,1}_{n-1}
+                    Hwedge[n00_index] = cosβ * Hwedge[nm100_index] - b̄ₙ  * sinβ * Hwedge[nm100_index+1]
+
+                    # H^{0,m}_{n} = c̄ₙₘ cosβ H^{0,m}_{n-1} - sinβ [ d̄ₙₘ H^{0,m+1}_{n-1} - ēₙₘ H^{0,m-1}_{n-1} ]
+                    for m in 1:n-2
+                        c̄ₙₘ = 2inv2n * √T((n+m)*(n-m))
+                        d̄ₙₘ = inv2n * √T((n-m)*(n-m-1))
+                        ēₙₘ = inv2n * √T((n+m)*(n+m-1))
+                        Hwedge[n00_index+m] = (
+                            c̄ₙₘ * cosβ * Hwedge[nm100_index+m]
+                            - sinβ * (
+                                d̄ₙₘ * Hwedge[nm100_index+m+1]
+                                - ēₙₘ * Hwedge[nm100_index+m-1]
+                            )
+                        )
+                    end
+                    let m = n-1
+                        c̄ₙₘ = 2inv2n * √T(2n-1)
+                        d̄ₙₘ = 0
+                        ēₙₘ = inv2n * √T((2n-1)*(2n-2))
+                        if superjacent
+                            HΨ = (
+                                c̄ₙₘ * cosβ * Hwedge[nm100_index+m]
+                                + sinβ * ēₙₘ * Hwedge[nm100_index+m-1]
+                            )
+                        else
+                            Hwedge[n00_index+m] = (
+                                c̄ₙₘ * cosβ * Hwedge[nm100_index+m]
+                                + sinβ * ēₙₘ * Hwedge[nm100_index+m-1]
+                            )
+                        end
+                    end
+                    let m = n
+                        c̄ₙₘ = 0
+                        d̄ₙₘ = 0
+                        ēₙₘ = inv2n * √T(2n*(2n-1))
+                        if superjacent
+                            HΩ = sinβ * ēₙₘ * Hwedge[nm100_index+m-1]
+                        else
+                            Hwedge[n00_index+m] = sinβ * ēₙₘ * Hwedge[nm100_index+m-1]
+                        end
+                    end
+
+                end
+            end
 
             if m′ₘₐₓ > 0
 
