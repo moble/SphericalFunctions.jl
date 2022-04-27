@@ -69,20 +69,23 @@ Set ``H_{0}^{0,0}=1``.
 ### Step 2
 
 Compute values ``H^{0,m}_{n}(β)`` for ``m=0,\ldots,n`` and ``H^{0,m}_{n+1}(β)``
-for ``m=0,\ldots,n+1``.  Using Eq. (32), we see
-
+for ``m=0,\ldots,n+1``.  Using Eq. (32), we see that within Gumerov and
+Duraiswami's conventions
 ```math
 \begin{aligned}
   H^{0,m}_{n}(β) &= (-1)^m \sqrt{\frac{(n-|m|)!}{(n+|m|)!}} P^{|m|}_{n}(\cos β) \\
-                 &= \frac{(-1)^m}{\sqrt{k (2n+1)}} P̄^{|m|}_{n}(\cos β).
+                 &= \frac{1}{\sqrt{k_m (2n+1)}} P̄_{n,|m|}(\cos β).
 \end{aligned}
 ```
-
-Here, ``k=1`` for ``m=0``, and ``k=2`` for ``m>0``, and ``P̄`` is defined as
-
+Here, ``k_0=1`` and ``k_m=2`` for ``m>0``, and ``P̄`` is defined as
 ```math
-  P̄ = \sqrt{\frac{k(2n+1)(n-m)!}{(n+m)!}} P.
+  P̄_{n,|m|} = \sqrt{\frac{k_m(2n+1)(n-m)!}{(n+m)!}} P_{n,|m|}.
 ```
+Note that the factor of ``(-1)^m`` in the first equation above is different from
+the convention used here, and is related to the
+[Condon-Shortley phase](https://en.wikipedia.org/wiki/Spherical_harmonics#Condon%E2%80%93Shortley_phase).
+Note that Gumerov and Duraiswami use the notation ``P^{|m|}_{n}``, whereas we are
+using the notation ``P_{n,|m|}`` — which usually differ by a factor of ``(-1)^m``.
 
 We use the "fully normalized" associated Legendre functions (fnALF) ``P̄``
 because, as explained by [Xing et
@@ -94,13 +97,13 @@ The algorithm Xing et al. describe as the best for computing ``P̄`` is due to
 Belikov (1991), and is given by them as
 ```math
 \begin{aligned}
-  P̄^{0}_{0} &= 1 \\
-  P̄^{0}_{1} &= \sqrt{3} \cos β \\
-  P̄^{1}_{1} &= \sqrt{3} \sin β \\
-  P̄^{0}_{n} &= a_n \cos β P̄^{0}_{n-1} - b_n \frac{\sin β}{2} P̄^{1}_{n-1} \\
-  P̄^{m}_{n} &=
-    c_{n,m} \cos β P̄^{m}_{n-1}
-    - \sin β \left[ d_{n,m} P̄^{m+1}_{n-1} - e_{n,m} P̄^{m-1}_{n-1} \right],
+  P̄_{0,0} &= 1 \\
+  P̄_{1,0} &= \sqrt{3} \cos β \\
+  P̄_{1,1} &= \sqrt{3} \sin β \\
+  P̄_{n,0} &= a_n \cos β P̄_{n-1,0} - b_n \frac{\sin β}{2} P̄_{n-1,1} \\
+  P̄_{n,m} &=
+    c_{n,m} \cos β P̄_{n-1,m}
+    - \sin β \left[ d_{n,m} P̄_{n-1,m+1} - e_{n,m} P̄_{n-1,m-1} \right],
 \end{aligned}
 ```
 where the coefficients are given by
@@ -115,7 +118,7 @@ where the coefficients are given by
 ```
 
 Now, we can directly obtain a recurrence relation for
-``H^{0,m}_{n} = P̄^{|m|}_{n} / \sqrt{k_m (2n+1)} `` from those expressions:
+``H^{0,m}_{n} = P̄_{n,|m|} / \sqrt{k_m (2n+1)} `` from those expressions:
 ```math
 \begin{aligned}
   H^{0,0}_{0} &= 1 \\
@@ -137,7 +140,9 @@ where the coefficients are given by
 \end{aligned}
 ```
 Note that the coefficients all simplified (in fact, ``a_n`` disappeared), without any
-increase in the complexity of the recurrence relations themselves.
+increase in the complexity of the recurrence relations themselves.  Rewriting Belikov's
+algorithm explicitly in terms of the ``H^{0,m}_{n}`` also allows us to avoid an extra
+normalization step.
 
 ### Step 3
 Compute ``H^{1,m}_{n}(β)`` for ``m=1,\ldots,n`` using relation (41).  Symmetry
