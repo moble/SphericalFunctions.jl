@@ -1,5 +1,5 @@
 """
-    WignerHsize(m′ₘₐₓ, ℓₘₐₓ=-2)
+    WignerHsize(m′ₘₐₓ, ℓₘₐₓ=m′ₘₐₓ)
 
 Total size of array of wedges of width m′ₘₐₓ up to ℓₘₐₓ
 
@@ -27,13 +27,10 @@ of these are checked.  The wedge array that this function indexes is ordered as
     ]
 
 """
-function WignerHsize(m′ₘₐₓ, ℓₘₐₓ=-2)
-    if ℓₘₐₓ == -2
-        ℓₘₐₓ = m′ₘₐₓ
-    elseif ℓₘₐₓ < 0
+function WignerHsize(m′ₘₐₓ, ℓₘₐₓ=m′ₘₐₓ)
+    if ℓₘₐₓ < 0
         return 0
-    end
-    if m′ₘₐₓ === nothing || m′ₘₐₓ >= ℓₘₐₓ
+    elseif m′ₘₐₓ >= ℓₘₐₓ
         return (ℓₘₐₓ+1) * (ℓₘₐₓ+2) * (2*ℓₘₐₓ+3) ÷ 6
     else
         return ((ℓₘₐₓ+1) * (ℓₘₐₓ+2) * (2*ℓₘₐₓ+3) - 2*(ℓₘₐₓ-m′ₘₐₓ)*(ℓₘₐₓ-m′ₘₐₓ+1)*(ℓₘₐₓ-m′ₘₐₓ+2)) ÷ 6
@@ -42,7 +39,7 @@ end
 
 
 """
-    WignerHrange(m′ₘₐₓ, ℓₘₐₓ=-1)
+    WignerHrange(m′ₘₐₓ, ℓₘₐₓ=m′ₘₐₓ)
 
 Create an array of (ℓ, m', m) indices as in H array
 
@@ -70,10 +67,7 @@ these are checked.  The wedge array that this function indexes is ordered as
     ]
 
 """
-function WignerHrange(m′ₘₐₓ, ℓₘₐₓ=-1)
-    if ℓₘₐₓ < 0
-        ℓₘₐₓ = m′ₘₐₓ
-    end
+function WignerHrange(m′ₘₐₓ, ℓₘₐₓ=m′ₘₐₓ)
     r = zeros(typeof(m′ₘₐₓ), (WignerHsize(m′ₘₐₓ, ℓₘₐₓ), 3))
     i = 1
     for ℓ in 0:ℓₘₐₓ
@@ -136,14 +130,11 @@ of these are checked.  The wedge array that this function indexes is ordered as
     ]
 
 """
-function WignerHindex(ℓ, m′, m, m′ₘₐₓ=nothing)
+function WignerHindex(ℓ, m′, m; m′ₘₐₓ=ℓ)
     if ℓ == 0
         return 1
     end
-    m′max = ℓ
-    if m′ₘₐₓ !== nothing
-        m′max = min(m′ₘₐₓ, m′max)
-    end
+    m′max = min(m′ₘₐₓ, ℓ)
     if m < -m′
         if m < m′
             return _WignerHindex(ℓ, -m′, -m, m′max)
@@ -161,7 +152,7 @@ end
 
 
 """
-    WignerDsize(ℓₘᵢₙ, m′ₘₐₓ, ℓₘₐₓ=-1)
+    WignerDsize(ℓₘᵢₙ, m′ₘₐₓ, ℓₘₐₓ=m′ₘₐₓ)
 
 Compute total size of Wigner 𝔇 matrix
 
@@ -196,11 +187,11 @@ This assumes that the Wigner 𝔇 matrix is arranged as
     ]
 
 """
-function WignerDsize(ℓₘᵢₙ, m′ₘₐₓ, ℓₘₐₓ=-1)
+function WignerDsize(ℓₘᵢₙ, m′ₘₐₓ, ℓₘₐₓ=m′ₘₐₓ)
     # from sympy import symbols, summation, horner
     # from sympy.printing.pycode import pycode
     # ℓ,m′,m,ℓₘᵢₙ,ℓₘₐₓ,m′ₘₐₓ = symbols('ℓ,m′,m,ℓₘᵢₙ,ℓₘₐₓ,m′ₘₐₓ', integer=True)
-    # 
+    #
     # def nice(expr)
     #     return horner(expr.expand().simplify(), (m′ₘₐₓ, ℓₘᵢₙ, ℓₘₐₓ))
     #
@@ -215,7 +206,7 @@ function WignerDsize(ℓₘᵢₙ, m′ₘₐₓ, ℓₘₐₓ=-1)
     #     (ℓₘᵢₙ, ℓₘₐₓ)
     # )
     # print(f"({pycode(nice(3*WignerDsize_ℓmin_ℓmax_m′max.subs(ℓₘₐₓ, ℓ-1)))}) ÷ 3")
-    # 
+    #
     # # Assuming ℓₘᵢₙ <= m′ₘₐₓ <= ℓₘₐₓ:
     # WignerDsize_ℓmin_m′max_ℓmax = horner(
     #     (
@@ -241,17 +232,13 @@ function WignerDsize(ℓₘᵢₙ, m′ₘₐₓ, ℓₘₐₓ=-1)
     #     (m′ₘₐₓ, ℓₘᵢₙ, ℓₘₐₓ)
     # )
     # print(f"{pycode(nice(WignerDsize_m′max_ℓmin_ℓmax.subs(ℓₘₐₓ, ℓ-1)).factor())}")
-    if ℓₘₐₓ < 0
-        ℓₘₐₓ = m′ₘₐₓ
-    end
     if m′ₘₐₓ >= ℓₘₐₓ
         return (
             ℓₘₐₓ * (ℓₘₐₓ * (4 * ℓₘₐₓ + 12) + 11)
             + ℓₘᵢₙ * (1 - 4 * ℓₘᵢₙ^2)
             + 3
         ) ÷ 3
-    end
-    if m′ₘₐₓ > ℓₘᵢₙ
+    elseif m′ₘₐₓ > ℓₘᵢₙ
         return (
             3 * ℓₘₐₓ * (ℓₘₐₓ + 2)
             + ℓₘᵢₙ * (1 - 4 * ℓₘᵢₙ^2)
@@ -268,7 +255,7 @@ end
 
 
 """
-    WignerDrange(ℓₘᵢₙ, m′ₘₐₓ, ℓₘₐₓ=-1)
+    WignerDrange(ℓₘᵢₙ, m′ₘₐₓ; ℓₘₐₓ=-1)
 
 Create an array of (ℓ, m', m) indices as in 𝔇 array
 
@@ -298,10 +285,7 @@ This assumes that the Wigner 𝔇 matrix is arranged as
     ]
 
 """
-function WignerDrange(ℓₘᵢₙ, m′ₘₐₓ, ℓₘₐₓ=-1)
-    if ℓₘₐₓ < 0
-        ℓₘₐₓ = m′ₘₐₓ
-    end
+function WignerDrange(ℓₘᵢₙ, m′ₘₐₓ; ℓₘₐₓ=m′ₘₐₓ)
     r = zeros(typeof(ℓₘᵢₙ), (WignerDsize(ℓₘᵢₙ, m′ₘₐₓ, ℓₘₐₓ), 3))
     i = 1
     for ℓ in ℓₘᵢₙ:ℓₘₐₓ
@@ -319,7 +303,7 @@ end
 
 
 """
-    WignerDindex(ℓ, m′, m, ℓₘᵢₙ=0, m′ₘₐₓ=-1)
+    WignerDindex(ℓ, m′, m; ℓₘᵢₙ=0, m′ₘₐₓ=ℓ)
 
 Compute index into Wigner 𝔇 matrix
 
@@ -358,10 +342,7 @@ This assumes that the Wigner 𝔇 matrix is arranged as
     ]
 
 """
-function WignerDindex(ℓ, m′, m, ℓₘᵢₙ=0, m′ₘₐₓ=-1)
-    if m′ₘₐₓ < 0
-        m′ₘₐₓ = ℓ
-    end
+function WignerDindex(ℓ, m′, m; ℓₘᵢₙ=0, m′ₘₐₓ=ℓ)
     i = (m′ + min(m′ₘₐₓ, ℓ)) * (2 * ℓ + 1) + m + ℓ
     if ℓ > ℓₘᵢₙ
         i += WignerDsize(ℓₘᵢₙ, m′ₘₐₓ, ℓ-1)

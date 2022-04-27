@@ -12,7 +12,7 @@ function H2!(
 ) where {T<:Real}
     m′ₘₐₓ = abs(m′ₘₐₓ)
     @assert m′ₘₐₓ ≤ ℓₘₐₓ
-    @assert size(Hwedge) == (Hindex(ℓₘₐₓ, m′ₘₐₓ, ℓₘₐₓ, m′ₘₐₓ),)
+    @assert size(Hwedge) == (Hindex(ℓₘₐₓ, m′ₘₐₓ, ℓₘₐₓ; m′ₘₐₓ=m′ₘₐₓ),)
 
     invsqrt2 = inv(√T(2))
     cosβ = expiβ.re
@@ -42,18 +42,18 @@ function H2!(
                 # Step 2: Compute H^{0,m}_{n}(β) for m=0,...,n and n=1,...,ℓₘₐₓ,ℓₘₐₓ+1?
                 nₘₐₓstep2 = m′ₘₐₓ>0 ? ℓₘₐₓ+1 : ℓₘₐₓ
                 # n = 1
-                n0n_index = Hindex(1, 0, 0, m′ₘₐₓ)
+                n0n_index = Hindex(1, 0, 0; m′ₘₐₓ=m′ₘₐₓ)
                 Hwedge[n0n_index] = cosβ
                 Hwedge[n0n_index+1] = invsqrt2 * sinβ
                 # n = 2, ..., ℓₘₐₓ, ℓₘₐₓ+1?
                 for n in 2:nₘₐₓstep2
                     superjacent = n > ℓₘₐₓ
                     if superjacent
-                        n00_index = Hindex(n-1, -1, 1, m′ₘₐₓ)
+                        n00_index = Hindex(n-1, -1, 1; m′ₘₐₓ=m′ₘₐₓ)
                     else
-                        n00_index = Hindex(n, 0, 0, m′ₘₐₓ)
+                        n00_index = Hindex(n, 0, 0; m′ₘₐₓ=m′ₘₐₓ)
                     end
-                    nm100_index = Hindex(n-1, 0, 0, m′ₘₐₓ)
+                    nm100_index = Hindex(n-1, 0, 0; m′ₘₐₓ=m′ₘₐₓ)
                     inv2n = inv(T(2n))
                     b̄ₙ = √(T(n-1)/n)
 
@@ -108,12 +108,12 @@ function H2!(
                 # Step 3: Compute H^{1,m}_{n}(β) for m=1,...,n
                 for n in 1:ℓₘₐₓ
                     # m = 1, ..., n
-                    i1 = Hindex(n, 1, 1, m′ₘₐₓ)
+                    i1 = Hindex(n, 1, 1; m′ₘₐₓ=m′ₘₐₓ)
                     if n+1 <= ℓₘₐₓ
-                        i2 = Hindex(n+1, 0, 0, m′ₘₐₓ)
+                        i2 = Hindex(n+1, 0, 0; m′ₘₐₓ=m′ₘₐₓ)
                         nₘₐₓstep3 = n-1
                     else  # n+1 == ℓₘₐₓ+1  &&  m′ₘₐₓ > 0
-                        i2 = Hindex(n, -1, 1, m′ₘₐₓ)
+                        i2 = Hindex(n, -1, 1; m′ₘₐₓ=m′ₘₐₓ)
                         nₘₐₓstep3 = n-3
                     end
                     i3 = nm_index(n+1, 0)
@@ -159,10 +159,10 @@ function H2!(
                 for n in 2:ℓₘₐₓ
                     for mp in 1:min(n, m′ₘₐₓ)-1
                         # m = m', ..., n-1
-                        i1 = Hindex(n, mp+1, mp+1, m′ₘₐₓ) - 1
-                        i2 = Hindex(n, mp-1, mp, m′ₘₐₓ)
-                        i3 = Hindex(n, mp, mp, m′ₘₐₓ) - 1
-                        i4 = Hindex(n, mp, mp+1, m′ₘₐₓ)
+                        i1 = Hindex(n, mp+1, mp+1; m′ₘₐₓ=m′ₘₐₓ) - 1
+                        i2 = Hindex(n, mp-1, mp; m′ₘₐₓ=m′ₘₐₓ)
+                        i3 = Hindex(n, mp, mp; m′ₘₐₓ=m′ₘₐₓ) - 1
+                        i4 = Hindex(n, mp, mp+1; m′ₘₐₓ=m′ₘₐₓ)
                         i5 = nm_index(n, mp)
                         i6 = nm_index(n, mp-1)
                         inverse_d5 = inv(d[i5])
@@ -193,10 +193,10 @@ function H2!(
                 for n in 0:ℓₘₐₓ
                     for mp in 0:-1:1-min(n, m′ₘₐₓ)
                         # m = -m', ..., n-1
-                        i1 = Hindex(n, mp-1, -mp+1, m′ₘₐₓ) - 1
-                        i2 = Hindex(n, mp+1, -mp+1, m′ₘₐₓ) - 1
-                        i3 = Hindex(n, mp, -mp, m′ₘₐₓ) - 1
-                        i4 = Hindex(n, mp, -mp+1, m′ₘₐₓ)
+                        i1 = Hindex(n, mp-1, -mp+1; m′ₘₐₓ=m′ₘₐₓ) - 1
+                        i2 = Hindex(n, mp+1, -mp+1; m′ₘₐₓ=m′ₘₐₓ) - 1
+                        i3 = Hindex(n, mp, -mp; m′ₘₐₓ=m′ₘₐₓ) - 1
+                        i4 = Hindex(n, mp, -mp+1; m′ₘₐₓ=m′ₘₐₓ)
                         i5 = nm_index(n, mp-1)
                         i6 = nm_index(n, mp)
                         i7 = nm_index(n, -mp-1)
