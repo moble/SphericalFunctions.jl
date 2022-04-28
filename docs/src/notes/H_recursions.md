@@ -6,7 +6,7 @@ Duraiswami](https://arxiv.org/abs/1403.7698), is related to Wigner's (small)
 the various spin-weighted spherical harmonics ``{}_{s}Y_{\ell,m}`` — via
 
 ```math
-d_{\ell}^{n,m} = \epsilon_n \epsilon_{-m} H_{\ell}^{n,m},
+d_{\ell}^{m',m} = \epsilon_{m'} \epsilon_{-m} H_{\ell}^{m',m},
 ```
 
 where
