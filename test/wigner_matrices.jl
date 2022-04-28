@@ -182,7 +182,7 @@
         end
     end
 
-    @testset "Compare d to formulaic d ($T)" for T in [Float64]
+    @testset "Compare d to formulaic d ($T)" for T in [BigFloat, Float64, Float32]
         epsilon(k) = k>0 ? (-1)^k : 1
         for β in βrange(T, 2)#[2:end-1]
             expiβ = exp(im*β)
@@ -192,40 +192,12 @@
                 d = Array{T}(undef, WignerDsize(0, ℓₘₐₓ, ℓₘₐₓ))
                 d!(d, expiβ, ℓₘₐₓ, abd_vals)
                 for n in 0:ℓₘₐₓ
-
-                    show_me = false
-
                     for m′ in -n:n
                         for m in -n:n
                             d_formula = ExplicitWignerMatrices.d_formula(n, m′, m, expiβ)
                             d_recurrence = d[WignerDindex(n, m′, m)]
-                            if ≉(d_formula, d_recurrence, atol=30eps(T), rtol=30eps(T))
-                                show_me = true
-                                @show (n, m′, m) ℓₘₐₓ WignerDindex(n, m′, m) d_formula d_recurrence
-                            end
                             @test d_formula ≈ d_recurrence atol=30eps(T) rtol=30eps(T)
                         end
-                    end
-
-                    if show_me
-                        mat = fill(zero(T), 2n+1, 2n+1)
-                        for m′ in -n:n
-                            for m in -n:n
-                                mat[m′+n+1, m+n+1] = d[WignerDindex(n, m′, m)]
-                            end
-                        end
-                        println("d_recurrence{$n}:")
-                        display(mat)
-                        println()
-                        mat = fill(zero(BigFloat), 2n+1, 2n+1)
-                        for m′ in -n:n
-                            for m in -n:n
-                                mat[m′+n+1, m+n+1] = ExplicitWignerMatrices.d_formula(n, m′, m, big(expiβ))
-                            end
-                        end
-                        println("d_formula{$n}:")
-                        display(mat)
-                        println()
                     end
                 end
             end
