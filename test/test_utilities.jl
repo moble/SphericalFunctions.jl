@@ -86,19 +86,20 @@ end
 end  # module NaNChecker
 NaNCheck = NaNChecker.NaNCheck;
 
+
 module ExplicitWignerMatrices
 
-function d(n, m′, m, expiβ::Complex{T}) where T
+function d_explicit(n, m′, m, expiβ::Complex{T}) where T
     if abs(m′) < abs(m)
-        return (-1)^(m-m′) * d(n, m, m′, expiβ)
+        return (-1)^(m-m′) * d_explicit(n, m, m′, expiβ)
     end
     if m′ < 0
-        return (-1)^(m-m′) * d(n, -m′, -m, expiβ)
+        return (-1)^(m-m′) * d_explicit(n, -m′, -m, expiβ)
     end
     cosβ = expiβ.re
     sinβ = expiβ.im
     if (n,m′,m) == (0,0,0)
-        1
+        T(1)
     elseif (n,m′,m) == (1,0,0)
         cosβ
     elseif (n,m′,m) == (1,1,-1)
@@ -125,11 +126,42 @@ function d(n, m′, m, expiβ::Complex{T}) where T
         -sinβ * (1+cosβ) / 2
     elseif (n,m′,m) == (2,2,2)
         (1+cosβ)^2/4
+    else
+        T(NaN)
     end
 end
 
-function D(n, m′, m, expiα::Complex{T}, expiβ::Complex{T}, expiγ::Complex{T}) where T
-    return expiα^(-m′) * d(n, m′, m, expiβ) * expiγ^(-m)
+function D_explicit(n, m′, m, expiα::Complex{T}, expiβ::Complex{T}, expiγ::Complex{T}) where T
+    return expiα^(-m′) * d_explicit(n, m′, m, expiβ) * expiγ^(-m)
+end
+
+
+function d_formula(n, m′, m, expiβ::Complex{T}) where T
+    cosβ = expiβ.re
+    sin½β = √((1-cosβ)/2)
+    cos½β = √((1+cosβ)/2)
+    prefactor =√T(
+        factorial(big(n + m′))
+        * factorial(big(n - m′))
+        * factorial(big(n + m))
+        * factorial(big(n - m))
+    )
+    prefactor * sum(
+        ifelse(iseven(m′ - m + s), 1, -1)
+        * cos½β ^ (2n + m - m′ - 2s)
+        * sin½β ^ (m′ - m + 2s)
+        / (
+            factorial(big(n + m - s))
+            * factorial(big(s))
+            * factorial(big(m′ - m + s))
+            * factorial(big(n - m′ - s))
+        )
+        for s in max(0, m - m′):min(n + m, n - m′)
+    )
+end
+
+function D_formula(n, m′, m, expiα::Complex{T}, expiβ::Complex{T}, expiγ::Complex{T}) where T
+    return expiα^(-m′) * d_formula(n, m′, m, expiβ) * expiγ^(-m)
 end
 
 end
