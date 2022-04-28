@@ -9,6 +9,7 @@
         0; nextfloat(T(0)); rand(T(0):eps(T(π)):T(π), n); prevfloat(T(π)); T(π)
     ]
     γrange(T, n=15) = αrange(T, n)
+    epsilon(k) = ifelse(k>0 && isodd(k), -1, 1)
 
     @testset "Compare d expressions ($T)" for T in [BigFloat, Float64, Float32]
         # This just compares the two versions of the `d` function from test_utilities
@@ -35,7 +36,6 @@
     @testset "Compare H to explicit d ($T)" for T in [BigFloat, Float64, Float32]
         # This compares the H obtained via recurrence with the explicit Wigner d
         # d_{\ell}^{n,m} = \epsilon_n \epsilon_{-m} H_{\ell}^{n,m},
-        epsilon(k) = ifelse(k>0 && isodd(k), -1, 1)
         for β in βrange(T)
             expiβ = exp(im*β)
             for ℓₘₐₓ in 0:2  # 2 is the max explicitly coded ℓ
@@ -87,7 +87,6 @@
     @testset "Compare H to formulaic d ($T)" for T in [BigFloat, Float64, Float32]
         # This compares the H obtained via recurrence with the formulaic Wigner d
         # d_{\ell}^{n,m} = \epsilon_n \epsilon_{-m} H_{\ell}^{n,m},
-        epsilon(k) = ifelse(k>0 && isodd(k), -1, 1)
         for β in βrange(T)
             expiβ = exp(im*β)
             for ℓₘₐₓ in 0:6  # Expect overflows for higher ℓ with Float32
@@ -108,6 +107,55 @@
         end
     end
 
+    @testset "Test H(0) ($T)" for T in [BigFloat, Float64, Float32]
+        # We have H_{n}^{m′,m}(0) = (-1)^m′ δ_{m′,m}
+        let β = zero(T)
+            expiβ = exp(im*β)
+            for ℓₘₐₓ in 0:6  # Expect overflows for higher ℓ with Float32
+                for m′ₘₐₓ in 0:ℓₘₐₓ
+                    Hw = fill(T(NaN), WignerHsize(m′ₘₐₓ, ℓₘₐₓ))
+                    H!(Hw, expiβ, ℓₘₐₓ, m′ₘₐₓ, abd(ℓₘₐₓ, T))
+                    for n in 0:ℓₘₐₓ
+                        for m′ in -min(n, m′ₘₐₓ):min(n, m′ₘₐₓ)
+                            for m in abs(m′):n
+                                H_rec = Hw[WignerHindex(n, m′, m; m′ₘₐₓ=m′ₘₐₓ)]
+                                if m′ == m
+                                    @test H_rec ≈ T(-1)^m′ atol=eps(T)
+                                else
+                                    @test H_rec ≈ zero(T) atol=eps(T)
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    @testset "Test H(π) ($T)" for T in [BigFloat, Float64, Float32]
+        # We have H_{n}^{m′,m}(0) = (-1)^m′ δ_{m′,m}
+        let β = T(π)
+            expiβ = exp(im*β)
+            for ℓₘₐₓ in 0:6  # Expect overflows for higher ℓ with Float32
+                for m′ₘₐₓ in 0:ℓₘₐₓ
+                    Hw = fill(T(NaN), WignerHsize(m′ₘₐₓ, ℓₘₐₓ))
+                    H!(Hw, expiβ, ℓₘₐₓ, m′ₘₐₓ, abd(ℓₘₐₓ, T))
+                    for n in 0:ℓₘₐₓ
+                        for m′ in -min(n, m′ₘₐₓ):min(n, m′ₘₐₓ)
+                            for m in abs(m′):n
+                                H_rec = Hw[WignerHindex(n, m′, m; m′ₘₐₓ=m′ₘₐₓ)]
+                                if m′ == -m
+                                    @test H_rec ≈ T(-1)^(n+m′) atol=eps(T(π))
+                                else
+                                    @test H_rec ≈ zero(T) atol=1.5eps(T(π))
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
 
     @testset "Compare H/D indexing ($T)" for T in [Float64, Float32]
         # Here, we check that we can pass in either an "H wedge" array to be used with
@@ -134,22 +182,50 @@
         end
     end
 
-    @testset "Compare explicit d ($T)" for T in [Float64]
+    @testset "Compare d to formulaic d ($T)" for T in [Float64]
         epsilon(k) = k>0 ? (-1)^k : 1
-        for ℓₘₐₓ in 0:2  # 2 is the max explicitly coded ℓ
-            expiβ = exp(im*rand(T(0):eps(T(π)):T(π)))
-            abd_vals = abd(ℓₘₐₓ, T)
-            d = Array{T}(undef, WignerDsize(0, ℓₘₐₓ, ℓₘₐₓ))
-            d!(d, expiβ, ℓₘₐₓ, abd_vals)
-            for n in 0:ℓₘₐₓ
-                for m′ in -n:n
-                    for m in -n:n
-                        d_explicit = ExplicitWignerMatrices.d_explicit(n, m′, m, expiβ)
-                        d_recurrence = d[WignerDindex(n, m′, m)]
-                        if d_explicit ≉ d_recurrence
-                            @show (n, m′, m) ℓₘₐₓ d_explicit d_recurrence
+        for β in βrange(T, 2)#[2:end-1]
+            expiβ = exp(im*β)
+            @info "Fix ℓₘₐₓ and remove show_me"
+            for ℓₘₐₓ in 0:4
+                abd_vals = abd(ℓₘₐₓ, T)
+                d = Array{T}(undef, WignerDsize(0, ℓₘₐₓ, ℓₘₐₓ))
+                d!(d, expiβ, ℓₘₐₓ, abd_vals)
+                for n in 0:ℓₘₐₓ
+
+                    show_me = false
+
+                    for m′ in -n:n
+                        for m in -n:n
+                            d_formula = ExplicitWignerMatrices.d_formula(n, m′, m, expiβ)
+                            d_recurrence = d[WignerDindex(n, m′, m)]
+                            if ≉(d_formula, d_recurrence, atol=30eps(T), rtol=30eps(T))
+                                show_me = true
+                                @show (n, m′, m) ℓₘₐₓ WignerDindex(n, m′, m) d_formula d_recurrence
+                            end
+                            @test d_formula ≈ d_recurrence atol=30eps(T) rtol=30eps(T)
                         end
-                        @test d_explicit ≈ d_recurrence atol=30eps(T) rtol=30eps(T)
+                    end
+
+                    if show_me
+                        mat = fill(zero(T), 2n+1, 2n+1)
+                        for m′ in -n:n
+                            for m in -n:n
+                                mat[m′+n+1, m+n+1] = d[WignerDindex(n, m′, m)]
+                            end
+                        end
+                        println("d_recurrence{$n}:")
+                        display(mat)
+                        println()
+                        mat = fill(zero(BigFloat), 2n+1, 2n+1)
+                        for m′ in -n:n
+                            for m in -n:n
+                                mat[m′+n+1, m+n+1] = ExplicitWignerMatrices.d_formula(n, m′, m, big(expiβ))
+                            end
+                        end
+                        println("d_formula{$n}:")
+                        display(mat)
+                        println()
                     end
                 end
             end
