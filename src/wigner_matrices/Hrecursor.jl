@@ -1,18 +1,101 @@
+"""Return flat index into arrray of [n, m] pairs.
+
+Assumes array is ordered as
+
+    [
+        [n, m]
+        for n in range(n_max+1)
+        for m in range(-n, n+1)
+    ]
+
+"""
+nm_index(n, m) = m + n * (n + 1) + 1
+
+
+"""Return flat index into arrray of [n, abs(m)] pairs
+
+Assumes array is ordered as
+
+    [
+        [n, m]
+        for n in range(n_max+1)
+        for m in range(n+1)
+    ]
+
+"""
+nabsm_index(n, absm) = absm + (n * (n + 1)) ÷ 2 + 1
+
+
+"""Return flat index into arrray of [n, mp, m]
+
+Assumes array is ordered as
+
+    [
+        [n, mp, m]
+        for n in range(n_max+1)
+        for mp in range(-n, n+1)
+        for m in range(-n, n+1)
+    ]
+
+"""
+nmpm_index(n, mp, m) = (((4n + 6) * n + 6mp + 5) * n + 3(m + mp)) ÷ 3 + 1
+
+
+"""
+    abd(ℓₘₐₓ, T)
+
+Pre-compute constants used in Wigner H recurrence.
+
+"""
 function abd(ℓₘₐₓ, T)
-    a = [√((n+1+m)*(n+1-m)/T((2n+1)*(2n+3))) for n in 0:ℓₘₐₓ+1 for m in 0:n]
-    b = [(m<0 ? -1 : 1) * √((n-m-1)*(n-m)/T((2n-1)*(2n+1))) for n in 0:ℓₘₐₓ+1 for m in -n:n]
-    d = [(m<0 ? -1 : 1) * (√T((n-m)*(n+m+1))) / 2 for n in 0:ℓₘₐₓ+1 for m in -n:n]
+    a = T[√((n+1+m)*(n+1-m)/T((2n+1)*(2n+3))) for n in 0:ℓₘₐₓ+1 for m in 0:n]
+    b = T[(m<0 ? -1 : 1) * √((n-m-1)*(n-m)/T((2n-1)*(2n+1))) for n in 0:ℓₘₐₓ+1 for m in -n:n]
+    d = T[(m<0 ? -1 : 1) * (√T((n-m)*(n+m+1))) / 2 for n in 0:ℓₘₐₓ+1 for m in -n:n]
     (a, b, d)
 end
 
 
-function H2!(
-    Hwedge::AbstractVector{T}, expiβ::Complex{T}, ℓₘₐₓ::Integer, m′ₘₐₓ::Integer,
-    (a,b,d), Hindex=WignerHindex
+# function H!(
+#     Hwedge::AbstractVector{T}, Hextra::AbstractVector{T}, Hv::AbstractVector{T},
+#     ℓₘᵢₙ, ℓₘₐₓ, expiβ::Complex{T}
+# ) where {T<:Real}
+#     H!(Hwedge, Hextra, Hv, ℓₘᵢₙ, ℓₘₐₓ, ℓₘₐₓ, expiβ)
+# end
+
+# function H!(
+#     Hwedge::AbstractVector{T}, Hextra::AbstractVector{T}, Hv::AbstractVector{T},
+#     ℓₘₐₓ, expiβ::Complex{T}
+# ) where {T<:Real}
+#     H!(Hwedge, Hextra, Hv, 0, ℓₘₐₓ, ℓₘₐₓ, expiβ)
+# end
+
+# function H(ℓₘᵢₙ, ℓₘₐₓ, m′ₘₐₓ, expiβ::Complex{T}) where {T<:Real}
+#     Hwedge = zeros(T, WignerHsize(m′ₘₐₓ, ℓₘₐₓ))
+#     Hv = zeros(T, (ℓₘₐₓ + 1)^2)
+#     Hextra = zeros(T, ℓₘₐₓ + 2)
+#     H!(Hwedge, Hextra, Hv, ℓₘᵢₙ, ℓₘₐₓ, m′ₘₐₓ, expiβ)
+# end
+
+# function H(ℓₘᵢₙ, ℓₘₐₓ, expiβ::Complex{T}) where {T<:Real}
+#     H(ℓₘᵢₙ, ℓₘₐₓ, ℓₘₐₓ, expiβ)
+# end
+
+# function H(ℓₘₐₓ, expiβ::Complex{T}) where {T<:Real}
+#     H(0, ℓₘₐₓ, ℓₘₐₓ, expiβ)
+# end
+
+
+# function H!(
+#     H::AbstractVector{TU}, expiβ::Complex{T}, ℓₘₐₓ::Integer, m′ₘₐₓ::Integer,
+#     (a,b,d), Hindex=WignerHindex
+# ) where {TU<:Union{T, Complex{T}}, T<:Real}
+
+function H!(
+    H::AbstractVector, expiβ::Complex{T}, ℓₘₐₓ, m′ₘₐₓ, (a,b,d), Hindex=WignerHindex
 ) where {T<:Real}
     m′ₘₐₓ = abs(m′ₘₐₓ)
     @assert m′ₘₐₓ ≤ ℓₘₐₓ
-    @assert size(Hwedge) == (Hindex(ℓₘₐₓ, m′ₘₐₓ, ℓₘₐₓ; m′ₘₐₓ=m′ₘₐₓ),)
+    @assert size(H) == (Hindex(ℓₘₐₓ, m′ₘₐₓ, ℓₘₐₓ; m′ₘₐₓ=m′ₘₐₓ),)
 
     invsqrt2 = inv(√T(2))
     cosβ = expiβ.re
@@ -30,11 +113,9 @@ function H2!(
     # and second-to-last elements H^{0, ℓₘₐₓ+1}_{ℓₘₐₓ+1} and H^{0, ℓₘₐₓ}_{ℓₘₐₓ+1}:
     HΩ, HΨ = zero(T), zero(T)
 
-    Hrange = SphericalFunctions.WignerHrange(m′ₘₐₓ, ℓₘₐₓ)
-
     @inbounds begin
         # Step 1: If n=0 set H_{0}^{0,0}=1
-        Hwedge[1] = 1
+        H[1] = 1
 
         if ℓₘₐₓ > 0
 
@@ -43,8 +124,8 @@ function H2!(
                 nₘₐₓstep2 = m′ₘₐₓ>0 ? ℓₘₐₓ+1 : ℓₘₐₓ
                 # n = 1
                 n0n_index = Hindex(1, 0, 0; m′ₘₐₓ=m′ₘₐₓ)
-                Hwedge[n0n_index] = cosβ
-                Hwedge[n0n_index+1] = invsqrt2 * sinβ
+                H[n0n_index] = cosβ
+                H[n0n_index+1] = invsqrt2 * sinβ
                 # n = 2, ..., ℓₘₐₓ, ℓₘₐₓ+1?
                 for n in 2:nₘₐₓstep2
                     superjacent = n > ℓₘₐₓ
@@ -58,18 +139,18 @@ function H2!(
                     b̄ₙ = √(T(n-1)/n)
 
                     # H^{0,0}_{n} = cosβ H^{0,0}_{n-1} - b̄ₙ sinβ H^{0,1}_{n-1}
-                    Hwedge[n00_index] = cosβ * Hwedge[nm100_index] - b̄ₙ  * sinβ * Hwedge[nm100_index+1]
+                    H[n00_index] = cosβ * H[nm100_index] - b̄ₙ  * sinβ * H[nm100_index+1]
 
                     # H^{0,m}_{n} = c̄ₙₘ cosβ H^{0,m}_{n-1} - sinβ [ d̄ₙₘ H^{0,m+1}_{n-1} - ēₙₘ H^{0,m-1}_{n-1} ]
                     for m in 1:n-2
                         c̄ₙₘ = 2inv2n * √T((n+m)*(n-m))
                         d̄ₙₘ = inv2n * √T((n-m)*(n-m-1))
                         ēₙₘ = inv2n * √T((n+m)*(n+m-1))
-                        Hwedge[n00_index+m] = (
-                            c̄ₙₘ * cosβ * Hwedge[nm100_index+m]
+                        H[n00_index+m] = (
+                            c̄ₙₘ * cosβ * H[nm100_index+m]
                             - sinβ * (
-                                d̄ₙₘ * Hwedge[nm100_index+m+1]
-                                - ēₙₘ * Hwedge[nm100_index+m-1]
+                                d̄ₙₘ * H[nm100_index+m+1]
+                                - ēₙₘ * H[nm100_index+m-1]
                             )
                         )
                     end
@@ -79,13 +160,13 @@ function H2!(
                         ēₙₘ = inv2n * √T((2n-1)*(2n-2))
                         if superjacent
                             HΨ = (
-                                c̄ₙₘ * cosβ * Hwedge[nm100_index+m]
-                                + sinβ * ēₙₘ * Hwedge[nm100_index+m-1]
+                                c̄ₙₘ * cosβ * H[nm100_index+m]
+                                + sinβ * ēₙₘ * H[nm100_index+m-1]
                             )
                         else
-                            Hwedge[n00_index+m] = (
-                                c̄ₙₘ * cosβ * Hwedge[nm100_index+m]
-                                + sinβ * ēₙₘ * Hwedge[nm100_index+m-1]
+                            H[n00_index+m] = (
+                                c̄ₙₘ * cosβ * H[nm100_index+m]
+                                + sinβ * ēₙₘ * H[nm100_index+m-1]
                             )
                         end
                     end
@@ -94,9 +175,9 @@ function H2!(
                         d̄ₙₘ = 0
                         ēₙₘ = inv2n * √T(2n*(2n-1))
                         if superjacent
-                            HΩ = sinβ * ēₙₘ * Hwedge[nm100_index+m-1]
+                            HΩ = sinβ * ēₙₘ * H[nm100_index+m-1]
                         else
-                            Hwedge[n00_index+m] = sinβ * ēₙₘ * Hwedge[nm100_index+m-1]
+                            H[n00_index+m] = sinβ * ēₙₘ * H[nm100_index+m-1]
                         end
                     end
 
@@ -123,10 +204,10 @@ function H2!(
                         b6 = b[-i+i3-2]
                         b7 = b[i+i3]
                         a8 = a[i+i4]
-                        Hwedge[i+i1] = inverse_b5 * (
-                            b6 * cosβ₋ * Hwedge[i+i2+2]
-                            - b7 * cosβ₊ * Hwedge[i+i2]
-                            - a8 * sinβ * Hwedge[i+i2+1]
+                        H[i+i1] = inverse_b5 * (
+                            b6 * cosβ₋ * H[i+i2+2]
+                            - b7 * cosβ₊ * H[i+i2]
+                            - a8 * sinβ * H[i+i2+1]
                         )
                     end
                     if n == ℓₘₐₓ  # &&  m′ₘₐₓ > 0
@@ -135,10 +216,10 @@ function H2!(
                                 b6 = b[-i+i3-2]
                                 b7 = b[i+i3]
                                 a8 = a[i+i4]
-                                Hwedge[i+i1] = inverse_b5 * (
+                                H[i+i1] = inverse_b5 * (
                                     b6 * cosβ₋ * HΨ
-                                    - b7 * cosβ₊ * Hwedge[i+i2]
-                                    - a8 * sinβ * Hwedge[i+i2+1]
+                                    - b7 * cosβ₊ * H[i+i2]
+                                    - a8 * sinβ * H[i+i2+1]
                                 )
                             end
                         end
@@ -146,9 +227,9 @@ function H2!(
                             b6 = b[-i+i3-2]
                             b7 = b[i+i3]
                             a8 = a[i+i4]
-                            Hwedge[i+i1] = inverse_b5 * (
+                            H[i+i1] = inverse_b5 * (
                                 b6 * cosβ₋ * HΩ
-                                - b7 * cosβ₊ * Hwedge[i+i2]
+                                - b7 * cosβ₊ * H[i+i2]
                                 - a8 * sinβ * HΨ
                             )
                         end
@@ -172,18 +253,18 @@ function H2!(
                         for i in 1:n-mp-1
                             d7 = d8
                             d8 = d[i+i5]
-                            Hwedge[i+i1] = inverse_d5 * (
-                                d6 * Hwedge[i+i2]
-                                - d7 * Hwedge[i+i3]
-                                + d8 * Hwedge[i+i4]
+                            H[i+i1] = inverse_d5 * (
+                                d6 * H[i+i2]
+                                - d7 * H[i+i3]
+                                + d8 * H[i+i4]
                             )
                         end
                         # m = n
                         let i=n-mp
                             d7 = d8
-                            Hwedge[i+i1] = inverse_d5 * (
-                                d6 * Hwedge[i+i2]
-                                - d7 * Hwedge[i+i3]
+                            H[i+i1] = inverse_d5 * (
+                                d6 * H[i+i2]
+                                - d7 * H[i+i3]
                             )
                         end
                     end
@@ -208,18 +289,18 @@ function H2!(
                         for i in 1:n+mp-1
                             d7 = d8
                             d8 = d[i+i8]
-                            Hwedge[i+i1] = inverse_d5 * (
-                                d6 * Hwedge[i+i2]
-                                + d7 * Hwedge[i+i3]
-                                - d8 * Hwedge[i+i4]
+                            H[i+i1] = inverse_d5 * (
+                                d6 * H[i+i2]
+                                + d7 * H[i+i3]
+                                - d8 * H[i+i4]
                             )
                         end
                         # m = n
                         let i=n+mp
                             d7 = d8
-                            Hwedge[i+i1] = inverse_d5 * (
-                                d6 * Hwedge[i+i2]
-                                + d7 * Hwedge[i+i3]
+                            H[i+i1] = inverse_d5 * (
+                                d6 * H[i+i2]
+                                + d7 * H[i+i3]
                             )
                         end
                     end
@@ -228,5 +309,5 @@ function H2!(
             end  # if m′ₘₐₓ > 0
         end  # if ℓₘₐₓ > 0
     end  # @inbounds
-    Hwedge
+    H
 end
