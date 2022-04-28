@@ -183,10 +183,8 @@
     end
 
     @testset "Compare d to formulaic d ($T)" for T in [BigFloat, Float64, Float32]
-        epsilon(k) = k>0 ? (-1)^k : 1
-        for β in βrange(T, 2)#[2:end-1]
+        for β in βrange(T)
             expiβ = exp(im*β)
-            @info "Fix ℓₘₐₓ and remove show_me"
             for ℓₘₐₓ in 0:4
                 abd_vals = abd(ℓₘₐₓ, T)
                 d = Array{T}(undef, WignerDsize(0, ℓₘₐₓ, ℓₘₐₓ))
@@ -204,27 +202,31 @@
         end
     end
 
-    # @testset "Group characers $T" for T in [Float64, Float32]
-    #     ℓₘₐₓ = 100
-    #     m′ₘₐₓ = ℓₘₐₓ
-    #     abd_vals = abd(ℓₘₐₓ, T)
-    #     d = Array{T}(undef, WignerDsize(0, m′ₘₐₓ, ℓₘₐₓ))
-    #     𝔇 = Array{Complex{T}}(undef, WignerDsize(0, m′ₘₐₓ, ℓₘₐₓ))
-    #     for β in rand(T(0):eps(T(π)):T(π))
-    #         expiβ = exp(im*β)
-    #         @show typeof(expiβ)
-    #         d!(d, expiβ, ℓₘₐₓ, abd_vals)
-    #         #D!(𝔇, expiβ, ℓₘₐₓ, abd_vals)
-    #         for j in 0:ℓₘₐₓ
-    #             sin_ratio = sin((2j+1)*β/2) / sin(β/2)
-    #             i1 = WignerDindex(j, -j, -j)
-    #             i2 = WignerDindex(j, j, j)
-    #             χʲ = sum(d[WignerDindex(j, m, m)] for m in -j:j)
-    #             @test χʲ ≈ sin_ratio atol=30eps(T) rtol=30eps(T)
-    #             #χʲ = sum(𝔇[i1:i2])
-    #             #@test χʲ ≈ sin_ratio atol=30eps(T) rtol=30eps(T)
-    #         end
-    #     end
-    # end
+    @testset "Group characters $T" for T in [BigFloat, Float64, Float32]
+        ℓₘₐₓ = 100
+        m′ₘₐₓ = ℓₘₐₓ
+        abd_vals = abd(ℓₘₐₓ, T)
+        d = Array{T}(undef, WignerDsize(0, m′ₘₐₓ, ℓₘₐₓ))
+        𝔇 = Array{Complex{T}}(undef, WignerDsize(0, m′ₘₐₓ, ℓₘₐₓ))
+        for β in βrange(T)#[3:end-2]
+            expiβ = exp(im*β)
+            d!(d, expiβ, ℓₘₐₓ, abd_vals)
+            #D!(𝔇, expiβ, ℓₘₐₓ, abd_vals)
+            for j in 0:ℓₘₐₓ
+                sin_ratio = sin((2j+1)*β/2) / sin(β/2)
+                if abs(β) < 10eps(T)
+                    sin_ratio = T(2j+1)
+                elseif abs(β-π) < 10eps(T)
+                    sin_ratio = T(-1)^j
+                end
+                i1 = WignerDindex(j, -j, -j)
+                i2 = WignerDindex(j, j, j)
+                χʲ = sum(d[WignerDindex(j, m, m)] for m in -j:j)
+                @test χʲ ≈ sin_ratio atol=500eps(T) rtol=500eps(T)
+                #χʲ = sum(𝔇[i1:i2])
+                #@test χʲ ≈ sin_ratio atol=500eps(T) rtol=500eps(T)
+            end
+        end
+    end
 
 end
