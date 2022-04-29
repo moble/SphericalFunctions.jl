@@ -118,9 +118,7 @@ d!(d, β::Real, ℓₘₐₓ) = d!(d, exp(im*β), ℓₘₐₓ, abd(ℓₘₐₓ
 
 Compute Wigner's 𝔇 matrix
 
-# Notes
-
-This function is the preferred method of computing the 𝔇 matrix for large ell
+This function implements the preferred method of computing the 𝔇 matrix for large ell
 values.  In particular, above ell≈32 standard formulas become completely
 unusable because of numerical instabilities and overflow.  This function uses
 stable recursion methods instead, and should be usable beyond ell≈1000.
@@ -184,16 +182,10 @@ function D!(𝔇, R::AbstractQuaternion, ℓₘₐₓ, (avals,bvals,dvals), expi
                 𝔇[i1] = ifelse(isodd(m′), -𝔇[i2], 𝔇[i2]) * expimγ[m+1] * expimα[m′+1]
             end
         end
-        for m′ in -ℓ:-1
+        for m′ in -ℓ:0
             i1 = i0 + (ℓ + m′) * (2ℓ + 1) + ℓ
             for m in abs(m′):ℓ
                 𝔇[i1+m] *= expimγ[m+1] * conj(expimα[-m′+1])
-            end
-        end
-        let m′ = 0
-            i1 = i0 + (ℓ + m′) * (2ℓ + 1) + ℓ
-            for m in abs(m′):ℓ
-                𝔇[i1+m] *= expimγ[m+1]
             end
         end
         for m′ in 1:ℓ
