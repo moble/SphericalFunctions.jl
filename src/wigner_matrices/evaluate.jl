@@ -114,8 +114,7 @@ d!(d, β::Real, ℓₘₐₓ) = d!(d, exp(im*β), ℓₘₐₓ, abd(ℓₘₐₓ
 
 
 """
-    D!(𝔇, w, R)
-    D!(w, R)
+    D!(𝔇, R, ℓₘₐₓ, (avals,bvals,dvals), expimα, expimγ)
 
 Compute Wigner's 𝔇 matrix
 
@@ -148,31 +147,59 @@ function D!(𝔇, R::AbstractQuaternion, ℓₘₐₓ, (avals,bvals,dvals), expi
     # exp[iϕₐ] = R̂ₐ = hat(R[2] + 1j * R[1]) = zm.conjugate()
     # exp[i(ϕₛ+ϕₐ)] = zp * zm.conjugate() = z[2] = zᵧ
     # exp[i(ϕₛ-ϕₐ)] = zp * zm = z[0] = zₐ
-    for ell in ell_min:ell_max
-        for mp in -ell:-1
-            i_D = WignerDindex(ell, mp, -ell, ell_min)
-            for m in -ell:-1
-                i_H = WignerHindex(ell, mp, m, mp_max)
-                𝔇[i_D] = ϵ(mp) * ϵ(-m) * 𝔇[i_H] * conj(expimγ[-m+1]) * conj(expimα[-mp+1])
-                i_D += 1
+    @inbounds for ℓ in 0:ℓₘₐₓ
+        i0 = WignerDindex(ℓ, -ℓ, -ℓ)
+        for m in -ℓ:-1
+            oddm_factor = ifelse(isodd(m), -1, 1)
+            for m′ in -ℓ:m
+                i1 = i0 + (ℓ + m′) * (2ℓ + 1) + m + ℓ
+                i2 = i0 + (ℓ - m) * (2ℓ + 1) - m′ + ℓ
+                𝔇[i1] = oddm_factor * 𝔇[i2] * conj(expimγ[-m+1] * expimα[-m′+1])
             end
-            for m in 0:ell
-                i_H = WignerHindex(ell, mp, m, mp_max)
-                𝔇[i_D] = ϵ(mp) * ϵ(-m) * 𝔇[i_H] * expimγ[m+1] * conj(expimα[-mp+1])
-                i_D += 1
+            for m′ in m+1:0
+                i1 = i0 + (ℓ + m′) * (2ℓ + 1) + m + ℓ
+                i2 = i0 + (ℓ - m′) * (2ℓ + 1) - m + ℓ
+                𝔇[i1] = oddm_factor * 𝔇[i2] * conj(expimγ[-m+1] * expimα[-m′+1])
+            end
+            for m′ in 1:-m
+                i1 = i0 + (ℓ + m′) * (2ℓ + 1) + m + ℓ
+                i2 = i0 + (ℓ - m′) * (2ℓ + 1) - m + ℓ
+                𝔇[i1] = ifelse(isodd(m′), -1, 1) * oddm_factor * 𝔇[i2] * conj(expimγ[-m+1]) * expimα[m′+1]
+            end
+            for m′ in 1-m:ℓ
+                i1 = i0 + (ℓ + m′) * (2ℓ + 1) + m + ℓ
+                i2 = i0 + (ℓ + m) * (2ℓ + 1) + m′ + ℓ
+                𝔇[i1] = ifelse(isodd(m′), -1, 1) * oddm_factor * 𝔇[i2] * conj(expimγ[-m+1]) * expimα[m′+1]
             end
         end
-        for mp in 0:ell
-            i_D = WignerDindex(ell, mp, -ell, ell_min)
-            for m in -ell:-1
-                i_H = WignerHindex(ell, mp, m, mp_max)
-                𝔇[i_D] = ϵ(mp) * ϵ(-m) * 𝔇[i_H] * conj(expimγ[-m+1]) * expimα[mp+1]
-                i_D += 1
+        for m in 0:ℓ
+            for m′ in -ℓ:-m-1
+                i1 = i0 + (ℓ + m′) * (2ℓ + 1) + m + ℓ
+                i2 = i0 + (ℓ - m) * (2ℓ + 1) - m′ + ℓ
+                𝔇[i1] = 𝔇[i2] * expimγ[m+1] * conj(expimα[-m′+1])
             end
-            for m in 0:ell
-                i_H = WignerHindex(ell, mp, m, mp_max)
-                𝔇[i_D] = ϵ(mp) * ϵ(-m) * 𝔇[i_H] * expimγ[m+1] * expimα[mp+1]
-                i_D += 1
+            for m′ in m+1:ℓ
+                i1 = i0 + (ℓ + m′) * (2ℓ + 1) + m + ℓ
+                i2 = i0 + (ℓ + m) * (2ℓ + 1) + m′ + ℓ
+                𝔇[i1] = ifelse(isodd(m′), -𝔇[i2], 𝔇[i2]) * expimγ[m+1] * expimα[m′+1]
+            end
+        end
+        for m′ in -ℓ:-1
+            i1 = i0 + (ℓ + m′) * (2ℓ + 1) + ℓ
+            for m in abs(m′):ℓ
+                𝔇[i1+m] *= expimγ[m+1] * conj(expimα[-m′+1])
+            end
+        end
+        let m′ = 0
+            i1 = i0 + (ℓ + m′) * (2ℓ + 1) + ℓ
+            for m in abs(m′):ℓ
+                𝔇[i1+m] *= expimγ[m+1]
+            end
+        end
+        for m′ in 1:ℓ
+            i1 = i0 + (ℓ + m′) * (2ℓ + 1) + ℓ
+            for m in abs(m′):ℓ
+                𝔇[i1+m] *= ifelse(isodd(m′), -1, 1) * expimγ[m+1] * expimα[m′+1]
             end
         end
     end

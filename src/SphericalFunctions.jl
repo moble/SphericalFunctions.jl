@@ -1,6 +1,6 @@
 module SphericalFunctions
 
-using FastTransforms, LinearAlgebra, ProgressMeter
+using FastTransforms, LinearAlgebra, Quaternionic
 import Base.Threads: @threads, nthreads
 
 export complex_powers, complex_powers!

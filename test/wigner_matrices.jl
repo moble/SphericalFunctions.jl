@@ -183,6 +183,8 @@
     end
 
     @testset "Compare d to formulaic d ($T)" for T in [BigFloat, Float64, Float32]
+        # Now, we're ready to check that d_{n}^{m′,m}(β) matches the expected values
+        # for a range of β values
         for β in βrange(T)
             expiβ = exp(im*β)
             for ℓₘₐₓ in 0:4
@@ -202,16 +204,98 @@
         end
     end
 
+    @testset "Compare 𝔇 to formulaic d ($T)" for T in [BigFloat, Float64, Float32]
+        # Now, we're ready to check that d_{n}^{m′,m}(β) matches the expected values
+        # for a range of β values
+        for ℓₘₐₓ in 0:4
+            abd_vals = abd(ℓₘₐₓ, T)
+            𝔇 = Array{Complex{T}}(undef, WignerDsize(0, ℓₘₐₓ, ℓₘₐₓ))
+            expimα = Array{Complex{T}}(undef, ℓₘₐₓ+1)
+            expimγ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
+            expiα = complex(one(T))
+            expiγ = complex(one(T))
+            for β in βrange(T)
+                expiβ = exp(im*β)
+                R = from_euler_angles(zero(T), β, zero(T))
+                D!(𝔇, R, ℓₘₐₓ, abd_vals, expimα, expimγ)
+                for n in 0:ℓₘₐₓ
+                    for m′ in -n:n
+                        for m in -n:n
+                            𝔇_formula = ExplicitWignerMatrices.D_formula(n, m′, m, expiα, expiβ, expiγ)
+                            𝔇_recurrence = 𝔇[WignerDindex(n, m′, m)]
+                            @test 𝔇_formula ≈ 𝔇_recurrence atol=200eps(T) rtol=200eps(T)
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    @testset "Compare 𝔇 to formulaic 𝔇 ($T)" for T in [BigFloat, Float64, Float32]
+        # Now, we're ready to check that 𝔇_{n}^{m′,m}(β) matches the expected values
+        # for a range of α, β, γ values
+        Random.seed!(123)
+        ℓₘₐₓ = 4
+        abd_vals = abd(ℓₘₐₓ, T)
+        𝔇 = Array{Complex{T}}(undef, WignerDsize(0, ℓₘₐₓ, ℓₘₐₓ))
+        expimα = Array{Complex{T}}(undef, ℓₘₐₓ+1)
+        expimγ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
+        @showprogress for α in αrange(T, 5)
+            for β in βrange(T, 5)
+                for γ in γrange(T, 5)
+                    # expiα, expiβ, expiγ = cis.([α, β, γ])
+                    # @show (α, β, γ)
+                    # println("Before:")
+                    # @show (expiα, expiβ, expiγ)
+                    R = from_euler_angles(α, β, γ)
+                    expiα, expiβ, expiγ = to_euler_phases(R)
+                    # println("After:")
+                    # @show (expiα, expiβ, expiγ)
+                    D!(𝔇, R, ℓₘₐₓ, abd_vals, expimα, expimγ)
+                    for n in 0:ℓₘₐₓ
+                        for m′ in -n:n
+                            for m in -n:n
+                                𝔇_formula = ExplicitWignerMatrices.D_formula(
+                                    n, m′, m, expiα, expiβ, expiγ
+                                )
+                                𝔇_recurrence = 𝔇[WignerDindex(n, m′, m)]
+                                if ≉(𝔇_formula, 𝔇_recurrence, atol=30eps(T), rtol=30eps(T))
+                                    if ≈(𝔇_formula, conj(𝔇_recurrence), atol=30eps(T), rtol=30eps(T))
+                                        println("Conjugation error in (n,m′,m) = ($n,$m′,$m)")
+                                    else
+                                        println("Major error in (n,m′,m) = ($n,$m′,$m)")
+                                    end
+                                    println("\t𝔇_formula = $𝔇_formula")
+                                    println("\t𝔇_recurrence = $𝔇_recurrence")
+                                    @show (α, β, γ)
+                                    @show (expiα, expiβ, expiγ)
+                                    @show R
+                                    println()
+                                end
+                                @test 𝔇_formula ≈ 𝔇_recurrence atol=30eps(T) rtol=30eps(T)
+                            end
+                        end
+                    end
+                    # println()
+                    # flush(stdout)
+                    # flush(stderr)
+                end
+            end
+        end
+    end
+
     @testset "Group characters $T" for T in [BigFloat, Float64, Float32]
+        # χʲ(β) ≔ Σₘ 𝔇ʲₘₘ(β) ≡ Σₘ 𝔇ʲₘₘ(β) = sin((2j+1)β/2) / sin(β/2)
         ℓₘₐₓ = 100
         m′ₘₐₓ = ℓₘₐₓ
         abd_vals = abd(ℓₘₐₓ, T)
         d = Array{T}(undef, WignerDsize(0, m′ₘₐₓ, ℓₘₐₓ))
-        𝔇 = Array{Complex{T}}(undef, WignerDsize(0, m′ₘₐₓ, ℓₘₐₓ))
-        for β in βrange(T)#[3:end-2]
+        # 𝔇 = Array{Complex{T}}(undef, WignerDsize(0, m′ₘₐₓ, ℓₘₐₓ))
+        # expimα = Array{Complex{T}}(undef, ℓₘₐₓ+1)
+        # expimγ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
+        for β in βrange(T)
             expiβ = exp(im*β)
             d!(d, expiβ, ℓₘₐₓ, abd_vals)
-            #D!(𝔇, expiβ, ℓₘₐₓ, abd_vals)
             for j in 0:ℓₘₐₓ
                 sin_ratio = sin((2j+1)*β/2) / sin(β/2)
                 if abs(β) < 10eps(T)
@@ -219,12 +303,16 @@
                 elseif abs(β-π) < 10eps(T)
                     sin_ratio = T(-1)^j
                 end
-                i1 = WignerDindex(j, -j, -j)
-                i2 = WignerDindex(j, j, j)
                 χʲ = sum(d[WignerDindex(j, m, m)] for m in -j:j)
                 @test χʲ ≈ sin_ratio atol=500eps(T) rtol=500eps(T)
-                #χʲ = sum(𝔇[i1:i2])
-                #@test χʲ ≈ sin_ratio atol=500eps(T) rtol=500eps(T)
+                # for α in αrange(T, 5)
+                #     for γ in γrange(T, 5)
+                #         R = from_euler_angles(α, β, γ)
+                #         D!(𝔇, R, ℓₘₐₓ, abd_vals, expimα, expimγ)
+                #         χʲ = sum(𝔇[WignerDindex(j, m, m)] for m in -j:j)
+                #         @test χʲ ≈ sin_ratio atol=500eps(T) rtol=500eps(T)
+                #     end
+                # end
             end
         end
     end

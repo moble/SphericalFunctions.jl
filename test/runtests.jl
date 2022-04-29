@@ -1,5 +1,6 @@
 using SphericalFunctions
-using Test, Random, FastTransforms
+using Test, Random, ProgressMeter
+using FastTransforms, Quaternionic
 
 
 enabled_tests = lowercase.(ARGS)

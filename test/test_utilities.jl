@@ -137,6 +137,7 @@ end
 
 
 function d_formula(n, m′, m, expiβ::Complex{T}) where T
+    # https://en.wikipedia.org/wiki/Wigner_D-matrix#Wigner_.28small.29_d-matrix
     cosβ = expiβ.re
     sin½β = √((1-cosβ)/2)
     cos½β = √((1+cosβ)/2)
@@ -161,7 +162,10 @@ function d_formula(n, m′, m, expiβ::Complex{T}) where T
 end
 
 function D_formula(n, m′, m, expiα::Complex{T}, expiβ::Complex{T}, expiγ::Complex{T}) where T
-    return expiα^(-m′) * d_formula(n, m′, m, expiβ) * expiγ^(-m)
+    # https://en.wikipedia.org/wiki/Wigner_D-matrix#Definition_of_the_Wigner_D-matrix
+    # Note that the convention in this package is conjugated relative to the convention
+    # used by Wikipedia, so we include that conjugation here.
+    return expiα^(m′) * d_formula(n, m′, m, expiβ) * expiγ^(m)
 end
 
 end
