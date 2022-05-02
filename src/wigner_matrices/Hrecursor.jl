@@ -90,6 +90,7 @@ end
 #     (a,b,d), Hindex=WignerHindex
 # ) where {TU<:Union{T, Complex{T}}, T<:Real}
 
+
 function H!(
     H::AbstractVector, expiβ::Complex{T}, ℓₘₐₓ, m′ₘₐₓ, (a,b,d), Hindex=WignerHindex
 ) where {T<:Real}
@@ -111,7 +112,7 @@ function H!(
     # step 5.  We use those slots for most of the temporary data.  However, there are still
     # two slots needed, which we allocate as individual variables, representing the last
     # and second-to-last elements H^{0, ℓₘₐₓ+1}_{ℓₘₐₓ+1} and H^{0, ℓₘₐₓ}_{ℓₘₐₓ+1}:
-    HΩ, HΨ = zero(T), zero(T)
+    HΩ, HΨ = zero(eltype(H)), zero(eltype(H))
 
     @inbounds begin
         # Step 1: If n=0 set H_{0}^{0,0}=1
@@ -248,6 +249,7 @@ function H!(
                         i6 = nm_index(n, mp-1)
                         inverse_d5 = inv(d[i5])
                         d6 = d[i6]
+
                         d7 = d6
                         d8 = d[i5]
                         for i in 1:n-mp-1
@@ -259,6 +261,7 @@ function H!(
                                 + d8 * H[i+i4]
                             )
                         end
+
                         # m = n
                         let i=n-mp
                             d7 = d8

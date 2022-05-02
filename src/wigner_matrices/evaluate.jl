@@ -13,17 +13,14 @@
 
 
 
-#export WignerMatrixCalculator,
 export H!, abd
 export WignerDsize, WignerHsize, WignerDindex, WignerHindex, _WignerHindex
-#export d!, D!, Y!, ϵ
+export d!, D!#, Y!, ϵ
 
 using ..SphericalFunctions: complex_powers!
 using Quaternionic: AbstractQuaternion, to_euler_phases!
 
 include("indexing.jl")
-# include("calculator.jl")
-#include("Hrecursions.jl")
 include("Hrecursor.jl")
 
 
