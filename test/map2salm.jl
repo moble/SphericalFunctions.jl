@@ -47,11 +47,12 @@
         Nϑ = 2ℓmax + 1
         Nφ = 2ℓmax + 2
         for s in -2:2
-            for ℓmin in 0:abs(s)
+            #for ℓmin in 0:abs(s)
+            let ℓmin = 0
                 for ℓ in abs(s):ℓmax
                     for m in -ℓ:ℓ
                         f = mapslices(ϕθ -> sYlm(s, ℓ, m, ϕθ[2], ϕθ[1]), phi_theta(Nφ, Nϑ, T), dims=[3])
-                        computed = map2salm(f, s, ℓmax; ℓmin)
+                        computed = map2salm(f, s, ℓmax)
                         expected = zeros(Complex{T}, size(computed))
                         expected[SphericalFunctions.Yindex(ℓ, m, ℓmin)] = one(T)
                         if ≉(computed, expected, atol=30eps(T), rtol=30eps(T))

@@ -1,58 +1,50 @@
 """
-    WignerHsize(m′ₘₐₓ, ℓₘₐₓ=m′ₘₐₓ)
+    WignerHsize(ℓₘₐₓ, m′ₘₐₓ=ℓₘₐₓ)
 
-Total size of array of wedges of width m′ₘₐₓ up to ℓₘₐₓ
+Total size of array of wedges of width m′ₘₐₓ up to ℓₘₐₓ.  If m′ₘₐₓ is not
+given, it defaults to ℓₘₐₓ.
 
-Parameters
-----------
-ℓₘₐₓ : int
-m′ₘₐₓ : int, optional
-    If nothing, it is assumed to be at least ℓ
+See also ['WignerHrange`](@ref) and [`WignerHindex`](@ref).
 
-See Also
---------
-WignerHrange : Array of (ℓ, m', m) indices corresponding to this wedge
-WignerHindex : Index inside these wedges
-
-Notes
------
-Here, it is assumed that only data with m≥|m'| are stored, and only
-corresponding values are passed.  We also assume |m|≤ℓ and |m'|≤ℓ.  Neither
+# Notes
+Here, it is assumed that only data with m≥|m′| are stored, and only
+corresponding values are passed.  We also assume |m|≤ℓ and |m′|≤ℓ.  Neither
 of these are checked.  The wedge array that this function indexes is ordered as
 
     [
-        H(ℓ, m′, m) for ℓ in range(ℓₘₐₓ+1)
-        for m′ in range(-min(ℓ, m′ₘₐₓ), min(ℓ, m′ₘₐₓ)+1)
-        for m in range(abs(m′), ℓ+1)
+        H(ℓ, m′, m) for ℓ in 0:ℓₘₐₓ
+        for m′ in -min(ℓ, m′ₘₐₓ):min(ℓ, m′ₘₐₓ)
+        for m in abs(m′):ℓ
     ]
 
 """
-function WignerHsize(m′ₘₐₓ, ℓₘₐₓ=m′ₘₐₓ)
+function WignerHsize(ℓₘₐₓ)
+    if ℓₘₐₓ < 0
+        return 0
+    else
+        return (ℓₘₐₓ+1) * (ℓₘₐₓ+2) * (2*ℓₘₐₓ+3) ÷ 6
+    end
+end
+function WignerHsize(ℓₘₐₓ, m′ₘₐₓ)
     if ℓₘₐₓ < 0
         return 0
     elseif m′ₘₐₓ >= ℓₘₐₓ
-        return (ℓₘₐₓ+1) * (ℓₘₐₓ+2) * (2*ℓₘₐₓ+3) ÷ 6
+        return ((ℓₘₐₓ+1) * (ℓₘₐₓ+2) * (2*ℓₘₐₓ+3)) ÷ 6
     else
-        return ((ℓₘₐₓ+1) * (ℓₘₐₓ+2) * (2*ℓₘₐₓ+3) - 2*(ℓₘₐₓ-m′ₘₐₓ)*(ℓₘₐₓ-m′ₘₐₓ+1)*(ℓₘₐₓ-m′ₘₐₓ+2)) ÷ 6
+        return (
+            (ℓₘₐₓ+1) * (ℓₘₐₓ+2) * (2*ℓₘₐₓ+3)
+            - 2*(ℓₘₐₓ-m′ₘₐₓ)*(ℓₘₐₓ-m′ₘₐₓ+1)*(ℓₘₐₓ-m′ₘₐₓ+2)
+        ) ÷ 6
     end
 end
 
 
 """
-    WignerHrange(m′ₘₐₓ, ℓₘₐₓ=m′ₘₐₓ)
+    WignerHrange(ℓₘₐₓ, m′ₘₐₓ=ℓₘₐₓ)
 
 Create an array of (ℓ, m', m) indices as in H array
 
-Parameters
-----------
-ℓₘₐₓ : int
-m′ₘₐₓ : int, optional
-    If nothing, it is assumed to be at least ℓ
-
-See Also
---------
-WignerHsize : Total size of wedge array
-WignerHindex : Index inside these wedges
+See also ['WignerHsize`](@ref) and [`WignerHindex`](@ref)
 
 Notes
 -----
@@ -67,8 +59,8 @@ these are checked.  The wedge array that this function indexes is ordered as
     ]
 
 """
-function WignerHrange(m′ₘₐₓ, ℓₘₐₓ=m′ₘₐₓ)
-    r = zeros(typeof(m′ₘₐₓ), (WignerHsize(m′ₘₐₓ, ℓₘₐₓ), 3))
+function WignerHrange(ℓₘₐₓ, m′ₘₐₓ=ℓₘₐₓ)
+    r = zeros(typeof(m′ₘₐₓ), (WignerHsize(ℓₘₐₓ, m′ₘₐₓ), 3))
     i = 1
     for ℓ in 0:ℓₘₐₓ
         for m′ in -min(ℓ, m′ₘₐₓ):min(ℓ, m′ₘₐₓ)
@@ -87,7 +79,7 @@ end
 function _WignerHindex(ℓ, m′, m, m′ₘₐₓ)
     """Helper function for `WignerHindex`"""
     m′ₘₐₓ = min(m′ₘₐₓ, ℓ)
-    i = WignerHsize(m′ₘₐₓ, ℓ-1)  # total size of everything with smaller ℓ
+    i = WignerHsize(ℓ-1, m′ₘₐₓ)  # total size of everything with smaller ℓ
     if m′<1
         i += (m′ₘₐₓ + m′) * (2*ℓ - m′ₘₐₓ + m′ + 1) ÷ 2  # size of wedge to the left of m'
     else
@@ -130,7 +122,7 @@ of these are checked.  The wedge array that this function indexes is ordered as
     ]
 
 """
-function WignerHindex(ℓ, m′, m; m′ₘₐₓ=ℓ)
+function WignerHindex(ℓ, m′, m, m′ₘₐₓ=ℓ)
     if ℓ == 0
         return 1
     end
@@ -152,28 +144,11 @@ end
 
 
 """
-    WignerDsize(ℓₘᵢₙ, m′ₘₐₓ, ℓₘₐₓ=m′ₘₐₓ)
+    WignerDsize(ℓₘₐₓ, m′ₘₐₓ=ℓₘₐₓ)
 
 Compute total size of Wigner 𝔇 matrix
 
-Parameters
-----------
-ℓₘᵢₙ : int
-    Integer satisfying 0 <= ℓₘᵢₙ <= ℓₘₐₓ
-m′ₘₐₓ : int, optional
-    Integer satisfying 0 <= m′ₘₐₓ.  Defaults to ℓₘₐₓ.
-ℓₘₐₓ : int
-    Integer satisfying 0 <= ℓₘᵢₙ <= ℓₘₐₓ
-
-Returns
--------
-i : int
-    Total size of Wigner 𝔇 matrix arranged as described below
-
-See Also
---------
-WignerDrange : Array of (ℓ, m', m) indices corresponding to the 𝔇 matrix
-WignerDindex : Index of a particular element of the 𝔇 matrix
+See also ['WignerDrange`](@ref) and [`WignerDindex`](@ref).
 
 Notes
 -----
@@ -181,13 +156,16 @@ This assumes that the Wigner 𝔇 matrix is arranged as
 
     [
         𝔇(ℓ, m′, m)
-        for ℓ in range(ℓₘᵢₙ, ℓₘₐₓ+1)
-        for m′ in range(-min(ℓ, m′ₘₐₓ), min(ℓ, m′ₘₐₓ)+1)
-        for m in range(-ℓ, ℓ+1)
+        for ℓ in ℓₘᵢₙ:ℓₘₐₓ
+        for m′ in -min(ℓ, m′ₘₐₓ):min(ℓ, m′ₘₐₓ)
+        for m in -ℓ:ℓ
     ]
 
 """
-function WignerDsize(ℓₘᵢₙ, m′ₘₐₓ, ℓₘₐₓ=m′ₘₐₓ)
+function WignerDsize(ℓₘₐₓ)
+    (ℓₘₐₓ * (ℓₘₐₓ * (4 * ℓₘₐₓ + 12) + 11) + 3) ÷ 3
+end
+function WignerDsize(ℓₘₐₓ, m′ₘₐₓ)
     # from sympy import symbols, summation, horner
     # from sympy.printing.pycode import pycode
     # ℓ,m′,m,ℓₘᵢₙ,ℓₘₐₓ,m′ₘₐₓ = symbols('ℓ,m′,m,ℓₘᵢₙ,ℓₘₐₓ,m′ₘₐₓ', integer=True)
@@ -233,15 +211,10 @@ function WignerDsize(ℓₘᵢₙ, m′ₘₐₓ, ℓₘₐₓ=m′ₘₐₓ)
     # )
     # print(f"{pycode(nice(WignerDsize_m′max_ℓmin_ℓmax.subs(ℓₘₐₓ, ℓ-1)).factor())}")
     if m′ₘₐₓ >= ℓₘₐₓ
-        return (
-            ℓₘₐₓ * (ℓₘₐₓ * (4 * ℓₘₐₓ + 12) + 11)
-            + ℓₘᵢₙ * (1 - 4 * ℓₘᵢₙ^2)
-            + 3
-        ) ÷ 3
-    elseif m′ₘₐₓ > ℓₘᵢₙ
+        return (ℓₘₐₓ * (ℓₘₐₓ * (4 * ℓₘₐₓ + 12) + 11) + 3) ÷ 3
+    elseif m′ₘₐₓ > 0
         return (
             3 * ℓₘₐₓ * (ℓₘₐₓ + 2)
-            + ℓₘᵢₙ * (1 - 4 * ℓₘᵢₙ^2)
             + m′ₘₐₓ * (
                 3 * ℓₘₐₓ * (2 * ℓₘₐₓ + 4)
                 + m′ₘₐₓ * (-2 * m′ₘₐₓ - 3) + 5
@@ -249,13 +222,13 @@ function WignerDsize(ℓₘᵢₙ, m′ₘₐₓ, ℓₘₐₓ=m′ₘₐₓ)
             + 3
         ) ÷ 3
     else
-        return (ℓₘₐₓ * (ℓₘₐₓ + 2) - ℓₘᵢₙ^2) * (1 + 2 * m′ₘₐₓ) + 2 * m′ₘₐₓ + 1
+        return (ℓₘₐₓ * (ℓₘₐₓ + 2)) * (1 + 2 * m′ₘₐₓ) + 2 * m′ₘₐₓ + 1
     end
 end
 
 
 """
-    WignerDrange(ℓₘᵢₙ, m′ₘₐₓ; ℓₘₐₓ=-1)
+    WignerDrange(ℓₘₐₓ, m′ₘₐₓ=ℓₘₐₓ)
 
 Create an array of (ℓ, m', m) indices as in 𝔇 array
 
@@ -285,10 +258,10 @@ This assumes that the Wigner 𝔇 matrix is arranged as
     ]
 
 """
-function WignerDrange(ℓₘᵢₙ, m′ₘₐₓ; ℓₘₐₓ=m′ₘₐₓ)
-    r = zeros(typeof(ℓₘᵢₙ), (WignerDsize(ℓₘᵢₙ, m′ₘₐₓ, ℓₘₐₓ), 3))
+function WignerDrange(ℓₘₐₓ, m′ₘₐₓ=ℓₘₐₓ)
+    r = zeros(typeof(ℓₘₐₓ), (WignerDsize(ℓₘₐₓ, m′ₘₐₓ), 3))
     i = 1
-    for ℓ in ℓₘᵢₙ:ℓₘₐₓ
+    for ℓ in 0:ℓₘₐₓ
         for m′ in -min(ℓ, m′ₘₐₓ):min(ℓ, m′ₘₐₓ)
             for m in -ℓ:ℓ
                 r[i, 1] = ℓ
@@ -303,7 +276,7 @@ end
 
 
 """
-    WignerDindex(ℓ, m′, m; ℓₘᵢₙ=0, m′ₘₐₓ=ℓ)
+    WignerDindex(ℓ, m′, m, m′ₘₐₓ=ℓ)
 
 Compute index into Wigner 𝔇 matrix
 
@@ -342,10 +315,6 @@ This assumes that the Wigner 𝔇 matrix is arranged as
     ]
 
 """
-function WignerDindex(ℓ, m′, m; ℓₘᵢₙ=0, m′ₘₐₓ=ℓ)
-    i = (m′ + min(m′ₘₐₓ, ℓ)) * (2 * ℓ + 1) + m + ℓ
-    if ℓ > ℓₘᵢₙ
-        i += WignerDsize(ℓₘᵢₙ, m′ₘₐₓ, ℓ-1)
-    end
-    return i + 1
+function WignerDindex(ℓ, m′, m, m′ₘₐₓ=ℓ)
+    WignerDsize(ℓ-1, m′ₘₐₓ) + (m′ + min(m′ₘₐₓ, ℓ)) * (2 * ℓ + 1) + m + ℓ + 1
 end

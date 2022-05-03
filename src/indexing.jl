@@ -1,19 +1,7 @@
 """
-    Ysize(ℓₘᵢₙ, ℓₘₐₓ)
+    Ysize(ℓₘₐₓ)
 
 Compute total size of array of mode weights
-
-Parameters
-----------
-ℓₘᵢₙ : int
-    Integer satisfying 0 <= ℓₘᵢₙ <= ℓₘₐₓ
-ℓₘₐₓ : int
-    Integer satisfying 0 <= ℓₘᵢₙ <= ℓₘₐₓ
-
-Returns
--------
-i : int
-    Total size of array of mode weights arranged as described below
 
 See Also
 --------
@@ -31,6 +19,9 @@ This assumes that the modes are arranged (with fixed s value) as
     ]
 
 """
+function Ysize(ℓₘₐₓ)
+    return ℓₘₐₓ * (ℓₘₐₓ + 2) + 1
+end
 function Ysize(ℓₘᵢₙ, ℓₘₐₓ)
     # from sympy import symbols, summation, horner
     # from sympy.printing.pycode import pycode
@@ -109,8 +100,11 @@ This assumes that the modes are arranged (with fixed s value) as
     ]
 
 """
+function Yrange(ℓₘₐₓ)
+    Yrange(0, ℓₘₐₓ)
+end
 function Yrange(ℓₘᵢₙ, ℓₘₐₓ)
-    r = zeros(typeof(ℓₘᵢₙ), (Ysize(ℓₘᵢₙ, ℓₘₐₓ), 2))
+    r = zeros(typeof(ℓₘₐₓ), (Ysize(ℓₘᵢₙ, ℓₘₐₓ), 2))
     i = 1
     for ℓ in ℓₘᵢₙ:ℓₘₐₓ
         for m in -ℓ:ℓ

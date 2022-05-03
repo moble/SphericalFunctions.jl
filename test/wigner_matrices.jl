@@ -41,13 +41,13 @@
             expiβ = exp(im*β)
             for ℓₘₐₓ in 0:2  # 2 is the max explicitly coded ℓ
                 for m′ₘₐₓ in 0:ℓₘₐₓ
-                    Hw = fill(T(NaN), WignerHsize(m′ₘₐₓ, ℓₘₐₓ))
+                    Hw = fill(T(NaN), WignerHsize(ℓₘₐₓ, m′ₘₐₓ))
                     H!(Hw, expiβ, ℓₘₐₓ, m′ₘₐₓ, abd(ℓₘₐₓ, T))
                     for n in 0:ℓₘₐₓ
                         for m′ in -min(n, m′ₘₐₓ):min(n, m′ₘₐₓ)
                             for m in -n:n
                                 d_expl = ExplicitWignerMatrices.d_explicit(n, m′, m, expiβ)
-                                d_rec = epsilon(m′) * epsilon(-m) * Hw[WignerHindex(n, m′, m; m′ₘₐₓ=m′ₘₐₓ)]
+                                d_rec = epsilon(m′) * epsilon(-m) * Hw[WignerHindex(n, m′, m, m′ₘₐₓ)]
                                 @test d_rec ≈ d_expl atol=30eps(T) rtol=30eps(T)
                             end
                         end
@@ -61,7 +61,7 @@
                 #     for m′ in -min(n, m′ₘₐₓ):min(n, m′ₘₐₓ)
                 #         for m in abs(m′):n
                 #             mat[m′+n+1, m+n+1] =
-                #                 Hw[SphericalFunctions.WignerHindex(n, m′, m; m′ₘₐₓ=m′ₘₐₓ)].val
+                #                 Hw[SphericalFunctions.WignerHindex(n, m′, m, m′ₘₐₓ)].val
                 #         end
                 #     end
                 #     println("H:")
@@ -71,7 +71,7 @@
                 #     for m′ in -min(n, m′ₘₐₓ):min(n, m′ₘₐₓ)
                 #         for m in abs(m′):n
                 #             mat[m′+n+1, m+n+1] =
-                #                 𝔇[SphericalFunctions.WignerDindex(n, m′, m; m′ₘₐₓ=m′ₘₐₓ)].val
+                #                 𝔇[SphericalFunctions.WignerDindex(n, m′, m, m′ₘₐₓ)].val
                 #         end
                 #     end
                 #     println("𝔇 :")
@@ -92,13 +92,13 @@
             expiβ = exp(im*β)
             for ℓₘₐₓ in 0:6  # Expect overflows for higher ℓ with Float32
                 for m′ₘₐₓ in 0:ℓₘₐₓ
-                    Hw = fill(T(NaN), WignerHsize(m′ₘₐₓ, ℓₘₐₓ))
+                    Hw = fill(T(NaN), WignerHsize(ℓₘₐₓ, m′ₘₐₓ))
                     H!(Hw, expiβ, ℓₘₐₓ, m′ₘₐₓ, abd(ℓₘₐₓ, T))
                     for n in 0:ℓₘₐₓ
                         for m′ in -min(n, m′ₘₐₓ):min(n, m′ₘₐₓ)
                             for m in -n:n
                                 d_form = ExplicitWignerMatrices.d_formula(n, m′, m, expiβ)
-                                d_rec = epsilon(m′) * epsilon(-m) * Hw[WignerHindex(n, m′, m; m′ₘₐₓ=m′ₘₐₓ)]
+                                d_rec = epsilon(m′) * epsilon(-m) * Hw[WignerHindex(n, m′, m, m′ₘₐₓ)]
                                 @test d_rec ≈ d_form atol=30eps(T) rtol=30eps(T)
                             end
                         end
@@ -114,12 +114,12 @@
             expiβ = exp(im*β)
             for ℓₘₐₓ in 0:6  # Expect overflows for higher ℓ with Float32
                 for m′ₘₐₓ in 0:ℓₘₐₓ
-                    Hw = fill(T(NaN), WignerHsize(m′ₘₐₓ, ℓₘₐₓ))
+                    Hw = fill(T(NaN), WignerHsize(ℓₘₐₓ, m′ₘₐₓ))
                     H!(Hw, expiβ, ℓₘₐₓ, m′ₘₐₓ, abd(ℓₘₐₓ, T))
                     for n in 0:ℓₘₐₓ
                         for m′ in -min(n, m′ₘₐₓ):min(n, m′ₘₐₓ)
                             for m in abs(m′):n
-                                H_rec = Hw[WignerHindex(n, m′, m; m′ₘₐₓ=m′ₘₐₓ)]
+                                H_rec = Hw[WignerHindex(n, m′, m, m′ₘₐₓ)]
                                 if m′ == m
                                     @test H_rec ≈ T(-1)^m′ atol=eps(T)
                                 else
@@ -139,12 +139,12 @@
             expiβ = exp(im*β)
             for ℓₘₐₓ in 0:6  # Expect overflows for higher ℓ with Float32
                 for m′ₘₐₓ in 0:ℓₘₐₓ
-                    Hw = fill(T(NaN), WignerHsize(m′ₘₐₓ, ℓₘₐₓ))
+                    Hw = fill(T(NaN), WignerHsize(ℓₘₐₓ, m′ₘₐₓ))
                     H!(Hw, expiβ, ℓₘₐₓ, m′ₘₐₓ, abd(ℓₘₐₓ, T))
                     for n in 0:ℓₘₐₓ
                         for m′ in -min(n, m′ₘₐₓ):min(n, m′ₘₐₓ)
                             for m in abs(m′):n
-                                H_rec = Hw[WignerHindex(n, m′, m; m′ₘₐₓ=m′ₘₐₓ)]
+                                H_rec = Hw[WignerHindex(n, m′, m, m′ₘₐₓ)]
                                 if m′ == -m
                                     @test H_rec ≈ T(-1)^(n+m′) atol=eps(T(π))
                                 else
@@ -167,15 +167,15 @@
             expiβ = exp(im*rand(0:eps(T):π))
             expiβNaNCheck = complex(NaNCheck{T}(expiβ.re), NaNCheck{T}(expiβ.im))
             NCTN = NaNCheck{T}(NaN)
-            Hw = fill(NCTN, WignerHsize(m′ₘₐₓ, ℓₘₐₓ))
+            Hw = fill(NCTN, WignerHsize(ℓₘₐₓ, m′ₘₐₓ))
             H!(Hw, expiβNaNCheck, ℓₘₐₓ, m′ₘₐₓ, abd(ℓₘₐₓ, T))
-            𝔇 = fill(NCTN, WignerDsize(0, m′ₘₐₓ, ℓₘₐₓ))
+            𝔇 = fill(NCTN, WignerDsize(ℓₘₐₓ, m′ₘₐₓ))
             H!(𝔇, expiβNaNCheck, ℓₘₐₓ, m′ₘₐₓ, abd(ℓₘₐₓ, T), WignerDindex)
             for n in 0:ℓₘₐₓ
                 for m′ in -min(n, m′ₘₐₓ):min(n, m′ₘₐₓ)
                     for m in abs(m′):n
-                        Hnm′m = Hw[WignerHindex(n, m′, m; m′ₘₐₓ=m′ₘₐₓ)]
-                        𝔇nm′m = 𝔇[WignerDindex(n, m′, m; m′ₘₐₓ=m′ₘₐₓ)]
+                        Hnm′m = Hw[WignerHindex(n, m′, m, m′ₘₐₓ)]
+                        𝔇nm′m = 𝔇[WignerDindex(n, m′, m, m′ₘₐₓ)]
                         @test Hnm′m == 𝔇nm′m
                     end
                 end
@@ -190,7 +190,7 @@
             expiβ = exp(im*β)
             for ℓₘₐₓ in 0:4
                 abd_vals = abd(ℓₘₐₓ, T)
-                d = Array{T}(undef, WignerDsize(0, ℓₘₐₓ, ℓₘₐₓ))
+                d = Array{T}(undef, WignerDsize(ℓₘₐₓ, ℓₘₐₓ))
                 d!(d, expiβ, ℓₘₐₓ, abd_vals)
                 for n in 0:ℓₘₐₓ
                     for m′ in -n:n
@@ -210,7 +210,7 @@
         # for a range of β values
         for ℓₘₐₓ in 0:4
             abd_vals = abd(ℓₘₐₓ, T)
-            𝔇 = Array{Complex{T}}(undef, WignerDsize(0, ℓₘₐₓ, ℓₘₐₓ))
+            𝔇 = Array{Complex{T}}(undef, WignerDsize(ℓₘₐₓ, ℓₘₐₓ))
             expimα = Array{Complex{T}}(undef, ℓₘₐₓ+1)
             expimγ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
             expiα = complex(one(T))
@@ -238,7 +238,7 @@
         Random.seed!(123)
         ℓₘₐₓ = T===BigFloat ? 4 : 8
         abd_vals = abd(ℓₘₐₓ, T)
-        𝔇 = Array{Complex{T}}(undef, WignerDsize(0, ℓₘₐₓ, ℓₘₐₓ))
+        𝔇 = Array{Complex{T}}(undef, WignerDsize(ℓₘₐₓ, ℓₘₐₓ))
         expimα = Array{Complex{T}}(undef, ℓₘₐₓ+1)
         expimγ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
         @showprogress "Compare 𝔇 to formulaic 𝔇 ($T)" for α in αrange(T, 5)
@@ -270,8 +270,8 @@
         ℓₘₐₓ = T===BigFloat ? 10 : 20
         m′ₘₐₓ = ℓₘₐₓ
         abd_vals = abd(ℓₘₐₓ, T)
-        d = Array{T}(undef, WignerDsize(0, m′ₘₐₓ, ℓₘₐₓ))
-        𝔇 = Array{Complex{T}}(undef, WignerDsize(0, m′ₘₐₓ, ℓₘₐₓ))
+        d = Array{T}(undef, WignerDsize(ℓₘₐₓ, m′ₘₐₓ))
+        𝔇 = Array{Complex{T}}(undef, WignerDsize(ℓₘₐₓ, m′ₘₐₓ))
         expimα = Array{Complex{T}}(undef, ℓₘₐₓ+1)
         expimγ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
         @showprogress "Group characters $T" for β in βrange(T)
