@@ -103,6 +103,7 @@
     @testset "Compare H to formulaic d ($T)" for T in [BigFloat, Float64, Float32]
         # This compares the H obtained via recurrence with the formulaic Wigner d
         # d_{\ell}^{n,m} = \epsilon_n \epsilon_{-m} H_{\ell}^{n,m},
+        tol = ifelse(T === BigFloat, 100, 1) * 30eps(T)
         for β in βrange(T)
             expiβ = exp(im*β)
             for ℓₘₐₓ in 0:6  # Expect overflows for higher ℓ with Float32
@@ -114,7 +115,7 @@
                             for m in -n:n
                                 d_form = ExplicitWignerMatrices.d_formula(n, m′, m, expiβ)
                                 d_rec = epsilon(m′) * epsilon(-m) * Hw[WignerHindex(n, m′, m, m′ₘₐₓ)]
-                                @test d_rec ≈ d_form atol=30eps(T) rtol=30eps(T)
+                                @test d_rec ≈ d_form atol=tol rtol=tol
                             end
                         end
                     end
