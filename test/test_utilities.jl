@@ -169,3 +169,15 @@ function D_formula(n, m′, m, expiα::Complex{T}, expiβ::Complex{T}, expiγ::C
 end
 
 end
+
+
+αrange(T, n=15) = T[
+    0; nextfloat(T(0)); rand(T(0):eps(T(π)):T(π), n÷2); prevfloat(T(π)); T(π);
+    nextfloat(T(π)); rand(T(π):eps(2T(π)):2T(π), n÷2); prevfloat(T(π)); 2T(π)
+]
+βrange(T, n=15) = T[
+    0; nextfloat(T(0)); rand(T(0):eps(T(π)):T(π), n); prevfloat(T(π)); T(π)
+]
+γrange(T, n=15) = αrange(T, n)
+v̂range(T, n=15) = QuatVec{T}[𝐢; 𝐣; 𝐤; -𝐢; -𝐣; -𝐤; normalize.(randn(QuatVec{T}, n))]
+epsilon(k) = ifelse(k>0 && isodd(k), -1, 1)
