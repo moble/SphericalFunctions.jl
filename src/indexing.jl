@@ -26,7 +26,7 @@ function Ysize(ℓₘᵢₙ, ℓₘₐₓ)
     # from sympy import symbols, summation, horner
     # from sympy.printing.pycode import pycode
     # ℓ,m,ℓₘᵢₙ,ℓₘₐₓ = symbols('ℓ,m,ℓₘᵢₙ,ℓₘₐₓ', integer=True)
-    # 
+    #
     # def nice(expr)
     #     return horner(expr.expand().simplify(), (m′ₘₐₓ, ℓₘᵢₙ, ℓₘₐₓ))
     #
@@ -100,9 +100,7 @@ This assumes that the modes are arranged (with fixed s value) as
     ]
 
 """
-function Yrange(ℓₘₐₓ)
-    Yrange(0, ℓₘₐₓ)
-end
+Yrange(ℓₘₐₓ) = Yrange(0, ℓₘₐₓ)
 function Yrange(ℓₘᵢₙ, ℓₘₐₓ)
     r = zeros(typeof(ℓₘₐₓ), (Ysize(ℓₘᵢₙ, ℓₘₐₓ), 2))
     i = 1
@@ -115,7 +113,7 @@ function Yrange(ℓₘᵢₙ, ℓₘₐₓ)
     end
     return r
 end
-        
+
 
 """
     Yindex(ℓ, m, ℓₘᵢₙ=0)
@@ -156,7 +154,7 @@ This assumes that the modes are arranged (with fixed s value) as
     # from sympy import symbols, summation, horner
     # from sympy.printing.pycode import pycode
     # ℓ,m,m′,ℓₘᵢₙ, = symbols('ℓ,m,m′,ℓₘᵢₙ', integer=True)
-    # 
+    #
     # def nice(expr)
     #     return horner(expr.expand().simplify(), (ℓₘᵢₙ, ℓ, m))
     #
@@ -177,8 +175,13 @@ Note that this order is different from the one assumed by this package;
 use [`phi_theta`](@ref) for the opposite ordering.
 
 """
-function theta_phi(nθ, nϕ, T=Float64)
-    [[θ, ϕ][i] for θ in range(0, T(π), length=nθ), ϕ in range(0, 2*T(π), length=nϕ+1)[begin:end-1], i in 1:2]
+function theta_phi(nθ, nϕ, ::Type{T}=Float64) where T
+    [
+        [θ, ϕ][i]
+        for θ in range(0, T(π), length=nθ),
+            ϕ in range(0, 2*T(π), length=nϕ+1)[begin:end-1],
+            i in 1:2
+    ]
 end
 
 """
@@ -189,6 +192,11 @@ Construct (phi, theta) grid in order expected by this package.
 See also [`theta_phi`](@ref) for the opposite ordering.
 
 """
-function phi_theta(nϕ, nθ, T=Float64)
-    [[ϕ, θ][i] for ϕ in range(0, 2*T(π), length=nϕ+1)[begin:end-1], θ in range(0, T(π), length=nθ), i in 1:2]
+function phi_theta(nϕ, nθ, ::Type{T}=Float64) where T
+    [
+        [ϕ, θ][i]
+        for ϕ in range(0, 2*T(π), length=nϕ+1)[begin:end-1],
+            θ in range(0, T(π), length=nθ),
+            i in 1:2
+    ]
 end

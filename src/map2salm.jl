@@ -161,7 +161,7 @@ function map2salm!(
 end
 
 function map2salm(map::AbstractArray{Complex{T}}, plan, show_progress=false) where {T<:Real}
-    salm = zeros(complex(T), (Ysize(plan[3], plan[2]), plan[6]...))
+    salm = zeros(complex(T), (Ysize(plan[2]), plan[5]...))
     map2salm!(salm, map, plan, show_progress)
     return salm
 end

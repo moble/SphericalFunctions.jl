@@ -76,8 +76,8 @@ function WignerHrange(ℓₘₐₓ, m′ₘₐₓ=ℓₘₐₓ)
 end
 
 
+"""Helper function for `WignerHindex`"""
 function _WignerHindex(ℓ, m′, m, m′ₘₐₓ)
-    """Helper function for `WignerHindex`"""
     m′ₘₐₓ = min(m′ₘₐₓ, ℓ)
     i = WignerHsize(ℓ-1, m′ₘₐₓ)  # total size of everything with smaller ℓ
     if m′<1

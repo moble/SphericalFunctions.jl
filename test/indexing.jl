@@ -26,6 +26,12 @@
     end
 
     @testset "WignerHsize" begin
+        for i in -5:-1
+            @test WignerHsize(i) == 0
+            for j in -5:5
+                @test WignerHsize(i, j) == 0
+            end
+        end
         for ell_max in 0:ell_max
             @test WignerHsize(ell_max) == size(WignerHrange(ell_max, ell_max), 1)
             for mp_max in ell_max
@@ -227,11 +233,19 @@
                 @test deduced == (ℓmin, ℓmax)
             end
         end
+        for ℓmax in 1:ell_max
+            prev_size = Ysize(ℓmax-1)
+            this_size = Ysize(ℓmax)
+            if abs(prev_size - this_size) > 1
+                mid_size = (prev_size + this_size) ÷ 2
+                @test_throws ErrorException deduce_limits(mid_size)
+            end
+        end
     end
 
     @testset "Yindex" begin
         for ell_max in 0:ell_max
-            for ell_min in [0]
+            let ell_min = 0
                 r = Yrange(ell_min, ell_max)
                 for ell in ell_min:ell_max
                     for m in -ell:ell
@@ -239,6 +253,8 @@
                         @test r[i, :] == [ell, m]
                     end
                 end
+                s = Yrange(ell_max)
+                @test array_equal(r, s)
             end
             for ell_min in 0:ell_max
                 r = Yrange(ell_min, ell_max)
@@ -248,6 +264,16 @@
                         @test r[i, :] == [ell, m]
                     end
                 end
+            end
+        end
+    end
+
+    @testset "phi_theta <-> theta_phi" for T in [Float64, Float32, BigFloat]
+        for nθ in 2:(2ell_max+1)
+            for nϕ in 2:(2ell_max+1)
+                θϕ = theta_phi(nθ, nϕ, T)
+                ϕθ = permutedims(phi_theta(nϕ, nθ, T), [2, 1, 3])[:, :, 2:-1:1]
+                @test array_equal(θϕ, ϕθ)
             end
         end
     end

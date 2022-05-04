@@ -8,7 +8,7 @@
         k_min = max(0, m + s)
         k_max = min(ell + m, ell + s)
         sin_half_theta, cos_half_theta = sincos(theta / 2)
-        return (-1)^(-s) * sqrt((2 * ell + 1) / (4 * T(π))) * 
+        return (-1)^(-s) * sqrt((2 * ell + 1) / (4 * T(π))) *
             T(sum(
                 (-1) ^ (k)
                 * sqrt(factorial(big(ell + m)) * factorial(big(ell - m)) * factorial(big(ell - s)) * factorial(big(ell + s)))
@@ -51,7 +51,11 @@
             let ℓmin = 0
                 for ℓ in abs(s):ℓmax
                     for m in -ℓ:ℓ
-                        f = mapslices(ϕθ -> sYlm(s, ℓ, m, ϕθ[2], ϕθ[1]), phi_theta(Nφ, Nϑ, T), dims=[3])
+                        f = mapslices(
+                            ϕθ -> sYlm(s, ℓ, m, ϕθ[2], ϕθ[1]),
+                            phi_theta(Nφ, Nϑ, T),
+                            dims=[3]
+                        )
                         computed = map2salm(f, s, ℓmax)
                         expected = zeros(Complex{T}, size(computed))
                         expected[SphericalFunctions.Yindex(ℓ, m, ℓmin)] = one(T)
@@ -70,6 +74,10 @@
                             println()
                         end
                         @test computed ≈ expected atol=30eps(T) rtol=30eps(T)
+
+                        plan = plan_map2salm(f, s, ℓmax)
+                        computed2 = map2salm(f, plan)
+                        @test array_equal(computed, computed2)
                     end
                 end
             end
