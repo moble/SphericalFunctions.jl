@@ -171,13 +171,29 @@ end
 end
 
 
-αrange(T, n=15) = T[
+αrange(::Type{T}, n=15) where T = T[
     0; nextfloat(T(0)); rand(T(0):eps(T(π)):T(π), n÷2); prevfloat(T(π)); T(π);
     nextfloat(T(π)); rand(T(π):eps(2T(π)):2T(π), n÷2); prevfloat(T(π)); 2T(π)
 ]
-βrange(T, n=15) = T[
+βrange(::Type{T}, n=15) where T = T[
     0; nextfloat(T(0)); rand(T(0):eps(T(π)):T(π), n); prevfloat(T(π)); T(π)
 ]
-γrange(T, n=15) = αrange(T, n)
-v̂range(T, n=15) = QuatVec{T}[𝐢; 𝐣; 𝐤; -𝐢; -𝐣; -𝐤; normalize.(randn(QuatVec{T}, n))]
+γrange(::Type{T}, n=15) where T = αrange(T, n)
+v̂range(::Type{T}, n=15) where T = QuatVec{T}[𝐢; 𝐣; 𝐤; -𝐢; -𝐣; -𝐤; normalize.(randn(QuatVec{T}, n))]
+function Rrange(::Type{T}, n=15) where T
+    invsqrt2 = inv(√T(2))
+    [
+        [
+            sign*R
+            for R in [
+                Rotor{T}(1);
+                [Rotor{T}(𝐯) for 𝐯 in (𝐢,𝐣,𝐤)];
+                [Rotor{T}(invsqrt2 + invsqrt2*𝐯) for 𝐯 in (𝐢,𝐣,𝐤)];
+                [Rotor{T}(invsqrt2 - invsqrt2*𝐯) for 𝐯 in (𝐢,𝐣,𝐤)]
+        ]
+        for sign in (1,-1)
+        ];
+        randn(Rotor{T}, n)
+    ]
+end
 epsilon(k) = ifelse(k>0 && isodd(k), -1, 1)

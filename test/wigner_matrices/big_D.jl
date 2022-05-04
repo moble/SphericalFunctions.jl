@@ -1,4 +1,4 @@
-@testset verbose=true "D" begin
+@testset verbose=true "𝔇" begin
 
     @testset "Compare H/D indexing ($T)" for T in [Float64, Float32]
         # Here, we check that we can pass in either an "H wedge" array to be used with
@@ -111,6 +111,33 @@
                     D!(𝔇, R, ℓₘₐₓ, abd_vals, expimα, expimγ)
                     χʲ = sum(𝔇[WignerDindex(j, m, m)] for m in -j:j)
                     @test χʲ ≈ sin_ratio atol=500eps(T) rtol=500eps(T)
+                end
+            end
+        end
+    end
+
+    @testset "Representation property ($T)" for T in [Float64, Float32, BigFloat]
+        # For each l, 𝔇ˡₙ,ₘ(R₁ R₂) = Σₚ 𝔇ˡₙ,ₚ(R₁₂) 𝔇ˡₚ,ₘ(R₂)
+        tol = 3eps(T)
+        ℓₘₐₓ = 10
+        𝔇₁ = Array{Complex{T}}(undef, WignerDsize(ℓₘₐₓ))
+        𝔇₂ = Array{Complex{T}}(undef, WignerDsize(ℓₘₐₓ))
+        𝔇₁₂ = Array{Complex{T}}(undef, WignerDsize(ℓₘₐₓ))
+        abd_vals = abd(ℓₘₐₓ, T)
+        expimα = Array{Complex{T}}(undef, ℓₘₐₓ+1)
+        expimγ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
+        @showprogress "Representation property ($T)" for R₁ in Rrange(T)
+            for R₂ in Rrange(T)
+                D!(𝔇₁, R₁, ℓₘₐₓ, abd_vals, expimα, expimγ)
+                D!(𝔇₂, R₂, ℓₘₐₓ, abd_vals, expimα, expimγ)
+                D!(𝔇₁₂, R₁*R₂, ℓₘₐₓ, abd_vals, expimα, expimγ)
+                for ℓ in 0:ℓₘₐₓ
+                    i = WignerDindex(ℓ, -ℓ, -ℓ)
+                    j = WignerDindex(ℓ, ℓ, ℓ)
+                    𝔇₁ˡ = transpose(reshape(𝔇₁[i:j], 2ℓ+1, 2ℓ+1))
+                    𝔇₂ˡ = transpose(reshape(𝔇₂[i:j], 2ℓ+1, 2ℓ+1))
+                    𝔇₁₂ˡ = transpose(reshape(𝔇₁₂[i:j], 2ℓ+1, 2ℓ+1))
+                    @test 𝔇₁ˡ * 𝔇₂ˡ ≈ 𝔇₁₂ˡ atol=(2ℓ+1)^2*tol rtol=(2ℓ+1)^2*tol
                 end
             end
         end
