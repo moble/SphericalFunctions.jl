@@ -117,7 +117,7 @@
     end
 
     @testset "Representation property ($T)" for T in [Float64, Float32, BigFloat]
-        # For each l, 𝔇ˡₙ,ₘ(R₁ R₂) = Σₚ 𝔇ˡₙ,ₚ(R₁₂) 𝔇ˡₚ,ₘ(R₂)
+        # For each l, 𝔇ˡₙ,ₘ(R₁ R₂) = Σₚ 𝔇ˡₙ,ₚ(R₁) 𝔇ˡₚ,ₘ(R₂)
         tol = 3eps(T)
         ℓₘₐₓ = 10
         𝔇₁ = Array{Complex{T}}(undef, WignerDsize(ℓₘₐₓ))
