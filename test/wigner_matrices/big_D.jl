@@ -6,7 +6,7 @@
         # H recurrence results
         ℓₘₐₓ = 8
         for m′ₘₐₓ in 0:ℓₘₐₓ
-            expiβ = exp(im*rand(0:eps(T):π))
+            expiβ = cis(rand(0:eps(T):π))
             expiβNaNCheck = complex(NaNCheck{T}(expiβ.re), NaNCheck{T}(expiβ.im))
             NCTN = NaNCheck{T}(NaN)
             Hw = fill(NCTN, WignerHsize(ℓₘₐₓ, m′ₘₐₓ))
@@ -36,7 +36,7 @@
             expiα = complex(one(T))
             expiγ = complex(one(T))
             for β in βrange(T)
-                expiβ = exp(im*β)
+                expiβ = cis(β)
                 R = from_euler_angles(zero(T), β, zero(T))
                 D!(𝔇, R, ℓₘₐₓ, abd_vals, expimα, expimγ)
                 for n in 0:ℓₘₐₓ
@@ -95,7 +95,7 @@
         expimα = Array{Complex{T}}(undef, ℓₘₐₓ+1)
         expimγ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
         @showprogress "Group characters $T" for β in βrange(T)
-            expiβ = exp(im*β)
+            expiβ = cis(β)
             d!(d, expiβ, ℓₘₐₓ, abd_vals)
             for j in 0:ℓₘₐₓ
                 sin_ratio = sin((2j+1)*β/2) / sin(β/2)

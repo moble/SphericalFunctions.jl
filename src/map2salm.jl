@@ -66,7 +66,7 @@ function plan_map2salm(map_data::AbstractArray{Complex{T}}, spin::Int, ℓmax::I
     Hwedge = Array{T}(undef, WignerHsize(ℓmax, m′max))
     H_rec_coeffs = abd(ℓmax, T)
     weight = clenshaw_curtis(Nϑ, T)
-    expiθ = complex_powers(exp(im * (π / T(Nϑ-1))), Nϑ-1)
+    expiθ = complex_powers(cis(π / T(Nϑ-1)), Nϑ-1)
     ϵs = SphericalFunctions.ϵ(-spin)
     extra_dims = Base.Iterators.product((1:e for e in Nextra)...)
     fftplan = T<:MachineFloat ? plan_fft(map_data[:, 1, first(extra_dims)...]) : nothing

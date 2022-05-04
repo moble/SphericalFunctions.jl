@@ -3,7 +3,7 @@
     @testset "Test H(0) ($T)" for T in [BigFloat, Float64, Float32]
         # We have H_{n}^{m′,m}(0) = (-1)^m′ δ_{m′,m}
         let β = zero(T)
-            expiβ = exp(im*β)
+            expiβ = cis(β)
             for ℓₘₐₓ in 0:6  # Expect overflows for higher ℓ with Float32
                 for m′ₘₐₓ in 0:ℓₘₐₓ
                     Hw = fill(T(NaN), WignerHsize(ℓₘₐₓ, m′ₘₐₓ))
@@ -28,7 +28,7 @@
     @testset "Test H(π) ($T)" for T in [BigFloat, Float64, Float32]
         # We have H_{n}^{m′,m}(0) = (-1)^m′ δ_{m′,m}
         let β = T(π)
-            expiβ = exp(im*β)
+            expiβ = cis(β)
             for ℓₘₐₓ in 0:6  # Expect overflows for higher ℓ with Float32
                 for m′ₘₐₓ in 0:ℓₘₐₓ
                     Hw = fill(T(NaN), WignerHsize(ℓₘₐₓ, m′ₘₐₓ))
@@ -54,7 +54,7 @@
         # This compares the H obtained via recurrence with the explicit Wigner d
         # d_{\ell}^{n,m} = \epsilon_n \epsilon_{-m} H_{\ell}^{n,m},
         for β in βrange(T)
-            expiβ = exp(im*β)
+            expiβ = cis(β)
             for ℓₘₐₓ in 0:2  # 2 is the max explicitly coded ℓ
                 for m′ₘₐₓ in 0:ℓₘₐₓ
                     Hw = fill(T(NaN), WignerHsize(ℓₘₐₓ, m′ₘₐₓ))
@@ -105,7 +105,7 @@
         # d_{\ell}^{n,m} = \epsilon_n \epsilon_{-m} H_{\ell}^{n,m},
         tol = ifelse(T === BigFloat, 100, 1) * 30eps(T)
         for β in βrange(T)
-            expiβ = exp(im*β)
+            expiβ = cis(β)
             for ℓₘₐₓ in 0:6  # Expect overflows for higher ℓ with Float32
                 for m′ₘₐₓ in 0:ℓₘₐₓ
                     Hw = fill(T(NaN), WignerHsize(ℓₘₐₓ, m′ₘₐₓ))

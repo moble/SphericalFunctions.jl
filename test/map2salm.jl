@@ -17,15 +17,15 @@
                 / (factorial(big(ell + m - k)) * factorial(big(ell + s - k)) * factorial(big(k)) * factorial(big(k - s - m)))
                 for k in k_min:k_max
             )) *
-            exp(im * m * phi)
+            cis(m * phi)
     end
 
     # Eqs. (II.9) through (II.13) of https://arxiv.org/abs/0709.0093v3
-    m2Y22(iota::T, phi) where T = sqrt(5 / (64 * T(π))) * (1 + cos(iota)) ^ 2 * exp(im * 2phi)
-    m2Y21(iota::T, phi) where T = sqrt(5 / (16 * T(π))) * sin(iota) * (1 + cos(iota)) * exp(im * phi)
+    m2Y22(iota::T, phi) where T = sqrt(5 / (64 * T(π))) * (1 + cos(iota)) ^ 2 * cis(2phi)
+    m2Y21(iota::T, phi) where T = sqrt(5 / (16 * T(π))) * sin(iota) * (1 + cos(iota)) * cis(phi)
     m2Y20(iota::T, phi) where T = sqrt(15 / (32 * T(π))) * sin(iota) ^ 2
-    m2Y2m1(iota::T, phi) where T = sqrt(5 / (16 * T(π))) * sin(iota) * (1 - cos(iota)) * exp(im * -1phi)
-    m2Y2m2(iota::T, phi) where T = sqrt(5 / (64 * T(π))) * (1 - cos(iota)) ^ 2 * exp(im * -2phi)
+    m2Y2m1(iota::T, phi) where T = sqrt(5 / (16 * T(π))) * sin(iota) * (1 - cos(iota)) * cis(-1phi)
+    m2Y2m2(iota::T, phi) where T = sqrt(5 / (64 * T(π))) * (1 - cos(iota)) ^ 2 * cis(-2phi)
 
     @testset "Input expressions $T" for T in [BigFloat, Float64, Float32]
         # These are just internal consistency tests of the sYlm function

@@ -5,7 +5,7 @@
         # to ensure that later tests that use those functions are reliable
         tol = ifelse(T === BigFloat, 100, 1) * 30eps(T)
         for β in βrange(T)
-            expiβ = exp(im*β)
+            expiβ = cis(β)
             for ℓₘₐₓ in 0:2  # 2 is the max explicitly coded ℓ
                 for m′ₘₐₓ in 0:ℓₘₐₓ
                     for n in 0:ℓₘₐₓ
@@ -27,7 +27,7 @@
         # for a range of β values
         tol = ifelse(T === BigFloat, 100, 1) * 30eps(T)
         for β in βrange(T)
-            expiβ = exp(im*β)
+            expiβ = cis(β)
             for ℓₘₐₓ in 0:4
                 abd_vals = abd(ℓₘₐₓ, T)
                 d = Array{T}(undef, WignerDsize(ℓₘₐₓ, ℓₘₐₓ))
@@ -42,6 +42,31 @@
                     end
                 end
             end
+        end
+    end
+
+    @testset "Test d signatures ($T)" for T in [BigFloat, Float64, Float32]
+        # 1 d!(𝔡, expiβ::Complex{T}, ℓₘₐₓ) where {T<:Real}
+        # 2 d!(𝔡, β::T, ℓₘₐₓ, (a,b,d)) where {T<:Real}
+        # 3 d!(𝔡, β::T, ℓₘₐₓ) where {T<:Real}
+        # 4 d(expiβ::Complex{T}, ℓₘₐₓ) where {T<:Real}
+        # 5 d(β::Real, ℓₘₐₓ)
+        ℓₘₐₓ = 8
+        for β in βrange(T)
+            expiβ = cis(β)
+            dA = d(β, ℓₘₐₓ)
+            dB = d(expiβ, ℓₘₐₓ)
+            @test array_equal(dA, dB)
+            dB .= 0
+            d!(dB, β, ℓₘₐₓ)
+            @test array_equal(dA, dB)
+            dB .= 0
+            d!(dB, expiβ, ℓₘₐₓ)
+            @test array_equal(dA, dB)
+            dB .= 0
+            abd_vals = abd(ℓₘₐₓ, T)
+            d!(dB, β, ℓₘₐₓ, abd_vals)
+            @test array_equal(dA, dB)
         end
     end
 
