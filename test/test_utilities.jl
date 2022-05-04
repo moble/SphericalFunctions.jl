@@ -197,3 +197,21 @@ function Rrange(::Type{T}, n=15) where T
     ]
 end
 epsilon(k) = ifelse(k>0 && isodd(k), -1, 1)
+
+"""
+    array_equal(a1, a2, equal_nan=false)
+
+Ensure that arrays have same types and shapes, and all elements are the same.
+If `equal_nan` is `true`, NaNs in the same place in each array will be
+considered to be equal.
+
+Note that this is slightly stricter than the numpy version of this function,
+because arrays of different type will not be considered equal.
+
+"""
+function array_equal(a1::T1, a2::T2, equal_nan=false) where {T1, T2}
+    if T1 !== T2 || size(a1) != size(a2)
+        return false
+    end
+    all(e->e[1]==e[2] || (equal_nan && isnan(e1) && isnan(e2)), zip(a1, a2))
+end
