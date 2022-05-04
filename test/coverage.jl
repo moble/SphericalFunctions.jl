@@ -19,7 +19,7 @@ coverage = merge_coverage_counts(coverage, filter!(
 
 # Get total coverage for all Julia files
 covered_lines, total_lines = get_summary(coverage)
-println("$(100covered_lines/total_lines)% coverage")
+println("$(round(100covered_lines/total_lines, digits=2))% coverage")
 println("Use lcov.info for full coverage info")
 
 LCOV.writefile("lcov.info", coverage)
