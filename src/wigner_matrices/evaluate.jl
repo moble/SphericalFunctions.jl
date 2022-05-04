@@ -1,7 +1,5 @@
 ### TODO:
-### 1. Test speeds without caching a, b, d; maybe switch
 ### 2. Separate ALF computation to a different module
-### 3. Compute H directly inside D array
 ### 4. Test skipping all the complicated indexing tricks; use fancy indexing
 ### 5. Allow specifying the extent of recursion / iterating over ℓ matrices
 
@@ -15,7 +13,7 @@
 
 export H!, abd
 export WignerDsize, WignerHsize, WignerDindex, WignerHindex, _WignerHindex
-export d!, D!#, Y!, ϵ
+export d!, d, D!#, Y!, ϵ
 
 using ..SphericalFunctions: complex_powers!
 using Quaternionic: AbstractQuaternion, to_euler_phases!
@@ -25,10 +23,6 @@ include("Hrecursor.jl")
 
 
 @inline ϵ(m) = (m <= 0 ? 1 : (isodd(m) ? -1 : 1))
-
-
-"""Return sign of input, with sign(0)=1"""
-@inline sign(m) = (m < 0 ? -1 : 1)
 
 
 """
@@ -105,9 +99,14 @@ function d!(d, expiβ::Complex, ℓₘₐₓ, (avals,bvals,dvals))
     end
     d
 end
-d!(d, expiβ::Complex, ℓₘₐₓ) = d!(d, expiβ, ℓₘₐₓ, abd(ℓₘₐₓ, real(typeof(β))))
-d!(d, β::Real, ℓₘₐₓ, (avals,bvals,dvals)) = d!(d, exp(im*β), ℓₘₐₓ, (avals,bvals,dvals))
-d!(d, β::Real, ℓₘₐₓ) = d!(d, exp(im*β), ℓₘₐₓ, abd(ℓₘₐₓ, typeof(β)))
+d!(𝔡, expiβ::Complex{T}, ℓₘₐₓ) where {T<:Real} = d!(𝔡, expiβ, ℓₘₐₓ, abd(ℓₘₐₓ, T))
+d!(𝔡, β::T, ℓₘₐₓ, (a,b,d)) where {T<:Real} = d!(𝔡, cis(β), ℓₘₐₓ, (a,b,d))
+d!(𝔡, β::T, ℓₘₐₓ) where {T<:Real} = d!(𝔡, cis(β), ℓₘₐₓ, abd(ℓₘₐₓ, T))
+function d(expiβ::Complex{T}, ℓₘₐₓ) where {T<:Real}
+    𝔡 = Array{T}(undef, WignerDsize(ℓₘₐₓ, ℓₘₐₓ))
+    d!(𝔡, expiβ, ℓₘₐₓ, abd(ℓₘₐₓ, T))
+end
+d(β::Real, ℓₘₐₓ) = d(cis(β), ℓₘₐₓ)
 
 
 """

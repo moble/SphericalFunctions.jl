@@ -2,6 +2,7 @@ using SphericalFunctions
 using Test, Random, ProgressMeter
 using FastTransforms, Quaternionic
 
+include("test_utilities.jl")
 
 enabled_tests = lowercase.(ARGS)
 

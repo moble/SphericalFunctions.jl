@@ -91,69 +91,67 @@ function H!(
 
         if ℓₘₐₓ > 0
 
-            begin
-                # Step 2: Compute H^{0,m}_{n}(β) for m=0,...,n and n=1,...,ℓₘₐₓ,ℓₘₐₓ+1?
-                nₘₐₓstep2 = m′ₘₐₓ>0 ? ℓₘₐₓ+1 : ℓₘₐₓ
-                # n = 1
-                n0n_index = Hindex(1, 0, 0, m′ₘₐₓ)
-                H[n0n_index] = cosβ
-                H[n0n_index+1] = invsqrt2 * sinβ
-                # n = 2, ..., ℓₘₐₓ, ℓₘₐₓ+1?
-                for n in 2:nₘₐₓstep2
-                    superjacent = n > ℓₘₐₓ
+            # Step 2: Compute H^{0,m}_{n}(β) for m=0,...,n and n=1,...,ℓₘₐₓ,ℓₘₐₓ+1?
+            nₘₐₓstep2 = m′ₘₐₓ>0 ? ℓₘₐₓ+1 : ℓₘₐₓ
+            # n = 1
+            n0n_index = Hindex(1, 0, 0, m′ₘₐₓ)
+            H[n0n_index] = cosβ
+            H[n0n_index+1] = invsqrt2 * sinβ
+            # n = 2, ..., ℓₘₐₓ, ℓₘₐₓ+1?
+            for n in 2:nₘₐₓstep2
+                superjacent = n > ℓₘₐₓ
+                if superjacent
+                    n00_index = Hindex(n-1, -1, 1, m′ₘₐₓ)
+                else
+                    n00_index = Hindex(n, 0, 0, m′ₘₐₓ)
+                end
+                nm100_index = Hindex(n-1, 0, 0, m′ₘₐₓ)
+                inv2n = inv(T(2n))
+                b̄ₙ = √(T(n-1)/n)
+
+                # H^{0,0}_{n} = cosβ H^{0,0}_{n-1} - b̄ₙ sinβ H^{0,1}_{n-1}
+                H[n00_index] = cosβ * H[nm100_index] - b̄ₙ  * sinβ * H[nm100_index+1]
+
+                # H^{0,m}_{n} = c̄ₙₘ cosβ H^{0,m}_{n-1} - sinβ [ d̄ₙₘ H^{0,m+1}_{n-1} - ēₙₘ H^{0,m-1}_{n-1} ]
+                for m in 1:n-2
+                    c̄ₙₘ = 2inv2n * √T((n+m)*(n-m))
+                    d̄ₙₘ = inv2n * √T((n-m)*(n-m-1))
+                    ēₙₘ = inv2n * √T((n+m)*(n+m-1))
+                    H[n00_index+m] = (
+                        c̄ₙₘ * cosβ * H[nm100_index+m]
+                        - sinβ * (
+                            d̄ₙₘ * H[nm100_index+m+1]
+                            - ēₙₘ * H[nm100_index+m-1]
+                        )
+                    )
+                end
+                let m = n-1
+                    c̄ₙₘ = 2inv2n * √T(2n-1)
+                    d̄ₙₘ = 0
+                    ēₙₘ = inv2n * √T((2n-1)*(2n-2))
                     if superjacent
-                        n00_index = Hindex(n-1, -1, 1, m′ₘₐₓ)
+                        HΨ = (
+                            c̄ₙₘ * cosβ * H[nm100_index+m]
+                            + sinβ * ēₙₘ * H[nm100_index+m-1]
+                        )
                     else
-                        n00_index = Hindex(n, 0, 0, m′ₘₐₓ)
-                    end
-                    nm100_index = Hindex(n-1, 0, 0, m′ₘₐₓ)
-                    inv2n = inv(T(2n))
-                    b̄ₙ = √(T(n-1)/n)
-
-                    # H^{0,0}_{n} = cosβ H^{0,0}_{n-1} - b̄ₙ sinβ H^{0,1}_{n-1}
-                    H[n00_index] = cosβ * H[nm100_index] - b̄ₙ  * sinβ * H[nm100_index+1]
-
-                    # H^{0,m}_{n} = c̄ₙₘ cosβ H^{0,m}_{n-1} - sinβ [ d̄ₙₘ H^{0,m+1}_{n-1} - ēₙₘ H^{0,m-1}_{n-1} ]
-                    for m in 1:n-2
-                        c̄ₙₘ = 2inv2n * √T((n+m)*(n-m))
-                        d̄ₙₘ = inv2n * √T((n-m)*(n-m-1))
-                        ēₙₘ = inv2n * √T((n+m)*(n+m-1))
                         H[n00_index+m] = (
                             c̄ₙₘ * cosβ * H[nm100_index+m]
-                            - sinβ * (
-                                d̄ₙₘ * H[nm100_index+m+1]
-                                - ēₙₘ * H[nm100_index+m-1]
-                            )
+                            + sinβ * ēₙₘ * H[nm100_index+m-1]
                         )
                     end
-                    let m = n-1
-                        c̄ₙₘ = 2inv2n * √T(2n-1)
-                        d̄ₙₘ = 0
-                        ēₙₘ = inv2n * √T((2n-1)*(2n-2))
-                        if superjacent
-                            HΨ = (
-                                c̄ₙₘ * cosβ * H[nm100_index+m]
-                                + sinβ * ēₙₘ * H[nm100_index+m-1]
-                            )
-                        else
-                            H[n00_index+m] = (
-                                c̄ₙₘ * cosβ * H[nm100_index+m]
-                                + sinβ * ēₙₘ * H[nm100_index+m-1]
-                            )
-                        end
-                    end
-                    let m = n
-                        c̄ₙₘ = 0
-                        d̄ₙₘ = 0
-                        ēₙₘ = inv2n * √T(2n*(2n-1))
-                        if superjacent
-                            HΩ = sinβ * ēₙₘ * H[nm100_index+m-1]
-                        else
-                            H[n00_index+m] = sinβ * ēₙₘ * H[nm100_index+m-1]
-                        end
-                    end
-
                 end
+                let m = n
+                    c̄ₙₘ = 0
+                    d̄ₙₘ = 0
+                    ēₙₘ = inv2n * √T(2n*(2n-1))
+                    if superjacent
+                        HΩ = sinβ * ēₙₘ * H[nm100_index+m-1]
+                    else
+                        H[n00_index+m] = sinβ * ēₙₘ * H[nm100_index+m-1]
+                    end
+                end
+
             end
 
             if m′ₘₐₓ > 0
