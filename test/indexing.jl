@@ -10,9 +10,9 @@
     @testset "WignerHrange" begin
         r1(mp_max, ell_max) = hcat([
             [ell, mp, m] for ell in 0:ell_max
-                for mp in -min(ell, mp_max):min(ell, mp_max)
-                    for m in abs(mp):ell
-                        ]...)'
+            for mp in -min(ell, mp_max):min(ell, mp_max)
+            for m in abs(mp):ell
+        ]...)'
         for ell_max in 0:ell_max
             a = WignerHrange(ell_max)  # Implicitly, mp_max=ell_max
             b = r1(ell_max, ell_max)

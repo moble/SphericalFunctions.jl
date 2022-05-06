@@ -64,7 +64,7 @@ function plan_map2salm(map_data::AbstractArray{Complex{T}}, spin::Int, ℓmax::I
     Gs = [Array{complex(T)}(undef, (Nφ,)) for i = 1:nthreads()]
     m′max = abs(spin)
     Hwedge = Array{T}(undef, WignerHsize(ℓmax, m′max))
-    H_rec_coeffs = abd(ℓmax, T)
+    H_rec_coeffs = H_recursion_coefficients(ℓmax, T)
     weight = clenshaw_curtis(Nϑ, T)
     expiθ = complex_powers(cis(π / T(Nϑ-1)), Nϑ-1)
     ϵs = SphericalFunctions.ϵ(-spin)

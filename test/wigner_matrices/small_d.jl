@@ -29,9 +29,9 @@
         for β in βrange(T)
             expiβ = cis(β)
             for ℓₘₐₓ in 0:4
-                abd_vals = abd(ℓₘₐₓ, T)
+                H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, T)
                 d = Array{T}(undef, WignerDsize(ℓₘₐₓ, ℓₘₐₓ))
-                d!(d, expiβ, ℓₘₐₓ, abd_vals)
+                d!(d, expiβ, ℓₘₐₓ, H_rec_coeffs)
                 for n in 0:ℓₘₐₓ
                     for m′ in -n:n
                         for m in -n:n
@@ -64,8 +64,8 @@
             d!(dB, expiβ, ℓₘₐₓ)
             @test array_equal(dA, dB)
             dB .= 0
-            abd_vals = abd(ℓₘₐₓ, T)
-            d!(dB, β, ℓₘₐₓ, abd_vals)
+            H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, T)
+            d!(dB, β, ℓₘₐₓ, H_rec_coeffs)
             @test array_equal(dA, dB)
         end
     end

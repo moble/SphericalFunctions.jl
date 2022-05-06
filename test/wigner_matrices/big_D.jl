@@ -10,9 +10,12 @@
             expiβNaNCheck = complex(NaNCheck{T}(expiβ.re), NaNCheck{T}(expiβ.im))
             NCTN = NaNCheck{T}(NaN)
             Hw = fill(NCTN, WignerHsize(ℓₘₐₓ, m′ₘₐₓ))
-            H!(Hw, expiβNaNCheck, ℓₘₐₓ, m′ₘₐₓ, abd(ℓₘₐₓ, T))
+            H!(Hw, expiβNaNCheck, ℓₘₐₓ, m′ₘₐₓ, H_recursion_coefficients(ℓₘₐₓ, T))
             𝔇 = fill(NCTN, WignerDsize(ℓₘₐₓ, m′ₘₐₓ))
-            H!(𝔇, expiβNaNCheck, ℓₘₐₓ, m′ₘₐₓ, abd(ℓₘₐₓ, T), WignerDindex)
+            H!(
+                𝔇, expiβNaNCheck, ℓₘₐₓ, m′ₘₐₓ,
+                H_recursion_coefficients(ℓₘₐₓ, T), WignerDindex
+            )
             for n in 0:ℓₘₐₓ
                 for m′ in -min(n, m′ₘₐₓ):min(n, m′ₘₐₓ)
                     for m in abs(m′):n
@@ -29,7 +32,7 @@
         # Now, we're ready to check that d_{n}^{m′,m}(β) matches the expected values
         # for a range of β values
         for ℓₘₐₓ in 0:4
-            abd_vals = abd(ℓₘₐₓ, T)
+            H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, T)
             𝔇 = Array{Complex{T}}(undef, WignerDsize(ℓₘₐₓ, ℓₘₐₓ))
             expimα = Array{Complex{T}}(undef, ℓₘₐₓ+1)
             expimγ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
@@ -38,11 +41,13 @@
             for β in βrange(T)
                 expiβ = cis(β)
                 R = from_euler_angles(zero(T), β, zero(T))
-                D!(𝔇, R, ℓₘₐₓ, abd_vals, expimα, expimγ)
+                D!(𝔇, R, ℓₘₐₓ, H_rec_coeffs, expimα, expimγ)
                 for n in 0:ℓₘₐₓ
                     for m′ in -n:n
                         for m in -n:n
-                            𝔇_formula = ExplicitWignerMatrices.D_formula(n, m′, m, expiα, expiβ, expiγ)
+                            𝔇_formula = ExplicitWignerMatrices.D_formula(
+                                n, m′, m, expiα, expiβ, expiγ
+                            )
                             𝔇_recurrence = 𝔇[WignerDindex(n, m′, m)]
                             @test 𝔇_formula ≈ 𝔇_recurrence atol=200eps(T) rtol=200eps(T)
                         end
@@ -57,7 +62,7 @@
         # for a range of α, β, γ values
         Random.seed!(123)
         ℓₘₐₓ = T===BigFloat ? 4 : 8
-        abd_vals = abd(ℓₘₐₓ, T)
+        H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, T)
         𝔇 = Array{Complex{T}}(undef, WignerDsize(ℓₘₐₓ, ℓₘₐₓ))
         expimα = Array{Complex{T}}(undef, ℓₘₐₓ+1)
         expimγ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
@@ -66,7 +71,7 @@
                 for γ in γrange(T, 5)
                     R = from_euler_angles(α, β, γ)
                     expiα, expiβ, expiγ = to_euler_phases(R)
-                    D!(𝔇, R, ℓₘₐₓ, abd_vals, expimα, expimγ)
+                    D!(𝔇, R, ℓₘₐₓ, H_rec_coeffs, expimα, expimγ)
                     for n in 0:ℓₘₐₓ
                         for m′ in -n:n
                             for m in -n:n
@@ -89,14 +94,14 @@
         # conjugacy classes of SO(3) are rotations through the same angle about any axis.
         ℓₘₐₓ = T===BigFloat ? 10 : 20
         m′ₘₐₓ = ℓₘₐₓ
-        abd_vals = abd(ℓₘₐₓ, T)
+        H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, T)
         d = Array{T}(undef, WignerDsize(ℓₘₐₓ, m′ₘₐₓ))
         𝔇 = Array{Complex{T}}(undef, WignerDsize(ℓₘₐₓ, m′ₘₐₓ))
         expimα = Array{Complex{T}}(undef, ℓₘₐₓ+1)
         expimγ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
         @showprogress "Group characters $T" for β in βrange(T)
             expiβ = cis(β)
-            d!(d, expiβ, ℓₘₐₓ, abd_vals)
+            d!(d, expiβ, ℓₘₐₓ, H_rec_coeffs)
             for j in 0:ℓₘₐₓ
                 sin_ratio = sin((2j+1)*β/2) / sin(β/2)
                 if abs(β) < 10eps(T)
@@ -108,7 +113,7 @@
                 @test χʲ ≈ sin_ratio atol=500eps(T) rtol=500eps(T)
                 for v̂ in v̂range(T)
                     R = exp(β/2 * v̂)
-                    D!(𝔇, R, ℓₘₐₓ, abd_vals, expimα, expimγ)
+                    D!(𝔇, R, ℓₘₐₓ, H_rec_coeffs, expimα, expimγ)
                     χʲ = sum(𝔇[WignerDindex(j, m, m)] for m in -j:j)
                     @test χʲ ≈ sin_ratio atol=500eps(T) rtol=500eps(T)
                 end
@@ -123,14 +128,14 @@
         𝔇₁ = Array{Complex{T}}(undef, WignerDsize(ℓₘₐₓ))
         𝔇₂ = Array{Complex{T}}(undef, WignerDsize(ℓₘₐₓ))
         𝔇₁₂ = Array{Complex{T}}(undef, WignerDsize(ℓₘₐₓ))
-        abd_vals = abd(ℓₘₐₓ, T)
+        H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, T)
         expimα = Array{Complex{T}}(undef, ℓₘₐₓ+1)
         expimγ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
         @showprogress "Representation property ($T)" for R₁ in Rrange(T)
             for R₂ in Rrange(T)
-                D!(𝔇₁, R₁, ℓₘₐₓ, abd_vals, expimα, expimγ)
-                D!(𝔇₂, R₂, ℓₘₐₓ, abd_vals, expimα, expimγ)
-                D!(𝔇₁₂, R₁*R₂, ℓₘₐₓ, abd_vals, expimα, expimγ)
+                D!(𝔇₁, R₁, ℓₘₐₓ, H_rec_coeffs, expimα, expimγ)
+                D!(𝔇₂, R₂, ℓₘₐₓ, H_rec_coeffs, expimα, expimγ)
+                D!(𝔇₁₂, R₁*R₂, ℓₘₐₓ, H_rec_coeffs, expimα, expimγ)
                 for ℓ in 0:ℓₘₐₓ
                     i = WignerDindex(ℓ, -ℓ, -ℓ)
                     j = WignerDindex(ℓ, ℓ, ℓ)

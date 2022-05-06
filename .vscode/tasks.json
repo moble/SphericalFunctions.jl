@@ -1,0 +1,23 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "julia",
+			"command": "testcoverage",
+			"problemMatcher": [
+				{
+					"owner": "language-julia",
+					"fileLocation": "autoDetect",
+					"pattern": {
+						"regexp": "^(?<filename>.+):\\s(?<body>.+)\\sat\\s(?<file>.+)\\:(?<line>\\d+)",
+						"file": 3,
+						"line": 4,
+						"message": 2
+					}
+				}
+			],
+			"group": "test",
+			"label": "Julia: Run tests with coverage"
+		}
+	]
+}

@@ -7,7 +7,7 @@
             for ℓₘₐₓ in 0:6  # Expect overflows for higher ℓ with Float32
                 for m′ₘₐₓ in 0:ℓₘₐₓ
                     Hw = fill(T(NaN), WignerHsize(ℓₘₐₓ, m′ₘₐₓ))
-                    H!(Hw, expiβ, ℓₘₐₓ, m′ₘₐₓ, abd(ℓₘₐₓ, T))
+                    H!(Hw, expiβ, ℓₘₐₓ, m′ₘₐₓ, H_recursion_coefficients(ℓₘₐₓ, T))
                     for n in 0:ℓₘₐₓ
                         for m′ in -min(n, m′ₘₐₓ):min(n, m′ₘₐₓ)
                             for m in abs(m′):n
@@ -32,7 +32,7 @@
             for ℓₘₐₓ in 0:6  # Expect overflows for higher ℓ with Float32
                 for m′ₘₐₓ in 0:ℓₘₐₓ
                     Hw = fill(T(NaN), WignerHsize(ℓₘₐₓ, m′ₘₐₓ))
-                    H!(Hw, expiβ, ℓₘₐₓ, m′ₘₐₓ, abd(ℓₘₐₓ, T))
+                    H!(Hw, expiβ, ℓₘₐₓ, m′ₘₐₓ, H_recursion_coefficients(ℓₘₐₓ, T))
                     for n in 0:ℓₘₐₓ
                         for m′ in -min(n, m′ₘₐₓ):min(n, m′ₘₐₓ)
                             for m in abs(m′):n
@@ -58,7 +58,7 @@
             for ℓₘₐₓ in 0:2  # 2 is the max explicitly coded ℓ
                 for m′ₘₐₓ in 0:ℓₘₐₓ
                     Hw = fill(T(NaN), WignerHsize(ℓₘₐₓ, m′ₘₐₓ))
-                    H!(Hw, expiβ, ℓₘₐₓ, m′ₘₐₓ, abd(ℓₘₐₓ, T))
+                    H!(Hw, expiβ, ℓₘₐₓ, m′ₘₐₓ, H_recursion_coefficients(ℓₘₐₓ, T))
                     for n in 0:ℓₘₐₓ
                         for m′ in -min(n, m′ₘₐₓ):min(n, m′ₘₐₓ)
                             for m in -n:n
@@ -109,7 +109,7 @@
             for ℓₘₐₓ in 0:6  # Expect overflows for higher ℓ with Float32
                 for m′ₘₐₓ in 0:ℓₘₐₓ
                     Hw = fill(T(NaN), WignerHsize(ℓₘₐₓ, m′ₘₐₓ))
-                    H!(Hw, expiβ, ℓₘₐₓ, m′ₘₐₓ, abd(ℓₘₐₓ, T))
+                    H!(Hw, expiβ, ℓₘₐₓ, m′ₘₐₓ, H_recursion_coefficients(ℓₘₐₓ, T))
                     for n in 0:ℓₘₐₓ
                         for m′ in -min(n, m′ₘₐₓ):min(n, m′ₘₐₓ)
                             for m in -n:n

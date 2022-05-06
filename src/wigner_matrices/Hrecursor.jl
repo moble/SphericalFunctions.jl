@@ -13,16 +13,16 @@ Assumes array is ordered as
 
 
 """
-    abd(ℓₘₐₓ, T)
+    H_recursion_coefficients(ℓₘₐₓ, T)
 
-Pre-compute constants used in Wigner H recurrence.
+Pre-compute constants used in Wigner H recursion.
 
 """
-function abd(ℓₘₐₓ, ::Type{T}) where {T<:Real}
-    a = T[√((n+1+m)*(n+1-m)/T((2n+1)*(2n+3))) for n in 0:ℓₘₐₓ+1 for m in 0:n]
-    b = T[(m<0 ? -1 : 1) * √((n-m-1)*(n-m)/T((2n-1)*(2n+1))) for n in 0:ℓₘₐₓ+1 for m in -n:n]
-    d = T[(m<0 ? -1 : 1) * (√T((n-m)*(n+m+1))) / 2 for n in 0:ℓₘₐₓ+1 for m in -n:n]
-    (a, b, d)
+function H_recursion_coefficients(ℓₘₐₓ, ::Type{T}) where {T<:Real}
+    aₙᵐ = T[√((n+1+m)*(n+1-m)/T((2n+1)*(2n+3))) for n in 0:ℓₘₐₓ+1 for m in 0:n]
+    bₙᵐ = T[(m<0 ? -1 : 1) * √((n-m-1)*(n-m)/T((2n-1)*(2n+1))) for n in 0:ℓₘₐₓ+1 for m in -n:n]
+    dₙᵐ = T[(m<0 ? -1 : 1) * (√T((n-m)*(n+m+1))) / 2 for n in 0:ℓₘₐₓ+1 for m in -n:n]
+    (aₙᵐ, bₙᵐ, dₙᵐ)
 end
 
 
@@ -63,17 +63,17 @@ end
 
 
 function H!(
-    H::AbstractVector, expiβ::Complex{T}, ℓₘₐₓ, m′ₘₐₓ, (a,b,d), Hindex=WignerHindex
+    H::AbstractVector, expiβ::Complex{T}, ℓₘₐₓ, m′ₘₐₓ, (aₙᵐ,bₙᵐ,dₙᵐ), Hindex=WignerHindex
 ) where {T<:Real}
     m′ₘₐₓ = abs(m′ₘₐₓ)
     @assert m′ₘₐₓ ≤ ℓₘₐₓ
-    @assert size(H) == (Hindex(ℓₘₐₓ, m′ₘₐₓ, ℓₘₐₓ, m′ₘₐₓ),)
+    @assert size(H, 1) ≥ Hindex(ℓₘₐₓ, m′ₘₐₓ, ℓₘₐₓ, m′ₘₐₓ)
 
     invsqrt2 = inv(√T(2))
     cosβ = expiβ.re
     sinβ = expiβ.im
-    cosβ₊ = (1+cosβ)/2
-    cosβ₋ = (1-cosβ)/2
+    cosβ₊ = (1+cosβ)/2  # = cos²(β/2)
+    cosβ₋ = (1-cosβ)/2  # = sin²(β/2)
 
     # Note: In step 3, we set the H^{1, m}_{ℓₘₐₓ} terms from H^{0, m+1}_{ℓₘₐₓ+1} data,
     # which of course should not appear in the final result, because it involves ℓ>ℓₘₐₓ.
@@ -81,8 +81,8 @@ function H!(
     # of this function.  Fortunately, this is only required if m′ₘₐₓ>0, which also implies
     # that there are at least ℓₘₐₓ slots in the input Hwedge array that are not needed until
     # step 5.  We use those slots for most of the temporary data.  However, there are still
-    # two slots needed, which we allocate as individual variables, representing the last
-    # and second-to-last elements H^{0, ℓₘₐₓ+1}_{ℓₘₐₓ+1} and H^{0, ℓₘₐₓ}_{ℓₘₐₓ+1}:
+    # two slots needed, which we provide as individual variables, representing the last and
+    # second-to-last elements H^{0, ℓₘₐₓ+1}_{ℓₘₐₓ+1} and H^{0, ℓₘₐₓ}_{ℓₘₐₓ+1}:
     HΩ, HΨ = zero(eltype(H)), zero(eltype(H))
 
     @inbounds begin
@@ -92,6 +92,9 @@ function H!(
         if ℓₘₐₓ > 0
 
             # Step 2: Compute H^{0,m}_{n}(β) for m=0,...,n and n=1,...,ℓₘₐₓ,ℓₘₐₓ+1?
+            # Note that in this step only, we use notation derived from Xing et al., so that
+            # the coefficients are denoted b̄ₙ, c̄ₙₘ, d̄ₙₘ, ēₙₘ.  Below, we will use notation
+            # from Gumerov and Duraiswami, who denote their different coefficients aₙᵐ, etc.
             nₘₐₓstep2 = m′ₘₐₓ>0 ? ℓₘₐₓ+1 : ℓₘₐₓ
             # n = 1
             n0n_index = Hindex(1, 0, 0, m′ₘₐₓ)
@@ -169,11 +172,11 @@ function H!(
                     end
                     i3 = nm_index(n+1, 0)
                     i4 = (n * (n + 1)) ÷ 2 + 2
-                    inverse_b5 = inv(b[i3])
+                    inverse_b5 = inv(bₙᵐ[i3])
                     for i in 0:nₘₐₓstep3
-                        b6 = b[-i+i3-2]
-                        b7 = b[i+i3]
-                        a8 = a[i+i4]
+                        b6 = bₙᵐ[-i+i3-2]
+                        b7 = bₙᵐ[i+i3]
+                        a8 = aₙᵐ[i+i4]
                         H[i+i1] = inverse_b5 * (
                             b6 * cosβ₋ * H[i+i2+2]
                             - b7 * cosβ₊ * H[i+i2]
@@ -183,9 +186,9 @@ function H!(
                     if n == ℓₘₐₓ  # &&  m′ₘₐₓ > 0
                         if n>1
                             let i = n-2
-                                b6 = b[-i+i3-2]
-                                b7 = b[i+i3]
-                                a8 = a[i+i4]
+                                b6 = bₙᵐ[-i+i3-2]
+                                b7 = bₙᵐ[i+i3]
+                                a8 = aₙᵐ[i+i4]
                                 H[i+i1] = inverse_b5 * (
                                     b6 * cosβ₋ * HΨ
                                     - b7 * cosβ₊ * H[i+i2]
@@ -194,9 +197,9 @@ function H!(
                             end
                         end
                         let i = n-1
-                            b6 = b[-i+i3-2]
-                            b7 = b[i+i3]
-                            a8 = a[i+i4]
+                            b6 = bₙᵐ[-i+i3-2]
+                            b7 = bₙᵐ[i+i3]
+                            a8 = aₙᵐ[i+i4]
                             H[i+i1] = inverse_b5 * (
                                 b6 * cosβ₋ * HΩ
                                 - b7 * cosβ₊ * H[i+i2]
@@ -216,14 +219,14 @@ function H!(
                         i4 = Hindex(n, mp, mp+1, m′ₘₐₓ)
                         i5 = nm_index(n, mp)
                         i6 = nm_index(n, mp-1)
-                        inverse_d5 = inv(d[i5])
-                        d6 = d[i6]
+                        inverse_d5 = inv(dₙᵐ[i5])
+                        d6 = dₙᵐ[i6]
 
                         d7 = d6
-                        d8 = d[i5]
+                        d8 = dₙᵐ[i5]
                         for i in 1:n-mp-1
                             d7 = d8
-                            d8 = d[i+i5]
+                            d8 = dₙᵐ[i+i5]
                             H[i+i1] = inverse_d5 * (
                                 d6 * H[i+i2]
                                 - d7 * H[i+i3]
@@ -254,13 +257,13 @@ function H!(
                         i6 = nm_index(n, mp)
                         i7 = nm_index(n, -mp-1)
                         i8 = nm_index(n, -mp)
-                        inverse_d5 = inv(d[i5])
-                        d6 = d[i6]
-                        d7 = d[i7]
-                        d8 = d[i8]
+                        inverse_d5 = inv(dₙᵐ[i5])
+                        d6 = dₙᵐ[i6]
+                        d7 = dₙᵐ[i7]
+                        d8 = dₙᵐ[i8]
                         for i in 1:n+mp-1
                             d7 = d8
-                            d8 = d[i+i8]
+                            d8 = dₙᵐ[i+i8]
                             H[i+i1] = inverse_d5 * (
                                 d6 * H[i+i2]
                                 + d7 * H[i+i3]
