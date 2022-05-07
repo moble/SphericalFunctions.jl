@@ -4,7 +4,7 @@ using FastTransforms, LinearAlgebra, ProgressMeter, Quaternionic
 import Base.Threads: @threads, nthreads
 
 export complex_powers, complex_powers!
-export theta_phi, phi_theta
+export Ysize, Yrange, Yindex, deduce_limits, theta_phi, phi_theta
 export WignerMatrixCalculator, H!, d!, D!, Y!
 export ALFRecursionCoefficients, ALFrecurse!, ALFcompute!
 export fejer1, fejer2, clenshaw_curtis

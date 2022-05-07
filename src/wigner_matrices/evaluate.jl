@@ -13,7 +13,8 @@
 
 export H!, H_recursion_coefficients
 export WignerDsize, WignerHsize, WignerDindex, WignerHindex, _WignerHindex
-export d!, d, D!, Y!, Yprep #, ϵ
+export d!, d, D!, Y!
+export dprep, dstorage, Dprep, Dstorage, Yprep, Ystorage#, ϵ
 
 using ..SphericalFunctions: complex_powers!
 using Quaternionic: AbstractQuaternion, to_euler_phases!
@@ -50,8 +51,8 @@ The result is returned in a 1-dimensional array ordered as
     ]
 
 """
-function d!(d, expiβ::Complex, ℓₘₐₓ, (aₙᵐ,bₙᵐ,dₙᵐ))
-    H!(d, expiβ, ℓₘₐₓ, ℓₘₐₓ, (aₙᵐ,bₙᵐ,dₙᵐ), WignerDindex)
+function d!(d, expiβ::Complex, ℓₘₐₓ, H_rec_coeffs)
+    H!(d, expiβ, ℓₘₐₓ, ℓₘₐₓ, H_rec_coeffs, WignerDindex)
 
     @inbounds for ℓ in 0:ℓₘₐₓ
         i0 = WignerDindex(ℓ, -ℓ, -ℓ)
@@ -102,8 +103,8 @@ end
 function d!(d, expiβ::Complex{T}, ℓₘₐₓ) where {T<:Real}
     d!(d, expiβ, ℓₘₐₓ, H_recursion_coefficients(ℓₘₐₓ, T))
 end
-function d!(d, β::T, ℓₘₐₓ, (aₙᵐ,bₙᵐ,dₙᵐ)) where {T<:Real}
-    d!(d, cis(β), ℓₘₐₓ, (aₙᵐ,bₙᵐ,dₙᵐ))
+function d!(d, β::T, ℓₘₐₓ, H_rec_coeffs) where {T<:Real}
+    d!(d, cis(β), ℓₘₐₓ, H_rec_coeffs)
 end
 function d!(d, β::T, ℓₘₐₓ) where {T<:Real}
     d!(d, cis(β), ℓₘₐₓ, H_recursion_coefficients(ℓₘₐₓ, T))
@@ -113,6 +114,16 @@ function d(expiβ::Complex{T}, ℓₘₐₓ) where {T<:Real}
     d!(𝔡, expiβ, ℓₘₐₓ, H_recursion_coefficients(ℓₘₐₓ, T))
 end
 d(β::T, ℓₘₐₓ) where {T<:Real} = d(cis(β), ℓₘₐₓ)
+
+function dstorage(ℓₘₐₓ, ::Type{T}) where {T<:Real}
+    Vector{T}(undef, WignerDsize(ℓₘₐₓ))
+end
+
+function dprep(ℓₘₐₓ, ::Type{T}) where {T<:Real}
+    d = dstorage(ℓₘₐₓ, T, ℓₘᵢₙ)
+    H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, T)
+    d, H_rec_coeffs
+end
 
 
 """
@@ -198,6 +209,18 @@ function D!(𝔇, R::AbstractQuaternion, ℓₘₐₓ, H_rec_coeffs, expimα, ex
         end
     end
     𝔇
+end
+
+function Dstorage(ℓₘₐₓ, ::Type{T}) where {T<:Real}
+    Vector{Complex{T}}(undef, WignerDsize(ℓₘₐₓ))
+end
+
+function Dprep(ℓₘₐₓ, ::Type{T}) where {T<:Real}
+    𝔇 = Dstorage(ℓₘₐₓ, T)
+    H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, T)
+    expimα = Vector{Complex{T}}(undef, ℓₘₐₓ+1)
+    expimγ = Vector{Complex{T}}(undef, ℓₘₐₓ+1)
+    𝔇, H_rec_coeffs, expimα, expimγ
 end
 
 
