@@ -45,7 +45,6 @@ function ALFRecursionCoefficients(nmax, ::Type{T}=Float64) where {T<:Real}
     end
     ALFRecursionCoefficients{T}(nmax, avalues, bvalues, cdevalues)
 end
-Base.show(io::IO, r::ALFRecursionCoefficients) = print(io, "$(typeof(r))($(r.nmax))")
 
 
 function ALFrecurse!(P̄ₙ::AbstractVector{T}, P̄ₙ₋₁::AbstractVector{T}, n::Int, t::T, u::T, aₙ::T, bₙ::T, cdeₙ::AbstractMatrix{T}) where {T<:Real}
