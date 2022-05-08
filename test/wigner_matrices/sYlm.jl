@@ -21,6 +21,14 @@
         ℓₘᵢₙ = 0
         tol = ℓₘₐₓ^2 * 2eps(T)  # Mostly because the NINJA.sYlm expressions are inaccurate
         Y, H_rec_coeffs, Hwedge, expimϕ = Yprep(ℓₘₐₓ, sₘₐₓ, T)
+
+        let R = randn(Rotor{T})
+            @test_throws ErrorException Y!(Y, R, ℓₘₐₓ+1, 0, H_rec_coeffs, Hwedge, expimϕ)
+            ℓ = ℓₘₐₓ - 1
+            i = WignerHsize(ℓ, abs(0)) - 1
+            @test_throws ErrorException Y!(Y, R, ℓ, 0, H_rec_coeffs, Hwedge[1:i], expimϕ)
+        end
+
         @showprogress "Compare to NINJA expressions ($T)" for spin in -sₘₐₓ:sₘₐₓ
             for ι in βrange(T)
                 for ϕ in αrange(T)

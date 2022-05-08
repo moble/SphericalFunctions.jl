@@ -120,7 +120,7 @@ function dstorage(ℓₘₐₓ, ::Type{T}) where {T<:Real}
 end
 
 function dprep(ℓₘₐₓ, ::Type{T}) where {T<:Real}
-    d = dstorage(ℓₘₐₓ, T, ℓₘᵢₙ)
+    d = dstorage(ℓₘₐₓ, T)
     H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, T)
     d, H_rec_coeffs
 end

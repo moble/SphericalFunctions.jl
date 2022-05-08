@@ -29,8 +29,7 @@
         for β in βrange(T)
             expiβ = cis(β)
             for ℓₘₐₓ in 0:4
-                H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, T)
-                d = Array{T}(undef, WignerDsize(ℓₘₐₓ, ℓₘₐₓ))
+                d, H_rec_coeffs = dprep(ℓₘₐₓ, T)
                 d!(d, expiβ, ℓₘₐₓ, H_rec_coeffs)
                 for n in 0:ℓₘₐₓ
                     for m′ in -n:n
