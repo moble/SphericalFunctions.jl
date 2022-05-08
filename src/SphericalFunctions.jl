@@ -21,8 +21,7 @@ include("indexing.jl")
 
 include("wigner_matrices/evaluate.jl")
 
-include("associated_legendre/calculator.jl")
-using .AssociatedLegendreFunction: ALFRecursionCoefficients, ALFrecurse!, ALFcompute!
+include("associated_legendre.jl")
 
 include("weights.jl")
 

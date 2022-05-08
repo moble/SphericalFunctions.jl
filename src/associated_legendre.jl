@@ -190,3 +190,5 @@ end
 
 
 end  # module ALF
+
+using .AssociatedLegendreFunction: ALFRecursionCoefficients, ALFrecurse!, ALFcompute!
