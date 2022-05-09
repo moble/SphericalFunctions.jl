@@ -30,5 +30,6 @@ Manifest.toml
 benchmark/*.json
 benchmark/results.md
 
-# Ignore my notes
+# Ignore my notes and settings
 /notes
+.vscode

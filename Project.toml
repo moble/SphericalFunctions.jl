@@ -1,7 +1,7 @@
 name = "SphericalFunctions"
 uuid = "af6d55de-b1f7-4743-b797-0829a72cf84e"
 authors = ["Michael Boyle <michael.oliver.boyle@gmail.com>"]
-version = "0.3.3"
+version = "1.0.0"
 
 [deps]
 FastTransforms = "057dd010-8810-581a-b7be-e3fc3b93f78c"
