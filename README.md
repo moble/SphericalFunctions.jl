@@ -31,8 +31,9 @@ page](https://moble.github.io/spherical_functions/).
 
 Note that numerous other packages cover some of these use cases, including
 [`FastTransforms.jl`](https://JuliaApproximation.github.io/FastTransforms.jl/),
-[`FastSphericalHarmonics.jl`](https://eschnett.github.io/FastSphericalHarmonics.jl/dev/), and
-[`WignerSymbols.jl`](https://github.com/Jutho/WignerSymbols.jl).  However, I need support for
+[`FastSphericalHarmonics.jl`](https://eschnett.github.io/FastSphericalHarmonics.jl/dev/),
+[`WignerSymbols.jl`](https://github.com/Jutho/WignerSymbols.jl), and
+[`WignerFamilies.jl`](https://github.com/xzackli/WignerFamilies.jl).  However, I need support for
 quaternions (via [`Quaternionic.jl`](https://github.com/moble/Quaternionic.jl)) and for
 higher-precision numbers — even at the cost of a very slight decrease in speed in some cases — which
 are what this package provides.

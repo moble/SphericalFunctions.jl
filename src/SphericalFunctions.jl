@@ -1,12 +1,12 @@
 module SphericalFunctions
 
-using FastTransforms, LinearAlgebra, ProgressMeter
+using FastTransforms, LinearAlgebra, ProgressMeter, Quaternionic
 import Base.Threads: @threads, nthreads
 
 export complex_powers, complex_powers!
-export theta_phi, phi_theta
+export Ysize, Yrange, Yindex, deduce_limits, theta_phi, phi_theta
 export WignerMatrixCalculator, H!, d!, D!, Y!
-export ALFRecursionCoefficients, ALFrecurse!, ALFcompute!
+export ALFRecursionCoefficients, ALFrecurse!, ALFcompute!, ALFcompute
 export fejer1, fejer2, clenshaw_curtis
 export map2salm, map2salm!, plan_map2salm
 
@@ -21,8 +21,7 @@ include("indexing.jl")
 
 include("wigner_matrices/evaluate.jl")
 
-include("associated_legendre/calculator.jl")
-using .AssociatedLegendreFunction: ALFRecursionCoefficients, ALFrecurse!, ALFcompute!
+include("associated_legendre.jl")
 
 include("weights.jl")
 

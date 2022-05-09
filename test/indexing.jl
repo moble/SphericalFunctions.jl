@@ -8,28 +8,34 @@
     ell_max_slow = ell_max ÷ 2
 
     @testset "WignerHrange" begin
-        r(mp_max, ell_max) = hcat([
+        r1(mp_max, ell_max) = hcat([
             [ell, mp, m] for ell in 0:ell_max
-                for mp in -min(ell, mp_max):min(ell, mp_max)
-                    for m in abs(mp):ell
-                        ]...)'
+            for mp in -min(ell, mp_max):min(ell, mp_max)
+            for m in abs(mp):ell
+        ]...)'
         for ell_max in 0:ell_max
             a = WignerHrange(ell_max)  # Implicitly, mp_max=ell_max
-            b = r(ell_max, ell_max)
+            b = r1(ell_max, ell_max)
             @test a == b
             for mp_max in 0:ell_max
-                a = WignerHrange(mp_max, ell_max)
-                b = r(mp_max, ell_max)
+                a = WignerHrange(ell_max, mp_max)
+                b = r1(mp_max, ell_max)
                 @test a == b
             end
         end
     end
 
     @testset "WignerHsize" begin
+        for i in -5:-1
+            @test WignerHsize(i) == 0
+            for j in -5:5
+                @test WignerHsize(i, j) == 0
+            end
+        end
         for ell_max in 0:ell_max
-            @test WignerHsize(ell_max) == size(WignerHrange(ell_max, ell_max))[1]
+            @test WignerHsize(ell_max) == size(WignerHrange(ell_max, ell_max), 1)
             for mp_max in ell_max
-                @test WignerHsize(mp_max, ell_max) == size(WignerHrange(mp_max, ell_max))[1]
+                @test WignerHsize(ell_max, mp_max) == size(WignerHrange(ell_max, mp_max), 1)
             end
         end
     end
@@ -62,7 +68,7 @@
                 end
             end
             for mp_max in 0:ell_max_i
-                r = WignerHrange(mp_max, ell_max_i)
+                r = WignerHrange(ell_max_i, mp_max)
                 for ell in 0:ell_max_i
                     for mp in -ell:ell
                         for m in -ell:ell
@@ -79,7 +85,7 @@
     end
 
     @testset "WignerDrange" begin
-        function r(ell_min, mp_max, ell_max)
+        function r2(ell_min, mp_max, ell_max)
             a = [
                 [ℓ, mp, m]
                 for ℓ in ell_min:ell_max
@@ -90,13 +96,13 @@
         end
 
         for ell_max in 0:ell_max_slow÷2
-            for ell_min in 0:ell_max
-                a = WignerDrange(ell_min, ell_max)  # Implicitly, mp_max=ell_max
-                b = r(ell_min, ell_max, ell_max)
+            let ell_min = 0
+                a = WignerDrange(ell_max)  # Implicitly, mp_max=ell_max
+                b = r2(ell_min, ell_max, ell_max)
                 @test a == b
                 for mp_max in 0:ell_max
-                    a = WignerDrange(ell_min, mp_max, ell_max)
-                    b = r(ell_min, mp_max, ell_max)
+                    a = WignerDrange(ell_max, mp_max)
+                    b = r2(ell_min, mp_max, ell_max)
                     @test a == b
                 end
             end
@@ -105,40 +111,39 @@
 
     @testset "WignerDsize" begin
         for ell_max in 0:ell_max
-            for ell_min in 0:ell_max
+            let ell_min = 0
                 for mp_max in 0:ell_max
-                    a = WignerDsize(ell_min, mp_max, ell_max)
-                    b = size(WignerDrange(ell_min, mp_max, ell_max))[1]
+                    a = WignerDsize(ell_max, mp_max)
+                    b = size(WignerDrange(ell_max, mp_max), 1)
                     @test a == b
                 end
             end
         end
         for ell_max in 0:ell_max
-            for ell_min in [0]
+            let ell_min = 0
                 for mp_max in 0:ell_max
-                    a = WignerDsize(ell_min, mp_max, ell_max)
-                    #a = WignerDsize_mpmax(ell_max, mp_max)
-                    b = size(WignerDrange(ell_min, mp_max, ell_max))[1]
+                    a = WignerDsize(ell_max, mp_max)
+                    b = size(WignerDrange(ell_max, mp_max), 1)
                     @test a == b
                 end
             end
         end
         for ell_max in 0:ell_max
-            for ell_min in 0:ell_max
+            let ell_min = 0
                 for mp_max in [ell_max]
-                    a = WignerDsize(ell_min, mp_max, ell_max)
+                    a = WignerDsize(ell_max, mp_max)
                     # a = WignerDsize_ellmin(ell_min, ell_max)
-                    b = size(WignerDrange(ell_min, mp_max, ell_max))[1]
+                    b = size(WignerDrange(ell_max, mp_max), 1)
                     @test a == b
                 end
             end
         end
         for ell_max in 0:ell_max
-            for ell_min in [0]
+            let ell_min = 0
                 for mp_max in [ell_max]
-                    a = WignerDsize(ell_min, mp_max, ell_max)
+                    a = WignerDsize(ell_max, mp_max)
                     # a = WignerDsize(ell_max)
-                    b = size(WignerDrange(ell_min, mp_max, ell_max))[1]
+                    b = size(WignerDrange(ell_max, mp_max), 1)
                     @test a == b
                 end
             end
@@ -146,18 +151,8 @@
     end
 
     @testset "WignerDindex" begin
-        function r(ell_min, mp_max, ell_max)
-            a = [
-                [ℓ, mp, m]
-                for ℓ in ell_min:ell_max
-                for mp in -min(ℓ, mp_max):min(ℓ, mp_max)
-                for m in -ℓ:ℓ
-            ]
-            collect(transpose(reshape(collect(Iterators.flatten(a)), (3, length(a)))))
-        end
-
         for ellmax in 0:ell_max_slow
-            r = WignerDrange(0, ellmax)
+            r = WignerDrange(ellmax)
             for ell in 0:ellmax
                 for mp in -ell:ell
                     for m in -ell:ell
@@ -166,22 +161,22 @@
                     end
                 end
             end
-            for ell_min in 0:ellmax
-                r = WignerDrange(ell_min, ellmax)
+            let ell_min = 0
+                r = WignerDrange(ellmax)
                 for ell in ell_min:ellmax
                     for mp in -ell:ell
                         for m in -ell:ell
-                            i = WignerDindex(ell, mp, m, ell_min)
+                            i = WignerDindex(ell, mp, m)
                             @test r[i, :] == [ell, mp, m]
                         end
                     end
                 end
                 for mp_max in 0:ellmax
-                    r = WignerDrange(ell_min, mp_max, ellmax)
+                    r = WignerDrange(ellmax, mp_max)
                     for ell in ell_min:ellmax
                         for mp in -min(ell, mp_max):min(ell, mp_max)
                             for m in -ell:ell
-                                i = WignerDindex(ell, mp, m, ell_min, mp_max)
+                                i = WignerDindex(ell, mp, m, mp_max)
                                 @test r[i, :] == [ell, mp, m]
                             end
                         end
@@ -192,7 +187,7 @@
     end
 
     @testset "Yrange" begin
-        function r(ell_min, ell_max)
+        function r3(ell_min, ell_max)
             a = [
                 [ℓ, m]
                 for ℓ in ell_min:ell_max
@@ -203,7 +198,7 @@
         for ell_max in 0:ell_max
             for ell_min in 0:ell_max
                 a = Yrange(ell_min, ell_max)
-                b = r(ell_min, ell_max)
+                b = r3(ell_min, ell_max)
                 @test a == b
             end
         end
@@ -238,11 +233,19 @@
                 @test deduced == (ℓmin, ℓmax)
             end
         end
+        for ℓmax in 1:ell_max
+            prev_size = Ysize(ℓmax-1)
+            this_size = Ysize(ℓmax)
+            if abs(prev_size - this_size) > 1
+                mid_size = (prev_size + this_size) ÷ 2
+                @test_throws ErrorException deduce_limits(mid_size)
+            end
+        end
     end
 
     @testset "Yindex" begin
         for ell_max in 0:ell_max
-            for ell_min in [0]
+            let ell_min = 0
                 r = Yrange(ell_min, ell_max)
                 for ell in ell_min:ell_max
                     for m in -ell:ell
@@ -250,6 +253,8 @@
                         @test r[i, :] == [ell, m]
                     end
                 end
+                s = Yrange(ell_max)
+                @test array_equal(r, s)
             end
             for ell_min in 0:ell_max
                 r = Yrange(ell_min, ell_max)
@@ -259,6 +264,16 @@
                         @test r[i, :] == [ell, m]
                     end
                 end
+            end
+        end
+    end
+
+    @testset "phi_theta <-> theta_phi" for T in [Float64, Float32, BigFloat]
+        for nθ in 2:(2ell_max+1)
+            for nϕ in 2:(2ell_max+1)
+                θϕ = theta_phi(nθ, nϕ, T)
+                ϕθ = permutedims(phi_theta(nϕ, nθ, T), [2, 1, 3])[:, :, 2:-1:1]
+                @test array_equal(θϕ, ϕθ)
             end
         end
     end

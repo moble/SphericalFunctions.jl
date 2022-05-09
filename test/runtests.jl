@@ -1,12 +1,14 @@
 using SphericalFunctions
-using Test, Random, FastTransforms
+using Test, Random, ProgressMeter
+using FastTransforms, Quaternionic
 
+include("test_utilities.jl")
 
 enabled_tests = lowercase.(ARGS)
 
 help = ("help" ∈ enabled_tests || "--help" ∈ enabled_tests)
 helptests = []
-    
+
 # This block is cribbed from StaticArrays.jl/test/runtests.jl
 function addtests(fname)
     key = lowercase(splitext(fname)[1])
@@ -26,6 +28,7 @@ end
     addtests("complex_powers.jl")
     addtests("indexing.jl")
     addtests("alf.jl")
+    addtests("wigner_matrices.jl")
     addtests("weights.jl")
     addtests("map2salm.jl")
 end

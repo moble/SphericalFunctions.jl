@@ -1,14 +1,12 @@
 @doc raw"""
-    map2salm(map, spin, ℓmax, [ℓmin])
+    map2salm(map, spin, ℓmax)
     map2salm(map, plan)
 
 Transform `map` values sampled on the sphere to ``{}_sa_{\ell, m}`` modes.
 
 The `map` array should have size Nφ along its first dimension and Nϑ along its
 second; any number of dimensions may follow.  The `spin` must be entered
-explicitly, and `ℓmax` is the highest ℓ value you want in the output.  The
-`ℓmin` represents the smallest ℓ value in the output and defaults to
-`abs(spin)`; it generally should never be larger than this.
+explicitly, and `ℓmax` is the highest ℓ value you want in the output.
 
 For repeated applications of this function with different values of `map`, it
 is more efficient to pre-compute `plan` using [`plan_map2salm`](@ref).  These
@@ -19,18 +17,15 @@ The core of this function follows the method described by [Reinecke and
 Seljebotn](https://dx.doi.org/10.1051/0004-6361/201321494).
 
 """
-function map2salm(
-    map::AbstractArray{Complex{T}},
-    spin::Int, ℓmax::Int; ℓmin::Int=abs(spin), show_progress=false
-) where {T<:Real}
+function map2salm(map::AbstractArray{Complex{T}}, spin::Int, ℓmax::Int, show_progress=false) where {T<:Real}
     Nφ, Nϑ, Nextra... = size(map)
-    salm = zeros(complex(T), (Ysize(ℓmin, ℓmax), Nextra...))
-    map2salm!(salm, map, spin, ℓmax; ℓmin=ℓmin, show_progress=show_progress)
+    salm = zeros(complex(T), (Ysize(ℓmax), Nextra...))
+    map2salm!(salm, map, spin, ℓmax, show_progress)
     return salm
 end
 
 @doc raw"""
-    map2salm!(salm, map, spin, ℓmax, [ℓmin])
+    map2salm!(salm, map, spin, ℓmax)
     map2salm!(salm, map, plan)
 
 Transform `map` values sampled on the sphere to ``{}_sa_{\ell, m}`` modes in
@@ -42,14 +37,14 @@ For details, see [`map2salm`](@ref).
 function map2salm!(
     salm::AbstractArray{Complex{T}},
     map::AbstractArray{Complex{T}},
-    spin::Int, ℓmax::Int; ℓmin::Int=abs(spin), show_progress=false
+    spin::Int, ℓmax::Int, show_progress=false
 ) where {T<:Real}
-    plan = plan_map2salm(map, spin, ℓmax, ℓmin)
-    map2salm!(salm, map, plan; show_progress=show_progress)
+    plan = plan_map2salm(map, spin, ℓmax)
+    map2salm!(salm, map, plan, show_progress)
 end
 
 """
-    plan_map2salm(map, spin, ℓmax, [ℓmin])
+    plan_map2salm(map, spin, ℓmax)
 
 Precompute values to use in executing [`map2salm`](@ref) or
 [`map2salm!`](@ref).
@@ -64,18 +59,19 @@ created for each thread that will use one, or locks should be used to ensure
 that a single `plan` is not used at the same time on different threads.
 
 """
-function plan_map2salm(map::AbstractArray{Complex{T}}, spin::Int, ℓmax::Int, ℓmin::Int=abs(spin)) where {T<:Real}
-    Nφ, Nϑ, Nextra... = size(map)
+function plan_map2salm(map_data::AbstractArray{Complex{T}}, spin::Int, ℓmax::Int) where {T<:Real}
+    Nφ, Nϑ, Nextra... = size(map_data)
     Gs = [Array{complex(T)}(undef, (Nφ,)) for i = 1:nthreads()]
     m′max = abs(spin)
-    wigner = WignerMatrixCalculator(ℓmin, ℓmax, m′max, T)
+    Hwedge = Array{T}(undef, WignerHsize(ℓmax, m′max))
+    H_rec_coeffs = H_recursion_coefficients(ℓmax, T)
     weight = clenshaw_curtis(Nϑ, T)
-    expiθ = complex_powers(exp(im * (π / T(Nϑ-1))), Nϑ-1)
+    expiθ = complex_powers(cis(π / T(Nϑ-1)), Nϑ-1)
     ϵs = SphericalFunctions.ϵ(-spin)
     extra_dims = Base.Iterators.product((1:e for e in Nextra)...)
-    fftplan = T<:MachineFloat ? plan_fft(map[:, 1, first(extra_dims)...]) : nothing
+    fftplan = T<:MachineFloat ? plan_fft(map_data[:, 1, first(extra_dims)...]) : nothing
 
-    return (spin, ℓmax, ℓmin, Nφ, Nϑ, Nextra, Gs, m′max, wigner, weight, expiθ, ϵs, extra_dims, fftplan)
+    return (spin, ℓmax, Nφ, Nϑ, Nextra, Gs, m′max, Hwedge, H_rec_coeffs, weight, expiθ, ϵs, extra_dims, fftplan)
 end
 
 
@@ -99,20 +95,19 @@ end
 
 
 function map2salm!(
-    salm::AbstractArray{Complex{T}},
-    map::AbstractArray{Complex{T}},
-    (spin, ℓmax, ℓmin, Nφ, Nϑ, Nextra, Gs, m′max, wigner, weight, expiθ, ϵs, extra_dims, fftplan);
+    salm::AbstractArray{Complex{T}}, map::AbstractArray{Complex{T}},
+    (spin, ℓmax, Nφ, Nϑ, Nextra, Gs, m′max, Hwedge, H_rec_coeffs, weight, expiθ, ϵs, extra_dims, fftplan),
     show_progress=false
 ) where {T<:Real}
     s1 = size(salm)
-    s2 = (Ysize(ℓmin, ℓmax), Nextra...)
-    @assert s1==s2 "size(salm)=$s1  !=  (Ysize(ℓmin, ℓmax), Nextra...)=$s2"
+    s2 = (Ysize(ℓmax), Nextra...)
+    @assert s1==s2 "size(salm)=$s1  !=  (Ysize(ℓmax), Nextra...)=$s2"
 
     absspin = abs(spin)
     progress = Progress(Nϑ * prod(Nextra); showspeed=true, enabled=show_progress)
 
     @inbounds for ϑ ∈ 1:Nϑ
-        H!(wigner, expiθ[ϑ])
+        H!(Hwedge, expiθ[ϑ], ℓmax, m′max, H_rec_coeffs, WignerHindex)
         @threads for extra ∈ collect(extra_dims)
             # NOTE: We can't thread at a higher level because each thread could access the
             # same element of `salm` simultaneously below; by threading at this level, we
@@ -126,8 +121,8 @@ function map2salm!(
                 i₀ = WignerHindex(ℓ, spin, 0, m′max)
 
                 let m=0
-                    salm[Yindex(ℓ, m, ℓmin), extra...] +=
-                        G[m+1] * λ_factor * wigner.Hwedge[i₀]
+                    salm[Yindex(ℓ, m), extra...] +=
+                        G[m+1] * λ_factor * Hwedge[i₀]
                 end
 
                 i₊ = i₀
@@ -136,28 +131,28 @@ function map2salm!(
                     for m ∈ 1:min(ℓ, absspin)
                         i₊ -= ℓ-m+2
                         i₋ += ℓ-m+1
-                        salm[Yindex(ℓ, m, ℓmin), extra...] +=
-                            G[m+1] * ϵ(m) * λ_factor * wigner.Hwedge[i₊]
-                        salm[Yindex(ℓ, -m, ℓmin), extra...] +=
-                            G[Nφ-m+1] * λ_factor * wigner.Hwedge[i₋]
+                        salm[Yindex(ℓ, m), extra...] +=
+                            G[m+1] * ϵ(m) * λ_factor * Hwedge[i₊]
+                        salm[Yindex(ℓ, -m), extra...] +=
+                            G[Nφ-m+1] * λ_factor * Hwedge[i₋]
                     end
                 else
                     for m ∈ 1:min(ℓ, absspin)
                         i₊ += ℓ-m+1
                         i₋ -= ℓ-m+2
-                        salm[Yindex(ℓ, m, ℓmin), extra...] +=
-                            G[m+1] * ϵ(m) * λ_factor * wigner.Hwedge[i₊]
-                        salm[Yindex(ℓ, -m, ℓmin), extra...] +=
-                            G[Nφ-m+1] * λ_factor * wigner.Hwedge[i₋]
+                        salm[Yindex(ℓ, m), extra...] +=
+                            G[m+1] * ϵ(m) * λ_factor * Hwedge[i₊]
+                        salm[Yindex(ℓ, -m), extra...] +=
+                            G[Nφ-m+1] * λ_factor * Hwedge[i₋]
                     end
                 end
                 for m ∈ absspin+1:ℓ
                     i₊ += 1
                     i₋ += 1
-                    salm[Yindex(ℓ, m, ℓmin), extra...] +=
-                        G[m+1] * ϵ(m) * λ_factor * wigner.Hwedge[i₊]
-                    salm[Yindex(ℓ, -m, ℓmin), extra...] +=
-                        G[Nφ-m+1] * λ_factor * wigner.Hwedge[i₋]
+                    salm[Yindex(ℓ, m), extra...] +=
+                        G[m+1] * ϵ(m) * λ_factor * Hwedge[i₊]
+                    salm[Yindex(ℓ, -m), extra...] +=
+                        G[Nφ-m+1] * λ_factor * Hwedge[i₋]
                 end
             end
             next!(progress)
@@ -165,8 +160,8 @@ function map2salm!(
     end
 end
 
-function map2salm(map::AbstractArray{Complex{T}}, plan; show_progress=false) where {T<:Real}
-    salm = zeros(complex(T), (Ysize(plan[3], plan[2]), plan[6]...))
-    map2salm!(salm, map, plan; show_progress=show_progress)
+function map2salm(map::AbstractArray{Complex{T}}, plan, show_progress=false) where {T<:Real}
+    salm = zeros(complex(T), (Ysize(plan[2]), plan[5]...))
+    map2salm!(salm, map, plan, show_progress)
     return salm
 end

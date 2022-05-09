@@ -31,4 +31,4 @@ benchmark/*.json
 benchmark/results.md
 
 # Ignore my notes
-notes
+/notes

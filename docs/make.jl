@@ -1,3 +1,7 @@
+# Run with
+#   time julia --project=. make.jl && julia --project=. -e 'using LiveServer; serve(dir="build")'
+# assuming you are in this `docs` directory (otherwise point the project argument here)
+
 using Documenter, SphericalFunctions
 
 DocMeta.setdocmeta!(SphericalFunctions, :DocTestSetup, :(using SphericalFunctions); recursive=true)
@@ -14,8 +18,12 @@ makedocs(
         "Introduction" => "index.md",
         "Basics" => "manual.md",
         "Utilities" => "utilities.md",
+        "Notes" => map(
+            s -> "notes/$(s)",
+            sort(readdir(joinpath(@__DIR__, "src/notes")))
+        ),
     ],
-    # doctest = false
+    #doctest = false
 )
 
 deploydocs(
