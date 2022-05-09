@@ -1,7 +1,3 @@
-module AssociatedLegendreFunction
-
-import ..OffsetVec, ..OffsetMat
-
 ### The code in this module is based on a paper by Xing et al.:
 ### https://doi.org/10.1007/s00190-019-01331-0.  All references to equation numbers are for that
 ### paper.
@@ -186,8 +182,3 @@ function ALFcompute(expiβ::Complex{T}, nmax::Int) where {T<:Real}
     recursion_coefficients = ALFRecursionCoefficients(0, T)
     ALFcompute(expiβ, nmax, recursion_coefficients)
 end
-
-
-end  # module ALF
-
-using .AssociatedLegendreFunction: ALFRecursionCoefficients, ALFrecurse!, ALFcompute!
