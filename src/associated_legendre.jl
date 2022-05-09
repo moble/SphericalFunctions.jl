@@ -166,11 +166,11 @@ function ALFcompute!(P̄::Vector{T}, expiβ::Complex{T}, nmax::Int, recursion_co
         end
     end
 end
+
 function ALFcompute!(P̄::Vector{T}, expiβ::Complex{T}, nmax::Int) where {T<:Real}
     recursion_coefficients = ALFRecursionCoefficients(0, T)
     ALFcompute!(P̄, expiβ, nmax, recursion_coefficients)
 end
-
 
 function ALFcompute(expiβ::Complex{T}, nmax::Int, recursion_coefficients::ALFRecursionCoefficients{T}) where {T<:Real}
     min_length = (nmax * (nmax + 3)) ÷ 2 + 1
@@ -178,6 +178,7 @@ function ALFcompute(expiβ::Complex{T}, nmax::Int, recursion_coefficients::ALFRe
     ALFcompute!(P̄, expiβ, nmax, recursion_coefficients)
     P̄
 end
+
 function ALFcompute(expiβ::Complex{T}, nmax::Int) where {T<:Real}
     recursion_coefficients = ALFRecursionCoefficients(0, T)
     ALFcompute(expiβ, nmax, recursion_coefficients)
