@@ -16,7 +16,7 @@ makedocs(
     ),
     pages = [
         "Introduction" => "index.md",
-        "Basics" => "manual.md",
+        "Primary functions" => "manual.md",
         "Utilities" => "utilities.md",
         "Notes" => map(
             s -> "notes/$(s)",

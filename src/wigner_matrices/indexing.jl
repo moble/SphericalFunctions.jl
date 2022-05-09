@@ -4,7 +4,7 @@
 Total size of array of wedges of width m′ₘₐₓ up to ℓₘₐₓ.  If m′ₘₐₓ is not
 given, it defaults to ℓₘₐₓ.
 
-See also ['WignerHrange`](@ref) and [`WignerHindex`](@ref).
+See also [`WignerHrange`](@ref) and [`WignerHindex`](@ref).
 
 # Notes
 Here, it is assumed that only data with m≥|m′| are stored, and only
@@ -44,10 +44,10 @@ end
 
 Create an array of (ℓ, m', m) indices as in H array
 
-See also ['WignerHsize`](@ref) and [`WignerHindex`](@ref)
+See also [`WignerHsize`](@ref) and [`WignerHindex`](@ref)
 
-Notes
------
+# Notes
+
 Here, it is assumed that only data with m≥|m'| are stored, and only
 corresponding values are passed.  We also assume |m|≤ℓ and |m'|≤ℓ.  Neither of
 these are checked.  The wedge array that this function indexes is ordered as
@@ -96,21 +96,10 @@ end
 
 Index to "wedge" arrays
 
-Parameters
-----------
-ℓ : int
-m′ : int
-m : int
-m′ₘₐₓ : int, optional
-    If nothing, it is assumed to be at least ℓ
+See also [`WignerHsize`](@ref) and [`WignerHrange`](@ref).
 
-See Also
---------
-WignerHsize : Total size of wedge array
-WignerHrange : Array of (ℓ, m', m) indices corresponding to this wedge
+# Notes
 
-Notes
------
 Here, it is assumed that only data with m≥|m'| are stored, and only
 corresponding values are passed.  We also assume |m|≤ℓ and |m'|≤ℓ.  Neither
 of these are checked.  The wedge array that this function indexes is ordered as
@@ -148,10 +137,10 @@ end
 
 Compute total size of Wigner 𝔇 matrix
 
-See also ['WignerDrange`](@ref) and [`WignerDindex`](@ref).
+See also [`WignerDrange`](@ref) and [`WignerDindex`](@ref).
 
-Notes
------
+# Notes
+
 This assumes that the Wigner 𝔇 matrix is arranged as
 
     [
@@ -232,22 +221,10 @@ end
 
 Create an array of (ℓ, m', m) indices as in 𝔇 array
 
-Parameters
-----------
-ℓₘᵢₙ : int
-    Integer satisfying 0 <= ℓₘᵢₙ <= ℓₘₐₓ
-m′ₘₐₓ : int, optional
-    Integer satisfying 0 <= m′ₘₐₓ.  Default is ℓₘₐₓ.
-ℓₘₐₓ : int
-    Integer satisfying 0 <= ℓₘᵢₙ <= ℓₘₐₓ
+See also [`WignerDsize`](@ref) and [`WignerDindex`](@ref).
 
-See Also
---------
-WignerDsize : Total size of 𝔇 array
-WignerDindex : Index inside these wedges
+# Notes
 
-Notes
------
 This assumes that the Wigner 𝔇 matrix is arranged as
 
     [
@@ -280,31 +257,10 @@ end
 
 Compute index into Wigner 𝔇 matrix
 
-Parameters
-----------
-ℓ : int
-    Integer satisfying ℓₘᵢₙ <= ℓ <= ℓₘₐₓ
-m′ : int
-    Integer satisfying -min(ℓₘₐₓ, m′ₘₐₓ) <= m′ <= min(ℓₘₐₓ, m′ₘₐₓ)
-m : int
-    Integer satisfying -ℓ <= m <= ℓ
-ℓₘᵢₙ : int, optional
-    Integer satisfying 0 <= ℓₘᵢₙ <= ℓₘₐₓ.  Defaults to 0.
-m′ₘₐₓ : int, optional
-    Integer satisfying 0 <= m′ₘₐₓ.  Defaults to ℓ.
+See also [`WignerDrange`](@ref) and [`WignerDsize`](@ref).
 
-Returns
--------
-i : int
-    Index into Wigner 𝔇 matrix arranged as described below
+# Notes
 
-See Also
---------
-WignerDsize : Total size of the 𝔇 matrix
-WignerDrange : Array of (ℓ, m', m) indices corresponding to the 𝔇 matrix
-
-Notes
------
 This assumes that the Wigner 𝔇 matrix is arranged as
 
     [

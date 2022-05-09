@@ -11,21 +11,24 @@ into mode coefficients) of functions evaluated on regular grids to high order an
 These quantities are computed using recursion relations, which makes it possible to compute to very
 high ℓ values.  Unlike direct evaluation of individual elements, which will generally cause overflow
 or underflow beyond ℓ≈30 when using double precision, these recursion relations should be valid for
-far higher ℓ values.  More precisely, `Inf` values appear starting at ℓ=22 for `Float16`, ℓ=183 for
-`Float32`, and ℓ=1474 for `Float64`.  `BigFloat` also works, and presumably will not overflow for
-any ℓ value that could reasonably fit into computer memory — though it is far slower.  Also note
-that [`DoubleFloats`](https://github.com/JuliaMath/DoubleFloats.jl) will work, and achieve
-significantly greater accuracy (but no greater range) than `Float64`.  The results are accurate to
-roughly ℓ times the precision of the input quaternion.
+far higher ℓ values.  More precisely, when using *this* package, `Inf` values appear starting at
+ℓ=22 for `Float16`, ℓ=183 for `Float32`, and ℓ=1474 for `Float64`.  `BigFloat` also works, and
+presumably will not overflow for any ℓ value that could reasonably fit into computer memory — though
+it is far slower.  Also note that [`DoubleFloats`](https://github.com/JuliaMath/DoubleFloats.jl)
+will work, and achieve significantly greater accuracy (but no greater range) than `Float64`.  The
+results are accurate to roughly ℓ times the precision of the input quaternion.
 
 The conventions for this package are described in detail on [this
-page](https://moble.github.io/spherical/).
+page](https://moble.github.io/spherical_functions/).
 
 Note that numerous other packages cover some of these use cases, including
 [`FastTransforms.jl`](https://JuliaApproximation.github.io/FastTransforms.jl/),
-[`FastSphericalHarmonics.jl`](https://eschnett.github.io/FastSphericalHarmonics.jl/dev/), and
-[`WignerSymbols.jl`](https://github.com/Jutho/WignerSymbols.jl).  However, I need support for
-higher-precision numbers — even at the cost of some speed — which is what this package provides.
+[`FastSphericalHarmonics.jl`](https://eschnett.github.io/FastSphericalHarmonics.jl/dev/),
+[`WignerSymbols.jl`](https://github.com/Jutho/WignerSymbols.jl), and
+[`WignerFamilies.jl`](https://github.com/xzackli/WignerFamilies.jl).  However, I need support for
+quaternions (via [`Quaternionic.jl`](https://github.com/moble/Quaternionic.jl)) and for
+higher-precision numbers — even at the cost of a very slight decrease in speed in some cases — which
+are what this package provides.
 
 
 ## Contents

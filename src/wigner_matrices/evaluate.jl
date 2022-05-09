@@ -31,6 +31,8 @@ include("Hrecursor.jl")
     d!(d, expiβ, ℓₘₐₓ)
     d!(d, β, ℓₘₐₓ, H_rec_coeffs)
     d!(d, β, ℓₘₐₓ)
+    d(expiβ, ℓₘₐₓ)
+    d(β, ℓₘₐₓ)
 
 Compute Wigner's d matrix dˡₘₚ,ₘ(β)
 
@@ -115,10 +117,28 @@ function d(expiβ::Complex{T}, ℓₘₐₓ) where {T<:Real}
 end
 d(β::T, ℓₘₐₓ) where {T<:Real} = d(cis(β), ℓₘₐₓ)
 
+"""
+    dstorage(ℓₘₐₓ, T)
+
+Construct space to compute Wigner's ``d`` matrix in place.
+
+This returns the `d` argument needed by [`d!`](@ref).
+
+"""
 function dstorage(ℓₘₐₓ, ::Type{T}) where {T<:Real}
     Vector{T}(undef, WignerDsize(ℓₘₐₓ))
 end
 
+
+"""
+    dprep(ℓₘₐₓ, T)
+
+Construct space and pre-compute recursion coefficients to compute Wigner's
+``d`` matrix in place.
+
+This returns the `(d, H_rec_coeffs)` arguments needed by [`d!`](@ref).
+
+"""
 function dprep(ℓₘₐₓ, ::Type{T}) where {T<:Real}
     d = dstorage(ℓₘₐₓ, T)
     H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, T)
@@ -211,10 +231,29 @@ function D!(𝔇, R::AbstractQuaternion, ℓₘₐₓ, H_rec_coeffs, expimα, ex
     𝔇
 end
 
+"""
+    Dstorage(ℓₘₐₓ, T)
+
+Construct space to compute Wigner's ``𝔇`` matrix in place.
+
+This returns the `D` argument needed by [`D!`](@ref).
+
+"""
 function Dstorage(ℓₘₐₓ, ::Type{T}) where {T<:Real}
     Vector{Complex{T}}(undef, WignerDsize(ℓₘₐₓ))
 end
 
+
+"""
+    Dprep(ℓₘₐₓ, T)
+
+Construct space and pre-compute recursion coefficients to compute Wigner's
+``𝔇`` matrix in place.
+
+This returns the `(D, H_rec_coeffs, expimα, expimγ)` arguments needed by
+[`D!`](@ref).
+
+"""
 function Dprep(ℓₘₐₓ, ::Type{T}) where {T<:Real}
     𝔇 = Dstorage(ℓₘₐₓ, T)
     H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, T)
@@ -288,6 +327,16 @@ function Y!(Y, R, ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢ�
     Y
 end
 
+"""
+    Ystorage(ℓₘₐₓ, T)
+    Ystorage(ℓₘₐₓ, T, ℓₘᵢₙ)
+
+Construct space to compute the spin-weighted spherical harmonics ``ₛYₗ,ₘ`` in
+place.
+
+This returns the `Y` argument needed by [`Y!`](@ref).
+
+"""
 function Ystorage(ℓₘₐₓ, ::Type{T}, ℓₘᵢₙ=0) where {T<:Real}
     Vector{Complex{T}}(undef, Ysize(ℓₘᵢₙ, ℓₘₐₓ))
 end
@@ -310,9 +359,9 @@ the correspondingly named arguments of `Y!`.
 Note that the same results of this function can be passed to `Y!`, even if the
 value of `ℓₘₐₓ` passed to that function is smaller than the value passed to
 this function, or the value of `spin` passed to that function is smaller (in
-absolute value) than the `sₘₐₓ` passed to this function.  However, the value
-of `ℓₘᵢₙ` passed to that function *must not* be smaller than the value passed
-to this function (unless one of the other sizes is sufficiently smaller).
+absolute value) than the `sₘₐₓ` passed to this function.  However, the value of
+`ℓₘᵢₙ` passed to that function *must not* be smaller than the value passed to
+this function (unless one of the other sizes is sufficiently smaller).
 
 """
 function Yprep(ℓₘₐₓ, sₘₐₓ, ::Type{T}, ℓₘᵢₙ=0) where {T<:Real}

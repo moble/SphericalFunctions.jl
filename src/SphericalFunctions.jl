@@ -5,7 +5,6 @@ import Base.Threads: @threads, nthreads
 
 export complex_powers, complex_powers!
 export Ysize, Yrange, Yindex, deduce_limits, theta_phi, phi_theta
-export WignerMatrixCalculator, H!, d!, D!, Y!
 export ALFRecursionCoefficients, ALFrecurse!, ALFcompute!, ALFcompute
 export fejer1, fejer2, clenshaw_curtis
 export map2salm, map2salm!, plan_map2salm
