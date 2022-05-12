@@ -268,7 +268,7 @@ function H!(
                     end
                 end  # Step 4
 
-                # Step 5: Compute H^{m'−1, m}_{n}(β) for m'=−1,...,−n+1, m=−m',...,n
+                # Step 5: Compute H^{m'−1, m}_{n}(β) for m'=0,...,−n+1, m=−m',...,n
                 for n in 0:ℓₘₐₓ
                     for mp in 0:-1:1-min(n, m′ₘₐₓ)
                         # m = -m', ..., n-1

@@ -1,5 +1,4 @@
 ### TODO:
-### 2. Separate ALF computation to a different module
 ### 4. Test skipping all the complicated indexing tricks; use fancy indexing
 ### 5. Allow specifying the extent of recursion / iterating over ℓ matrices
 
