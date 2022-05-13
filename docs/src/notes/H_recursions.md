@@ -162,7 +162,27 @@ b^{m}_{n} = \mathrm{sgn}(m) \sqrt{\frac{(n-m-1)(n-m)} {(2n-1)(2n+1)}}.
 ```
 Note that all values are assumed to be zero whenever ``|m| > n``, we use
 ``\mathrm{sgn}(0)=1`` (unlike the common convention that
-``\mathrm{sgn}(0)=0``), and we have ``a^{m}_{n} = a^{-m}_{n}``.
+``\mathrm{sgn}(0)=0``), and we have ``a^{m}_{n} = a^{-m}_{n}``.  Also note
+that these coefficients *only* appear in this step, and because of how they
+appear (specifically, because ``b`` always appears with argument ``n+1``), we
+can factor out the denominators in the definitions of the constants.  We
+obtain this simplified formula
+```math
+H^{1, m}_{n}
+  = -\frac{1}{\sqrt{n(n+1)}} \left[
+      \frac{\bar{b}^{−m−1}_{n+1} (1−\cos β)}{2} H^{0, m+1}_{n+1}
+      + \frac{\bar{b}^{ m−1}_{n+1} (1+\cos β)}{2} H^{0, m−1}_{n+1}
+      + \bar{a}^{m}_{n} \sin β H^{0, m}_{n+1}
+    \right],
+```
+with
+```math
+\bar{a}^{m}_{n} = \sqrt{(n+m+1)(n-m+1)},
+```
+```math
+\bar{b}^{m}_{n+1} = \sqrt{(n-m)(n-m+1)}.
+```
+
 
 ### Step 4
 Recursively compute ``H^{m'+1, m}_{n}(β)`` for ``m'=1,\ldots,n−1``,
@@ -178,10 +198,12 @@ d^{m'}_{n} H^{m'+1, m}_{n}
 ```math
 d^{m}_{n} = \frac{\mathrm{sgn}(m)}{2} \sqrt{(n-m)(n+m+1)}.
 ```
+Note that we can drop the factor of ``1/2``, and *for this case only* the sign
+is always +1.
 
 
 ### Step 5
-Recursively compute ``H^{m'−1, m}_{n}(β)`` for ``m'=−1,\ldots,−n+1``,
+Recursively compute ``H^{m'−1, m}_{n}(β)`` for ``m'=0,\ldots,−n+1``,
 ``m=−m',\ldots,n`` using relation (50) resolved with respect to ``H^{m'−1,
 m}_{n}``:
 ```math
