@@ -19,8 +19,6 @@ struct HCalculator{T<:Real}
     m′ₘₐₓ::Int
     Hₙ₊₁⁰::Vector{T}
     Hₙ::Vector{T}
-    Hₙ₋₁⁰::Vector{T}
-    H_rec_coeffs
 end
 Base.show(io::IO, hc::HCalculator{T}) where T = print(io, "HCalculator($(T), $(hc.ℓₘₐₓ), $(hc.m′ₘₐₓ)) ")
 
@@ -30,8 +28,7 @@ function HCalculator(T, ℓₘₐₓ, m′ₘₐₓ=ℓₘₐₓ)
     Hₙsize = m′ₘₐₓ * (2*ℓₘₐₓ - m′ₘₐₓ + 1) + ℓₘₐₓ + 1
     Hₙ₊₁⁰ = Vector{T}(undef, ℓₘₐₓ+2)
     Hₙ = Vector{T}(undef, Hₙsize)
-    Hₙ₋₁⁰ = Vector{T}(undef, ℓₘₐₓ)
-    HCalculator{T}(ℓₘₐₓ, m′ₘₐₓ, Hₙ₊₁⁰, Hₙ, Hₙ₋₁⁰, H_recursion_coefficients(ℓₘₐₓ, T))
+    HCalculator{T}(ℓₘₐₓ, m′ₘₐₓ, Hₙ₊₁⁰, Hₙ)
 end
 
 # struct DCalculator{T<:Real}
