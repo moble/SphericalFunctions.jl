@@ -15,9 +15,9 @@ Pre-compute constants used in Wigner H recursion.
 
 """
 function H_recursion_coefficients(ℓₘₐₓ, ::Type{T}) where {T<:Real}
-    aₙᵐ = T[√((n+1+m)*(n+1-m)/T((2n+1)*(2n+3))) for n in 0:ℓₘₐₓ+1 for m in 0:n]
-    bₙᵐ = T[(m<0 ? -1 : 1) * √((n-m-1)*(n-m)/T((2n-1)*(2n+1))) for n in 0:ℓₘₐₓ+1 for m in -n:n]
-    dₙᵐ = T[(m<0 ? -1 : 1) * (√T((n-m)*(n+m+1))) / 2 for n in 0:ℓₘₐₓ+1 for m in -n:n]
+    aₙᵐ = T[√T((n+1+m)*(n+1-m)) for n in 0:ℓₘₐₓ+1 for m in 0:n]
+    bₙᵐ = T[√T((n-m-1)*(n-m)) for n in 0:ℓₘₐₓ+1 for m in -n:n]
+    dₙᵐ = T[(m<0 ? -1 : 1) * (√T((n-m)*(n+m+1))) for n in 0:ℓₘₐₓ+1 for m in -n:n]
     (aₙᵐ, bₙᵐ, dₙᵐ)
 end
 
@@ -200,10 +200,10 @@ function H!(
                         b6 = bₙᵐ[-i+i3-2]
                         b7 = bₙᵐ[i+i3]
                         a8 = aₙᵐ[i+i4]
-                        H[i+i1] = inverse_b5 * (
+                        H[i+i1] = -inverse_b5 * (
                             b6 * cosβ₋ * H[i+i2+2]
-                            - b7 * cosβ₊ * H[i+i2]
-                            - a8 * sinβ * H[i+i2+1]
+                            + b7 * cosβ₊ * H[i+i2]
+                            + a8 * sinβ * H[i+i2+1]
                         )
                     end
                     if n == ℓₘₐₓ  # &&  m′ₘₐₓ > 0
@@ -212,10 +212,10 @@ function H!(
                                 b6 = bₙᵐ[-i+i3-2]
                                 b7 = bₙᵐ[i+i3]
                                 a8 = aₙᵐ[i+i4]
-                                H[i+i1] = inverse_b5 * (
+                                H[i+i1] = -inverse_b5 * (
                                     b6 * cosβ₋ * HΨ
-                                    - b7 * cosβ₊ * H[i+i2]
-                                    - a8 * sinβ * H[i+i2+1]
+                                    + b7 * cosβ₊ * H[i+i2]
+                                    + a8 * sinβ * H[i+i2+1]
                                 )
                             end
                         end
@@ -223,10 +223,10 @@ function H!(
                             b6 = bₙᵐ[-i+i3-2]
                             b7 = bₙᵐ[i+i3]
                             a8 = aₙᵐ[i+i4]
-                            H[i+i1] = inverse_b5 * (
+                            H[i+i1] = -inverse_b5 * (
                                 b6 * cosβ₋ * HΩ
-                                - b7 * cosβ₊ * H[i+i2]
-                                - a8 * sinβ * HΨ
+                                + b7 * cosβ₊ * H[i+i2]
+                                + a8 * sinβ * HΨ
                             )
                         end
                     end
