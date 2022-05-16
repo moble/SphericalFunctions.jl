@@ -27,6 +27,7 @@ end
 @testset verbose=true "All tests" begin
     addtests("complex_powers.jl")
     addtests("indexing.jl")
+    addtests("calculators.jl")
     addtests("alf.jl")
     addtests("wigner_matrices.jl")
     addtests("weights.jl")
