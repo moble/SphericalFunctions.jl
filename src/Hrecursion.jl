@@ -1,47 +1,3 @@
-# # Return flat index into arrray of (n, m) pairs.
-# # Assumes array is ordered as
-# #   [
-# #     (n, m)
-# #     for n in 0:n_max
-# #     for m in -n:n
-# # ]
-# @inline nm_index(n, m) = m + n * (n + 1) + 1
-
-
-# function H!(
-#     Hwedge::AbstractVector{T}, Hextra::AbstractVector{T}, Hv::AbstractVector{T},
-#     ℓₘᵢₙ, ℓₘₐₓ, expiβ::Complex{T}
-# ) where {T<:Real}
-#     H!(Hwedge, Hextra, Hv, ℓₘᵢₙ, ℓₘₐₓ, ℓₘₐₓ, expiβ)
-# end
-
-# function H!(
-#     Hwedge::AbstractVector{T}, Hextra::AbstractVector{T}, Hv::AbstractVector{T},
-#     ℓₘₐₓ, expiβ::Complex{T}
-# ) where {T<:Real}
-#     H!(Hwedge, Hextra, Hv, 0, ℓₘₐₓ, ℓₘₐₓ, expiβ)
-# end
-
-# function H(ℓₘᵢₙ, ℓₘₐₓ, m′ₘₐₓ, expiβ::Complex{T}) where {T<:Real}
-#     Hwedge = zeros(T, WignerHsize(m′ₘₐₓ, ℓₘₐₓ))
-#     Hv = zeros(T, (ℓₘₐₓ + 1)^2)
-#     Hextra = zeros(T, ℓₘₐₓ + 2)
-#     H!(Hwedge, Hextra, Hv, ℓₘᵢₙ, ℓₘₐₓ, m′ₘₐₓ, expiβ)
-# end
-
-# function H(ℓₘᵢₙ, ℓₘₐₓ, expiβ::Complex{T}) where {T<:Real}
-#     H(ℓₘᵢₙ, ℓₘₐₓ, ℓₘₐₓ, expiβ)
-# end
-
-# function H(ℓₘₐₓ, expiβ::Complex{T}) where {T<:Real}
-#     H(0, ℓₘₐₓ, ℓₘₐₓ, expiβ)
-# end
-
-
-# function H!(
-#     H::AbstractVector{TU}, expiβ::Complex{T}, ℓₘₐₓ::Integer, m′ₘₐₓ::Integer,
-#     (a,b,d), Hindex=WignerHindex
-# ) where {TU<:Union{T, Complex{T}}, T<:Real}
 
 """
     H!(H, expiβ, ℓₘₐₓ, m′ₘₐₓ, H_rec_coeffs)
@@ -67,17 +23,14 @@ If ``m′ₘₐₓ < ℓₘₐₓ``, we don't even need 1/4 of the elements, and
 with ``|m′| ≤ m′ₘₐₓ`` will be computed.  This is particularly useful for
 computing spin-weighted spherical harmonics.
 
-Note that the recursion coefficients `H_rec_coeffs` should be the quantity
-returned by [`H_recursion_coefficients`](@ref).
-
 """
-function H2!(HC::HCalculator{T}, expiβ::Complex{T}, n) where {T<:Real}
-    @assert n ≤ HC.ℓₘₐₓ
-    m′ₘₐₓ = HC.m′ₘₐₓ
-    Hₙ₊₁⁰ = HC.Hₙ₊₁⁰
-    Hₙ = HC.Hₙ
-    sqrt3 = HC.sqrt3
-    invsqrt2 = HC.invsqrt2
+function H2!(WC::WCT, expiβ::Complex{T}, n) where {WCT<:WignerCalculator, T<:Real}
+    @assert n ≤ WC.ℓₘₐₓ
+    m′ₘₐₓ = WC.m′ₘₐₓ
+    Hₙ₊₁⁰ = WC.Hₙ₊₁⁰
+    Hₙ = WC.Hₙ
+    sqrt3 = WC.sqrt3
+    invsqrt2 = WC.invsqrt2
     sqrt2n = √T(2n)
     sqrtnnp1 = √T(n*(n+1))
     inv2np1 = inv(T(2n+2))
@@ -87,6 +40,14 @@ function H2!(HC::HCalculator{T}, expiβ::Complex{T}, n) where {T<:Real}
     cosβ₊ = (1+cosβ)/2  # = cos²(β/2)
     cosβ₋ = (1-cosβ)/2  # = sin²(β/2)
 
+    # @warn "Replace inbounds; remove indices and @show statements"
+    # indices = [
+    #     (n, m′, m)
+    #     for m′ in -min(n, m′ₘₐₓ):min(n, m′ₘₐₓ)
+    #     for m in abs(m′):n
+    # ]
+    # @show n
+    # begin
     @inbounds begin
         if n == 0
 
@@ -127,7 +88,7 @@ function H2!(HC::HCalculator{T}, expiβ::Complex{T}, n) where {T<:Real}
 
         else  # n > 1
             #iₙ = WignerHindex(n, 0, 0, m′ₘₐₓ) - WignerHindex(n-1, min(m′ₘₐₓ, n-1), n-1, m′ₘₐₓ)
-            iₙ = offset(HC, n, 0, 0)
+            iₙ = offset(WC, n, 0, 0)
             iₙ0 = iₙ
 
             # Step 1 is irrelevant for n>0
@@ -164,17 +125,23 @@ function H2!(HC::HCalculator{T}, expiβ::Complex{T}, n) where {T<:Real}
                 )
             end
             let m = n+1
-                iₙ += 1
                 #c̄ₙₘ = 0
                 #d̄ₙₘ = 0
                 ēₙₘ = inv2np1 * √T((2n+2)*(2n+1))
-                Hₙ₊₁⁰[1+m] = sinβ * ēₙₘ * Hₙ[iₙ-1]
+                Hₙ₊₁⁰[1+m] = sinβ * ēₙₘ * Hₙ[iₙ]
             end
+            # At the end of this step, iₙ is pointing at H^{0, n}_{n}
 
             if m′ₘₐₓ > 0
                 # Step 3: Compute H^{1,m}_{n}(β) for m=1,...,n
+                iₙ = iₙ + m′offset₊(WC, n, 0, n) - n + 1
                 # iₙ is now pointing at H^{1, 1}_{n}
                 invsqrtnnp1 = inv(sqrtnnp1)
+                # println("pre")
+                # println((iₙ))
+                # println((n, 1, 1))
+                # println(indices[iₙ])
+                # println()
                 for m in 1:n
                     a = √T((n+m+1)*(n-m+1))
                     b1 = √T((n+m+1)*(n+m+2))
@@ -185,18 +152,40 @@ function H2!(HC::HCalculator{T}, expiβ::Complex{T}, n) where {T<:Real}
                         + a * sinβ * Hₙ₊₁⁰[m+1]
                     )
                     iₙ += 1
+                    # println("0")
+                    # println((iₙ))
+                    # println((n, 1, m+1))
+                    # if iₙ > size(indices, 1)
+                    #     println("After ", indices[iₙ-1])
+                    # else
+                    #     println(indices[iₙ])
+                    # end
+                    # println()
                 end
+                iₙ -= 1
+                # Now, iₙ is pointing at H^{1, n}_{n}
 
                 # Step 4: Compute H^{m′+1, m}_{n}(β) for m′=1,...,n−1, m=m′,...,n
                 d1 = sqrtnnp1
+                # println("preA")
+                # println((iₙ))
+                # println((n, 1, n))
+                # println(indices[iₙ])
+                # println()
+                iₙ′′ = iₙ - m′offset₋(WC, n, 1, n) - n + 2  # (n, 0, 2)
+                iₙ′ = iₙ - n + 1  # (n, 1, 1)
+                iₙ = iₙ + m′offset₊(WC, n, 1, n) - n + 2 # (n, 2, 2)
                 for m′ in 1:min(n, m′ₘₐₓ)-1
                     #iₙ′ = iₙ - (n-m′)
-                    iₙ = offset(HC, n, m′+1, m′+1)
-                    iₙ′ = offset(HC, n, m′, m′)
-                    iₙ′′ = offset(HC, n, m′-1, m′+1)
+
+                    # iₙ = offset(WC, n, m′+1, m′+1)
+                    # iₙ′ = offset(WC, n, m′, m′)
+                    # iₙ′′ = offset(WC, n, m′-1, m′+1)
+
                     # iₙ points at H^{m′+1, m}_{n}
                     # iₙ′ points at H^{m′, m-1}_{n}
                     # iₙ′′ points at H^{m′-1, m}_{n}
+
                     # d1 ≔ d^{m′}_{n} = √T((n-m′)*(n+m′+1))
                     # d2 ≔ d^{m′-1}_{n} = √T((n-m′+1)*(n+m′))
                     # d3 ≔ d^{m-1}_{n} = √T((n-m+1)*(n+m))
@@ -208,13 +197,18 @@ function H2!(HC::HCalculator{T}, expiβ::Complex{T}, n) where {T<:Real}
                     for m in m′+1:n-1
                         d3 = d4
                         d4 = √T((n-m)*(n+m+1))
+                        # println("A")
+                        # println((n, m′, m))
+                        # println((iₙ, iₙ′, iₙ′+2, iₙ′′))
+                        # println("L: ", (n, m′+1, m), " ", indices[iₙ])
+                        # println("R1: ", (n, m′, m-1), " ", indices[iₙ′])
+                        # println("R2: ", (n, m′, m+1), " ", indices[iₙ′+2])
+                        # println("R3: ", (n, m′-1, m), " ", indices[iₙ′′])
+                        # println()
                         Hₙ[iₙ] = invd1 * (
                             d2 * Hₙ[iₙ′′]
                             - d3 * Hₙ[iₙ′]
                             + d4 * Hₙ[iₙ′+2]
-                            # d2 * Hₙ[iₙ′ - (n-m′+1)]
-                            # - d3 * Hₙ[iₙ′-1]
-                            # + d4 * Hₙ[iₙ′+1]
                         )
                         iₙ += 1
                         iₙ′ += 1
@@ -222,31 +216,44 @@ function H2!(HC::HCalculator{T}, expiβ::Complex{T}, n) where {T<:Real}
                     end
                     let m = n
                         d3 = sqrt2n
+                        # println("B")
+                        # println((n, m′, m))
+                        # println((iₙ, iₙ′, iₙ′′))
+                        # println("L: ", (n, m′+1, m), " ", indices[iₙ])
+                        # println("R1: ", (n, m′, m-1), " ", indices[iₙ′])
+                        # println("R3: ", (n, m′-1, m), " ", indices[iₙ′′])
+                        # println()
                         Hₙ[iₙ] = invd1 * (
                             d2 * Hₙ[iₙ′′]
                             - d3 * Hₙ[iₙ′]
-                            # d2 * Hₙ[iₙ′ - (n-m′+1)]
-                            # - d3 * Hₙ[iₙ′-1]
                         )
                         # iₙ += 1
                         # iₙ′ += 1
                     end
+                    iₙ += m′offset₊(WC, n, m′+1, n) - n + m′ + 2 # → (n, m′+2, m′+2)
+                    iₙ′ += m′offset₊(WC, n, m′, n-1) - (n-1) + m′ + 1 # → (n, m′+1, m′+1)
+                    iₙ′′ += m′offset₊(WC, n, m′-1, n) - n + m′ + 2 # → (n, m′, m′+2)
                 end  # Step 4
 
                 # Step 5: Compute H^{m′−1, m}_{n}(β) for m′=0,...,−n+1, m=−m′,...,n
-                #iₙ = iₙ0 - 1
+                iₙ′′ = iₙ0 + m′offset₊(WC, n, 0, 0) + n  # (n, 1, n)
+                iₙ′ = iₙ0 + n - 1  # (n, 0, n-1)
+                iₙ = iₙ0 - m′offset₋(WC, n, 0, 0) + n  # (n, -1, n)
                 d2 = sqrtnnp1
                 #offset2 = 0  # Account for 2 missing elements when m′==0
                 for m′ in 0:-1:-min(n, m′ₘₐₓ)+1
                     # iₙ′ = iₙ + (n+m′) + 1
                     # # iₙ points at H^{m′-1, m}_{n}
                     # # iₙ′ points at H^{m′, m}_{n}
-                    iₙ = offset(HC, n, m′-1, n)
-                    iₙ′ = offset(HC, n, m′, n-1)
-                    iₙ′′ = offset(HC, n, m′+1, n)
+
+                    # iₙ = offset(WC, n, m′-1, n)
+                    # iₙ′ = offset(WC, n, m′, n-1)
+                    # iₙ′′ = offset(WC, n, m′+1, n)
+
                     # iₙ points at H^{m′-1, m}_{n}
                     # iₙ′ points at H^{m′, m-1}_{n}
                     # iₙ′′ points at H^{m′+1, m}_{n}
+
                     # d1 ≔ d^{m′-1}_{n} = -√T((n-m′+1)*(n+m′))
                     # d2 ≔ d^{m′}_{n} = √T((n-m′)*(n+m′+1))
                     # d3 ≔ d^{m-1}_{n} = √T((n-m+1)*(n+m))
@@ -256,13 +263,16 @@ function H2!(HC::HCalculator{T}, expiβ::Complex{T}, n) where {T<:Real}
                     invd1 = inv(d1)
                     d3 = sqrt2n
                     let m = n
-                        # @show (n,m′,m) indices[iₙ] indices[iₙ′] indices[iₙ′′]
+                        # println("A")
+                        # println((n, m′, m))
+                        # println([iₙ, iₙ′, iₙ′′])
+                        # println("L: ", (n, m′-1, m), " ", indices[iₙ])
+                        # println("R1: ", (n, m′, m-1), " ", indices[iₙ′])
+                        # println("R3: ", (n, m′+1, m), " ", indices[iₙ′′])
                         # println()
                         Hₙ[iₙ] = invd1 * (
                             d2 * Hₙ[iₙ′′]
                             + d3 * Hₙ[iₙ′]
-                            # d2 * Hₙ[iₙ′ + (n+m′+offset2)]
-                            # + d3 * Hₙ[iₙ′-1]
                         )
                         iₙ -= 1
                         iₙ′ -= 1
@@ -271,20 +281,36 @@ function H2!(HC::HCalculator{T}, expiβ::Complex{T}, n) where {T<:Real}
                     for m in n-1:-1:1-m′
                         d4 = d3
                         d3 = √T((n-m+1)*(n+m))
+                        # println("B")
+                        # println((n, m′, m))
+                        # println([iₙ, iₙ′, iₙ′′])
+                        # println("L: ", (n, m′-1, m), " ", indices[iₙ])
+                        # println("R1: ", (n, m′, m-1), " ", indices[iₙ′])
+                        # println("R2: ", (n, m′, m+1), " ", indices[iₙ′+2])
+                        # println("R3: ", (n, m′+1, m), " ", indices[iₙ′′])
+                        # println()
                         Hₙ[iₙ] = invd1 * (
                             d2 * Hₙ[iₙ′′]
                             + d3 * Hₙ[iₙ′]
                             - d4 * Hₙ[iₙ′+2]
-                            # d2 * Hₙ[iₙ′ + (n+m′+offset2)]
-                            # + d3 * Hₙ[iₙ′-1]
-                            # - d4 * Hₙ[iₙ′+1]
                         )
                         iₙ -= 1
                         iₙ′ -= 1
                         iₙ′′ -= 1
                     end
-                    #offset2 = 2
                     d2 = d1
+                    # iₙ points at H^{m′-1, -m′}_{n}
+                    # iₙ′ points at H^{m′, -m′-1}_{n}
+                    # iₙ′′ points at H^{m′+1, -m′}_{n}
+
+                    # iₙ points at H^{m′-1, n}_{n}
+                    # iₙ′ points at H^{m′, n-1}_{n}
+                    # iₙ′′ points at H^{m′+1, n}_{n}
+
+                    iₙ += -m′offset₋(WC, n, m′-1, 1-m′) + n + m′ # → (n, m′-2, n)
+                    iₙ′ += -m′offset₋(WC, n, m′, -m′) + (n-1) + m′ + 1 # → (n, m′-1, n-1)
+                    iₙ′′ += -m′offset₋(WC, n, m′+1, 1-m′) + n + m′ # → (n, m′, n)
+
                 end  # Step 5
 
             end

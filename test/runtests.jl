@@ -29,6 +29,7 @@ end
     addtests("indexing.jl")
     addtests("calculators.jl")
     addtests("alf.jl")
+    addtests("Hrecursion.jl")
     addtests("wigner_matrices.jl")
     addtests("weights.jl")
     addtests("map2salm.jl")
