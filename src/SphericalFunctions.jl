@@ -26,9 +26,5 @@ include("weights.jl")
 
 include("map2salm.jl")
 
-include("calculators.jl")
-
-include("Hrecursion.jl")
-
 
 end # module
