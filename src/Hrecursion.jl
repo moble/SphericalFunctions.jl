@@ -1,7 +1,5 @@
-
 """
-    H!(H, expiβ, ℓₘₐₓ, m′ₘₐₓ, H_rec_coeffs)
-    H!(H, expiβ, ℓₘₐₓ, m′ₘₐₓ, H_rec_coeffs, Hindex)
+    H2!(WC, expiβ, n)
 
 Compute the ``H`` matrix defined by Gumerov and Duraiswami.
 
@@ -40,14 +38,6 @@ function H2!(WC::WCT, expiβ::Complex{T}, n) where {WCT<:WignerCalculator, T<:Re
     cosβ₊ = (1+cosβ)/2  # = cos²(β/2)
     cosβ₋ = (1-cosβ)/2  # = sin²(β/2)
 
-    # @warn "Replace inbounds; remove indices and @show statements"
-    # indices = [
-    #     (n, m′, m)
-    #     for m′ in -min(n, m′ₘₐₓ):min(n, m′ₘₐₓ)
-    #     for m in abs(m′):n
-    # ]
-    # @show n
-    # begin
     @inbounds begin
         if n == 0
 
@@ -87,7 +77,6 @@ function H2!(WC::WCT, expiβ::Complex{T}, n) where {WCT<:WignerCalculator, T<:Re
             end
 
         else  # n > 1
-            #iₙ = WignerHindex(n, 0, 0, m′ₘₐₓ) - WignerHindex(n-1, min(m′ₘₐₓ, n-1), n-1, m′ₘₐₓ)
             iₙ = offset(WC, n, 0, 0)
             iₙ0 = iₙ
 
@@ -137,11 +126,6 @@ function H2!(WC::WCT, expiβ::Complex{T}, n) where {WCT<:WignerCalculator, T<:Re
                 iₙ = iₙ + m′offset₊(WC, n, 0, n) - n + 1
                 # iₙ is now pointing at H^{1, 1}_{n}
                 invsqrtnnp1 = inv(sqrtnnp1)
-                # println("pre")
-                # println((iₙ))
-                # println((n, 1, 1))
-                # println(indices[iₙ])
-                # println()
                 for m in 1:n
                     a = √T((n+m+1)*(n-m+1))
                     b1 = √T((n+m+1)*(n+m+2))
@@ -152,40 +136,19 @@ function H2!(WC::WCT, expiβ::Complex{T}, n) where {WCT<:WignerCalculator, T<:Re
                         + a * sinβ * Hₙ₊₁⁰[m+1]
                     )
                     iₙ += 1
-                    # println("0")
-                    # println((iₙ))
-                    # println((n, 1, m+1))
-                    # if iₙ > size(indices, 1)
-                    #     println("After ", indices[iₙ-1])
-                    # else
-                    #     println(indices[iₙ])
-                    # end
-                    # println()
                 end
                 iₙ -= 1
                 # Now, iₙ is pointing at H^{1, n}_{n}
 
                 # Step 4: Compute H^{m′+1, m}_{n}(β) for m′=1,...,n−1, m=m′,...,n
                 d1 = sqrtnnp1
-                # println("preA")
-                # println((iₙ))
-                # println((n, 1, n))
-                # println(indices[iₙ])
-                # println()
                 iₙ′′ = iₙ - m′offset₋(WC, n, 1, n) - n + 2  # (n, 0, 2)
                 iₙ′ = iₙ - n + 1  # (n, 1, 1)
                 iₙ = iₙ + m′offset₊(WC, n, 1, n) - n + 2 # (n, 2, 2)
                 for m′ in 1:min(n, m′ₘₐₓ)-1
-                    #iₙ′ = iₙ - (n-m′)
-
-                    # iₙ = offset(WC, n, m′+1, m′+1)
-                    # iₙ′ = offset(WC, n, m′, m′)
-                    # iₙ′′ = offset(WC, n, m′-1, m′+1)
-
                     # iₙ points at H^{m′+1, m}_{n}
                     # iₙ′ points at H^{m′, m-1}_{n}
                     # iₙ′′ points at H^{m′-1, m}_{n}
-
                     # d1 ≔ d^{m′}_{n} = √T((n-m′)*(n+m′+1))
                     # d2 ≔ d^{m′-1}_{n} = √T((n-m′+1)*(n+m′))
                     # d3 ≔ d^{m-1}_{n} = √T((n-m+1)*(n+m))
@@ -194,17 +157,9 @@ function H2!(WC::WCT, expiβ::Complex{T}, n) where {WCT<:WignerCalculator, T<:Re
                     d1 = √T((n-m′)*(n+m′+1))
                     d4 = d1
                     invd1 = inv(d1)
-                    for m in m′+1:n-1
+                    @fastmath for m in m′+1:n-1
                         d3 = d4
                         d4 = √T((n-m)*(n+m+1))
-                        # println("A")
-                        # println((n, m′, m))
-                        # println((iₙ, iₙ′, iₙ′+2, iₙ′′))
-                        # println("L: ", (n, m′+1, m), " ", indices[iₙ])
-                        # println("R1: ", (n, m′, m-1), " ", indices[iₙ′])
-                        # println("R2: ", (n, m′, m+1), " ", indices[iₙ′+2])
-                        # println("R3: ", (n, m′-1, m), " ", indices[iₙ′′])
-                        # println()
                         Hₙ[iₙ] = invd1 * (
                             d2 * Hₙ[iₙ′′]
                             - d3 * Hₙ[iₙ′]
@@ -216,19 +171,10 @@ function H2!(WC::WCT, expiβ::Complex{T}, n) where {WCT<:WignerCalculator, T<:Re
                     end
                     let m = n
                         d3 = sqrt2n
-                        # println("B")
-                        # println((n, m′, m))
-                        # println((iₙ, iₙ′, iₙ′′))
-                        # println("L: ", (n, m′+1, m), " ", indices[iₙ])
-                        # println("R1: ", (n, m′, m-1), " ", indices[iₙ′])
-                        # println("R3: ", (n, m′-1, m), " ", indices[iₙ′′])
-                        # println()
                         Hₙ[iₙ] = invd1 * (
                             d2 * Hₙ[iₙ′′]
                             - d3 * Hₙ[iₙ′]
                         )
-                        # iₙ += 1
-                        # iₙ′ += 1
                     end
                     iₙ += m′offset₊(WC, n, m′+1, n) - n + m′ + 2 # → (n, m′+2, m′+2)
                     iₙ′ += m′offset₊(WC, n, m′, n-1) - (n-1) + m′ + 1 # → (n, m′+1, m′+1)
@@ -240,36 +186,18 @@ function H2!(WC::WCT, expiβ::Complex{T}, n) where {WCT<:WignerCalculator, T<:Re
                 iₙ′ = iₙ0 + n - 1  # (n, 0, n-1)
                 iₙ = iₙ0 - m′offset₋(WC, n, 0, 0) + n  # (n, -1, n)
                 d2 = sqrtnnp1
-                #offset2 = 0  # Account for 2 missing elements when m′==0
                 for m′ in 0:-1:-min(n, m′ₘₐₓ)+1
-                    # iₙ′ = iₙ + (n+m′) + 1
-                    # # iₙ points at H^{m′-1, m}_{n}
-                    # # iₙ′ points at H^{m′, m}_{n}
-
-                    # iₙ = offset(WC, n, m′-1, n)
-                    # iₙ′ = offset(WC, n, m′, n-1)
-                    # iₙ′′ = offset(WC, n, m′+1, n)
-
                     # iₙ points at H^{m′-1, m}_{n}
                     # iₙ′ points at H^{m′, m-1}_{n}
                     # iₙ′′ points at H^{m′+1, m}_{n}
-
                     # d1 ≔ d^{m′-1}_{n} = -√T((n-m′+1)*(n+m′))
                     # d2 ≔ d^{m′}_{n} = √T((n-m′)*(n+m′+1))
                     # d3 ≔ d^{m-1}_{n} = √T((n-m+1)*(n+m))
                     # d4 ≔ d^{m}_{n} = √T((n-m)*(n+m+1))
-
                     d1 = -√T((n-m′+1)*(n+m′))
                     invd1 = inv(d1)
                     d3 = sqrt2n
                     let m = n
-                        # println("A")
-                        # println((n, m′, m))
-                        # println([iₙ, iₙ′, iₙ′′])
-                        # println("L: ", (n, m′-1, m), " ", indices[iₙ])
-                        # println("R1: ", (n, m′, m-1), " ", indices[iₙ′])
-                        # println("R3: ", (n, m′+1, m), " ", indices[iₙ′′])
-                        # println()
                         Hₙ[iₙ] = invd1 * (
                             d2 * Hₙ[iₙ′′]
                             + d3 * Hₙ[iₙ′]
@@ -278,17 +206,9 @@ function H2!(WC::WCT, expiβ::Complex{T}, n) where {WCT<:WignerCalculator, T<:Re
                         iₙ′ -= 1
                         iₙ′′ -= 1
                     end
-                    for m in n-1:-1:1-m′
+                    @fastmath for m in n-1:-1:1-m′
                         d4 = d3
                         d3 = √T((n-m+1)*(n+m))
-                        # println("B")
-                        # println((n, m′, m))
-                        # println([iₙ, iₙ′, iₙ′′])
-                        # println("L: ", (n, m′-1, m), " ", indices[iₙ])
-                        # println("R1: ", (n, m′, m-1), " ", indices[iₙ′])
-                        # println("R2: ", (n, m′, m+1), " ", indices[iₙ′+2])
-                        # println("R3: ", (n, m′+1, m), " ", indices[iₙ′′])
-                        # println()
                         Hₙ[iₙ] = invd1 * (
                             d2 * Hₙ[iₙ′′]
                             + d3 * Hₙ[iₙ′]
@@ -299,20 +219,10 @@ function H2!(WC::WCT, expiβ::Complex{T}, n) where {WCT<:WignerCalculator, T<:Re
                         iₙ′′ -= 1
                     end
                     d2 = d1
-                    # iₙ points at H^{m′-1, -m′}_{n}
-                    # iₙ′ points at H^{m′, -m′-1}_{n}
-                    # iₙ′′ points at H^{m′+1, -m′}_{n}
-
-                    # iₙ points at H^{m′-1, n}_{n}
-                    # iₙ′ points at H^{m′, n-1}_{n}
-                    # iₙ′′ points at H^{m′+1, n}_{n}
-
                     iₙ += -m′offset₋(WC, n, m′-1, 1-m′) + n + m′ # → (n, m′-2, n)
                     iₙ′ += -m′offset₋(WC, n, m′, -m′) + (n-1) + m′ + 1 # → (n, m′-1, n-1)
                     iₙ′′ += -m′offset₋(WC, n, m′+1, 1-m′) + n + m′ # → (n, m′, n)
-
                 end  # Step 5
-
             end
 
 
