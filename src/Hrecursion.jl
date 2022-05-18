@@ -21,41 +21,9 @@ function H_recursion_coefficients(ℓₘₐₓ, ::Type{T}) where {T<:Real}
     (aₙᵐ, bₙᵐ, dₙᵐ)
 end
 
-
-# function H!(
-#     Hwedge::AbstractVector{T}, Hextra::AbstractVector{T}, Hv::AbstractVector{T},
-#     ℓₘᵢₙ, ℓₘₐₓ, expiβ::Complex{T}
-# ) where {T<:Real}
-#     H!(Hwedge, Hextra, Hv, ℓₘᵢₙ, ℓₘₐₓ, ℓₘₐₓ, expiβ)
-# end
-
-# function H!(
-#     Hwedge::AbstractVector{T}, Hextra::AbstractVector{T}, Hv::AbstractVector{T},
-#     ℓₘₐₓ, expiβ::Complex{T}
-# ) where {T<:Real}
-#     H!(Hwedge, Hextra, Hv, 0, ℓₘₐₓ, ℓₘₐₓ, expiβ)
-# end
-
-# function H(ℓₘᵢₙ, ℓₘₐₓ, m′ₘₐₓ, expiβ::Complex{T}) where {T<:Real}
-#     Hwedge = zeros(T, WignerHsize(m′ₘₐₓ, ℓₘₐₓ))
-#     Hv = zeros(T, (ℓₘₐₓ + 1)^2)
-#     Hextra = zeros(T, ℓₘₐₓ + 2)
-#     H!(Hwedge, Hextra, Hv, ℓₘᵢₙ, ℓₘₐₓ, m′ₘₐₓ, expiβ)
-# end
-
-# function H(ℓₘᵢₙ, ℓₘₐₓ, expiβ::Complex{T}) where {T<:Real}
-#     H(ℓₘᵢₙ, ℓₘₐₓ, ℓₘₐₓ, expiβ)
-# end
-
 # function H(ℓₘₐₓ, expiβ::Complex{T}) where {T<:Real}
 #     H(0, ℓₘₐₓ, ℓₘₐₓ, expiβ)
 # end
-
-
-# function H!(
-#     H::AbstractVector{TU}, expiβ::Complex{T}, ℓₘₐₓ::Integer, m′ₘₐₓ::Integer,
-#     (a,b,d), Hindex=WignerHindex
-# ) where {TU<:Union{T, Complex{T}}, T<:Real}
 
 """
     H!(H, expiβ, ℓₘₐₓ, m′ₘₐₓ, H_rec_coeffs)
@@ -180,7 +148,7 @@ function H!(
 
             end
 
-            if m′ₘₐₓ > 0
+            @fastmath if m′ₘₐₓ > 0
 
                 # Step 3: Compute H^{1,m}_{n}(β) for m=1,...,n
                 for n in 1:ℓₘₐₓ
