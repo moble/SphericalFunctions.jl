@@ -1,7 +1,6 @@
 module SphericalFunctions
 
 using FastTransforms, LinearAlgebra, ProgressMeter, Quaternionic
-import ChainRulesCore: rrule, frule
 import Base.Threads: @threads, nthreads
 
 const MachineFloat = Union{Float16, Float32, Float64}
