@@ -27,7 +27,7 @@ export H!, H_recursion_coefficients
 
 include("evaluate.jl")
 export d!, d, D!, Y!
-export dprep, dstorage, Dprep, Dstorage, Yprep, Ystorage#, ϵ
+export dprep, dstorage, Dprep, Dstorage, Yprep, Ystorage
 
 include("weights.jl")
 export fejer1, fejer2, clenshaw_curtis
