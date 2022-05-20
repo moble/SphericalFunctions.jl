@@ -1,27 +1,12 @@
 ### TODO:
-### 2. Separate ALF computation to a different module
 ### 4. Test skipping all the complicated indexing tricks; use fancy indexing
-### 5. Allow specifying the extent of recursion / iterating over ℓ matrices
-
-
 ### NOTES:
 ### 1. Caching coefficients provides a ~11% speedup at low ℓ, but that falls off
 ###    as ℓ increases, reaching ~4% around ℓ=512.
 ### 2. This is probably a much more significant advantage for ALFs.
 
-
-
-export H!, H_recursion_coefficients
-export WignerDsize, WignerHsize, WignerDindex, WignerHindex, _WignerHindex
-export d!, d, D!, Y!
-export dprep, dstorage, Dprep, Dstorage, Yprep, Ystorage#, ϵ
-
-using ..SphericalFunctions: complex_powers!
+using .SphericalFunctions: complex_powers!
 using Quaternionic: AbstractQuaternion, to_euler_phases!
-
-include("indexing.jl")
-include("Hrecursor.jl")
-
 
 @inline ϵ(m) = ifelse(m > 0 && isodd(m), -1, 1)
 
