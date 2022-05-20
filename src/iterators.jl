@@ -50,9 +50,9 @@ function Base.iterate(
         (Dˡ, (ℓ+1, i2+1))
     end
 end
-Base.IteratorSize(::Type{Diterator}) = HasShape{1}()
-Base.IteratorEltype(::Type{Diterator}) = HasEltype()
-Base.eltype(::Type{Diterator{VT}}) where VT = ReshapedArray{eltype(VT), 2, SubArray{eltype(VT), 1, VT, Tuple{UnitRange{Int64}}, true}, Tuple{}}
+Base.IteratorSize(::Type{<:Diterator}) = Base.HasShape{1}()
+Base.IteratorEltype(::Type{<:Diterator}) = Base.HasEltype()
+Base.eltype(::Type{Diterator{VT}}) where VT = Base.ReshapedArray{eltype(VT), 2, SubArray{eltype(VT), 1, VT, Tuple{UnitRange{Int64}}, true}, Tuple{}}
 Base.length(Di::Diterator) = Di.ℓₘₐₓ - Di.ℓₘᵢₙ + 1
 Base.size(Di::Diterator) = (length(Di),)
 Base.size(Di::Diterator, dim) = dim > 1 ? 1 : length(Di)
@@ -110,9 +110,9 @@ function Base.iterate(
         (dˡ, (ℓ+1, i2+1))
     end
 end
-Base.IteratorSize(::Type{diterator}) = HasShape{1}()
-Base.IteratorEltype(::Type{diterator}) = HasEltype()
-Base.eltype(::Type{diterator{VT}}) where VT = ReshapedArray{eltype(VT), 2, SubArray{eltype(VT), 1, VT, Tuple{UnitRange{Int64}}, true}, Tuple{}}
+Base.IteratorSize(::Type{<:diterator}) = Base.HasShape{1}()
+Base.IteratorEltype(::Type{<:diterator}) = Base.HasEltype()
+Base.eltype(::Type{diterator{VT}}) where VT = Base.ReshapedArray{eltype(VT), 2, SubArray{eltype(VT), 1, VT, Tuple{UnitRange{Int64}}, true}, Tuple{}}
 Base.length(di::diterator) = di.ℓₘₐₓ - di.ℓₘᵢₙ + 1
 Base.size(di::diterator) = (length(di),)
 Base.size(di::diterator, dim) = dim > 1 ? 1 : length(di)
@@ -178,8 +178,8 @@ function Base.iterate(
         (Yˡ, (ℓ+1, i2+1))
     end
 end
-Base.IteratorSize(::Type{Yiterator}) = HasShape{1}()
-Base.IteratorEltype(::Type{Yiterator}) = HasEltype()
+Base.IteratorSize(::Type{<:Yiterator}) = Base.HasShape{1}()
+Base.IteratorEltype(::Type{<:Yiterator}) = Base.HasEltype()
 Base.eltype(::Type{Yiterator{VT}}) where VT = SubArray{eltype(VT), 1, VT, Tuple{UnitRange{Int64}}, true}
 Base.length(Yi::Yiterator) = Yi.ℓₘₐₓ - Yi.ℓₘᵢₙ + 1
 Base.size(Yi::Yiterator) = (length(Yi),)

@@ -16,6 +16,14 @@
             ]
             @test 𝔇ˡ == Dˡ
         end
+        @test Base.IteratorSize(typeof(𝔇)) == Base.HasShape{1}()
+        @test Base.IteratorEltype(typeof(𝔇)) == Base.HasEltype()
+        collection = collect(𝔇)
+        @test length(collection) == length(𝔇)
+        @test size(collection, 1) == size(𝔇, 1)
+        @test size(collection) == size(𝔇)
+        @test eltype(collection) == eltype(𝔇)
+
         for ℓₘᵢₙ in 0:ℓₘₐₓ
             𝔇 = Diterator(Drange, ℓₘₐₓ, ℓₘᵢₙ)
             for (ℓ, 𝔇ˡ) in enumerate(𝔇)
@@ -44,6 +52,14 @@
             ]
             @test 𝔡ˡ == dˡ
         end
+        @test Base.IteratorSize(typeof(𝔡)) == Base.HasShape{1}()
+        @test Base.IteratorEltype(typeof(𝔡)) == Base.HasEltype()
+        collection = collect(𝔡)
+        @test length(collection) == length(𝔡)
+        @test size(collection, 1) == size(𝔡, 1)
+        @test size(collection) == size(𝔡)
+        @test eltype(collection) == eltype(𝔡)
+
         for ℓₘᵢₙ in 0:ℓₘₐₓ
             𝔡 = diterator(drange, ℓₘₐₓ, ℓₘᵢₙ)
             for (ℓ, 𝔡ˡ) in enumerate(𝔡)
@@ -72,6 +88,14 @@
             ]
             @test 𝔜ˡ == Yˡ
         end
+        @test Base.IteratorSize(typeof(𝔜)) == Base.HasShape{1}()
+        @test Base.IteratorEltype(typeof(𝔜)) == Base.HasEltype()
+        collection = collect(𝔜)
+        @test length(collection) == length(𝔜)
+        @test size(collection, 1) == size(𝔜, 1)
+        @test size(collection) == size(𝔜)
+        @test eltype(collection) == eltype(𝔜)
+
         for ℓₘᵢₙ in 0:ℓₘₐₓ
             𝔜 = Yiterator(Yrange, ℓₘₐₓ, ℓₘᵢₙ)
             for (ℓ, 𝔜ˡ) in enumerate(𝔜)
