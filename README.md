@@ -68,11 +68,11 @@ results exhibited increased error for certain angles, whereas their Eqs. (12)—
 directly to obtain results with greater accuracy for those certain angles, and comparable accuracy
 for other angles.
 
-It may be worthwhile simply implementing X-numbers as a subtype of `AbstractFloat`, and simply
-passing them to these algorithms if higher orders are needed.  (Though using `BigFloat` would
-achieve a similar objective, it would probably be far slower.)  The actual recommendation of
-Fukushima is more sophisticated — just using X-numbers in the core calculation — but it looks like
-the simpler approach wouldn't be *too* much slower.
+It may be worthwhile simply passing [X-numbers](https://github.com/moble/XNumbers.jl) to these
+algorithms if higher orders are needed.  (Though using `BigFloat` *may* achieve a similar objective,
+it would probably be far slower.)  The actual recommendation of Fukushima is more sophisticated —
+just using X-numbers in the core calculation — but it looks like the simpler approach wouldn't be
+*too* much slower.
 
 The other major functionality of this package is `map2salm`, which decomposes function values on
 regular grids into mode weights (coefficients).  The approach used here is taken from [Reinecke and
