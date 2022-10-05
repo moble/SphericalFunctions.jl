@@ -28,7 +28,7 @@ The fundamental algorithm is the ``H`` recursion, which is the core computation 
 
 ```@autodocs
 Modules = [SphericalFunctions]
-Pages   = ["wigner_matrices/Hrecursor.jl"]
+Pages   = ["Hrecursion.jl"]
 ```
 
 Internally, the ``H`` recursion relies on calculation of the Associated Legendre Functions (ALFs),
@@ -43,8 +43,18 @@ Based on those, we have the `d!`, `D!`, and `Y!` functions:
 
 ```@autodocs
 Modules = [SphericalFunctions]
-Pages   = ["wigner_matrices/evaluate.jl"]
+Pages   = ["evaluate.jl"]
 ```
+
+In all cases, the returned (or overwritten) data are stored linearly, as a single `Vector` ranging
+over all indices.  To access subarrays based on certain ``ℓ`` values, for example, we also have
+iterators that return conveniently shaped views into these linear vectors:
+
+```@autodocs
+Modules = [SphericalFunctions]
+Pages   = ["iterators.jl"]
+```
+
 
 # Transformation
 
