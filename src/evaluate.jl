@@ -249,8 +249,9 @@ end
 
 
 @doc raw"""
-    Y(s, R, ℓₘₐₓ)
-    Y!(Y, s, R, ℓₘₐₓ)
+    Y!(Y, R, ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ=0)
+    Y!(Y, expiθ, expiϕ, ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ=0)
+    Y!(Y, expiϕ, expiθ, expiγ, ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ=0)
 
 Evaluate (and write into `Y`, if present) the values of ``{}_{s}Y_{\ell,
 m}(R)`` for the input value of `s`, for all ``(\ell, m)`` throughout the range
@@ -270,6 +271,15 @@ The spherical harmonics of spin weight ``s`` are related to Wigner's
 ```
 """
 function Y!(Y, R, ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ=0)
+    expiϕ, expiθ, expiγ = to_euler_phases(R)
+    Y!(Y, expiϕ, expiθ, expiγ, ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ)
+end
+
+function Y!(Y, expiθ, expiϕ, ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ)
+    Y!(Y, expiϕ, expiθ, one(expiϕ), ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ)
+end
+
+function Y!(Y, expiϕ, expiθ, expiγ, ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ)
     if length(Y) < Ysize(ℓₘᵢₙ, ℓₘₐₓ)
         error("Input `Y` has length $(length(Y)); which is not enough for ℓₘₐₓ=$ℓₘₐₓ")
     end
@@ -280,7 +290,6 @@ function Y!(Y, R, ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢ�
         )
     end
 
-    expiϕ, expiθ, expiγ = to_euler_phases(R)
     H!(Hwedge, expiθ, ℓₘₐₓ, abs(spin), H_rec_coeffs)
     complex_powers!(expimϕ, expiϕ)
     spin_factor = (isodd(spin) ? -1 : 1) * ϵ(spin) * expiγ^-spin

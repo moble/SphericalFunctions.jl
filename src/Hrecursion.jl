@@ -29,7 +29,8 @@ end
     H!(H, expiβ, ℓₘₐₓ, m′ₘₐₓ, H_rec_coeffs)
     H!(H, expiβ, ℓₘₐₓ, m′ₘₐₓ, H_rec_coeffs, Hindex)
 
-Compute the ``H`` matrix defined by Gumerov and Duraiswami.
+Compute the ``H`` matrix defined by [Gumerov and
+Duraiswami](https://arxiv.org/abs/1403.7698).
 
 This computation forms the basis for computing Wigner's ``d`` and ``𝔇``
 matrices via [`d!`](@ref) and [`D!`](@ref), the spin-weighted spherical
