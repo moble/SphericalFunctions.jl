@@ -13,15 +13,17 @@
 
 
 Julia package for evaluating and transforming Wigner's 𝔇 matrices, and spin-weighted spherical
-harmonics (which includes the ordinary scalar spherical harmonics).  These functions are evaluated
-directly in terms of quaternions, as well as in the more standard forms of spherical coordinates and
-Euler angles.<sup>[1](#1-euler-angles-are-inadequate)</sup> Among other applications, those
-functions permit "synthesis" (evaluation of the spin-weighted spherical functions) of spin-weighted
-spherical harmonic coefficients on regular or distorted grids.  This package also includes functions
-enabling efficient "analysis" (decomposition into mode coefficients) of functions evaluated on
-regular grids to high order and accuracy.
+harmonics (which includes the ordinary scalar spherical harmonics).  Because [*both* 𝔇 *and* the
+harmonics are most correctly considered](https://arxiv.org/abs/1604.08140) functions on the rotation
+group $𝐒𝐎(3)$ — or more precisely, the spin group $𝐒𝐩𝐢𝐧(3)$ that covers it — these functions are
+evaluated directly in terms of quaternions.  Concessions are also made for more standard forms of
+spherical coordinates and Euler angles.<sup>[1](#1-euler-angles-are-inadequate)</sup> Among other
+applications, those functions permit "synthesis" (evaluation of the spin-weighted spherical
+functions) of spin-weighted spherical harmonic coefficients on regular or distorted grids.  This
+package also includes functions enabling efficient "analysis" (decomposition into mode coefficients)
+of functions evaluated on regular grids to high order and accuracy.
 
-These quantities are computed using recursion relations, which makes it possible to compute to very
+These quantities are computed using recursion relations, which makes it possible to compute to fairly
 high ℓ values.  Unlike direct evaluation of individual elements, which will generally cause overflow
 or underflow beyond ℓ≈30 when using double precision, these recursion relations should be valid for
 far higher ℓ values.  More precisely, when using *this* package, `Inf` values appear starting at
@@ -31,17 +33,20 @@ it is far slower.  Also note that [`DoubleFloats`](https://github.com/JuliaMath/
 will work, and achieve significantly greater accuracy but no greater ℓ range than `Float64`.  The
 results are accurate to roughly ℓ times the precision of the input quaternion.
 
-The conventions for this package are described in detail on [this
-page](https://moble.github.io/spherical_functions/).
+The conventions for this package inherited from — and are described in detail on — its predecessors
+found [here](https://moble.github.io/spherical_functions/) and
+[here](https://moble.github.io/spherical/).
 
-Note that numerous other packages cover some of these use cases, including
+Note that the goals of this package do not include some important use cases, including some that are
+common in fields such as CMB astronomy or lensing.  Numerous other packages may be better suited to
+those use cases, including
 [`FastTransforms.jl`](https://JuliaApproximation.github.io/FastTransforms.jl/),
 [`FastSphericalHarmonics.jl`](https://eschnett.github.io/FastSphericalHarmonics.jl/dev/),
 [`WignerSymbols.jl`](https://github.com/Jutho/WignerSymbols.jl), and
-[`WignerFamilies.jl`](https://github.com/xzackli/WignerFamilies.jl).  However, I need support for
-quaternions (via [`Quaternionic.jl`](https://github.com/moble/Quaternionic.jl)) and for
-higher-precision numbers — even at the cost of a very slight decrease in speed in some cases — which
-are what this package provides.
+[`WignerFamilies.jl`](https://github.com/xzackli/WignerFamilies.jl).  However, I need support only for
+relatively moderate values of ℓ, for quaternions (via
+[`Quaternionic.jl`](https://github.com/moble/Quaternionic.jl)) and for higher-precision numbers — even
+at the cost of a very slight decrease in speed in some cases — which are what this package provides.
 
 
 ## Installation
