@@ -1,12 +1,18 @@
 module SphericalFunctions
 
-using FastTransforms, LinearAlgebra, ProgressMeter, Quaternionic
-import Base.Threads: @threads, nthreads
+using FastTransforms, LinearAlgebra, ProgressMeter, Quaternionic, OffsetArrays, AbstractFFTs
+import LoopVectorization: @turbo
+import Hwloc: num_physical_cores
+import Base.Threads: @threads, nthreads, threadid
 
 const MachineFloat = Union{Float16, Float32, Float64}
 
 
 include("utils.jl")
+
+include("pixelizations.jl")
+export golden_ratio_spiral, sorted_rings
+export fejer1_rings, fejer2_rings, clenshaw_curtis_rings
 
 include("complex_powers.jl")
 export complex_powers, complex_powers!
@@ -28,9 +34,13 @@ export H!, H_recursion_coefficients
 include("evaluate.jl")
 export d!, d, D!, Y!
 export dprep, dstorage, Dprep, Dstorage, Yprep, Ystorage
+export ₛ𝐘
 
 include("weights.jl")
 export fejer1, fejer2, clenshaw_curtis
+
+include("ssht.jl")
+export SSHT
 
 include("map2salm.jl")
 export map2salm, map2salm!, plan_map2salm

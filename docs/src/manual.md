@@ -69,3 +69,26 @@ back to the corresponding mode weights — also called "analysis" or `map2salm`.
 Modules = [SphericalFunctions]
 Pages   = ["map2salm.jl"]
 ```
+
+A newer interface allows simpler syntax, akin to that of `FFTW.jl`, whereby a transformation object
+`𝒯` can be used to transform between function values `𝐟` and mode weights `𝐦` as either
+
+    𝐟 = 𝒯 * 𝐦
+
+or
+
+    𝐦 = 𝒯 \ 𝐟
+
+
+```@autodocs
+Modules = [SphericalFunctions]
+Pages   = ["ssht.jl", "ssht_direct.jl", "ssht_ekkm.jl", "ssht_rs.jl"]
+```
+
+The `SSHT` types use various pixelizations that may be computed as follows:
+
+```@autodocs
+Modules = [SphericalFunctions]
+Pages   = ["pixelizations.jl"]
+```
+
