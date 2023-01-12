@@ -214,42 +214,5 @@ function LinearAlgebra.ldiv!(f̃, 𝒯::SSHTRS, f)  # Compute `f̃ = 𝒯 \ f`, 
         end  # m
     end  # (f̃′ⱼ, f′ⱼ)
 
-    # # Based loosely on Fig. 2 of Reinecke & Seljebotn
-    # @threads for (G,y) ∈ zip(𝒯.G, axes(f, 1))
-    #     iₜ = threadid()
-    #     for j ∈ jobs
-    #         G!(G[j,iₜ,:], f[y, j])
-    #     end  # j
-    # end  # y
-
-    # @threads for m ∈ -mₘₐₓ:mₘₐₓ  # Note: Contrary to R&S, we include negative m
-    #     ℓ₀ = max(abs(s), abs(m))
-    #     for y ∈ b.rings
-    #         let θ = θ[y]
-    #             cosθ = cos(θ)
-    #             sin½θ, cos½θ = sincos(θ/2)
-    #             ₛλₗ₋₁ₘ = zero(T)
-    #             ₛλₗₘ = λ_recursion_initialize(sin½θ, cos½θ, s, ℓ₀, m)
-    #             cₗ₋₁ = zero(T)
-    #             for ℓ ∈ ℓ₀:ℓₘₐₓ
-    #                 @turbo for j ∈ jobs
-    #                     f̃[j,l,m] += G[j,m,y] * ₛλₗₘ
-    #                 end  # j
-    #                 if ℓ < ℓₘₐₓ
-    #                     cₗ₊₁, cₗ = λ_recursion_coefficients(cosθ, s, ℓ, m)
-    #                     ₛλₗ₊₁ₘ = if ℓ == 0
-    #                         √(3/4T(π)) * cosθ
-    #                     else
-    #                         (cₗ * ₛλₗₘ + cₗ₋₁ * ₛλₗ₋₁ₘ) / cₗ₊₁
-    #                     end
-    #                     ₛλₗ₋₁ₘ = ₛλₗₘ
-    #                     ₛλₗₘ = ₛλₗ₊₁ₘ
-    #                     cₗ₋₁ = -cₗ₊₁ * √((2ℓ+1)/T(2ℓ+3))
-    #                 end
-    #             end  # l
-    #         end  # θ
-    #     end  # y
-    # end  # m
-
     f̃
 end
