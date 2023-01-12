@@ -3,6 +3,27 @@ using Quaternionic: from_spherical_coordinates
 """Helper function for [`λ_recursion_initialize`](@ref)"""
 binom(T, n, k) = T(binomial(big(n), big(k)))
 
+# # Eq. (10) of Reinecke & Seljebotn https://dx.doi.org/10.1051/0004-6361/201321494
+# ₛλₗₘ(ϑ) = (-1)ᵐ √((2ℓ+1)/(4π)) dˡ₋ₘₛ(ϑ)
+#
+# # Eq. (4.11) of Kostelec & Rockmore https://dx.doi.org/10.1007/s00041-008-9013-5
+# # Note that terms with out-of-range indices should be treated as 0.
+# ₛλₗ₊₁ₘ = √((2ℓ+3)/(2ℓ+1)) (ℓ+1) (2ℓ+1) / √(((ℓ+1)²-m²) ((ℓ+1)²-s²)) (cosϑ + ms/(ℓ(ℓ+1))) ₛλₗₘ
+#          -  √((2ℓ+3)/(2ℓ-1)) (ℓ+1) (2ℓ+1) √((ℓ-m²) (ℓ-s²)) / √(((ℓ+1)²-m²) ((ℓ+1)²-s²)) ((ℓ+1)/ℓ) ₛλₗ₋₁ₘ
+#
+# # Eqs. (4.7) and (4.6) of Kostelec & Rockmore
+# for 0 ≤ s ≤ ℓ
+# ₛλₗₗ(ϑ) = (-1)ᵐ √((2ℓ+1)/(4π)) √(((2ℓ)!)/((ℓ+s)!(ℓ-s)!)) cosˡ⁻ˢ ϑ/2 sinˡ⁺ˢ ϑ/2
+# ₛλₗ₋ₗ(ϑ) = (-1)ᵐ⁺ˡ⁺ˢ √((2ℓ+1)/(4π)) √(((2ℓ)!)/((ℓ+s)!(ℓ-s)!)) cosˡ⁺ˢ ϑ/2 sinˡ⁻ˢ ϑ/2
+#
+# # https://en.wikipedia.org/wiki/Wigner_D-matrix#Symmetries_and_special_cases
+# dˡ₋ₘₛ(ϑ) = (-1)ˡ⁺ᵐ dˡ₋ₘ₋ₛ(π-ϑ)
+#  ₛλₗₘ(ϑ) = (-1)ˡ⁺ᵐ  ₋ₛλₗₘ(π-ϑ)
+#
+# for -ℓ ≤ s ≤ 0
+# ₛλₗₗ(ϑ) = (-1)ˡ √((2ℓ+1)/(4π)) √(((2ℓ)!)/((ℓ+s)!(ℓ-s)!)) cosˡ⁺ˢ (π-ϑ)/2 sinˡ⁻ˢ (π-ϑ)/2
+# ₛλₗ₋ₗ(ϑ) = (-1)ˢ √((2ℓ+1)/(4π)) √(((2ℓ)!)/((ℓ+s)!(ℓ-s)!)) cosˡ⁻ˢ (π-ϑ)/2 sinˡ⁺ˢ (π-ϑ)/2
+
 @doc raw"""
     λ_recursion_initialize(cosθ, sin½θ, cos½θ, s, ℓ, m)
 
@@ -15,12 +36,17 @@ Specifically, this function computes values with ``\ell=m``.
 
 """
 function λ_recursion_initialize(sin½θ::T, cos½θ::T, s, ℓ, m) where T
-    if abs(m) != ℓ
-        @error "Value of m=$m can only be ±ℓ=±$ℓ for this initial-value function.  (θ=$θ; s=$s)."
-    end
     if abs(s) > abs(m)
         λ_recursion_initialize(-sin½θ, cos½θ, m, ℓ, s)
     else
+        if abs(m) != ℓ
+            @error """
+                Value of m=$m can only be ±ℓ=±$ℓ for this initial-value function.
+                s=$s
+                sin½θ=$sin½θ
+                cos½θ=$cos½θ
+            """
+        end
         let π = T(π)
             c = √((2ℓ+1) * binom(T, 2ℓ, ℓ-abs(s)) / (4π))
             if s < 0
@@ -71,15 +97,18 @@ struct SSHTRS <: SSHT
     """Number of points along the azimuthal (ϕ) coordinate in each ring"""
     Nϕ
 
+    """Index range of each ring along the colatitude (θ) coordinate"""
+    iθ
+
+    """Preallocated storage for FTs of individual rings"""
+    G
+
     """Fourier-transform plan
 
     This transforms physical-space function values to the Fourier domain on
     each ring of colatitude.
     """
     plan
-
-    """Preallocated storage for FTs of individual rings"""
-    G
 end
 
 
@@ -101,7 +130,16 @@ function SSHTRS(
     Nϕ=fill(2ℓₘₐₓ+2, length(θ)),
     plan_fft_flags=FFTW.ESTIMATE, plan_fft_timelimit=Inf
 )
-    @assert size(θ) == size(quadrature_weights) "size(θ) should equal size(quadrature_weights)"
+    @assert size(θ) == size(quadrature_weights) """
+        size(θ) should equal size(quadrature_weights)
+        size(θ) = $(size(θ))
+        size(quadrature_weights) = $(size(quadrature_weights))
+    """
+    @assert size(θ) == size(Nϕ) """
+        size(θ) should equal size(Nϕ)
+        size(θ) = $(size(θ))
+        size(Nϕ) = $(size(Nϕ))
+    """
     if (message = check_threads()) != ""
         @warn """$message
         Computations with SSHTRS can benefit greatly from using all available threads if many
@@ -109,70 +147,58 @@ function SSHTRS(
         """
     end
     m′ₘₐₓ = abs(s)
+    iθ = let iθ = cumsum(Nϕ)
+        [a:b for (a,b) in eachrow(hcat([1; iθ[begin:end-1].+1], iθ))]
+    end
     Gs = [Vector{Complex{T}}(undef, N) for N ∈ Nϕ]
     plans = [plan_fft(G, flags=plan_fft_flags, timelimit=plan_fft_timelimit) for G ∈ Gs]
-    SSHTRS(s, ℓₘₐₓ, θ, quadrature_weights, Nϕ, plans, Gs)
+    SSHTRS(s, ℓₘₐₓ, θ, quadrature_weights, Nϕ, iθ, Gs, plans)
 end
 
 function Base.:\(𝒯::SSHTRS, f)
-    f̃ = similar(f, (Ysize(𝒯.ℓₘₐₓ), size(f)[3:end]...))
+    f̃ = similar(f, (Ysize(𝒯.ℓₘₐₓ), size(f)[2:end]...))
     ldiv!(f̃, 𝒯, f)
 end
 
 function LinearAlgebra.ldiv!(f̃, 𝒯::SSHTRS, f)  # Compute `f̃ = 𝒯 \ f`, storing the result in `f̃`
     s1 = size(f̃)
-    s2 = (Ysize(𝒯.ℓₘₐₓ), size(f)[3:end]...)
-    @assert s1==s2 "size(f̃)=$s1  !=  (Ysize(ℓₘₐₓ), size(f)[3:end]...)=$s2"
+    s2 = (Ysize(𝒯.ℓₘₐₓ), size(f)[2:end]...)
+    @assert s1==s2 """
+        Size of output `f̃` is not matched to size of input `f`:
+        size(f̃) = $(size(f̃))
+        (Ysize(ℓₘₐₓ), size(f)[2:end]...) = $((Ysize(ℓₘₐₓ), size(f)[2:end]...))
+    """
 
-    # # Eq. (10) of Reinecke & Seljebotn https://dx.doi.org/10.1051/0004-6361/201321494
-    # ₛλₗₘ(ϑ) = (-1)ᵐ √((2ℓ+1)/(4π)) dˡ₋ₘₛ(ϑ)
-    #
-    # # Eq. (4.11) of Kostelec & Rockmore https://dx.doi.org/10.1007/s00041-008-9013-5
-    # # Note that terms with out-of-range indices should be treated as 0.
-    # ₛλₗ₊₁ₘ = √((2ℓ+3)/(2ℓ+1)) (ℓ+1) (2ℓ+1) / √(((ℓ+1)²-m²) ((ℓ+1)²-s²)) (cosϑ + ms/(ℓ(ℓ+1))) ₛλₗₘ
-    #          -  √((2ℓ+3)/(2ℓ-1)) (ℓ+1) (2ℓ+1) √((ℓ-m²) (ℓ-s²)) / √(((ℓ+1)²-m²) ((ℓ+1)²-s²)) ((ℓ+1)/ℓ) ₛλₗ₋₁ₘ
-    #
-    # # Eqs. (4.7) and (4.6) of Kostelec & Rockmore
-    # for 0 ≤ s ≤ ℓ
-    # ₛλₗₗ(ϑ) = (-1)ᵐ √((2ℓ+1)/(4π)) √(((2ℓ)!)/((ℓ+s)!(ℓ-s)!)) cosˡ⁻ˢ ϑ/2 sinˡ⁺ˢ ϑ/2
-    # ₛλₗ₋ₗ(ϑ) = (-1)ᵐ⁺ˡ⁺ˢ √((2ℓ+1)/(4π)) √(((2ℓ)!)/((ℓ+s)!(ℓ-s)!)) cosˡ⁺ˢ ϑ/2 sinˡ⁻ˢ ϑ/2
-    #
-    # # https://en.wikipedia.org/wiki/Wigner_D-matrix#Symmetries_and_special_cases
-    # dˡ₋ₘₛ(ϑ) = (-1)ˡ⁺ᵐ dˡ₋ₘ₋ₛ(π-ϑ)
-    #  ₛλₗₘ(ϑ) = (-1)ˡ⁺ᵐ  ₋ₛλₗₘ(π-ϑ)
-    #
-    # for -ℓ ≤ s ≤ 0
-    # ₛλₗₗ(ϑ) = (-1)ˡ √((2ℓ+1)/(4π)) √(((2ℓ)!)/((ℓ+s)!(ℓ-s)!)) cosˡ⁺ˢ (π-ϑ)/2 sinˡ⁻ˢ (π-ϑ)/2
-    # ₛλₗ₋ₗ(ϑ) = (-1)ˢ √((2ℓ+1)/(4π)) √(((2ℓ)!)/((ℓ+s)!(ℓ-s)!)) cosˡ⁻ˢ (π-ϑ)/2 sinˡ⁺ˢ (π-ϑ)/2
-
+    T = eltype(𝒯.θ)
     s = 𝒯.s
-    lmax = 𝒯.ℓₘₐₓ
-    mmax = lmax
+    ℓₘₐₓ = 𝒯.ℓₘₐₓ
+    mₘₐₓ = ℓₘₐₓ
     f̃[:] .= false  # Zero out all elements to prepare for accumulation below
-    #f̃′ = reshape(f̃, size(f̃, 1), :)
 
-    # Based loosely on Fig. 2 of Reinecke & Seljebotn
-    @threads for (G,y) ∈ zip(𝒯.G, axes(f, ))
-        iₜ = threadid()
-        for j ∈ jobs
-            G!(G[j,iₜ,:], f[j,y])
-        end  # j
-    end  # y
-
-    @threads for m ∈ -mmax:mmax  # Note: Contrary to R&S, we include negative m
-        ℓ₀ = max(abs(s), abs(m))
-        for y ∈ b.rings
-            let θ = θ[y]
+    f̃′ = reshape(f̃, size(f̃, 1), :)
+    f′ = reshape(f, size(f, 1), :)
+    for (f̃′ⱼ, f′ⱼ) ∈ zip(eachcol(f̃′), eachcol(f′))
+        for (w, iθ, G, plan) ∈ zip(𝒯.quadrature_weight, 𝒯.iθ, 𝒯.G, 𝒯.plan)
+            mul!(G, plan, @view(f′ⱼ[iθ]))
+            #mul!(G, plan, f′ⱼ[iθ])
+            G *= w
+        end
+        for m ∈ -mₘₐₓ:mₘₐₓ  # Note: Contrary to R&S, we include negative m
+            ℓ₀ = max(abs(s), abs(m))
+            for (θ, G) ∈ zip(𝒯.θ, 𝒯.G)
+                Gy = G[1+mod(m, length(G))]
                 cosθ = cos(θ)
                 sin½θ, cos½θ = sincos(θ/2)
                 ₛλₗ₋₁ₘ = zero(T)
                 ₛλₗₘ = λ_recursion_initialize(sin½θ, cos½θ, s, ℓ₀, m)
                 cₗ₋₁ = zero(T)
-                for ℓ ∈ ℓ₀:lmax
-                    @turbo for j ∈ jobs
-                        f̃[j,l,m] += G[j,m,y] * ₛλₗₘ
-                    end  # j
-                    if ℓ < lmax
+                for ℓ ∈ ℓ₀:ℓₘₐₓ
+                    lm = Yindex(ℓ, m, abs(s))
+                    # Be careful of the following when adding threads!!!
+                    # We need this element of f̃′ⱼ to be used in only one thread,
+                    # and we need G to be used in only one thread at a time.
+                    f̃′ⱼ[lm] += Gy * ₛλₗₘ
+                    if ℓ < ℓₘₐₓ  # Take another step in the λ recursion
                         cₗ₊₁, cₗ = λ_recursion_coefficients(cosθ, s, ℓ, m)
                         ₛλₗ₊₁ₘ = if ℓ == 0
                             √(3/4T(π)) * cosθ
@@ -183,10 +209,47 @@ function LinearAlgebra.ldiv!(f̃, 𝒯::SSHTRS, f)  # Compute `f̃ = 𝒯 \ f`, 
                         ₛλₗₘ = ₛλₗ₊₁ₘ
                         cₗ₋₁ = -cₗ₊₁ * √((2ℓ+1)/T(2ℓ+3))
                     end
-                end  # l
-            end  # θ
-        end  # y
-    end  # m
+                end  # ℓ
+            end  # (θ, Nϕ, G)
+        end  # m
+    end  # (f̃′ⱼ, f′ⱼ)
+
+    # # Based loosely on Fig. 2 of Reinecke & Seljebotn
+    # @threads for (G,y) ∈ zip(𝒯.G, axes(f, 1))
+    #     iₜ = threadid()
+    #     for j ∈ jobs
+    #         G!(G[j,iₜ,:], f[y, j])
+    #     end  # j
+    # end  # y
+
+    # @threads for m ∈ -mₘₐₓ:mₘₐₓ  # Note: Contrary to R&S, we include negative m
+    #     ℓ₀ = max(abs(s), abs(m))
+    #     for y ∈ b.rings
+    #         let θ = θ[y]
+    #             cosθ = cos(θ)
+    #             sin½θ, cos½θ = sincos(θ/2)
+    #             ₛλₗ₋₁ₘ = zero(T)
+    #             ₛλₗₘ = λ_recursion_initialize(sin½θ, cos½θ, s, ℓ₀, m)
+    #             cₗ₋₁ = zero(T)
+    #             for ℓ ∈ ℓ₀:ℓₘₐₓ
+    #                 @turbo for j ∈ jobs
+    #                     f̃[j,l,m] += G[j,m,y] * ₛλₗₘ
+    #                 end  # j
+    #                 if ℓ < ℓₘₐₓ
+    #                     cₗ₊₁, cₗ = λ_recursion_coefficients(cosθ, s, ℓ, m)
+    #                     ₛλₗ₊₁ₘ = if ℓ == 0
+    #                         √(3/4T(π)) * cosθ
+    #                     else
+    #                         (cₗ * ₛλₗₘ + cₗ₋₁ * ₛλₗ₋₁ₘ) / cₗ₊₁
+    #                     end
+    #                     ₛλₗ₋₁ₘ = ₛλₗₘ
+    #                     ₛλₗₘ = ₛλₗ₊₁ₘ
+    #                     cₗ₋₁ = -cₗ₊₁ * √((2ℓ+1)/T(2ℓ+3))
+    #                 end
+    #             end  # l
+    #         end  # θ
+    #     end  # y
+    # end  # m
 
     f̃
 end

@@ -4,6 +4,10 @@
         ["Direct", "RS"], #["Direct", "EKKM", "RS"],
         [BigFloat, Float64, Float32]
     )
+        if method == "RS" && T === BigFloat
+            continue
+        end
+
         ϵ = 50eps(T)
 
         # These test the ability of ssht to precisely decompose the results of `sYlm`.

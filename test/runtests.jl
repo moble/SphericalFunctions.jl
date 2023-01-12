@@ -1,6 +1,6 @@
 using SphericalFunctions
 using Test, Random, ProgressMeter
-using FastTransforms, Quaternionic
+using FastTransforms, FFTW, Quaternionic
 
 include("test_utilities.jl")
 
