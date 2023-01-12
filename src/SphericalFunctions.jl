@@ -40,7 +40,7 @@ include("weights.jl")
 export fejer1, fejer2, clenshaw_curtis
 
 include("ssht.jl")
-export SSHT
+export SSHT, pixels
 
 include("map2salm.jl")
 export map2salm, map2salm!, plan_map2salm

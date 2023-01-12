@@ -18,6 +18,9 @@ struct SSHTEKKM{Inplace} <: SSHT
     """
     θ::OffsetVector
 
+    """Spin-weighted spherical harmonic values"""
+    ₛ𝐘
+
     """OffsetVector of Fourier-transform plans
 
     These transform physical-space function values to the Fourier domain on
@@ -26,7 +29,7 @@ struct SSHTEKKM{Inplace} <: SSHT
     plans::OffsetVector
 
     """OffsetVector of LU-decomposed matrices to solve for mode weights
-    
+
     There is one matrix for each value of m = k ∈ -ℓₘₐₓ:ℓₘₐₓ; the rows in each
     matrix correspond to j ∈ max(abs(s),abs(m)):ℓₘₐₓ; the columns correspond
     to ℓ over the same range as j.
@@ -37,6 +40,15 @@ struct SSHTEKKM{Inplace} <: SSHT
     workspace::Vector
 end
 
+function pixels(𝒯::SSHTEKKM)
+    let π = convert(eltype(𝒯.θ), π)
+        [
+            from_spherical_coordinates(𝒯.θ[j], iϕ * 2π / (2j+1))
+            for j ∈ abs(𝒯.s):ℓₘₐₓ
+            for iϕ ∈ 0:2j
+        ]
+    end
+end
 
 function SSHTEKKM(
     s, ℓₘₐₓ;
@@ -46,6 +58,8 @@ function SSHTEKKM(
 )
     @assert length(θ) == ℓₘₐₓ-abs(s)+1 "Length of `θ` ($(length(θ))) must equal `ℓₘₐₓ-abs(s)+1` ($(ℓₘₐₓ-abs(s)+1))"
     T = eltype(θ)
+
+    s𝐘 = ₛ𝐘(s, ℓₘₐₓ, T, Rθϕ)
 
     plans = OffsetVector(
         [
@@ -81,45 +95,52 @@ function SSHTEKKM(
         end
         OffsetVector([LinearAlgebra.lu(ₛ𝐝′[m]) for m ∈ -ℓₘₐₓ:ℓₘₐₓ], -ℓₘₐₓ:ℓₘₐₓ)
     end
-    
+
     # Pre-allocate the workspace used to solve the linear equations
     workspace = Vector{Complex{T}}(undef, 2ℓₘₐₓ+1)
 
-    SSHTEKKM{inplace}(s, ℓₘₐₓ, OffsetVector(θ, abs(s):ℓₘₐₓ), plans, ₛ𝐝, workspace)
+    SSHTEKKM{inplace}(s, ℓₘₐₓ, OffsetVector(θ, abs(s):ℓₘₐₓ), s𝐘, plans, ₛ𝐝, workspace)
 end
 
-
-function Base.:\(ssht::SSHTEKKM, f)
-    ldiv!(ssht, copy(f))
+function Base.:*(𝒯::SSHTEKKM, f̃)
+    𝒯.ₛ𝐘 * f̃
 end
 
-function Base.:\(ssht::SSHTEKKM{true}, f)
-    ldiv!(ssht, f)
+function LinearAlgebra.mul!(f, 𝒯::SSHTEKKM, f̃)
+    mul!(f, 𝒯.ₛ𝐘, f̃)
 end
 
-function LinearAlgebra.ldiv!(Y, ssht::SSHTEKKM, f)
-    Y[:] = f
-    ldiv!(ssht, Y)
+function Base.:\(𝒯::SSHTEKKM, f)
+    ldiv!(𝒯, copy(f))
 end
 
-function LinearAlgebra.ldiv!(ssht::SSHTEKKM, f)
+function Base.:\(𝒯::SSHTEKKM{true}, ff̃)
+    ldiv!(𝒯, ff̃)
+end
+
+function LinearAlgebra.ldiv!(f̃, 𝒯::SSHTEKKM, f)
+    f̃[:] = f
+    ldiv!(𝒯, f̃)
+end
+
+function LinearAlgebra.ldiv!(𝒯::SSHTEKKM, ff̃)
     # s, ℓₘₐₓ, plans, ₛ𝐝, workspace
-    i₁ = firstindex(f)
-    for j ∈ abs(ssht.s):ssht.ℓₘₐₓ
+    i₁ = firstindex(ff̃)
+    for j ∈ abs(𝒯.s):𝒯.ℓₘₐₓ
         i₂ = i₁ + 2j+1
-        @views (plans[j] * f[i₁:i₂])  # performs FFT in place
+        @views (plans[j] * ff̃[i₁:i₂])  # performs FFT in place
         i₁ = i₂+1
     end
-    for k ∈ ssht.ℓₘₐₓ:-1:0
-        w = @view ssht.workspace[begin:begin+ssht.ℓₘₐₓ-abs(k)]
+    for k ∈ 𝒯.ℓₘₐₓ:-1:0
+        w = @view 𝒯.workspace[begin:begin+𝒯.ℓₘₐₓ-abs(k)]
 
         # Copy all harmonics into workspace
         @error "Not implemented"
 
         # Solve for mode weights
-        ldiv!(ssht.ₛ𝐝[k], w)
+        ldiv!(𝒯.ₛ𝐝[k], w)
 
-        # Copy all mode weights back into f
+        # Copy all mode weights back into ff̃
         @error "Not implemented"
 
         # De-alias lower |k| harmonics

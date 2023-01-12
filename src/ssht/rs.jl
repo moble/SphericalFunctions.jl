@@ -1,3 +1,4 @@
+using Quaternionic: from_spherical_coordinates
 
 """Helper function for [`λ_recursion_initialize`](@ref)"""
 binom(T, n, k) = T(binomial(big(n), big(k)))
@@ -82,6 +83,17 @@ struct SSHTRS <: SSHT
 end
 
 
+function pixels(𝒯::SSHTRS)
+    let π = convert(eltype(𝒯.θ), π)
+        [
+            from_spherical_coordinates(θ, iϕ * 2π / Nϕ)
+            for (θ,Nϕ) ∈ zip(𝒯.θ, 𝒯.Nϕ)
+            for iϕ ∈ 0:Nϕ-1
+        ]
+    end
+end
+
+
 function SSHTRS(
     s, ℓₘₐₓ; T=Float64,
     θ=clenshaw_curtis_rings(s, ℓₘₐₓ, T),
@@ -102,11 +114,15 @@ function SSHTRS(
     SSHTRS(s, ℓₘₐₓ, θ, quadrature_weights, Nϕ, plans, Gs)
 end
 
+function Base.:\(𝒯::SSHTRS, f)
+    f̃ = similar(f, (Ysize(𝒯.ℓₘₐₓ), size(f)[3:end]...))
+    ldiv!(f̃, 𝒯, f)
+end
 
-function LinearAlgebra.ldiv!(𝐟̃, 𝒯::SSHTRS, 𝐟)  # Compute `𝐟̃ = 𝒯 \ 𝐟`, storing the result in `𝐟̃`
-    s1 = size(𝐟̃)
-    s2 = (Ysize(ℓₘₐₓ), size(𝐟)[3:end]...)
-    @assert s1==s2 "size(𝐟̃)=$s1  !=  (Ysize(ℓₘₐₓ), size(𝐟)[3:end]...)=$s2"
+function LinearAlgebra.ldiv!(f̃, 𝒯::SSHTRS, f)  # Compute `f̃ = 𝒯 \ f`, storing the result in `f̃`
+    s1 = size(f̃)
+    s2 = (Ysize(𝒯.ℓₘₐₓ), size(f)[3:end]...)
+    @assert s1==s2 "size(f̃)=$s1  !=  (Ysize(ℓₘₐₓ), size(f)[3:end]...)=$s2"
 
     # # Eq. (10) of Reinecke & Seljebotn https://dx.doi.org/10.1051/0004-6361/201321494
     # ₛλₗₘ(ϑ) = (-1)ᵐ √((2ℓ+1)/(4π)) dˡ₋ₘₛ(ϑ)
@@ -132,15 +148,14 @@ function LinearAlgebra.ldiv!(𝐟̃, 𝒯::SSHTRS, 𝐟)  # Compute `𝐟̃ = �
     s = 𝒯.s
     lmax = 𝒯.ℓₘₐₓ
     mmax = lmax
-    𝐟̃[:] .= false  # Zero out all elements to prepare for accumulation below
-    𝐟̃′ = reshape(𝐟̃, size(𝐟̃, 1), :)
-
+    f̃[:] .= false  # Zero out all elements to prepare for accumulation below
+    #f̃′ = reshape(f̃, size(f̃, 1), :)
 
     # Based loosely on Fig. 2 of Reinecke & Seljebotn
-    @threads for (G,y) ∈ zip(𝒯.G, axes(𝐟, ))
+    @threads for (G,y) ∈ zip(𝒯.G, axes(f, ))
         iₜ = threadid()
         for j ∈ jobs
-            G!(G[j,iₜ,:], 𝐟[j,y])
+            G!(G[j,iₜ,:], f[j,y])
         end  # j
     end  # y
 
@@ -155,7 +170,7 @@ function LinearAlgebra.ldiv!(𝐟̃, 𝒯::SSHTRS, 𝐟)  # Compute `𝐟̃ = �
                 cₗ₋₁ = zero(T)
                 for ℓ ∈ ℓ₀:lmax
                     @turbo for j ∈ jobs
-                        𝐟̃[j,l,m] += G[j,m,y] * ₛλₗₘ
+                        f̃[j,l,m] += G[j,m,y] * ₛλₗₘ
                     end  # j
                     if ℓ < lmax
                         cₗ₊₁, cₗ = λ_recursion_coefficients(cosθ, s, ℓ, m)
@@ -173,5 +188,5 @@ function LinearAlgebra.ldiv!(𝐟̃, 𝒯::SSHTRS, 𝐟)  # Compute `𝐟̃ = �
         end  # y
     end  # m
 
-    𝐟̃
+    f̃
 end

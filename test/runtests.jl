@@ -32,6 +32,7 @@ end
     addtests("wigner_matrices.jl")
     addtests("weights.jl")
     addtests("map2salm.jl")
+    addtests("ssht.jl")
 end
 
 

@@ -11,7 +11,6 @@ the same values of either ``θ`` or ``ϕ``.  Also note that no point is present
 on either the North or South poles.
 
 The returned quantity is a vector of `Rotor`s providing each pixel.
-
 """
 function golden_ratio_spiral(s, ℓₘₐₓ, T=Float64)
     let π = T(π), φ = T(MathConstants.φ)
@@ -40,7 +39,6 @@ optimizer to fine-tune the positions of the rings.
 This function does not provide the individual pixels; it just provides the
 colatitude values of the rings on which the pixels will be placed.  The pixels
 themselves are provided by [`sorted_ring_pixels`](@ref).
-
 """
 function sorted_rings(s, ℓₘₐₓ, T=Float64)
     let πo2 = prevfloat(T(π)/2, s)
@@ -61,7 +59,6 @@ by [`sorted_rings`](@ref); see that function's documentation for more
 description.
 
 The returned quantity is a vector of `Rotor`s providing each pixel.
-
 """
 function sorted_ring_pixels(s, ℓₘₐₓ, T=Float64)
     θrings = sorted_rings(s, ℓₘₐₓ, T)

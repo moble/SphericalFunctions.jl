@@ -12,7 +12,7 @@ example, when processing multiple fields with different spin weights; the functi
 evaluated on points appropriate for the lowest value of ``|s|``, and therefore could also be used to
 solve for fields of all other spin weights.
 
-Note that in-place operation is possible for this type, when the length of the input `Rθϕ` is equal
+Note that in-place operation is possible for this type when the length of the input `Rθϕ` is equal
 to the number of modes given `s` and `ℓₘₐₓ` — and is the default behavior when possible.  See
 [`SSHT`](@ref) for description of in-place operation.
 
@@ -46,6 +46,10 @@ struct SSHTDirect{Inplace} <: SSHT
     ₛ𝐘decomposition
 end
 
+function pixels(𝒯::SSHTDirect)
+    𝒯.Rθϕ
+end
+
 function SSHTDirect(
     s, ℓₘₐₓ;
     decomposition=LinearAlgebra.lu,
@@ -70,26 +74,26 @@ function SSHTDirect(
     end
 end
 
-function Base.:*(ssht::SSHTDirect, 𝐦)
-    ssht.ₛ𝐘 * 𝐦
+function Base.:*(𝒯::SSHTDirect, f̃)
+    𝒯.ₛ𝐘 * f̃
 end
 
-function LinearAlgebra.mul!(𝐟, ssht::SSHTDirect, 𝐦)
-    mul!(𝐟, ssht.ₛ𝐘, 𝐦)
+function LinearAlgebra.mul!(f, 𝒯::SSHTDirect, f̃)
+    mul!(f, 𝒯.ₛ𝐘, f̃)
 end
 
-function Base.:\(ssht::SSHTDirect, 𝐟)
-    ssht.ₛ𝐘decomposition \ 𝐟
+function Base.:\(𝒯::SSHTDirect, f)
+    𝒯.ₛ𝐘decomposition \ f
 end
 
-function Base.:\(ssht::SSHTDirect{true}, 𝐟𝐦)
-    ldiv!(ssht.ₛ𝐘decomposition, 𝐟𝐦)
+function Base.:\(𝒯::SSHTDirect{true}, ff̃)
+    ldiv!(𝒯.ₛ𝐘decomposition, ff̃)
 end
 
-function LinearAlgebra.ldiv!(𝐦, ssht::SSHTDirect, 𝐟)
-    ldiv!(𝐦, ssht.ₛ𝐘decomposition, 𝐟)
+function LinearAlgebra.ldiv!(f̃, 𝒯::SSHTDirect, f)
+    ldiv!(f̃, 𝒯.ₛ𝐘decomposition, f)
 end
 
-function LinearAlgebra.ldiv!(ssht::SSHTDirect, 𝐟𝐦)
-    ldiv!(ssht.ₛ𝐘decomposition, 𝐟𝐦)
+function LinearAlgebra.ldiv!(𝒯::SSHTDirect, ff̃)
+    ldiv!(𝒯.ₛ𝐘decomposition, ff̃)
 end

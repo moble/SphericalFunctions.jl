@@ -8,26 +8,28 @@ Construct an `SSHT` object to transform between spin-weighted spherical-harmonic
 function values — performing an ``s``-SHT.
 
 This object behaves similarly to an `AbstractFFTs.Plan` object — specfically in the ability to use
-the semantics of algebra to perform transforms.  For example, if the mode weights are stored as a
-vector `𝐦`, the function values as `𝐟`, and the `SSHT` as `𝒯`, then we can compute the function
+the semantics of algebra to perform transforms.  For example, if the function values are stored as
+a vector `f`, the mode weights as `f̃`, and the `SSHT` as `𝒯`, then we can compute the function
 values from the mode weights as
 
-    𝐟 = 𝒯 * 𝐦
+    f = 𝒯 * f̃
 
 or solve for the mode weights from the function values as
 
-    𝐦 = 𝒯 \ 𝐟
+    f̃ = 𝒯 \ f
 
-The first dimensions of `𝐦` must index the mode weights (as usual, for `ℓ∈abs(m):ℓₘₐₓ` and `m∈-ℓ:ℓ`)
-and the first index of `𝐟` must index the locations at which the function is evaluated.  Any
+The first dimensions of `f̃` must index the mode weights (as usual, for `ℓ∈abs(m):ℓₘₐₓ` and `m∈-ℓ:ℓ`)
+and the first index of `f` must index the locations at which the function is evaluated.  Any
 following dimensions will be broadcast over.  Note that certain types will broadcast using Julia
 threads, while others will broadcast using BLAS threads.  The relevant number of threads must be set
 appropriately.
 
-Certain `SSHT` types also have an option to *always* act in place — meaning that they simply re-use
-the input storage, even when used in an expression like `𝒯 \ 𝐟`.  Regardless of the value of that
-option, for those types where the option exists, it is also possible to use `mul!` and `ldiv!` from
-the `LinearAlgebra` package to force operation in place.
+Certain `SSHT` types (currently, only `EKKM` and `Direct`) also have an option to *always* act in
+place — meaning that they simply re-use the input storage, even when used in an expression like
+`𝒯 \ f`.  The option must be passed as the `inplace` argument to the constructors, and part of the
+type of the resulting object.  Regardless of the value of that option, for those types where the
+option exists, it is also possible to use `mul!` and `ldiv!` from the `LinearAlgebra` package to
+force operation in place.
 
 """
 function SSHT(s, ℓₘₐₓ; method="Direct", kwargs...)
@@ -48,7 +50,7 @@ function Base.show(io::IO, ssht::SSHT)
 end
 
 
-inplaceable(s, ℓₘₐₓ, Rθϕ) = (ℓₘₐₓ+1)^2 - s^2 == length(Rθϕ)
+inplaceable(s, ℓₘₐₓ, Rθϕ) = (ℓₘₐₓ + 1)^2 - s^2 == length(Rθϕ)
 
 
 function check_threads()
@@ -85,5 +87,4 @@ end
 
 include("ssht/direct.jl")
 include("ssht/ekkm.jl")
-include("ssht/eg.jl")
 include("ssht/rs.jl")
