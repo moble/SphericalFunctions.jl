@@ -127,7 +127,7 @@ end
 
 function clenshaw_curtis(n, ::Type{T}=Float64) where {T<:MachineFloat}
     # Specialized to "machine" floats; significant reduction in memory and increase in speed
-    nmod2 = (n-1) % 2
+    nmod2 = mod(n-1, 2)
     w₀ᶜᶜ = inv(T((n-1)^2 - 1 + nmod2))
     v = Vector{T}(undef, (n-1)÷2 + 1)
     @inbounds begin

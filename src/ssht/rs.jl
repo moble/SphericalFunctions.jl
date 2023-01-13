@@ -127,7 +127,7 @@ function SSHTRS(
     s, ℓₘₐₓ; T=Float64,
     θ=clenshaw_curtis_rings(s, ℓₘₐₓ, T),
     quadrature_weights=clenshaw_curtis(length(θ), T),
-    Nϕ=fill(2ℓₘₐₓ+2, length(θ)),
+    Nϕ=fill(2ℓₘₐₓ+1, length(θ)),
     plan_fft_flags=FFTW.ESTIMATE, plan_fft_timelimit=Inf
 )
     @assert size(θ) == size(quadrature_weights) """
@@ -146,7 +146,6 @@ function SSHTRS(
         functions are to be transformed.
         """
     end
-    m′ₘₐₓ = abs(s)
     iθ = let iθ = cumsum(Nϕ)
         [a:b for (a,b) in eachrow(hcat([1; iθ[begin:end-1].+1], iθ))]
     end
@@ -156,37 +155,38 @@ function SSHTRS(
 end
 
 function Base.:\(𝒯::SSHTRS, f)
-    f̃ = similar(f, (Ysize(𝒯.ℓₘₐₓ), size(f)[2:end]...))
+    f̃ = similar(f, (Ysize(abs(𝒯.s), 𝒯.ℓₘₐₓ), size(f)[2:end]...))
     ldiv!(f̃, 𝒯, f)
 end
 
 function LinearAlgebra.ldiv!(f̃, 𝒯::SSHTRS, f)  # Compute `f̃ = 𝒯 \ f`, storing the result in `f̃`
     s1 = size(f̃)
-    s2 = (Ysize(𝒯.ℓₘₐₓ), size(f)[2:end]...)
+    s2 = (Ysize(abs(𝒯.s), 𝒯.ℓₘₐₓ), size(f)[2:end]...)
     @assert s1==s2 """
         Size of output `f̃` is not matched to size of input `f`:
         size(f̃) = $(size(f̃))
-        (Ysize(ℓₘₐₓ), size(f)[2:end]...) = $((Ysize(ℓₘₐₓ), size(f)[2:end]...))
+        (Ysize(abs(𝒯.s), ℓₘₐₓ), size(f)[2:end]...) = $((Ysize(abs(𝒯.s), 𝒯.ℓₘₐₓ), size(f)[2:end]...))
     """
 
     T = eltype(𝒯.θ)
     s = 𝒯.s
     ℓₘₐₓ = 𝒯.ℓₘₐₓ
     mₘₐₓ = ℓₘₐₓ
-    f̃[:] .= false  # Zero out all elements to prepare for accumulation below
+    f̃ .= false  # Zero out all elements to prepare for accumulation below
 
     f̃′ = reshape(f̃, size(f̃, 1), :)
     f′ = reshape(f, size(f, 1), :)
     for (f̃′ⱼ, f′ⱼ) ∈ zip(eachcol(f̃′), eachcol(f′))
-        for (w, iθ, G, plan) ∈ zip(𝒯.quadrature_weight, 𝒯.iθ, 𝒯.G, 𝒯.plan)
-            mul!(G, plan, @view(f′ⱼ[iθ]))
-            #mul!(G, plan, f′ⱼ[iθ])
-            G *= w
+        let π = T(π)
+            for (wy, Nϕy, iθy, Gy, plany) ∈ zip(𝒯.quadrature_weight, 𝒯.Nϕ, 𝒯.iθ, 𝒯.G, 𝒯.plan)
+                mul!(Gy, plany, @view(f′ⱼ[iθy]))
+                @. Gy *= wy * 2π / Nϕy
+            end
         end
         for m ∈ -mₘₐₓ:mₘₐₓ  # Note: Contrary to R&S, we include negative m
             ℓ₀ = max(abs(s), abs(m))
-            for (θ, G) ∈ zip(𝒯.θ, 𝒯.G)
-                Gy = G[1+mod(m, length(G))]
+            for (θ, Gy) ∈ zip(𝒯.θ, 𝒯.G)
+                Gmy = Gy[1+mod(m, length(Gy))]
                 cosθ = cos(θ)
                 sin½θ, cos½θ = sincos(θ/2)
                 ₛλₗ₋₁ₘ = zero(T)
@@ -197,11 +197,12 @@ function LinearAlgebra.ldiv!(f̃, 𝒯::SSHTRS, f)  # Compute `f̃ = 𝒯 \ f`, 
                     # Be careful of the following when adding threads!!!
                     # We need this element of f̃′ⱼ to be used in only one thread,
                     # and we need G to be used in only one thread at a time.
-                    f̃′ⱼ[lm] += Gy * ₛλₗₘ
+                    f̃′ⱼ[lm] += Gmy * ₛλₗₘ
                     if ℓ < ℓₘₐₓ  # Take another step in the λ recursion
                         cₗ₊₁, cₗ = λ_recursion_coefficients(cosθ, s, ℓ, m)
                         ₛλₗ₊₁ₘ = if ℓ == 0
-                            √(3/4T(π)) * cosθ
+                            # √(3/4T(π)) * cosθ
+                            λ_recursion_initialize(sin½θ, cos½θ, s, ℓ+1, m)
                         else
                             (cₗ * ₛλₗₘ + cₗ₋₁ * ₛλₗ₋₁ₘ) / cₗ₊₁
                         end
