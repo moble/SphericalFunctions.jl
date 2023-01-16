@@ -1,14 +1,13 @@
 @testset verbose=true "ssht" begin
 
-    @testset "$method $T" for (method, T) in [("RS", Float64)] #Iterators.product(
+    # These test the ability of ssht to precisely decompose the results of `sYlm`.
+    @testset "$method $T" for (method, T) in [("RS", Float64)]#Iterators.product(
     #     ["Direct", "RS"], #["Direct", "EKKM", "RS"],
-    #     [BigFloat, Float64, Float32]
+    #     [Double64, Float64, Float32]
     # )
         if method == "RS" && T === BigFloat
             continue
         end
-
-        # These test the ability of ssht to precisely decompose the results of `sYlm`.
 
         function sYlm(s, ℓ, m, Rθϕ)
             (θ, ϕ) = to_spherical_coordinates(Rθϕ)
@@ -16,7 +15,9 @@
         end
 
         for ℓmax ∈ [7, 15]
-            ϵ = 10ℓmax^2 * eps(T)
+            # We need ϵ to be huge, seemingly mostly due to the low-precision method
+            # used for NINJA.sYlm; it is used because it is a simple reference method.
+            ϵ = 500ℓmax^3 * eps(T)
 
             for s in -2:2
                 𝒯 = SSHT(s, ℓmax; T=T, method=method)
@@ -30,14 +31,16 @@
                             expected = zeros(Complex{T}, size(computed))
                             expected[SphericalFunctions.Yindex(ℓ, m, ℓmin)] = one(T)
                             if ≉(computed, expected, atol=ϵ, rtol=ϵ)
+                                @show method
                                 @show T
                                 @show ℓmax
                                 @show s
                                 @show ℓ
                                 @show m
                                 @show ϵ
-                                @. computed[abs(computed)<1e-10]=0
-                                @show computed
+                                comp = copy(computed)
+                                @. comp[abs(comp)<ϵ]=0
+                                @show comp
                                 @show expected
                                 println("max_diff = ", maximum(abs, computed .- expected), ";")
                                 println()

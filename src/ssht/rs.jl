@@ -40,12 +40,11 @@ function λ_recursion_initialize(sin½θ::T, cos½θ::T, s, ℓ, m) where T
         λ_recursion_initialize(-sin½θ, cos½θ, m, ℓ, s)
     else
         if abs(m) != ℓ
-            @error """
-                Value of m=$m can only be ±ℓ=±$ℓ for this initial-value function.
+            error("""Value of m=$m can only be ±ℓ=±$ℓ for this initial-value function.
                 s=$s
                 sin½θ=$sin½θ
                 cos½θ=$cos½θ
-            """
+            """)
         end
         let π = T(π)
             c = √((2ℓ+1) * binom(T, 2ℓ, ℓ-abs(s)) / (4π))
@@ -201,8 +200,10 @@ function LinearAlgebra.ldiv!(f̃, 𝒯::SSHTRS, f)  # Compute `f̃ = 𝒯 \ f`, 
                     if ℓ < ℓₘₐₓ  # Take another step in the λ recursion
                         cₗ₊₁, cₗ = λ_recursion_coefficients(cosθ, s, ℓ, m)
                         ₛλₗ₊₁ₘ = if ℓ == 0
-                            # √(3/4T(π)) * cosθ
-                            λ_recursion_initialize(sin½θ, cos½θ, s, ℓ+1, m)
+                            # The only case in which this will ever be used is when
+                            # s == m == ℓ == 0.  Noting that we want the result for ℓ+1==1,
+                            # we know the formula:
+                            √(3/4T(π)) * cosθ
                         else
                             (cₗ * ₛλₗₘ + cₗ₋₁ * ₛλₗ₋₁ₘ) / cₗ₊₁
                         end

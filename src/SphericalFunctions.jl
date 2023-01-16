@@ -1,6 +1,7 @@
 module SphericalFunctions
 
-using FastTransforms, LinearAlgebra, ProgressMeter, Quaternionic, OffsetArrays, AbstractFFTs
+using FFTW, AbstractFFTs, FastTransforms
+using LinearAlgebra, ProgressMeter, Quaternionic, OffsetArrays
 import LoopVectorization: @turbo
 import Hwloc: num_physical_cores
 import Base.Threads: @threads, nthreads, threadid

@@ -135,19 +135,19 @@ function LinearAlgebra.ldiv!(𝒯::SSHTEKKM, ff̃)
         w = @view 𝒯.workspace[begin:begin+𝒯.ℓₘₐₓ-abs(k)]
 
         # Copy all harmonics into workspace
-        @error "Not implemented"
+        error("Not implemented")
 
         # Solve for mode weights
         ldiv!(𝒯.ₛ𝐝[k], w)
 
         # Copy all mode weights back into ff̃
-        @error "Not implemented"
+        error("Not implemented")
 
         # De-alias lower |k| harmonics
         for ℓ ∈ abs(k):-1:abs(s)
             for n ∈ cld(-ℓ-k, 2j+1):fld(ℓ-k, 2j+1)
                 m = k + n * (2j+1)
-                @error "Not implemented"
+                error("Not implemented")
             end
         end
     end

@@ -40,7 +40,7 @@ function SSHT(s, ℓₘₐₓ; method="Direct", kwargs...)
     elseif method == "RS"
         return SSHTRS(s, ℓₘₐₓ; kwargs...)
     else
-        @error """Unrecognized s-SHT method "$method"."""
+        error("""Unrecognized s-SHT method "$method".""")
     end
 end
 
