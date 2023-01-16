@@ -1,10 +1,11 @@
 name = "SphericalFunctions"
 uuid = "af6d55de-b1f7-4743-b797-0829a72cf84e"
 authors = ["Michael Boyle <michael.oliver.boyle@gmail.com>"]
-version = "1.1.1"
+version = "2.0.0"
 
 [deps]
 AbstractFFTs = "621f4979-c628-5d54-868e-fcf4e3e8185c"
+DoubleFloats = "497a8b3b-efae-58df-a0af-a86822472b78"
 FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
 FastTransforms = "057dd010-8810-581a-b7be-e3fc3b93f78c"
 Hwloc = "0e44f5e4-bd66-52a0-8798-143a42290a1d"
