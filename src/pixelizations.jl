@@ -100,14 +100,16 @@ function sorted_ring_rotors(s, ℓₘₐₓ, T=Float64)
 end
 
 """
-    fejer1_rings(s, N, [T=Float64])
+    fejer1_rings(N, [T=Float64])
 
 Values of the colatitude coordinate (``θ``) appropriate for quadrature by
 Fejér's first rule, using weights provided by [`fejer1`](@ref).
 
-Note that the second argument to this function is `N`, rather than `ℓₘₐₓ`.
+Note that the first argument to this function is `N`, rather than the
+`ℓₘₐₓ` used in some other functions.  For spin-weighted spherical
+harmonics, you may want to use `N=2ℓₘₐₓ+1`.
 """
-function fejer1_rings(s, N, T=Float64)
+function fejer1_rings(N, T=Float64)
     # Eq. (12) of Reinecke and Seljebotn
     let π = T(π)
         [(2n+1)*π/2N for n ∈ 0:N-1]
@@ -115,12 +117,16 @@ function fejer1_rings(s, N, T=Float64)
 end
 
 """
-    fejer2_rings(s, N, [T=Float64])
+    fejer2_rings(N, [T=Float64])
 
 Values of the colatitude coordinate (``θ``) appropriate for quadrature by
 Fejér's second rule, using weights provided by [`fejer2`](@ref).
+
+Note that the first argument to this function is `N`, rather than the
+`ℓₘₐₓ` used in some other functions.  For spin-weighted spherical
+harmonics, you may want to use `N=2ℓₘₐₓ+2`.
 """
-function fejer2_rings(s, N, T=Float64)
+function fejer2_rings(N, T=Float64)
     # Eq. (13) of Reinecke and Seljebotn
     let π = T(π)
         [n*π/N for n ∈ 1:N-1]
@@ -128,12 +134,16 @@ function fejer2_rings(s, N, T=Float64)
 end
 
 """
-    clenshaw_curtis_rings(s, N, [T=Float64])
+    clenshaw_curtis_rings(N, [T=Float64])
 
 Values of the colatitude coordinate (``θ``) appropriate for quadrature by the
 Clenshaw-Curtis rule, using weights provided by [`clenshaw_curtis`](@ref).
+
+Note that the first argument to this function is `N`, rather than the
+`ℓₘₐₓ` used in some other functions.  For spin-weighted spherical
+harmonics, you may want to use `N=2ℓₘₐₓ+1`.
 """
-function clenshaw_curtis_rings(s, N, T=Float64)
+function clenshaw_curtis_rings(N, T=Float64)
     # Eq. (14) of Reinecke and Seljebotn
     let π = T(π)
         [n*π/N for n ∈ 0:N]

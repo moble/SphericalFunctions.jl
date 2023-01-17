@@ -1,4 +1,4 @@
-@testset verbose=true "ssht" begin
+@testset verbose=true "SSHT" begin
 
     # These test the ability of ssht to precisely decompose the results of `sYlm`.
     @testset "Analysis: $method $T" for (method, T) in Iterators.product(
