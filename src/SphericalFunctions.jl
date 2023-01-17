@@ -1,7 +1,7 @@
 module SphericalFunctions
 
 using FFTW, AbstractFFTs, FastTransforms
-using LinearAlgebra, ProgressMeter, Quaternionic, OffsetArrays
+using LinearAlgebra, ProgressMeter, Quaternionic, OffsetArrays, StaticArrays
 import LoopVectorization: @turbo
 import Hwloc: num_physical_cores
 import Base.Threads: @threads, nthreads, threadid
@@ -12,7 +12,8 @@ const MachineFloat = Union{Float16, Float32, Float64}
 include("utils.jl")
 
 include("pixelizations.jl")
-export golden_ratio_spiral, sorted_rings
+export golden_ratio_spiral_pixels, golden_ratio_spiral_rotors
+export sorted_rings, sorted_ring_pixels, sorted_ring_rotors
 export fejer1_rings, fejer2_rings, clenshaw_curtis_rings
 
 include("complex_powers.jl")
@@ -41,7 +42,7 @@ include("weights.jl")
 export fejer1, fejer2, clenshaw_curtis
 
 include("ssht.jl")
-export SSHT, pixels
+export SSHT, pixels, rotors
 
 include("map2salm.jl")
 export map2salm, map2salm!, plan_map2salm

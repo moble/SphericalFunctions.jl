@@ -45,6 +45,28 @@ function SSHT(s, ℓₘₐₓ; method="Direct", kwargs...)
 end
 
 
+"""
+    pixels(𝒯)
+
+Return the spherical coordinates (θ, ϕ) on which the spin-weighted spherical harmonics are
+evaluated.  See also [`rotors`](@ref), which provides the actual `Rotor`s on which they are
+evaluated.
+"""
+function pixels(𝒯::SSHT)
+    error("Not implemented for abstract supertype")
+end
+
+"""
+    rotors(𝒯)
+
+Return the `Rotor`s on which the spin-weighted spherical harmonics are evaluated.  See also
+[`pixels`](@ref), which provides the corresponding spherical coordinates.
+"""
+function rotors(𝒯::SSHT)
+    error("Not implemented for abstract supertype")
+end
+
+
 function Base.show(io::IO, ssht::SSHT)
     print(io, typeof(ssht), "($(ssht.s), $(ssht.ℓₘₐₓ))")
 end

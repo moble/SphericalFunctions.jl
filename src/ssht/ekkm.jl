@@ -40,16 +40,6 @@ struct SSHTEKKM{Inplace} <: SSHT
     workspace::Vector
 end
 
-function pixels(𝒯::SSHTEKKM)
-    let π = convert(eltype(𝒯.θ), π)
-        [
-            from_spherical_coordinates(𝒯.θ[j], iϕ * 2π / (2j+1))
-            for j ∈ abs(𝒯.s):ℓₘₐₓ
-            for iϕ ∈ 0:2j
-        ]
-    end
-end
-
 function SSHTEKKM(
     s, ℓₘₐₓ;
     T=Float64, θ=sorted_rings(s, ℓₘₐₓ, T),
@@ -100,6 +90,20 @@ function SSHTEKKM(
     workspace = Vector{Complex{T}}(undef, 2ℓₘₐₓ+1)
 
     SSHTEKKM{inplace}(s, ℓₘₐₓ, OffsetVector(θ, abs(s):ℓₘₐₓ), s𝐘, plans, ₛ𝐝, workspace)
+end
+
+function pixels(𝒯::SSHTEKKM)
+    let π = convert(eltype(𝒯.θ), π)
+        [
+            @SVector [𝒯.θ[j], iϕ * 2π / (2j+1)]
+            for j ∈ abs(𝒯.s):ℓₘₐₓ
+            for iϕ ∈ 0:2j
+        ]
+    end
+end
+
+function rotors(𝒯::SSHTEKKM)
+    from_spherical_coordinates.(pixels(𝒯))
 end
 
 function Base.:*(𝒯::SSHTEKKM, f̃)

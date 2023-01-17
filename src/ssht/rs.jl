@@ -110,21 +110,9 @@ struct SSHTRS <: SSHT
     plan
 end
 
-
-function pixels(𝒯::SSHTRS)
-    let π = convert(eltype(𝒯.θ), π)
-        [
-            from_spherical_coordinates(θ, iϕ * 2π / Nϕ)
-            for (θ,Nϕ) ∈ zip(𝒯.θ, 𝒯.Nϕ)
-            for iϕ ∈ 0:Nϕ-1
-        ]
-    end
-end
-
-
 function SSHTRS(
     s, ℓₘₐₓ; T=Float64,
-    θ=clenshaw_curtis_rings(s, ℓₘₐₓ, T),
+    θ=clenshaw_curtis_rings(s, 2ℓₘₐₓ+1, T),
     quadrature_weights=clenshaw_curtis(length(θ), T),
     Nϕ=fill(2ℓₘₐₓ+1, length(θ)),
     plan_fft_flags=FFTW.ESTIMATE, plan_fft_timelimit=Inf
@@ -151,6 +139,20 @@ function SSHTRS(
     Gs = [Vector{Complex{T}}(undef, N) for N ∈ Nϕ]
     plans = [plan_fft(G, flags=plan_fft_flags, timelimit=plan_fft_timelimit) for G ∈ Gs]
     SSHTRS(s, ℓₘₐₓ, θ, quadrature_weights, Nϕ, iθ, Gs, plans)
+end
+
+function pixels(𝒯::SSHTRS)
+    let π = convert(eltype(𝒯.θ), π)
+        [
+            @SVector [θ, iϕ * 2π / Nϕ]
+            for (θ,Nϕ) ∈ zip(𝒯.θ, 𝒯.Nϕ)
+            for iϕ ∈ 0:Nϕ-1
+        ]
+    end
+end
+
+function rotors(𝒯::SSHTRS)
+    from_spherical_coordinates.(pixels(𝒯))
 end
 
 function Base.:\(𝒯::SSHTRS, f)

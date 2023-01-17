@@ -1,5 +1,5 @@
 """
-    SSHTDirect(s, ℓₘₐₓ; decomposition=LinearAlgebra.qr, T=Float64, Rθϕ=golden_ratio_spiral(s, ℓₘₐₓ, T), inplace=true)
+    SSHTDirect(s, ℓₘₐₓ; decomposition=LinearAlgebra.qr, T=Float64, Rθϕ=golden_ratio_spiral_rotors(s, ℓₘₐₓ, T), inplace=true)
 
 Construct an ``s``-SHT object that uses the "Direct" method; see [`ₛ𝐘`](@ref) for details about the
 method and optional arguments.  Also see [`SSHT`](@ref) for general information about how to use
@@ -46,14 +46,10 @@ struct SSHTDirect{Inplace} <: SSHT
     ₛ𝐘decomposition
 end
 
-function pixels(𝒯::SSHTDirect)
-    𝒯.Rθϕ
-end
-
 function SSHTDirect(
     s, ℓₘₐₓ;
     decomposition=LinearAlgebra.lu,
-    T=Float64, Rθϕ=golden_ratio_spiral(s, ℓₘₐₓ, T),
+    T=Float64, Rθϕ=golden_ratio_spiral_rotors(s, ℓₘₐₓ, T),
     inplace=inplaceable(s, ℓₘₐₓ, Rθϕ)
 )
     if ((ℓₘₐₓ+1)^2-s^2)^2 > 65^4
@@ -72,6 +68,14 @@ function SSHTDirect(
     let ₛ𝐘 = ₛ𝐘(s, ℓₘₐₓ, T, Rθϕ)
         SSHTDirect{inplace}(s, ℓₘₐₓ, Rθϕ, ₛ𝐘, decomposition(ₛ𝐘))
     end
+end
+
+function pixels(𝒯::SSHTDirect)
+    to_spherical_coordinates.(rotors(𝒯))
+end
+
+function rotors(𝒯::SSHTDirect)
+    𝒯.Rθϕ
 end
 
 function Base.:*(𝒯::SSHTDirect, f̃)

@@ -1,7 +1,7 @@
 @testset verbose=true "ssht" begin
 
     # These test the ability of ssht to precisely decompose the results of `sYlm`.
-    @testset "$method $T" for (method, T) in [("RS", Float64)]#Iterators.product(
+    @testset "$method $T" for (method, T) in [("RS", Float32)]#Iterators.product(
     #     ["Direct", "RS"], #["Direct", "EKKM", "RS"],
     #     [Double64, Float64, Float32]
     # )
@@ -9,9 +9,8 @@
             continue
         end
 
-        function sYlm(s, ℓ, m, Rθϕ)
-            (θ, ϕ) = to_spherical_coordinates(Rθϕ)
-            NINJA.sYlm(s, ℓ, m, θ, ϕ)
+        function sYlm(s, ℓ, m, θϕ)
+            NINJA.sYlm(s, ℓ, m, θϕ[1], θϕ[2])
         end
 
         for ℓmax ∈ [7, 15]
