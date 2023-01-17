@@ -1,7 +1,7 @@
 using Quaternionic: from_spherical_coordinates
 
 # TODO: Move λ recursion to separate file, as way to evaluate ₛYₗₘs
-# TODO: Figure out how to deal with binomial coefficients in `λ_recursion_initialize` better
+# TODO: Deal with binomial coefficients in `λ_recursion_initialize` better
 # TODO: Add enough `G` storage to use on multiple threads / SIMD registers (`plan`s are thread-safe)
 # TODO: Reorganize to match actual R&S algorithm recommendations
 
@@ -115,10 +115,45 @@ struct SSHTRS{T<:Real} <: SSHT{T}
     plan
 end
 
+"""
+    SSHTRS(s, ℓₘₐₓ; kwargs...)
+
+Construct a `SSHTRS` object directly.  This may also be achieved by calling the
+main `SSHT` function with the same keywords, along with `method="RS"`.
+
+This object uses the algorithm described in [this paper by Reinecke and
+Seljebotn](https://arxiv.org/abs/1303.4945).
+
+The basic floating-point number type may be adjusted with the keyword
+argument `T`, which defaults to `Float64`.
+
+The SSHs are evaluated on a series of "rings" at constant colatitude.  Their
+locations are specified by the `θ` keyword argument, which defaults to
+`fejer1_rings(2ℓₘₐₓ+1, T)`.  If this is changed, the user should also provide
+the corresponding `quadrature_weights` argument — the default being
+`fejer1(length(θ), T)`.
+
+On each of these rings, an FFT is performed.  To reach the band limit of
+``m = ± ℓₘₐₓ``, the number of points along each ring must therefore be *at
+least* ``2ℓₘₐₓ+1``, but may be greater.  For example, if ``2ℓₘₐₓ+1`` does
+not factorize neatly into a product of small primes, it may be preferable
+to use ``2ℓₘₐₓ+2`` points along each ring.  (In that case, whenever `ℓₘₐₓ`
+is 1 less than a power of 2, the number of points will be exactly a power
+of 2, which is usually particularly efficient.)  The number of points on
+each ring can be modified independently, if given as a vector with the same
+length as `θ`, or as a single number which is assumed to be the same for
+all rings.
+
+Whenever `T` is either `Float64` or `Float32`, the keyword arguments
+`plan_fft_flags` and `plan_fft_timelimit` may also be useful for obtaining
+more efficient FFTs.  They default to `FFTW.ESTIMATE` and `Inf`,
+respectively.  They are passed to
+[`AbstractFFTs.plan_fft`](https://juliamath.github.io/AbstractFFTs.jl/stable/api/#AbstractFFTs.plan_fft).
+"""
 function SSHTRS(
     s, ℓₘₐₓ; T=Float64,
-    θ=clenshaw_curtis_rings(s, 2ℓₘₐₓ+1, T),
-    quadrature_weights=clenshaw_curtis(length(θ), T),
+    θ=fejer1_rings(2ℓₘₐₓ+1, T),
+    quadrature_weights=fejer1(length(θ), T),
     Nϕ=fill(2ℓₘₐₓ+1, length(θ)),
     plan_fft_flags=FFTW.ESTIMATE, plan_fft_timelimit=Inf
 )
