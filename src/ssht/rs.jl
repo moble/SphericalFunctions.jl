@@ -1,5 +1,10 @@
 using Quaternionic: from_spherical_coordinates
 
+# TODO: Move λ recursion to separate file, as way to evaluate ₛYₗₘs
+# TODO: Figure out how to deal with binomial coefficients in `λ_recursion_initialize` better
+# TODO: Add enough `G` storage to use on multiple threads / SIMD registers (`plan`s are thread-safe)
+# TODO: Reorganize to match actual R&S algorithm recommendations
+
 """Helper function for [`λ_recursion_initialize`](@ref)"""
 binom(T, n, k) = T(binomial(big(n), big(k)))
 
@@ -80,7 +85,7 @@ The algorithm was described in [this paper by Reinecke and
 Seljebotn](https://arxiv.org/abs/1303.4945).
 
 """
-struct SSHTRS <: SSHT
+struct SSHTRS{T<:Real} <: SSHT{T}
     """Spin weight"""
     s
 
@@ -137,12 +142,16 @@ function SSHTRS(
         [a:b for (a,b) in eachrow(hcat([1; iθ[begin:end-1].+1], iθ))]
     end
     Gs = [Vector{Complex{T}}(undef, N) for N ∈ Nϕ]
-    plans = [plan_fft(G, flags=plan_fft_flags, timelimit=plan_fft_timelimit) for G ∈ Gs]
-    SSHTRS(s, ℓₘₐₓ, θ, quadrature_weights, Nϕ, iθ, Gs, plans)
+    plans = if T ∈ [Float64, Float32]  # Only supported types in FFTW
+        [plan_fft(G, flags=plan_fft_flags, timelimit=plan_fft_timelimit) for G ∈ Gs]
+    else
+        [plan_fft(G) for G ∈ Gs]
+    end
+    SSHTRS{T}(s, ℓₘₐₓ, θ, quadrature_weights, Nϕ, iθ, Gs, plans)
 end
 
-function pixels(𝒯::SSHTRS)
-    let π = convert(eltype(𝒯.θ), π)
+function pixels(𝒯::SSHTRS{T}) where {T}
+    let π=T(π)
         [
             @SVector [θ, iϕ * 2π / Nϕ]
             for (θ,Nϕ) ∈ zip(𝒯.θ, 𝒯.Nϕ)
@@ -160,16 +169,21 @@ function Base.:\(𝒯::SSHTRS, f)
     ldiv!(f̃, 𝒯, f)
 end
 
-function LinearAlgebra.ldiv!(f̃, 𝒯::SSHTRS, f)  # Compute `f̃ = 𝒯 \ f`, storing the result in `f̃`
-    s1 = size(f̃)
+# Compute `f̃ = 𝒯 \ f`, storing the result in `f̃`
+function LinearAlgebra.ldiv!(f̃, 𝒯::SSHTRS{T}, f) where {T}
+    s1 = maximum(iθ.stop for iθ ∈ 𝒯.iθ)
+    @assert size(f, 1) ≥ s1 """
+        Size of input `f` along first dimension ($(size(f,1))) is insufficient for
+        `Nϕ` property of input transform `𝒯`; it must be at least $s1.
+    """
+    s̃2 = size(f̃)
     s2 = (Ysize(abs(𝒯.s), 𝒯.ℓₘₐₓ), size(f)[2:end]...)
-    @assert s1==s2 """
+    @assert s̃2==s2 """
         Size of output `f̃` is not matched to size of input `f`:
-        size(f̃) = $(size(f̃))
-        (Ysize(abs(𝒯.s), ℓₘₐₓ), size(f)[2:end]...) = $((Ysize(abs(𝒯.s), 𝒯.ℓₘₐₓ), size(f)[2:end]...))
+        size(f̃) = $(s̃2)
+        (Ysize(abs(𝒯.s), ℓₘₐₓ), size(f)[2:end]...) = $(s2)
     """
 
-    T = eltype(𝒯.θ)
     s = 𝒯.s
     ℓₘₐₓ = 𝒯.ℓₘₐₓ
     mₘₐₓ = ℓₘₐₓ
@@ -177,46 +191,45 @@ function LinearAlgebra.ldiv!(f̃, 𝒯::SSHTRS, f)  # Compute `f̃ = 𝒯 \ f`, 
 
     f̃′ = reshape(f̃, size(f̃, 1), :)
     f′ = reshape(f, size(f, 1), :)
-    for (f̃′ⱼ, f′ⱼ) ∈ zip(eachcol(f̃′), eachcol(f′))
-        let π = T(π)
+    @inbounds let π = T(π)
+        for (f̃′ⱼ, f′ⱼ) ∈ zip(eachcol(f̃′), eachcol(f′))
             for (wy, Nϕy, iθy, Gy, plany) ∈ zip(𝒯.quadrature_weight, 𝒯.Nϕ, 𝒯.iθ, 𝒯.G, 𝒯.plan)
-                mul!(Gy, plany, @view(f′ⱼ[iθy]))
+                mul!(Gy, plany, f′ⱼ[iθy])
                 @. Gy *= wy * 2π / Nϕy
             end
-        end
-        for m ∈ -mₘₐₓ:mₘₐₓ  # Note: Contrary to R&S, we include negative m
-            ℓ₀ = max(abs(s), abs(m))
-            for (θ, Gy) ∈ zip(𝒯.θ, 𝒯.G)
-                Gmy = Gy[1+mod(m, length(Gy))]
-                cosθ = cos(θ)
-                sin½θ, cos½θ = sincos(θ/2)
-                ₛλₗ₋₁ₘ = zero(T)
-                ₛλₗₘ = λ_recursion_initialize(sin½θ, cos½θ, s, ℓ₀, m)
-                cₗ₋₁ = zero(T)
-                for ℓ ∈ ℓ₀:ℓₘₐₓ
-                    lm = Yindex(ℓ, m, abs(s))
-                    # Be careful of the following when adding threads!!!
-                    # We need this element of f̃′ⱼ to be used in only one thread,
-                    # and we need G to be used in only one thread at a time.
-                    f̃′ⱼ[lm] += Gmy * ₛλₗₘ
-                    if ℓ < ℓₘₐₓ  # Take another step in the λ recursion
-                        cₗ₊₁, cₗ = λ_recursion_coefficients(cosθ, s, ℓ, m)
-                        ₛλₗ₊₁ₘ = if ℓ == 0
-                            # The only case in which this will ever be used is when
-                            # s == m == ℓ == 0.  Noting that we want the result for ℓ+1==1,
-                            # we know the formula:
-                            √(3/4T(π)) * cosθ
-                        else
-                            (cₗ * ₛλₗₘ + cₗ₋₁ * ₛλₗ₋₁ₘ) / cₗ₊₁
+            for m ∈ -mₘₐₓ:mₘₐₓ  # Note: Contrary to R&S, we include negative m
+                ℓ₀ = max(abs(s), abs(m))
+                for (θ, Gy) ∈ zip(𝒯.θ, 𝒯.G)
+                    Gmy = Gy[1+mod(m, length(Gy))]
+                    cosθ = cos(θ)
+                    sin½θ, cos½θ = sincos(θ/2)
+                    ₛλₗ₋₁ₘ = zero(T)
+                    ₛλₗₘ = λ_recursion_initialize(sin½θ, cos½θ, s, ℓ₀, m)
+                    cₗ₋₁ = zero(T)
+                    for ℓ ∈ ℓ₀:ℓₘₐₓ
+                        lm = Yindex(ℓ, m, abs(s))
+                        # Be careful of the following when adding threads!!!
+                        # We need this element of f̃′ⱼ to be used in only one thread,
+                        # and we need G to be used in only one thread at a time.
+                        f̃′ⱼ[lm] += Gmy * ₛλₗₘ
+                        if ℓ < ℓₘₐₓ  # Take another step in the λ recursion
+                            cₗ₊₁, cₗ = λ_recursion_coefficients(cosθ, s, ℓ, m)
+                            ₛλₗ₊₁ₘ = if ℓ == 0
+                                # The only case in which this will ever be used is when
+                                # s == m == ℓ == 0.  So we want ₀Y₁₀, which is known:
+                                √(3/4π) * cosθ
+                            else
+                                (cₗ * ₛλₗₘ + cₗ₋₁ * ₛλₗ₋₁ₘ) / cₗ₊₁
+                            end
+                            ₛλₗ₋₁ₘ = ₛλₗₘ
+                            ₛλₗₘ = ₛλₗ₊₁ₘ
+                            cₗ₋₁ = -cₗ₊₁ * √((2ℓ+1)/T(2ℓ+3))
                         end
-                        ₛλₗ₋₁ₘ = ₛλₗₘ
-                        ₛλₗₘ = ₛλₗ₊₁ₘ
-                        cₗ₋₁ = -cₗ₊₁ * √((2ℓ+1)/T(2ℓ+3))
-                    end
-                end  # ℓ
-            end  # (θ, Nϕ, G)
-        end  # m
-    end  # (f̃′ⱼ, f′ⱼ)
+                    end  # ℓ
+                end  # (θ, Nϕ, G)
+            end  # m
+        end  # (f̃′ⱼ, f′ⱼ)
+    end  # π
 
     f̃
 end

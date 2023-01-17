@@ -1,5 +1,4 @@
-### TODO:
-### 4. Test skipping all the complicated indexing tricks; use fancy indexing
+### TODO: Test skipping all the complicated indexing tricks; use fancy indexing
 ### NOTES:
 ### 1. Caching coefficients provides a ~11% speedup at low ℓ, but that falls off
 ###    as ℓ increases, reaching ~4% around ℓ=512.

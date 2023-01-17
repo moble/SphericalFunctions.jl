@@ -22,7 +22,7 @@ of speed and accuracy.  However, this advantage quickly falls away.  A warning w
 accurate choice.
 
 """
-struct SSHTDirect{Inplace} <: SSHT
+struct SSHTDirect{T<:Real, Inplace} <: SSHT{T}
     """Spin weight"""
     s
 
@@ -66,7 +66,7 @@ function SSHTDirect(
         """
     end
     let ₛ𝐘 = ₛ𝐘(s, ℓₘₐₓ, T, Rθϕ)
-        SSHTDirect{inplace}(s, ℓₘₐₓ, Rθϕ, ₛ𝐘, decomposition(ₛ𝐘))
+        SSHTDirect{T, inplace}(s, ℓₘₐₓ, Rθϕ, ₛ𝐘, decomposition(ₛ𝐘))
     end
 end
 
@@ -90,7 +90,7 @@ function Base.:\(𝒯::SSHTDirect, f)
     𝒯.ₛ𝐘decomposition \ f
 end
 
-function Base.:\(𝒯::SSHTDirect{true}, ff̃)
+function Base.:\(𝒯::SSHTDirect{T, true}, ff̃) where {T}
     ldiv!(𝒯.ₛ𝐘decomposition, ff̃)
 end
 

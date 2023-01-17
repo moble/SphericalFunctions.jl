@@ -1,19 +1,18 @@
 @testset verbose=true "ssht" begin
 
     # These test the ability of ssht to precisely decompose the results of `sYlm`.
-    @testset "$method $T" for (method, T) in [("RS", Float32)]#Iterators.product(
-    #     ["Direct", "RS"], #["Direct", "EKKM", "RS"],
-    #     [Double64, Float64, Float32]
-    # )
-        if method == "RS" && T === BigFloat
-            continue
-        end
+    @testset "Analysis: $method $T" for (method, T) in Iterators.product(
+        ["Direct", "RS"], #["Direct", "EKKM", "RS"],
+        [Double64, Float64, Float32]
+    )
 
         function sYlm(s, ℓ, m, θϕ)
             NINJA.sYlm(s, ℓ, m, θϕ[1], θϕ[2])
         end
 
-        for ℓmax ∈ [7, 15]
+        # We can't go to very high ℓ, because NINJA.sYlm fails for low-precision numbers
+        for ℓmax ∈ 3:7
+
             # We need ϵ to be huge, seemingly mostly due to the low-precision method
             # used for NINJA.sYlm; it is used because it is a simple reference method.
             ϵ = 500ℓmax^3 * eps(T)

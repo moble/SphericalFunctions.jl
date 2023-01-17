@@ -4,7 +4,7 @@ The EKKM algorithm was described in [this paper](https://arxiv.org/abs/1809.0132
 the minimal number of function samples.
 
 """
-struct SSHTEKKM{Inplace} <: SSHT
+struct SSHTEKKM{T<:Real, Inplace} <: SSHT{T}
     """Spin weight"""
     s::Integer
 
@@ -89,7 +89,7 @@ function SSHTEKKM(
     # Pre-allocate the workspace used to solve the linear equations
     workspace = Vector{Complex{T}}(undef, 2ℓₘₐₓ+1)
 
-    SSHTEKKM{inplace}(s, ℓₘₐₓ, OffsetVector(θ, abs(s):ℓₘₐₓ), s𝐘, plans, ₛ𝐝, workspace)
+    SSHTEKKM{T, inplace}(s, ℓₘₐₓ, OffsetVector(θ, abs(s):ℓₘₐₓ), s𝐘, plans, ₛ𝐝, workspace)
 end
 
 function pixels(𝒯::SSHTEKKM)
@@ -118,7 +118,7 @@ function Base.:\(𝒯::SSHTEKKM, f)
     ldiv!(𝒯, copy(f))
 end
 
-function Base.:\(𝒯::SSHTEKKM{true}, ff̃)
+function Base.:\(𝒯::SSHTEKKM{T, true}, ff̃) where {T}
     ldiv!(𝒯, ff̃)
 end
 
