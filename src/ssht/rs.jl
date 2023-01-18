@@ -199,6 +199,79 @@ function rotors(𝒯::SSHTRS)
     from_spherical_coordinates.(pixels(𝒯))
 end
 
+function Base.:*(𝒯::SSHTRS, f̃)
+    s1 = Ysize(abs(𝒯.s), 𝒯.ℓₘₐₓ)
+    @assert size(f̃, 1) ≥ s1 """
+        Size of input `f̃` along first dimension ($(size(f̃,1))) is insufficient for
+        `ℓₘₐₓ` property of input transform `𝒯`; it must be at least $s1.
+    """
+    s2 = maximum(iθ.stop for iθ ∈ 𝒯.iθ)
+    f = similar(f̃, (s2, size(f̃)[2:end]...))
+    mul!(f, 𝒯, f̃)
+end
+
+function LinearAlgebra.mul!(f, 𝒯::SSHTRS{T}, f̃) where {T}
+    s1 = Ysize(abs(𝒯.s), 𝒯.ℓₘₐₓ)
+    @assert size(f̃, 1) ≥ s1 """
+        Size of input `f̃` along first dimension ($(size(f̃,1))) is insufficient for
+        `ℓₘₐₓ` property of input transform `𝒯`; it must be at least $s1.
+    """
+    s2 = size(f)
+    s̃2 = (maximum(iθ.stop for iθ ∈ 𝒯.iθ), size(f̃)[2:end]...)
+    @assert s̃2==s2 """
+        Size of output `f` is not matched to size of input `f̃`:
+        size(f) = $(s2)
+        (maximum(iθ.stop for iθ ∈ 𝒯.iθ), size(f̃)[2:end]...) = $(s̃2)
+    """
+
+    s = 𝒯.s
+    ℓₘₐₓ = 𝒯.ℓₘₐₓ
+    mₘₐₓ = ℓₘₐₓ
+    f .= false  # Zero out all elements to prepare for accumulation below
+
+    f̃′ = reshape(f̃, size(f̃, 1), :)
+    f′ = reshape(f, size(f, 1), :)
+    @inbounds let π = T(π)
+        for (f̃′ⱼ, f′ⱼ) ∈ zip(eachcol(f̃′), eachcol(f′))
+            for m ∈ -mₘₐₓ:mₘₐₓ  # Note: Contrary to R&S, we include negative m
+                ℓ₀ = max(abs(s), abs(m))
+                for (θ, Fy) ∈ zip(𝒯.θ, 𝒯.G)
+                    Fmy = zero(T)
+                    cosθ = cos(θ)
+                    sin½θ, cos½θ = sincos(θ/2)
+                    ₛλₗ₋₁ₘ = zero(T)
+                    ₛλₗₘ = λ_recursion_initialize(sin½θ, cos½θ, s, ℓ₀, m)
+                    cₗ₋₁ = zero(T)
+                    for ℓ ∈ ℓ₀:ℓₘₐₓ
+                        lm = Yindex(ℓ, m, abs(s))
+                        Fmy += f̃′ⱼ[lm] * ₛλₗₘ
+                        if ℓ < ℓₘₐₓ  # Take another step in the λ recursion
+                            cₗ₊₁, cₗ = λ_recursion_coefficients(cosθ, s, ℓ, m)
+                            ₛλₗ₊₁ₘ = if ℓ == 0
+                                # The only case in which this will ever be used is when
+                                # s == m == ℓ == 0.  So we want ₀Y₁₀, which is simple:
+                                √(3/4π) * cosθ
+                            else
+                                (cₗ * ₛλₗₘ + cₗ₋₁ * ₛλₗ₋₁ₘ) / cₗ₊₁
+                            end
+                            ₛλₗ₋₁ₘ = ₛλₗₘ
+                            ₛλₗₘ = ₛλₗ₊₁ₘ
+                            cₗ₋₁ = -cₗ₊₁ * √((2ℓ+1)/T(2ℓ+3))
+                        end
+                    end  # ℓ
+                    Fy[1+mod(m, length(Fy))] = Fmy
+                end  # (θ, Nϕ, G)
+            end  # m
+            for (Nϕy, iθy, Fy, plany) ∈ zip(𝒯.Nϕ, 𝒯.iθ, 𝒯.G, 𝒯.plan)
+                LinearAlgebra.ldiv!(@view(f′ⱼ[iθy]), plany, Fy)
+                @. f′ⱼ[iθy] *= Nϕy
+            end
+        end  # (f̃′ⱼ, f′ⱼ)
+    end  # π
+
+    f
+end
+
 function Base.:\(𝒯::SSHTRS, f)
     f̃ = similar(f, (Ysize(abs(𝒯.s), 𝒯.ℓₘₐₓ), size(f)[2:end]...))
     ldiv!(f̃, 𝒯, f)
