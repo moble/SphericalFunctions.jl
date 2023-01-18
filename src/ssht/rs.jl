@@ -302,9 +302,8 @@ function LinearAlgebra.ldiv!(f̃, 𝒯::SSHTRS{T}, f) where {T}
     @inbounds let π = T(π)
         for (f̃′ⱼ, f′ⱼ) ∈ zip(eachcol(f̃′), eachcol(f′))
             for (wy, Nϕy, iθy, Gy, plany) ∈ zip(𝒯.quadrature_weight, 𝒯.Nϕ, 𝒯.iθ, 𝒯.G, 𝒯.plan)
-                Gy .= f′ⱼ[iθy]
+                @. Gy = f′ⱼ[iθy] * wy * 2π / Nϕy
                 plany * Gy
-                @. Gy *= wy * 2π / Nϕy
             end
             for m ∈ -mₘₐₓ:mₘₐₓ  # Note: Contrary to R&S, we include negative m
                 ℓ₀ = max(abs(s), abs(m))
