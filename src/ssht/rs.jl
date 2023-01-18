@@ -178,9 +178,9 @@ function SSHTRS(
     end
     Gs = [Vector{Complex{T}}(undef, N) for N ∈ Nϕ]
     plans = if T ∈ [Float64, Float32]  # Only supported types in FFTW
-        [plan_fft(G, flags=plan_fft_flags, timelimit=plan_fft_timelimit) for G ∈ Gs]
+        [plan_fft!(G, flags=plan_fft_flags, timelimit=plan_fft_timelimit) for G ∈ Gs]
     else
-        [plan_fft(G) for G ∈ Gs]
+        [plan_fft!(G) for G ∈ Gs]
     end
     SSHTRS{T}(s, ℓₘₐₓ, θ, quadrature_weights, Nϕ, iθ, Gs, plans)
 end
@@ -263,8 +263,8 @@ function LinearAlgebra.mul!(f, 𝒯::SSHTRS{T}, f̃) where {T}
                 end  # (θ, Nϕ, G)
             end  # m
             for (Nϕy, iθy, Fy, plany) ∈ zip(𝒯.Nϕ, 𝒯.iθ, 𝒯.G, 𝒯.plan)
-                LinearAlgebra.ldiv!(@view(f′ⱼ[iθy]), plany, Fy)
-                @. f′ⱼ[iθy] *= Nϕy
+                plany \ Fy
+                @. f′ⱼ[iθy] = Fy * Nϕy
             end
         end  # (f̃′ⱼ, f′ⱼ)
     end  # π
@@ -302,7 +302,8 @@ function LinearAlgebra.ldiv!(f̃, 𝒯::SSHTRS{T}, f) where {T}
     @inbounds let π = T(π)
         for (f̃′ⱼ, f′ⱼ) ∈ zip(eachcol(f̃′), eachcol(f′))
             for (wy, Nϕy, iθy, Gy, plany) ∈ zip(𝒯.quadrature_weight, 𝒯.Nϕ, 𝒯.iθ, 𝒯.G, 𝒯.plan)
-                mul!(Gy, plany, f′ⱼ[iθy])
+                Gy .= f′ⱼ[iθy]
+                plany * Gy
                 @. Gy *= wy * 2π / Nϕy
             end
             for m ∈ -mₘₐₓ:mₘₐₓ  # Note: Contrary to R&S, we include negative m
