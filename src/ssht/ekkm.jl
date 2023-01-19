@@ -92,8 +92,8 @@ function SSHTEKKM(
     SSHTEKKM{T, inplace}(s, ℓₘₐₓ, OffsetVector(θ, abs(s):ℓₘₐₓ), s𝐘, plans, ₛ𝐝, workspace)
 end
 
-function pixels(𝒯::SSHTEKKM)
-    let π = convert(eltype(𝒯.θ), π)
+function pixels(𝒯::SSHTEKKM{T}) where {T}
+    let π = convert(T, π)
         [
             @SVector [𝒯.θ[j], iϕ * 2π / (2j+1)]
             for j ∈ abs(𝒯.s):ℓₘₐₓ
