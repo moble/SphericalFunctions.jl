@@ -4,6 +4,8 @@ using Quaternionic: from_spherical_coordinates
 # TODO: Deal with binomial coefficients in `λ_recursion_initialize` better
 # TODO: Add enough `G` storage to use on multiple threads / SIMD registers (`plan`s are thread-safe)
 # TODO: Reorganize to match actual R&S algorithm recommendations
+# TODO: Allow SSHTRS to take a single Int, rather than a full vector for Nϕ
+# TODO: Optimize: Check allocations, fuse ±m loops, etc.
 
 """Helper function for [`λ_recursion_initialize`](@ref)"""
 binom(T, n, k) = T(binomial(big(n), big(k)))
@@ -233,7 +235,7 @@ function LinearAlgebra.mul!(f, 𝒯::SSHTRS{T}, f̃) where {T}
     f′ = reshape(f, size(f, 1), :)
     @inbounds let π = T(π)
         for (f̃′ⱼ, f′ⱼ) ∈ zip(eachcol(f̃′), eachcol(f′))
-            for m ∈ -mₘₐₓ:mₘₐₓ  # Note: Contrary to R&S, we include negative m
+            @threads for m ∈ -mₘₐₓ:mₘₐₓ  # Note: Contrary to R&S, we include negative m
                 ℓ₀ = max(abs(s), abs(m))
                 for (θ, Fy) ∈ zip(𝒯.θ, 𝒯.G)
                     Fmy = zero(T)
@@ -262,7 +264,11 @@ function LinearAlgebra.mul!(f, 𝒯::SSHTRS{T}, f̃) where {T}
                     Fy[1+mod(m, length(Fy))] = Fmy
                 end  # (θ, Nϕ, G)
             end  # m
-            for (Nϕy, iθy, Fy, plany) ∈ zip(𝒯.Nϕ, 𝒯.iθ, 𝒯.G, 𝒯.plan)
+            @threads for y ∈ eachindex(𝒯.G)
+                Nϕy = 𝒯.Nϕ[y]
+                iθy = 𝒯.iθ[y]
+                Fy = 𝒯.G[y]
+                plany = 𝒯.plan[y]
                 plany \ Fy
                 @. f′ⱼ[iθy] = Fy * Nϕy
             end
@@ -301,11 +307,16 @@ function LinearAlgebra.ldiv!(f̃, 𝒯::SSHTRS{T}, f) where {T}
     f′ = reshape(f, size(f, 1), :)
     @inbounds let π = T(π)
         for (f̃′ⱼ, f′ⱼ) ∈ zip(eachcol(f̃′), eachcol(f′))
-            for (wy, Nϕy, iθy, Gy, plany) ∈ zip(𝒯.quadrature_weight, 𝒯.Nϕ, 𝒯.iθ, 𝒯.G, 𝒯.plan)
+            @threads for y ∈ eachindex(𝒯.G)
+                wy = 𝒯.quadrature_weight[y]
+                Nϕy = 𝒯.Nϕ[y]
+                iθy = 𝒯.iθ[y]
+                Gy = 𝒯.G[y]
+                plany = 𝒯.plan[y]
                 @. Gy = f′ⱼ[iθy] * wy * 2π / Nϕy
                 plany * Gy
             end
-            for m ∈ -mₘₐₓ:mₘₐₓ  # Note: Contrary to R&S, we include negative m
+            @threads for m ∈ -mₘₐₓ:mₘₐₓ  # Note: Contrary to R&S, we include negative m
                 ℓ₀ = max(abs(s), abs(m))
                 for (θ, Gy) ∈ zip(𝒯.θ, 𝒯.G)
                     Gmy = Gy[1+mod(m, length(Gy))]
