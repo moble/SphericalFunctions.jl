@@ -212,8 +212,8 @@ function LinearAlgebra.ldiv!(𝒯::SSHTMinimal{T}, ff̃) where {T}
                 # Scatter the data back into the output
                 for ℓ ∈ Δ:ℓₘₐₓ
                     iₗ₀ = Yindex(ℓ, 0, abs(s))
-                    ₛf[iₗ₀+mod(ℓ+m, 2ℓ+1)-ℓ] = 𝒯.ₛf̃₊[ℓ]
-                    ₛf[iₗ₀+mod(ℓ-m, 2ℓ+1)-ℓ] = 𝒯.ₛf̃₋[ℓ]
+                    ₛf[iₗ₀+m] = 𝒯.ₛf̃₊[ℓ]
+                    ₛf[iₗ₀-m] = 𝒯.ₛf̃₋[ℓ]
                 end
                 # De-alias remaining Fourier components
                 @threads for j′ ∈ m-1:-1:abs(s)
