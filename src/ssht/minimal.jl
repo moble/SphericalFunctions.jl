@@ -29,9 +29,6 @@ struct SSHTMinimal{T<:Real, Inplace} <: SSHT{T}
     """
     θindices::OffsetVector
 
-    # """Spin-weighted spherical harmonic values"""
-    # ₛ𝐘
-
     """OffsetVector of Fourier-transform plans
 
     These transform physical-space function values to the Fourier domain on
@@ -45,23 +42,16 @@ struct SSHTMinimal{T<:Real, Inplace} <: SSHT{T}
     matrix correspond to j ∈ max(abs(s),abs(m)):ℓₘₐₓ; the columns correspond
     to ℓ over the same range as j.
     """
-    #ₛ𝐝::OffsetVector
     ₛΛ::OffsetVector
 
     """Preallocated storage for solving linear equations"""
     workspace::Vector
 
-    """Preallocated storage for all FT modes with a given positive ``m`` value"""
-    ₛf̃₊ₘ::OffsetVector
-
-    """Preallocated storage for all FT modes with a given negative ``m`` value"""
-    ₛf̃₋ₘ::OffsetVector
+    """Preallocated storage for all FT modes with a given ``m``"""
+    ₛfₘ::OffsetVector
 
     """Preallocated storage for all SH modes with a given positive ``m`` value"""
-    ₛf̃₊::OffsetVector
-
-    """Preallocated storage for all SH modes with a given negative ``m`` value"""
-    ₛf̃₋::OffsetVector
+    ₛf̃ₘ::OffsetVector
 end
 
 function SSHTMinimal(
@@ -78,8 +68,6 @@ function SSHTMinimal(
     θindices = let iθ = cumsum([2j+1 for j ∈ abs(s):ℓₘₐₓ])
         [a:b for (a,b) in eachrow(hcat([1; iθ[begin:end-1].+1], iθ))]
     end
-
-    #s𝐘 = ₛ𝐘(s, ℓₘₐₓ, T, Rθϕ)
 
     plans = OffsetVector(
         [
@@ -123,15 +111,12 @@ function SSHTMinimal(
     # Pre-allocate the workspace used to solve the linear equations
     workspace = Vector{Complex{T}}(undef, 2ℓₘₐₓ+1)
 
-    ₛf̃₊ₘ = OffsetVector(Vector{Complex{T}}(undef, ℓₘₐₓ+1), 0:ℓₘₐₓ)
-    ₛf̃₋ₘ = OffsetVector(Vector{Complex{T}}(undef, ℓₘₐₓ+1), 0:ℓₘₐₓ)
-    ₛf̃₊ = OffsetVector(Vector{Complex{T}}(undef, ℓₘₐₓ+1), 0:ℓₘₐₓ)
-    ₛf̃₋ = OffsetVector(Vector{Complex{T}}(undef, ℓₘₐₓ+1), 0:ℓₘₐₓ)
+    ₛfₘ = OffsetVector(Vector{Complex{T}}(undef, ℓₘₐₓ+1), 0:ℓₘₐₓ)
+    ₛf̃ₘ = OffsetVector(Vector{Complex{T}}(undef, ℓₘₐₓ+1), 0:ℓₘₐₓ)
 
     SSHTMinimal{T, inplace}(
         s, ℓₘₐₓ, OffsetVector(θ, abs(s):ℓₘₐₓ), OffsetVector(θindices, abs(s):ℓₘₐₓ),
-        #s𝐘,
-        plans, ₛΛ, workspace, ₛf̃₊ₘ, ₛf̃₋ₘ, ₛf̃₊, ₛf̃₋
+        plans, ₛΛ, workspace, ₛfₘ, ₛf̃ₘ
     )
 end
 
@@ -179,57 +164,45 @@ function LinearAlgebra.ldiv!(𝒯::SSHTMinimal{T}, ff̃) where {T}
     """
     s = 𝒯.s
     ℓₘₐₓ = 𝒯.ℓₘₐₓ
-    mₘₐₓ = ℓₘₐₓ
-    θindices = 𝒯.θindices
-    ₛΛ = 𝒯.ₛΛ
     ff̃′ = reshape(ff̃, size(ff̃, 1), :)
 
     @inbounds let π = T(π)
         for ₛf ∈ eachcol(ff̃′)
             # FFT the data in place
             @threads for j ∈ abs(s):ℓₘₐₓ
-                jk = θindices[j]
+                jk = 𝒯.θindices[j]
                 @views 𝒯.plans[j] * ₛf[jk]
                 @. ₛf[jk] *= 2π / (2j+1)
                 @views ₛf[jk] .= fftshift(ₛf[jk])
             end
 
-            # TODO: correct this loop for m==0
-            for m ∈ ℓₘₐₓ:-1:0  # We do both ±m inside this loop
-                Δ = max(abs(s), m)
-                # Gather the data for ±m into temporary workspaces
+            for m ∈ AlternatingCountdown(ℓₘₐₓ)
+                Δ = max(abs(s), abs(m))
+
+                # Gather the `m` data from each ring into a temporary workspace
                 for j ∈ Δ:ℓₘₐₓ
-                    iⱼ₀ = Yindex(j, 0, abs(s))
-                    𝒯.ₛf̃₊ₘ[j] = ₛf[iⱼ₀ + m]
-                    𝒯.ₛf̃₋ₘ[j] = ₛf[iⱼ₀ - m]
+                    𝒯.ₛfₘ[j] = ₛf[Yindex(j, m, abs(s))]
                 end
+
                 # Solve for the mode weights from the Fourier components
                 # TODO: Use workspace to do linear solves more efficiently
                 # TODO: See if I can just do in-place solves
-                @views 𝒯.ₛf̃₊[Δ:ℓₘₐₓ] .= ₛΛ[m] \ 𝒯.ₛf̃₊ₘ[Δ:ℓₘₐₓ]
-                # ldiv!(ₛΛ[m], 𝒯.ₛf̃₊ₘ[Δ:ℓₘₐₓ])
-                @views 𝒯.ₛf̃₋[Δ:ℓₘₐₓ] .= ₛΛ[-m] \ 𝒯.ₛf̃₋ₘ[Δ:ℓₘₐₓ]
+                @views 𝒯.ₛf̃ₘ[Δ:ℓₘₐₓ] .= 𝒯.ₛΛ[m] \ 𝒯.ₛfₘ[Δ:ℓₘₐₓ]
+                # ldiv!(ₛΛ[m], 𝒯.ₛf̃ₘ[Δ:ℓₘₐₓ])
+
                 # Scatter the data back into the output
                 for ℓ ∈ Δ:ℓₘₐₓ
-                    iₗ₀ = Yindex(ℓ, 0, abs(s))
-                    ₛf[iₗ₀+m] = 𝒯.ₛf̃₊[ℓ]
-                    ₛf[iₗ₀-m] = 𝒯.ₛf̃₋[ℓ]
+                    ₛf[Yindex(ℓ, m, abs(s))] = 𝒯.ₛf̃ₘ[ℓ]
                 end
+
                 # De-alias remaining Fourier components
-                @threads for j′ ∈ m-1:-1:abs(s)
-                    α₊ = zero(T)
-                    α₋ = zero(T)
-                    θ = 𝒯.θ[j′]
-                    λ₊ = λiterator(θ, s, m)
-                    λ₋ = λiterator(θ, s, -m)
-                    for (ℓ, ₛλₗₘ, ₛλₗ₋ₘ) ∈ zip(Δ:ℓₘₐₓ, λ₊, λ₋)
-                        α₊ += 𝒯.ₛf̃₊[ℓ] * ₛλₗₘ
-                        α₋ += 𝒯.ₛf̃₋[ℓ] * ₛλₗ₋ₘ
-                    end
-                    # Finally, de-alias
-                    iⱼ′₀ = Yindex(j′, 0, abs(s))
-                    ₛf[iⱼ′₀ + mod(j′+m, 2j′+1)-j′] -= 2π * α₊
-                    ₛf[iⱼ′₀ + mod(j′-m, 2j′+1)-j′] -= 2π * α₋
+                @threads for j′ ∈ abs(s):abs(m)-1
+                    m′ = mod(j′+m, 2j′+1)-j′  # `m` aliases into `(j′, m′)`
+                    α = 2π * sum(
+                        𝒯.ₛf̃ₘ[ℓ] * ₛλₗₘ
+                        for (ℓ, ₛλₗₘ) ∈ zip(Δ:ℓₘₐₓ, λiterator(𝒯.θ[j′], s, m))
+                    )
+                    ₛf[Yindex(j′, m′, abs(s))] -= α
                 end  # j′
             end  # m
         end # ₛf

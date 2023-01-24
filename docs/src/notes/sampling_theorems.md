@@ -118,7 +118,7 @@ in $\theta_j$ rings with $j < |k|$.  But crucially, we know *how* they alias, an
 them from the Fourier transforms of those rings.  We then repeat, solving for the next-highest $|k|$
 values, and so on.
 
-The following pseudo-code summarizes the algorithm
+The following pseudo-code summarizes the algorithm:
 ```julia
 # Iterate over rings, doing Fourier decompositions on each
 for j ∈ abs(s):ℓₘₐₓ
@@ -127,42 +127,30 @@ for j ∈ abs(s):ℓₘₐₓ
     ₛf[j] *= 2π / (2j+1)  # Change normalization
 end
 
-for m ∈ ℓₘₐₓ:-1:0  # We do both ±m inside this loop
+for m ∈ AlternatingCountdown(ℓₘₐₓ)  # Iterate over +m, then -m, down to m=0
     Δ = max(abs(s), m)
 
     # Gather the data for ±m into temporary workspaces
     for j ∈ Δ:ℓₘₐₓ
-        ₛf̃₊ₘ[j] = ₛf[Yindex(j, m, abs(s))]
-        ₛf̃₋ₘ[j] = ₛf[Yindex(j, -m, abs(s))]
+        ₛfₘ[j] = ₛf[Yindex(j, m, abs(s))]
     end
 
     # Solve for the mode weights from the Fourier components
-    ₛf̃₊ₘ[Δ:ℓₘₐₓ] = ₛΛ[m] \ ₛf̃₊ₘ[Δ:ℓₘₐₓ]
-    ₛf̃₋ₘ[Δ:ℓₘₐₓ] = ₛΛ[-m] \ ₛf̃₋ₘ[Δ:ℓₘₐₓ]
+    ₛf̃ₘ[Δ:ℓₘₐₓ] = ₛΛ[m] \ ₛfₘ[Δ:ℓₘₐₓ]
 
     # Distribute the data back into the output
     for ℓ ∈ Δ:ℓₘₐₓ
-        ₛf[Yindex(ℓ, m, abs(s))] = ₛf̃₊ₘ[ℓ]
-        ₛf[Yindex(ℓ, -m, abs(s))] = ₛf̃₋ₘ[ℓ]
+        ₛf[Yindex(ℓ, m, abs(s))] = ₛf̃ₘ[ℓ]
     end
 
     # De-alias remaining Fourier components
-    for j′ ∈ m-1:-1:abs(s)
-        α₊ = 0
-        α₋ = 0
-        ₛλₗₘ = λRecursion(θ[j′], s, Δ, m)
-        ₛλₗ₋ₘ = λRecursion(θ[j′], s, Δ, -m)
-        # Collect aliasing contribution to this ring from all higher ℓ modes
-        for ℓ ∈ Δ:ℓₘₐₓ
-            α₊ += ₛf̃₊[ℓ] * ₛλₗₘ
-            α₋ += ₛf̃₋[ℓ] * ₛλₗ₋ₘ
-            iterate!(ₛλₗₘ)
-            iterate!(ₛλₗ₋ₘ)
-        end
-        m′₊ = mod(j′+m, 2j′+1) - j′
-        m′₋ = mod(j′-m, 2j′+1) - j′
-        ₛf[Yindex(j′, m′₊, abs(s))] -= 2π * α₊
-        ₛf[Yindex(j′, m′₋, abs(s))] -= 2π * α₋
+    for j′ ∈ abs(s):m-1
+        m′ = mod(j′+m, 2j′+1)-j′  # `m` aliases into `(j′, m′)`
+        α = 2π * sum(
+            𝒯.ₛf̃ₘ[ℓ] * ₛλₗₘ
+            for (ℓ, ₛλₗₘ) ∈ zip(Δ:ℓₘₐₓ, λiterator(𝒯.θ[j′], s, m))
+        )
+        ₛf[Yindex(j′, m′, abs(s))] -= α
     end
 
 end
