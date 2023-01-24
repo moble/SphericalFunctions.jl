@@ -1,3 +1,4 @@
+
 """Storage for EKKM spin-spherical-harmonic transform
 
 The EKKM algorithm was described in [this paper](https://arxiv.org/abs/1809.01321), and allows for
@@ -18,8 +19,18 @@ struct SSHTEKKM{T<:Real, Inplace} <: SSHT{T}
     """
     θ::OffsetVector
 
-    """Spin-weighted spherical harmonic values"""
-    ₛ𝐘
+    """OffsetVector of index ranges for each θ ring
+
+    This OffsetVector provides a series of `UnitRange`s indexing each
+    successive colatitude ring (as given by `θ`), so that the data along
+    the first such ring will be given by `f[θindices[abs(s)]]`, and the
+    last `f[θindices[ℓₘₐₓ]]`, where `f` is a standard (non-offset)
+    `Vector`.
+    """
+    θindices::OffsetVector
+
+    # """Spin-weighted spherical harmonic values"""
+    # ₛ𝐘
 
     """OffsetVector of Fourier-transform plans
 
@@ -34,10 +45,23 @@ struct SSHTEKKM{T<:Real, Inplace} <: SSHT{T}
     matrix correspond to j ∈ max(abs(s),abs(m)):ℓₘₐₓ; the columns correspond
     to ℓ over the same range as j.
     """
-    ₛ𝐝::OffsetVector
+    #ₛ𝐝::OffsetVector
+    ₛΛ::OffsetVector
 
     """Preallocated storage for solving linear equations"""
     workspace::Vector
+
+    """Preallocated storage for all FT modes with a given positive ``m`` value"""
+    ₛf̃₊ₘ::OffsetVector
+
+    """Preallocated storage for all FT modes with a given negative ``m`` value"""
+    ₛf̃₋ₘ::OffsetVector
+
+    """Preallocated storage for all SH modes with a given positive ``m`` value"""
+    ₛf̃₊::OffsetVector
+
+    """Preallocated storage for all SH modes with a given negative ``m`` value"""
+    ₛf̃₋::OffsetVector
 end
 
 function SSHTEKKM(
@@ -46,21 +70,31 @@ function SSHTEKKM(
     plan_fft_flags=FFTW.ESTIMATE, plan_fft_timelimit=Inf,
     inplace=true
 )
-    @assert length(θ) == ℓₘₐₓ-abs(s)+1 "Length of `θ` ($(length(θ))) must equal `ℓₘₐₓ-abs(s)+1` ($(ℓₘₐₓ-abs(s)+1))"
+    @assert length(θ) == ℓₘₐₓ-abs(s)+1 """
+        Length of `θ` ($(length(θ))) must equal `ℓₘₐₓ-abs(s)+1` ($(ℓₘₐₓ-abs(s)+1))
+    """
     T = eltype(θ)
 
-    s𝐘 = ₛ𝐘(s, ℓₘₐₓ, T, Rθϕ)
+    θindices = let iθ = cumsum([2j+1 for j ∈ abs(s):ℓₘₐₓ])
+        [a:b for (a,b) in eachrow(hcat([1; iθ[begin:end-1].+1], iθ))]
+    end
+
+    #s𝐘 = ₛ𝐘(s, ℓₘₐₓ, T, Rθϕ)
 
     plans = OffsetVector(
         [
-            plan_fft!(Vector{Complex{T}}(undef, 2j+1), flags=plan_fft_flags, timelimit=plan_fft_timelimit)
+            plan_fft!(
+                Vector{Complex{T}}(undef, 2j+1),
+                flags=plan_fft_flags,
+                timelimit=plan_fft_timelimit
+            )
             for j ∈ abs(s):ℓₘₐₓ
         ],
-        abs(s):ℓₘₐₓ
+        abs(s):ℓₘₐₓ  # This is the range of valid indices
     )
 
     # Compute ₛ𝐝 as a series of LU-decomposed matrices — one for each m=k value
-    ₛ𝐝 = let
+    ₛΛ = let π=T(π)
         H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, T)
         d = dstorage(ℓₘₐₓ, T)
         ₛ𝐝′ = OffsetVector(
@@ -77,9 +111,9 @@ function SSHTEKKM(
             θⱼ = θ[j-abs(s)+1]
             d!(d, θⱼ, ℓₘₐₓ, H_rec_coeffs)
             for ℓ ∈ abs(s):ℓₘₐₓ
-                coefficient = √T(2ℓ+1)
+                coefficient = (-1)^s * √(π*T(2ℓ+1))
                 for m ∈ -min(j,ℓ):min(j,ℓ)  # Note that k = m
-                    ₛ𝐝′[m][j, ℓ] = coefficient * d[WignerDindex(ℓ, m, s)]
+                    ₛ𝐝′[m][j, ℓ] = coefficient * d[WignerDindex(ℓ, m, -s)]
                 end
             end
         end
@@ -89,14 +123,23 @@ function SSHTEKKM(
     # Pre-allocate the workspace used to solve the linear equations
     workspace = Vector{Complex{T}}(undef, 2ℓₘₐₓ+1)
 
-    SSHTEKKM{T, inplace}(s, ℓₘₐₓ, OffsetVector(θ, abs(s):ℓₘₐₓ), s𝐘, plans, ₛ𝐝, workspace)
+    ₛf̃₊ₘ = OffsetVector(Vector{Complex{T}}(undef, ℓₘₐₓ+1), 0:ℓₘₐₓ)
+    ₛf̃₋ₘ = OffsetVector(Vector{Complex{T}}(undef, ℓₘₐₓ+1), 0:ℓₘₐₓ)
+    ₛf̃₊ = OffsetVector(Vector{Complex{T}}(undef, ℓₘₐₓ+1), 0:ℓₘₐₓ)
+    ₛf̃₋ = OffsetVector(Vector{Complex{T}}(undef, ℓₘₐₓ+1), 0:ℓₘₐₓ)
+
+    SSHTEKKM{T, inplace}(
+        s, ℓₘₐₓ, OffsetVector(θ, abs(s):ℓₘₐₓ), OffsetVector(θindices, abs(s):ℓₘₐₓ),
+        #s𝐘,
+        plans, ₛΛ, workspace, ₛf̃₊ₘ, ₛf̃₋ₘ, ₛf̃₊, ₛf̃₋
+    )
 end
 
 function pixels(𝒯::SSHTEKKM{T}) where {T}
     let π = convert(T, π)
         [
             @SVector [𝒯.θ[j], iϕ * 2π / (2j+1)]
-            for j ∈ abs(𝒯.s):ℓₘₐₓ
+            for j ∈ abs(𝒯.s):𝒯.ℓₘₐₓ
             for iϕ ∈ 0:2j
         ]
     end
@@ -127,32 +170,132 @@ function LinearAlgebra.ldiv!(f̃, 𝒯::SSHTEKKM, f)
     ldiv!(𝒯, f̃)
 end
 
-function LinearAlgebra.ldiv!(𝒯::SSHTEKKM, ff̃)
-    # s, ℓₘₐₓ, plans, ₛ𝐝, workspace
-    i₁ = firstindex(ff̃)
-    for j ∈ abs(𝒯.s):𝒯.ℓₘₐₓ
-        i₂ = i₁ + 2j+1
-        @views (plans[j] * ff̃[i₁:i₂])  # performs FFT in place
-        i₁ = i₂+1
-    end
-    for k ∈ 𝒯.ℓₘₐₓ:-1:0
-        w = @view 𝒯.workspace[begin:begin+𝒯.ℓₘₐₓ-abs(k)]
+function LinearAlgebra.ldiv!(𝒯::SSHTEKKM{T}, ff̃) where {T}
+    s1 = size(ff̃, 1)
+    s2 = Ysize(abs(𝒯.s), 𝒯.ℓₘₐₓ)
+    @assert s1==s2 """
+        Size of input `ff̃` along first dimension is incorrect for spins `s`=$s and
+        `ℓₘₐₓ`=$ℓₘₐₓ; it has size $s1, but should be $s2.
+    """
+    s = 𝒯.s
+    ℓₘₐₓ = 𝒯.ℓₘₐₓ
+    mₘₐₓ = ℓₘₐₓ
+    θindices = 𝒯.θindices
+    ₛΛ = 𝒯.ₛΛ
+    ff̃′ = reshape(ff̃, size(ff̃, 1), :)
 
-        # Copy all harmonics into workspace
-        error("Not implemented")
-
-        # Solve for mode weights
-        ldiv!(𝒯.ₛ𝐝[k], w)
-
-        # Copy all mode weights back into ff̃
-        error("Not implemented")
-
-        # De-alias lower |k| harmonics
-        for ℓ ∈ abs(k):-1:abs(s)
-            for n ∈ cld(-ℓ-k, 2j+1):fld(ℓ-k, 2j+1)
-                m = k + n * (2j+1)
-                error("Not implemented")
+    # TODO: finalize below
+    #@inbounds let π = T(π)
+    let π = T(π)
+        for ₛf ∈ eachcol(ff̃′)
+            # FFT the data in place
+            # TODO: Use threads
+            #@threads for j ∈ abs(s):ℓₘₐₓ
+            for j ∈ abs(s):ℓₘₐₓ
+                jk = θindices[j]
+                @views 𝒯.plans[j] * ₛf[jk]
+                @. ₛf[jk] *= 2π / (2j+1)
+                @views ₛf[jk] .= fftshift(ₛf[jk])
             end
-        end
-    end
+
+            # TODO: correct this loop for m==0
+            for m ∈ ℓₘₐₓ:-1:0  # We do both ±m inside this loop
+                Δ = max(abs(s), m)
+                # Gather the data for ±m into temporary workspaces
+                for j ∈ Δ:ℓₘₐₓ
+                    iⱼ₀ = Yindex(j, 0, abs(s))
+                    𝒯.ₛf̃₊ₘ[j] = ₛf[iⱼ₀ + m]
+                    𝒯.ₛf̃₋ₘ[j] = ₛf[iⱼ₀ - m]
+                    # # The following kind of hacks `Yindex`, because we actually
+                    # # want the index of the m-frequency component in an FFT,
+                    # # rather than the m mode, so we play with the `m` term.
+                    # # 𝒯.ₛf̃₊ₘ[j] = ₛf[Yindex(j, mod(m,2j+1)-j, abs(s))]
+                    # # 𝒯.ₛf̃₋ₘ[j] = ₛf[Yindex(j, mod(-m,2j+1)-j, abs(s))]
+                    # iⱼ₋ⱼ = Yindex(j, -j, abs(s))
+                    # 𝒯.ₛf̃₊ₘ[j] = ₛf[iⱼ₋ⱼ + mod(m,2j+1)]
+                    # 𝒯.ₛf̃₋ₘ[j] = ₛf[iⱼ₋ⱼ + mod(-m,2j+1)]
+                    # # 𝒯.ₛf̃₊ₘ[j] = ₛf[Yindex(j, m-j, abs(s))]
+                    # # 𝒯.ₛf̃₋ₘ[j] = ₛf[Yindex(j, j-m, abs(s))]
+                end
+                # Solve for the mode weights from the Fourier components
+                # TODO: Use workspace to do linear solves more efficiently
+                # TODO: See if I can just do in-place solves
+                #@show (m, 𝒯.ₛf̃₊ₘ[Δ:ℓₘₐₓ], 𝒯.ₛf̃₋ₘ[Δ:ℓₘₐₓ])
+                #@show (maximum(abs,𝒯.ₛf̃₊ₘ[Δ:ℓₘₐₓ]), maximum(abs,𝒯.ₛf̃₋ₘ[Δ:ℓₘₐₓ]))
+                @views 𝒯.ₛf̃₊[Δ:ℓₘₐₓ] .= ₛΛ[m] \ 𝒯.ₛf̃₊ₘ[Δ:ℓₘₐₓ]
+                # ldiv!(ₛΛ[m], 𝒯.ₛf̃₊ₘ[Δ:ℓₘₐₓ])
+                @views 𝒯.ₛf̃₋[Δ:ℓₘₐₓ] .= ₛΛ[-m] \ 𝒯.ₛf̃₋ₘ[Δ:ℓₘₐₓ]
+                #@show (𝒯.ₛf̃₊[Δ:ℓₘₐₓ], 𝒯.ₛf̃₋[Δ:ℓₘₐₓ])
+                #@show (maximum(abs,𝒯.ₛf̃₊[Δ:ℓₘₐₓ]), maximum(abs,𝒯.ₛf̃₋[Δ:ℓₘₐₓ]))
+                #println()
+                # Scatter the data back into the output
+                for ℓ ∈ Δ:ℓₘₐₓ
+                    iₗ₀ = Yindex(ℓ, 0, abs(s))
+                    ₛf[iₗ₀+mod(ℓ+m, 2ℓ+1)-ℓ] = 𝒯.ₛf̃₊[ℓ]
+                    ₛf[iₗ₀+mod(ℓ-m, 2ℓ+1)-ℓ] = 𝒯.ₛf̃₋[ℓ]
+                    # ₛf[Yindex(ℓ, m, abs(s))] = 𝒯.ₛf̃₊[ℓ]
+                    # ₛf[Yindex(ℓ, -m, abs(s))] = 𝒯.ₛf̃₋[ℓ]
+                end
+                # De-alias remaining Fourier components
+                # TODO: finalize below
+                #@threads for j′ ∈ m-1:-1:abs(s)
+                for j′ ∈ m-1:-1:abs(s)
+                    α₊ = zero(T)
+                    α₋ = zero(T)
+                    θ = 𝒯.θ[j′]
+                    # TODO: Use λRecursion objects to simplify this
+                    cosθ = cos(θ)
+                    sin½θ, cos½θ = sincos(θ/2)
+                    ₛλₗ₋₁ₘ = zero(T)
+                    ₛλₗ₋₁₋ₘ = zero(T)
+                    ₛλₗₘ = λ_recursion_initialize(sin½θ, cos½θ, s, Δ, m)
+                    ₛλₗ₋ₘ = λ_recursion_initialize(sin½θ, cos½θ, s, Δ, -m)
+                    c⁺ₗ₋₁ = zero(T)
+                    c⁻ₗ₋₁ = zero(T)
+                    for ℓ ∈ Δ:ℓₘₐₓ-1
+                        #@show (θ, j′, s, ℓ, m, ₛλₗₘ, ₛλₗ₋ₘ)
+                        α₊ += 𝒯.ₛf̃₊[ℓ] * ₛλₗₘ
+                        α₋ += 𝒯.ₛf̃₋[ℓ] * ₛλₗ₋ₘ
+                        # Take another step in the λ recursions
+                        c⁺ₗ₊₁, c⁺ₗ = λ_recursion_coefficients(cosθ, s, ℓ, m)
+                        c⁻ₗ₊₁, c⁻ₗ = λ_recursion_coefficients(cosθ, s, ℓ, -m)
+                        ₛλₗ₊₁ₘ = if ℓ == 0
+                            √(3/4π) * cosθ
+                        else
+                            (c⁺ₗ * ₛλₗₘ + c⁺ₗ₋₁ * ₛλₗ₋₁ₘ) / c⁺ₗ₊₁
+                        end
+                        ₛλₗ₊₁₋ₘ = if ℓ == 0
+                            √(3/4π) * cosθ
+                        else
+                            (c⁻ₗ * ₛλₗ₋ₘ + c⁻ₗ₋₁ * ₛλₗ₋₁₋ₘ) / c⁻ₗ₊₁
+                        end
+                        ₛλₗ₋₁ₘ = ₛλₗₘ
+                        ₛλₗ₋₁₋ₘ = ₛλₗ₋ₘ
+                        ₛλₗₘ = ₛλₗ₊₁ₘ
+                        ₛλₗ₋ₘ = ₛλₗ₊₁₋ₘ
+                        c⁺ₗ₋₁ = -c⁺ₗ₊₁ * √((2ℓ+1)/T(2ℓ+3))
+                        c⁻ₗ₋₁ = -c⁻ₗ₊₁ * √((2ℓ+1)/T(2ℓ+3))
+                    end
+                    # Do the above once more for ℓ==ℓₘₐₓ, and skip recursion
+                    #@show (θ, j′, s, ℓₘₐₓ, m, ₛλₗₘ, ₛλₗ₋ₘ)
+                    α₊ += 𝒯.ₛf̃₊[ℓₘₐₓ] * ₛλₗₘ
+                    α₋ += 𝒯.ₛf̃₋[ℓₘₐₓ] * ₛλₗ₋ₘ
+                    # Finally, de-alias
+                    iⱼ′₀ = Yindex(j′, 0, abs(s))
+                    #@show j′, m, ₛf[iⱼ′₀  + mod(j′+m, 2j′+1)-j′], -2π * α₊
+                    #ₛf[iⱼ′₀ + mod(m, 2j′+1)] -= 2π * α₊
+                    ₛf[iⱼ′₀ + mod(j′+m, 2j′+1)-j′] -= 2π * α₊
+                    #@show ₛf[iⱼ′₀ + mod(j′+m, 2j′+1)-j′]
+                    #println()
+                    ₛf[iⱼ′₀ + mod(j′-m, 2j′+1)-j′] -= 2π * α₋
+                    # iⱼ′₋ⱼ′ = Yindex(j′, -j′, abs(s))
+                    # m′₊ = mod(m, 2j′+1)
+                    # m′₋ = mod(-m, 2j′+1)
+                    # ₛf[iⱼ′₋ⱼ′ + m′₊] -= 2π * α₊
+                    # ₛf[iⱼ′₋ⱼ′ + m′₋] -= 2π * α₋
+                end  # j′
+            end  # m
+        end # ₛf
+    end  # π
+    ff̃
 end
