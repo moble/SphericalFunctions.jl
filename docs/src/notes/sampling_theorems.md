@@ -118,7 +118,7 @@ in $\theta_j$ rings with $j < |k|$.  But crucially, we know *how* they alias, an
 them from the Fourier transforms of those rings.  We then repeat, solving for the next-highest $|k|$
 values, and so on.
 
-The following pseudo-code summarizes the algorithm:
+The following pseudo-code summarizes the algorithm, modifying the input in place:
 ```julia
 # Iterate over rings, doing Fourier decompositions on each
 for j ∈ abs(s):ℓₘₐₓ

@@ -44,9 +44,6 @@ struct SSHTMinimal{T<:Real, Inplace} <: SSHT{T}
     """
     ₛΛ::OffsetVector
 
-    """Preallocated storage for solving linear equations"""
-    workspace::Vector
-
     """Preallocated storage for all FT modes with a given ``m``"""
     ₛfₘ::OffsetVector
 
@@ -108,15 +105,12 @@ function SSHTMinimal(
         OffsetVector([LinearAlgebra.lu(ₛ𝐝′[m]) for m ∈ -ℓₘₐₓ:ℓₘₐₓ], -ℓₘₐₓ:ℓₘₐₓ)
     end
 
-    # Pre-allocate the workspace used to solve the linear equations
-    workspace = Vector{Complex{T}}(undef, 2ℓₘₐₓ+1)
-
     ₛfₘ = OffsetVector(Vector{Complex{T}}(undef, ℓₘₐₓ+1), 0:ℓₘₐₓ)
     ₛf̃ₘ = OffsetVector(Vector{Complex{T}}(undef, ℓₘₐₓ+1), 0:ℓₘₐₓ)
 
     SSHTMinimal{T, inplace}(
         s, ℓₘₐₓ, OffsetVector(θ, abs(s):ℓₘₐₓ), OffsetVector(θindices, abs(s):ℓₘₐₓ),
-        plans, ₛΛ, workspace, ₛfₘ, ₛf̃ₘ
+        plans, ₛΛ, ₛfₘ, ₛf̃ₘ
     )
 end
 
@@ -185,10 +179,7 @@ function LinearAlgebra.ldiv!(𝒯::SSHTMinimal{T}, ff̃) where {T}
                 end
 
                 # Solve for the mode weights from the Fourier components
-                # TODO: Use workspace to do linear solves more efficiently
-                # TODO: See if I can just do in-place solves
-                @views 𝒯.ₛf̃ₘ[Δ:ℓₘₐₓ] .= 𝒯.ₛΛ[m] \ 𝒯.ₛfₘ[Δ:ℓₘₐₓ]
-                # ldiv!(ₛΛ[m], 𝒯.ₛf̃ₘ[Δ:ℓₘₐₓ])
+                @views ldiv!(𝒯.ₛf̃ₘ.parent[Δ+1:ℓₘₐₓ+1], 𝒯.ₛΛ[m], 𝒯.ₛfₘ.parent[Δ+1:ℓₘₐₓ+1])
 
                 # Scatter the data back into the output
                 for ℓ ∈ Δ:ℓₘₐₓ
