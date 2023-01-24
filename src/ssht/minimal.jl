@@ -1,11 +1,11 @@
 
-"""Storage for EKKM spin-spherical-harmonic transform
+"""Storage for Minimal spin-spherical-harmonic transform
 
-The EKKM algorithm was described in [this paper](https://arxiv.org/abs/1809.01321), and allows for
+The Minimal algorithm was described in [this paper](https://arxiv.org/abs/1809.01321), and allows for
 the minimal number of function samples.
 
 """
-struct SSHTEKKM{T<:Real, Inplace} <: SSHT{T}
+struct SSHTMinimal{T<:Real, Inplace} <: SSHT{T}
     """Spin weight"""
     s::Integer
 
@@ -64,7 +64,7 @@ struct SSHTEKKM{T<:Real, Inplace} <: SSHT{T}
     ₛf̃₋::OffsetVector
 end
 
-function SSHTEKKM(
+function SSHTMinimal(
     s, ℓₘₐₓ;
     T=Float64, θ=sorted_rings(s, ℓₘₐₓ, T),
     plan_fft_flags=FFTW.ESTIMATE, plan_fft_timelimit=Inf,
@@ -128,14 +128,14 @@ function SSHTEKKM(
     ₛf̃₊ = OffsetVector(Vector{Complex{T}}(undef, ℓₘₐₓ+1), 0:ℓₘₐₓ)
     ₛf̃₋ = OffsetVector(Vector{Complex{T}}(undef, ℓₘₐₓ+1), 0:ℓₘₐₓ)
 
-    SSHTEKKM{T, inplace}(
+    SSHTMinimal{T, inplace}(
         s, ℓₘₐₓ, OffsetVector(θ, abs(s):ℓₘₐₓ), OffsetVector(θindices, abs(s):ℓₘₐₓ),
         #s𝐘,
         plans, ₛΛ, workspace, ₛf̃₊ₘ, ₛf̃₋ₘ, ₛf̃₊, ₛf̃₋
     )
 end
 
-function pixels(𝒯::SSHTEKKM{T}) where {T}
+function pixels(𝒯::SSHTMinimal{T}) where {T}
     let π = convert(T, π)
         [
             @SVector [𝒯.θ[j], iϕ * 2π / (2j+1)]
@@ -145,32 +145,32 @@ function pixels(𝒯::SSHTEKKM{T}) where {T}
     end
 end
 
-function rotors(𝒯::SSHTEKKM)
+function rotors(𝒯::SSHTMinimal)
     from_spherical_coordinates.(pixels(𝒯))
 end
 
-function Base.:*(𝒯::SSHTEKKM, f̃)
+function Base.:*(𝒯::SSHTMinimal, f̃)
     𝒯.ₛ𝐘 * f̃
 end
 
-function LinearAlgebra.mul!(f, 𝒯::SSHTEKKM, f̃)
+function LinearAlgebra.mul!(f, 𝒯::SSHTMinimal, f̃)
     mul!(f, 𝒯.ₛ𝐘, f̃)
 end
 
-function Base.:\(𝒯::SSHTEKKM, f)
+function Base.:\(𝒯::SSHTMinimal, f)
     ldiv!(𝒯, copy(f))
 end
 
-function Base.:\(𝒯::SSHTEKKM{T, true}, ff̃) where {T}
+function Base.:\(𝒯::SSHTMinimal{T, true}, ff̃) where {T}
     ldiv!(𝒯, ff̃)
 end
 
-function LinearAlgebra.ldiv!(f̃, 𝒯::SSHTEKKM, f)
+function LinearAlgebra.ldiv!(f̃, 𝒯::SSHTMinimal, f)
     f̃[:] = f
     ldiv!(𝒯, f̃)
 end
 
-function LinearAlgebra.ldiv!(𝒯::SSHTEKKM{T}, ff̃) where {T}
+function LinearAlgebra.ldiv!(𝒯::SSHTMinimal{T}, ff̃) where {T}
     s1 = size(ff̃, 1)
     s2 = Ysize(abs(𝒯.s), 𝒯.ℓₘₐₓ)
     @assert s1==s2 """

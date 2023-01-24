@@ -47,7 +47,7 @@ and the next-largest ring is placed just above or below the equator (depending
 on the sign of ``s``), the next just below or above, and so on.  This is
 generally a fairly good first guess when minimizing the condition number of
 matrices used to solve for mode weughts from function values.  In particular, I
-use this to initialize the modified EKKM algorithm, which is then fed into an
+use this to initialize the Minimal algorithm, which is then fed into an
 optimizer to fine-tune the positions of the rings.
 
 This function does not provide the individual pixels; it just provides the

@@ -26,7 +26,7 @@ following dimensions will be broadcast over.  Note that certain types will broad
 threads, while others will broadcast using BLAS threads.  The relevant number of threads must be set
 appropriately.
 
-Certain `SSHT` types (currently, only `EKKM` and `Direct`) also have an option to *always* act in
+Certain `SSHT` types (currently, only `Minimal` and `Direct`) also have an option to *always* act in
 place — meaning that they simply re-use the input storage, even when used in an expression like
 `𝒯 \ f`.  The option must be passed as the `inplace` argument to the constructors, and part of the
 type of the resulting object.  Regardless of the value of that option, for those types where the
@@ -37,8 +37,8 @@ force operation in place.
 function SSHT(s, ℓₘₐₓ; method="Direct", kwargs...)
     if method == "Direct"
         return SSHTDirect(s, ℓₘₐₓ; kwargs...)
-    elseif method == "EKKM"
-        return SSHTEKKM(s, ℓₘₐₓ; kwargs...)
+    elseif method == "Minimal"
+        return SSHTMinimal(s, ℓₘₐₓ; kwargs...)
     elseif method == "RS"
         return SSHTRS(s, ℓₘₐₓ; kwargs...)
     else
@@ -110,5 +110,5 @@ end
 
 
 include("ssht/direct.jl")
-include("ssht/ekkm.jl")
+include("ssht/minimal.jl")
 include("ssht/rs.jl")
