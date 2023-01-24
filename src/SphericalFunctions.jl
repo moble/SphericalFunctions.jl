@@ -25,7 +25,7 @@ export WignerHsize, WignerHindex, _WignerHindex, WignerHrange
 export WignerDsize, WignerDindex, WignerDrange
 
 include("iterators.jl")
-export Diterator, diterator, Yiterator
+export Diterator, diterator, Yiterator, λiterator
 
 include("associated_legendre.jl")
 export ALFRecursionCoefficients, ALFrecurse!, ALFcompute!, ALFcompute

@@ -259,3 +259,108 @@ function λ_recursion_coefficients(cosθ::T, s, ℓ, m) where T
     cₗ = (cosθ + m*s/T(ℓ*(ℓ+1))) / √T(2ℓ+1)
     cₗ₊₁, cₗ
 end
+
+"""
+    λiterator(θ, s, m)
+
+Construct an object to iterate over ₛλₗₘ values.
+
+The ``ₛλₗₘ(θ)`` function is defined as the spin-weighted spherical harmonic evaluated at
+spherical coordinates ``(θ, ϕ)``, with ``ϕ=0``.  In particular, note that it is real-valued.
+The return type is determined by the type of `θ` (or more precisely, cos½θ).
+
+This algorithm by [Kostelec & Rockmore](https://dx.doi.org/10.1007/s00041-008-9013-5) allows
+us to iterate over increasing ``ℓ`` values, for given fixed ``s`` and ``m`` values.
+
+Note that this iteration has no inherent bound, so if you try to iterate over all values,
+you will end up in an infinite loop.  Instead, you can `zip` this iterator with another:
+```julia
+θ = 0.1
+s = -2
+m = 1
+λ = λiterator(θ, s, m)
+Δ = max(abs(s), abs(m))
+for (ℓ, ₛλₗₘ) ∈ zip(Δ:Δ+5, λ)
+    @show (ℓ, ₛλₗₘ)
+end
+```
+Alternatively, you could use `Iterates.take(λ, 6)`, for example.
+
+Note that the iteration always begins with `ℓ = Δ = max(abs(s), abs(m))`.
+"""
+struct λiterator{T}
+    cosθ::T
+    sin½θ::T
+    cos½θ::T
+    s::Integer
+    m::Integer
+end
+function λiterator(θ, s, m)
+    cosθ = cos(θ)
+    sin½θ, cos½θ = sincos(θ/2)
+    λiterator{typeof(cos½θ)}(cosθ, sin½θ, cos½θ, s, m)
+end
+function Base.iterate(λ::λiterator{T}) where {T}
+    Δ = max(abs(λ.s), abs(λ.m))
+    ₛλₗₘ = λ_recursion_initialize(λ.sin½θ, λ.cos½θ, λ.s, Δ, λ.m)
+    state = (zero(λ.cos½θ), ₛλₗₘ, zero(λ.cos½θ), Δ)
+    (ₛλₗₘ, state)
+end
+function Base.iterate(λ::λiterator{T}, state) where {T}
+    (ₛλₗ₋₁ₘ, ₛλₗₘ, cₗ₋₁, ℓ) = state
+    cₗ₊₁, cₗ = λ_recursion_coefficients(λ.cosθ, λ.s, ℓ, λ.m)
+    ₛλₗ₊₁ₘ = if ℓ == 0
+        # The only case in which this will ever be used is when
+        # s == m == ℓ == 0.  So we want ₀Y₁₀, which is known:
+        √(3/4π) * λ.cosθ
+    else
+        (cₗ * ₛλₗₘ + cₗ₋₁ * ₛλₗ₋₁ₘ) / cₗ₊₁
+    end
+    ₛλₗ₋₁ₘ = ₛλₗₘ
+    ₛλₗₘ = ₛλₗ₊₁ₘ
+    cₗ₋₁ = -cₗ₊₁ * √((2ℓ+1)/T(2ℓ+3))
+    ℓ += 1
+    (ₛλₗₘ, (ₛλₗ₋₁ₘ, ₛλₗₘ, cₗ₋₁, ℓ))
+end
+Base.IteratorSize(::Type{<:λiterator}) = Base.IsInfinite()
+Base.IteratorEltype(::Type{<:λiterator}) = Base.HasEltype()
+Base.eltype(λ::λiterator{T}) where {T} = T
+
+
+
+"""Simple iterator to count down to 0, with alternating signs
+
+```julia
+julia> collect(AlternatingCountdown(5))
+11-element Vector{Int64}:
+  5
+ -5
+  4
+ -4
+  3
+ -3
+  2
+ -2
+  1
+ -1
+  0
+```
+"""
+struct AlternatingCountdown
+    start::Int
+end
+function Base.iterate(c::AlternatingCountdown, state=c.start)
+    if state == typemax(Int)
+        return nothing
+    end
+    n = if state == 0
+        typemax(Int)
+    elseif state > 0
+        -state
+    else
+        -state - 1
+    end
+    (state, n)
+end
+Base.eltype(::Type{AlternatingCountdown}) = Int
+Base.length(c::AlternatingCountdown) = 2c.start+1
