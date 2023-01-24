@@ -184,14 +184,10 @@ function LinearAlgebra.ldiv!(𝒯::SSHTEKKM{T}, ff̃) where {T}
     ₛΛ = 𝒯.ₛΛ
     ff̃′ = reshape(ff̃, size(ff̃, 1), :)
 
-    # TODO: finalize below
-    #@inbounds let π = T(π)
-    let π = T(π)
+    @inbounds let π = T(π)
         for ₛf ∈ eachcol(ff̃′)
             # FFT the data in place
-            # TODO: Use threads
-            #@threads for j ∈ abs(s):ℓₘₐₓ
-            for j ∈ abs(s):ℓₘₐₓ
+            @threads for j ∈ abs(s):ℓₘₐₓ
                 jk = θindices[j]
                 @views 𝒯.plans[j] * ₛf[jk]
                 @. ₛf[jk] *= 2π / (2j+1)
@@ -206,40 +202,21 @@ function LinearAlgebra.ldiv!(𝒯::SSHTEKKM{T}, ff̃) where {T}
                     iⱼ₀ = Yindex(j, 0, abs(s))
                     𝒯.ₛf̃₊ₘ[j] = ₛf[iⱼ₀ + m]
                     𝒯.ₛf̃₋ₘ[j] = ₛf[iⱼ₀ - m]
-                    # # The following kind of hacks `Yindex`, because we actually
-                    # # want the index of the m-frequency component in an FFT,
-                    # # rather than the m mode, so we play with the `m` term.
-                    # # 𝒯.ₛf̃₊ₘ[j] = ₛf[Yindex(j, mod(m,2j+1)-j, abs(s))]
-                    # # 𝒯.ₛf̃₋ₘ[j] = ₛf[Yindex(j, mod(-m,2j+1)-j, abs(s))]
-                    # iⱼ₋ⱼ = Yindex(j, -j, abs(s))
-                    # 𝒯.ₛf̃₊ₘ[j] = ₛf[iⱼ₋ⱼ + mod(m,2j+1)]
-                    # 𝒯.ₛf̃₋ₘ[j] = ₛf[iⱼ₋ⱼ + mod(-m,2j+1)]
-                    # # 𝒯.ₛf̃₊ₘ[j] = ₛf[Yindex(j, m-j, abs(s))]
-                    # # 𝒯.ₛf̃₋ₘ[j] = ₛf[Yindex(j, j-m, abs(s))]
                 end
                 # Solve for the mode weights from the Fourier components
                 # TODO: Use workspace to do linear solves more efficiently
                 # TODO: See if I can just do in-place solves
-                #@show (m, 𝒯.ₛf̃₊ₘ[Δ:ℓₘₐₓ], 𝒯.ₛf̃₋ₘ[Δ:ℓₘₐₓ])
-                #@show (maximum(abs,𝒯.ₛf̃₊ₘ[Δ:ℓₘₐₓ]), maximum(abs,𝒯.ₛf̃₋ₘ[Δ:ℓₘₐₓ]))
                 @views 𝒯.ₛf̃₊[Δ:ℓₘₐₓ] .= ₛΛ[m] \ 𝒯.ₛf̃₊ₘ[Δ:ℓₘₐₓ]
                 # ldiv!(ₛΛ[m], 𝒯.ₛf̃₊ₘ[Δ:ℓₘₐₓ])
                 @views 𝒯.ₛf̃₋[Δ:ℓₘₐₓ] .= ₛΛ[-m] \ 𝒯.ₛf̃₋ₘ[Δ:ℓₘₐₓ]
-                #@show (𝒯.ₛf̃₊[Δ:ℓₘₐₓ], 𝒯.ₛf̃₋[Δ:ℓₘₐₓ])
-                #@show (maximum(abs,𝒯.ₛf̃₊[Δ:ℓₘₐₓ]), maximum(abs,𝒯.ₛf̃₋[Δ:ℓₘₐₓ]))
-                #println()
                 # Scatter the data back into the output
                 for ℓ ∈ Δ:ℓₘₐₓ
                     iₗ₀ = Yindex(ℓ, 0, abs(s))
                     ₛf[iₗ₀+mod(ℓ+m, 2ℓ+1)-ℓ] = 𝒯.ₛf̃₊[ℓ]
                     ₛf[iₗ₀+mod(ℓ-m, 2ℓ+1)-ℓ] = 𝒯.ₛf̃₋[ℓ]
-                    # ₛf[Yindex(ℓ, m, abs(s))] = 𝒯.ₛf̃₊[ℓ]
-                    # ₛf[Yindex(ℓ, -m, abs(s))] = 𝒯.ₛf̃₋[ℓ]
                 end
                 # De-alias remaining Fourier components
-                # TODO: finalize below
-                #@threads for j′ ∈ m-1:-1:abs(s)
-                for j′ ∈ m-1:-1:abs(s)
+                @threads for j′ ∈ m-1:-1:abs(s)
                     α₊ = zero(T)
                     α₋ = zero(T)
                     θ = 𝒯.θ[j′]
@@ -253,7 +230,6 @@ function LinearAlgebra.ldiv!(𝒯::SSHTEKKM{T}, ff̃) where {T}
                     c⁺ₗ₋₁ = zero(T)
                     c⁻ₗ₋₁ = zero(T)
                     for ℓ ∈ Δ:ℓₘₐₓ-1
-                        #@show (θ, j′, s, ℓ, m, ₛλₗₘ, ₛλₗ₋ₘ)
                         α₊ += 𝒯.ₛf̃₊[ℓ] * ₛλₗₘ
                         α₋ += 𝒯.ₛf̃₋[ℓ] * ₛλₗ₋ₘ
                         # Take another step in the λ recursions
@@ -277,22 +253,12 @@ function LinearAlgebra.ldiv!(𝒯::SSHTEKKM{T}, ff̃) where {T}
                         c⁻ₗ₋₁ = -c⁻ₗ₊₁ * √((2ℓ+1)/T(2ℓ+3))
                     end
                     # Do the above once more for ℓ==ℓₘₐₓ, and skip recursion
-                    #@show (θ, j′, s, ℓₘₐₓ, m, ₛλₗₘ, ₛλₗ₋ₘ)
                     α₊ += 𝒯.ₛf̃₊[ℓₘₐₓ] * ₛλₗₘ
                     α₋ += 𝒯.ₛf̃₋[ℓₘₐₓ] * ₛλₗ₋ₘ
                     # Finally, de-alias
                     iⱼ′₀ = Yindex(j′, 0, abs(s))
-                    #@show j′, m, ₛf[iⱼ′₀  + mod(j′+m, 2j′+1)-j′], -2π * α₊
-                    #ₛf[iⱼ′₀ + mod(m, 2j′+1)] -= 2π * α₊
                     ₛf[iⱼ′₀ + mod(j′+m, 2j′+1)-j′] -= 2π * α₊
-                    #@show ₛf[iⱼ′₀ + mod(j′+m, 2j′+1)-j′]
-                    #println()
                     ₛf[iⱼ′₀ + mod(j′-m, 2j′+1)-j′] -= 2π * α₋
-                    # iⱼ′₋ⱼ′ = Yindex(j′, -j′, abs(s))
-                    # m′₊ = mod(m, 2j′+1)
-                    # m′₋ = mod(-m, 2j′+1)
-                    # ₛf[iⱼ′₋ⱼ′ + m′₊] -= 2π * α₊
-                    # ₛf[iⱼ′₋ⱼ′ + m′₋] -= 2π * α₋
                 end  # j′
             end  # m
         end # ₛf
