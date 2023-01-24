@@ -1,9 +1,12 @@
-# Sampling theorems
+# Sampling theorems and transformations of spin-weighted spherical harmonics
 
-[McEwen and Wiaux](https://arxiv.org/abs/1110.6298) provide a very thorough review of the literature
-on sampling theorems related to spin-weighted spherical harmonics up to 2011, and presents a
-``∼2L²`` algorithm, though [Elahi, Khalid, Kennedy, and McEwen](https://arxiv.org/abs/1809.01321)
-have obtained the optimal result that scales as ``∼L²``.
+[McEwen and Wiaux](https://arxiv.org/abs/1110.6298) (MW) provide a very thorough review of the
+literature on sampling theorems related to spin-weighted spherical harmonics up to 2011.
+[Reinecke and Seljebotn](https://arxiv.org/abs/1303.4945) (RS) outlined one of the more efficient
+and accurate implementations of spin-weighted spherical harmonic transforms (``s``SHT) currently
+available as `libsharp`, but their algorithm is ``∼4L²``, whereas McEwen and Wiaux's is``∼2L²``,
+while [Elahi, Khalid, Kennedy, and McEwen](https://arxiv.org/abs/1809.01321) (EKKM) have obtained
+the optimal result that scales as ``∼L²``.
 
 The downside of the EKKM algorithm is that the ``θ`` values at which to sample have to be obtained
 by iteratively minimizing the condition numbers of various matrices (which are involved in the
@@ -34,7 +37,7 @@ ${}_s\mathbf{d}_{m}$ matrix, and we are seeking the ${}_s\mathbf{f}_m$ values, s
 this equation to solve for the latter.
 
 
-## Discretize Fourier transform
+## Discretizing the Fourier transform
 
 Now, the only flaw in this analysis is that we have undersampled everywhere except $\ell = L$, which
 means that the second equation (re-expressing the Fourier transforms as a sum using orthogonality of
@@ -114,3 +117,53 @@ solve for the corresponding highest-$|m|$ values.  Those harmonics will alias to
 in $\theta_j$ rings with $j < |k|$.  But crucially, we know *how* they alias, and can simply remove
 them from the Fourier transforms of those rings.  We then repeat, solving for the next-highest $|k|$
 values, and so on.
+
+The following pseudo-code summarizes the algorithm
+```julia
+# Iterate over rings, doing Fourier decompositions on each
+for j ∈ abs(s):ℓₘₐₓ
+    fft!(ₛf[j])  # Perform in-place FFT
+    fftshift!(ₛf[j])  # Cycle order of FFT elements in place to match order of modes
+    ₛf[j] *= 2π / (2j+1)  # Change normalization
+end
+
+for m ∈ ℓₘₐₓ:-1:0  # We do both ±m inside this loop
+    Δ = max(abs(s), m)
+
+    # Gather the data for ±m into temporary workspaces
+    for j ∈ Δ:ℓₘₐₓ
+        ₛf̃₊ₘ[j] = ₛf[Yindex(j, m, abs(s))]
+        ₛf̃₋ₘ[j] = ₛf[Yindex(j, -m, abs(s))]
+    end
+
+    # Solve for the mode weights from the Fourier components
+    ₛf̃₊ₘ[Δ:ℓₘₐₓ] = ₛΛ[m] \ ₛf̃₊ₘ[Δ:ℓₘₐₓ]
+    ₛf̃₋ₘ[Δ:ℓₘₐₓ] = ₛΛ[-m] \ ₛf̃₋ₘ[Δ:ℓₘₐₓ]
+
+    # Distribute the data back into the output
+    for ℓ ∈ Δ:ℓₘₐₓ
+        ₛf[Yindex(ℓ, m, abs(s))] = ₛf̃₊ₘ[ℓ]
+        ₛf[Yindex(ℓ, -m, abs(s))] = ₛf̃₋ₘ[ℓ]
+    end
+
+    # De-alias remaining Fourier components
+    for j′ ∈ m-1:-1:abs(s)
+        α₊ = 0
+        α₋ = 0
+        ₛλₗₘ = λRecursion(θ[j′], s, Δ, m)
+        ₛλₗ₋ₘ = λRecursion(θ[j′], s, Δ, -m)
+        # Collect aliasing contribution to this ring from all higher ℓ modes
+        for ℓ ∈ Δ:ℓₘₐₓ
+            α₊ += ₛf̃₊[ℓ] * ₛλₗₘ
+            α₋ += ₛf̃₋[ℓ] * ₛλₗ₋ₘ
+            iterate!(ₛλₗₘ)
+            iterate!(ₛλₗ₋ₘ)
+        end
+        m′₊ = mod(j′+m, 2j′+1) - j′
+        m′₋ = mod(j′-m, 2j′+1) - j′
+        ₛf[Yindex(j′, m′₊, abs(s))] -= 2π * α₊
+        ₛf[Yindex(j′, m′₋, abs(s))] -= 2π * α₋
+    end
+
+end
+```
