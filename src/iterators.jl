@@ -228,13 +228,6 @@ function λ_recursion_initialize(sin½θ::T, cos½θ::T, s, ℓ, m) where T
     if abs(s) > abs(m)
         λ_recursion_initialize(-sin½θ, cos½θ, m, ℓ, s)
     else
-        if abs(m) != ℓ
-            error("""Value of m=$m can only be ±ℓ=±$ℓ for this initial-value function.
-                s=$s
-                sin½θ=$sin½θ
-                cos½θ=$cos½θ
-            """)
-        end
         let π = T(π)
             c = √((2ℓ+1) * binom(T, 2ℓ, ℓ-abs(s)) / (4π))
             if s < 0
