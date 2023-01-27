@@ -2,6 +2,9 @@ name: tests
 
 on: [push]
 
+env:
+  JULIA_NUM_THREADS: auto
+
 jobs:
   tests:
     name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ github.event_name }}
