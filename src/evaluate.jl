@@ -274,10 +274,6 @@ function Y!(Y, R, ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢ�
     Y!(Y, expiϕ, expiθ, expiγ, ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ)
 end
 
-function Y!(Y, expiθ, expiϕ, ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ)
-    Y!(Y, expiϕ, expiθ, one(expiϕ), ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ)
-end
-
 function Y!(Y, expiϕ, expiθ, expiγ, ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ)
     if length(Y) < Ysize(ℓₘᵢₙ, ℓₘₐₓ)
         error("Input `Y` has length $(length(Y)); which is not enough for ℓₘₐₓ=$ℓₘₐₓ")
