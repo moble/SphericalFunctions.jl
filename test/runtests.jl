@@ -1,7 +1,11 @@
 using SphericalFunctions
 using Test
 using Random, FFTW, FastTransforms, OffsetArrays, Quaternionic, DoubleFloats, ProgressMeter
+using LinearAlgebra, Base.Threads
 
+# Match the number of BLAS threads to the number of threads Julia was started with.
+# This may not always be a great idea, but will be useful for these tests.
+LinearAlgebra.BLAS.set_num_threads(nthreads())
 
 include("test_utilities.jl")
 
