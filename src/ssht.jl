@@ -1,7 +1,6 @@
 """Supertype of storage for spin-spherical-harmonic transforms"""
 abstract type SSHT{T<:Real} end
 
-# TODO: Ensure that each SSHT subtype can do both forward and backward transforms
 
 @doc raw"""
     SSHT(s, ℓₘₐₓ; [method="Direct"], [T=Float64], [kwargs...])
