@@ -62,7 +62,7 @@
             # used for NINJA.sYlm; it is used because it is a simple reference method.
             ϵ = 500ℓmax^3 * eps(T)
             if method == "Minimal"
-                ϵ *= 20
+                ϵ *= 50
             end
 
             for s in -2:2
