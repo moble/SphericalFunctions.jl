@@ -162,27 +162,9 @@ function LinearAlgebra.mul!(f, 𝒯::SSHTRS{T}, f̃) where {T}
                 ℓ₀ = max(abs(s), abs(m))
                 for (θ, Fy) ∈ zip(𝒯.θ, 𝒯.G)
                     Fmy = zero(T)
-                    cosθ = cos(θ)
-                    sin½θ, cos½θ = sincos(θ/2)
-                    ₛλₗ₋₁ₘ = zero(T)
-                    ₛλₗₘ = λ_recursion_initialize(sin½θ, cos½θ, s, ℓ₀, m)
-                    cₗ₋₁ = zero(T)
-                    for ℓ ∈ ℓ₀:ℓₘₐₓ
-                        lm = Yindex(ℓ, m, abs(s))
-                        Fmy += f̃′ⱼ[lm] * ₛλₗₘ
-                        if ℓ < ℓₘₐₓ  # Take another step in the λ recursion
-                            cₗ₊₁, cₗ = λ_recursion_coefficients(cosθ, s, ℓ, m)
-                            ₛλₗ₊₁ₘ = if ℓ == 0
-                                # The only case in which this will ever be used is when
-                                # s == m == ℓ == 0.  So we want ₀Y₁₀, which is simple:
-                                √(3/4π) * cosθ
-                            else
-                                (cₗ * ₛλₗₘ + cₗ₋₁ * ₛλₗ₋₁ₘ) / cₗ₊₁
-                            end
-                            ₛλₗ₋₁ₘ = ₛλₗₘ
-                            ₛλₗₘ = ₛλₗ₊₁ₘ
-                            cₗ₋₁ = -cₗ₊₁ * √((2ℓ+1)/T(2ℓ+3))
-                        end
+                    λ = λiterator(θ, s, m)
+                    for (ℓ, ₛλₗₘ) ∈ zip(ℓ₀:ℓₘₐₓ, λ)
+                        Fmy += f̃′ⱼ[Yindex(ℓ, m, abs(s))] * ₛλₗₘ
                     end  # ℓ
                     Fy[1+mod(m, length(Fy))] = Fmy
                 end  # (θ, Nϕ, G)
@@ -243,30 +225,12 @@ function LinearAlgebra.ldiv!(f̃, 𝒯::SSHTRS{T}, f) where {T}
                 ℓ₀ = max(abs(s), abs(m))
                 for (θ, Gy) ∈ zip(𝒯.θ, 𝒯.G)
                     Gmy = Gy[1+mod(m, length(Gy))]
-                    cosθ = cos(θ)
-                    sin½θ, cos½θ = sincos(θ/2)
-                    ₛλₗ₋₁ₘ = zero(T)
-                    ₛλₗₘ = λ_recursion_initialize(sin½θ, cos½θ, s, ℓ₀, m)
-                    cₗ₋₁ = zero(T)
-                    for ℓ ∈ ℓ₀:ℓₘₐₓ
-                        lm = Yindex(ℓ, m, abs(s))
+                    λ = λiterator(θ, s, m)
+                    for (ℓ, ₛλₗₘ) ∈ zip(ℓ₀:ℓₘₐₓ, λ)
                         # Be careful of the following when adding threads!!!
                         # We need this element of f̃′ⱼ to be used in only one thread,
                         # and we need G to be used in only one thread at a time.
-                        f̃′ⱼ[lm] += Gmy * ₛλₗₘ
-                        if ℓ < ℓₘₐₓ  # Take another step in the λ recursion
-                            cₗ₊₁, cₗ = λ_recursion_coefficients(cosθ, s, ℓ, m)
-                            ₛλₗ₊₁ₘ = if ℓ == 0
-                                # The only case in which this will ever be used is when
-                                # s == m == ℓ == 0.  So we want ₀Y₁₀, which is known:
-                                √(3/4π) * cosθ
-                            else
-                                (cₗ * ₛλₗₘ + cₗ₋₁ * ₛλₗ₋₁ₘ) / cₗ₊₁
-                            end
-                            ₛλₗ₋₁ₘ = ₛλₗₘ
-                            ₛλₗₘ = ₛλₗ₊₁ₘ
-                            cₗ₋₁ = -cₗ₊₁ * √((2ℓ+1)/T(2ℓ+3))
-                        end
+                        f̃′ⱼ[Yindex(ℓ, m, abs(s))] += Gmy * ₛλₗₘ
                     end  # ℓ
                 end  # (θ, Nϕ, G)
             end  # m
