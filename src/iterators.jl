@@ -312,7 +312,7 @@ function Base.iterate(λ::λiterator{T}, state) where {T}
     ₛλₗ₊₁ₘ = if ℓ == 0
         # The only case in which this will ever be used is when
         # s == m == ℓ == 0.  So we want ₀Y₁₀, which is known:
-        √(3/4π) * λ.cosθ
+        √(3/4T(π)) * λ.cosθ
     else
         (cₗ * ₛλₗₘ + cₗ₋₁ * ₛλₗ₋₁ₘ) / cₗ₊₁
     end
@@ -364,3 +364,20 @@ function Base.iterate(c::AlternatingCountdown, state=c.start)
 end
 Base.eltype(::Type{AlternatingCountdown}) = Int
 Base.length(c::AlternatingCountdown) = 2c.start+1
+
+struct AlternatingCountup
+    stop::Int
+end
+function Base.iterate(c::AlternatingCountup, state=0)
+    if state > c.stop
+        return nothing
+    end
+    n = if state > 0
+        -state
+    else
+        -state + 1
+    end
+    (state, n)
+end
+Base.eltype(::Type{AlternatingCountup}) = Int
+Base.length(c::AlternatingCountup) = 2c.stop+1
