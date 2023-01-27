@@ -118,7 +118,7 @@ in $\theta_j$ rings with $j < |k|$.  But crucially, we know *how* they alias, an
 them from the Fourier transforms of those rings.  We then repeat, solving for the next-highest $|k|$
 values, and so on.
 
-The following pseudo-code summarizes the algorithm, modifying the input in place:
+The following pseudo-code summarizes the analysis algorithm, modifying the input in place:
 ```julia
 # Iterate over rings, doing Fourier decompositions on each
 for j ∈ abs(s):ℓₘₐₓ
@@ -128,9 +128,9 @@ for j ∈ abs(s):ℓₘₐₓ
 end
 
 for m ∈ AlternatingCountdown(ℓₘₐₓ)  # Iterate over +m, then -m, down to m=0
-    Δ = max(abs(s), m)
+    Δ = max(abs(s), abs(m))
 
-    # Gather the data for ±m into temporary workspaces
+    # Gather the `m` data from each ring into a temporary workspace
     for j ∈ Δ:ℓₘₐₓ
         ₛfₘ[j] = ₛf[Yindex(j, m, abs(s))]
     end
@@ -143,7 +143,7 @@ for m ∈ AlternatingCountdown(ℓₘₐₓ)  # Iterate over +m, then -m, down t
         ₛf[Yindex(ℓ, m, abs(s))] = ₛf̃ₘ[ℓ]
     end
 
-    # De-alias remaining Fourier components
+    # De-alias Fourier components from rings with values of j < Δ
     for j′ ∈ abs(s):m-1
         m′ = mod(j′+m, 2j′+1)-j′  # `m` aliases into `(j′, m′)`
         α = 2π * sum(
@@ -153,5 +153,50 @@ for m ∈ AlternatingCountdown(ℓₘₐₓ)  # Iterate over +m, then -m, down t
         ₛf[Yindex(j′, m′, abs(s))] -= α
     end
 
+end
+```
+
+
+
+The following pseudo-code summarizes the synthesis algorithm, modifying the input in place:
+```julia
+for m ∈ AlternatingCountup(ℓₘₐₓ)  # Iterate over +m, then -m, up from m=0
+    Δ = max(abs(s), abs(m))
+
+    # Iterate over rings, combining contributions for this `m` value
+    for j ∈ Δ:ℓₘₐₓ
+        # We will accumulate into 𝒯.ₛfₘ, and write it out at the end of the loop
+        ₛfₘ[j] = false
+
+        # Direct (non-aliased) contributions from m′ == m
+        λ = λiterator(𝒯.θ[j], s, m)
+        for (ℓ, ₛλₗₘ) ∈ zip(Δ:ℓₘₐₓ, λ)
+            ₛfₘ[j] += ₛf̃[Yindex(ℓ, m, abs(s))] * ₛλₗₘ
+        end
+
+        # Aliased contributions from |m′| > j > |m|
+        for ℓ′ ∈ j:ℓₘₐₓ
+            for n ∈ cld(-ℓ′-m, 2j+1):fld(ℓ′-m, 2j+1)
+                m′ = m + n*(2j+1)
+                if abs(m′) > j
+                    ₛλₗ′ₘ′ = ₛΛ[m′][j,ℓ′]
+                    𝒯.ₛfₘ[j] += ₛf̃[Yindex(ℓ′, m′, abs(s))] * ₛλₗ′ₘ′
+                end
+            end
+        end
+
+    end  # j
+
+    # Distribute the data back into the output
+    @threads for j ∈ Δ:ℓₘₐₓ
+        ₛf̃[Yindex(j, m, abs(s))] = 𝒯.ₛfₘ[j]
+    end
+
+end  # m
+
+# Iterate over rings, doing Fourier decompositions on each
+for j ∈ abs(s):ℓₘₐₓ
+    ifftshift!(ₛf̃[j]) # Cycle order of modes in place to match order of FFT elements
+    bfft!(ₛf̃ⱼ[j]) # Perform in-place BFFT
 end
 ```

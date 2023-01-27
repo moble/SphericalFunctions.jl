@@ -1,10 +1,9 @@
 @testset verbose=true "SSHT" begin
 
     cases = Iterators.product(
-        ["Direct", "RS"], #["Direct", "EKKM", "RS"],
+        ["Direct", "Minimal", "RS"],
         [Double64, Float64, Float32]
     )
-    # cases = [["RS", Float64]]
 
     function sYlm(s, ℓ, m, θϕ)
         NINJA.sYlm(s, ℓ, m, θϕ[1], θϕ[2])
@@ -62,6 +61,9 @@
             # We need ϵ to be huge, seemingly mostly due to the low-precision method
             # used for NINJA.sYlm; it is used because it is a simple reference method.
             ϵ = 500ℓmax^3 * eps(T)
+            if method == "Minimal"
+                ϵ *= 20
+            end
 
             for s in -2:2
                 𝒯 = SSHT(s, ℓmax; T=T, method=method)
