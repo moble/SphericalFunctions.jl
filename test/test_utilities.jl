@@ -230,7 +230,11 @@ end  # module NINJA
     0; nextfloat(T(0)); rand(T(0):eps(T(π)):T(π), n); prevfloat(T(π)); T(π)
 ]
 γrange(::Type{T}, n=15) where T = αrange(T, n)
-v̂range(::Type{T}, n=15) where T = QuatVec{T}[𝐢; 𝐣; 𝐤; -𝐢; -𝐣; -𝐤; normalize.(randn(QuatVec{T}, n))]
+v̂range(::Type{T}, n=15) where T = QuatVec{T}[
+    𝐢; 𝐣; 𝐤;
+    -𝐢; -𝐣; -𝐤;
+    Quaternionic.normalize.(randn(QuatVec{T}, n))
+]
 function Rrange(::Type{T}, n=15) where T
     invsqrt2 = inv(√T(2))
     [
