@@ -82,7 +82,7 @@ or
 
 ```@autodocs
 Modules = [SphericalFunctions]
-Pages   = ["ssht.jl", "ssht_direct.jl", "ssht_ekkm.jl", "ssht_rs.jl"]
+Pages   = ["ssht.jl", "ssht/direct.jl", "ssht/minimal.jl", "ssht/rs.jl"]
 ```
 
 The `SSHT` types use various pixelizations that may be computed as follows:
