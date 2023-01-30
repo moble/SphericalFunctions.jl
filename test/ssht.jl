@@ -1,5 +1,16 @@
 @testset verbose=true "SSHT" begin
 
+    # Preliminary check that `sqrtbinomial` works as expected
+    for T ∈ [Float16, Float32, Float64, Double64, BigFloat]
+        for ℓ ∈ [1, 2, 3, 4, 5, 13, 64, 1025]
+            for s ∈ -2:2
+                # Note that `ℓ-abs(s)` is actually used, but we test without `abs` here
+                a,b = sqrtbinomial(2ℓ, ℓ-s, T), T(√binomial(big(2ℓ), big(ℓ-s)))
+                @test a ≈ b
+            end
+        end
+    end
+
     # Check that an error results from a nonsense method request
     let s=-2, ℓmax=8
         @test_throws ErrorException SSHT(s, ℓmax; method="NonsenseGarbage")
