@@ -40,3 +40,16 @@ Order   = [:module, :type, :constant, :function, :macro]
 ```
 
 
+## Combinatorics
+
+Spherical functions frequently involve binomial coefficients and similar terms, with arguments
+proportional to ``ℓ``, which we aim to allow to be very large — of order 1,000 or more.
+Unfortunately, due to combinatorical explosions, this is frequently infeasible with naive
+methods.  Here, we collect any specialized methods that help us beat the limits.
+
+```@autodocs
+Modules = [SphericalFunctions]
+Pages   = ["utils.jl"]
+```
+
+
