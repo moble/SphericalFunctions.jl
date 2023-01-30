@@ -28,6 +28,6 @@ makedocs(
 
 deploydocs(
     repo="github.com/moble/SphericalFunctions.jl.git",
-    devbranch="main",
+    #devbranch="main",
     push_preview=true
 )
