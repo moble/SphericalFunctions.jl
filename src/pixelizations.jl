@@ -124,12 +124,12 @@ Fejér's second rule, using weights provided by [`fejer2`](@ref).
 
 Note that the first argument to this function is `N`, rather than the
 `ℓₘₐₓ` used in some other functions.  For spin-weighted spherical
-harmonics, you may want to use `N=2ℓₘₐₓ+2`.
+harmonics, you may want to use `N=2ℓₘₐₓ+1`.
 """
 function fejer2_rings(N, T=Float64)
-    # Eq. (13) of Reinecke and Seljebotn
+    # Eq. (13) of Reinecke and Seljebotn, with N adjusted to reflect actual number of elements
     let π = T(π)
-        [n*π/N for n ∈ 1:N-1]
+        [n*π/(N+1) for n ∈ 1:N]
     end
 end
 
@@ -144,8 +144,8 @@ Note that the first argument to this function is `N`, rather than the
 harmonics, you may want to use `N=2ℓₘₐₓ+1`.
 """
 function clenshaw_curtis_rings(N, T=Float64)
-    # Eq. (14) of Reinecke and Seljebotn
+    # Eq. (14) of Reinecke and Seljebotn, with N adjusted to reflect actual number of elements
     let π = T(π)
-        [n*π/N for n ∈ 0:N]
+        [n*π/(N-1) for n ∈ 0:N-1]
     end
 end
