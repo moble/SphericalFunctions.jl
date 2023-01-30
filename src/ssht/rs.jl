@@ -92,12 +92,14 @@ function SSHTRS(
         size(θ) = $(size(θ))
         size(Nϕ) = $(size(Nϕ))
     """
+    # COV_EXCL_START
     if (message = check_threads()) != ""
         @warn """$message
         Computations with SSHTRS can benefit greatly from using all available threads if many
         functions are to be transformed.
         """
     end
+    # COV_EXCL_STOP
     iθ = let iθ = cumsum(Nϕ)
         [a:b for (a,b) in eachrow(hcat([1; iθ[begin:end-1].+1], iθ))]
     end

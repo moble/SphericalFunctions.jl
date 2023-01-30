@@ -20,6 +20,18 @@
         @test_warn """ "Direct" method for s-SHT is only """ SSHT(s, ℓₘₐₓ; method="Direct")
     end
 
+    # Check that SSHTDirect warns if `check_blas_threads` is too low
+    let cores=num_physical_cores(), blas_threads=LinearAlgebra.BLAS.get_num_threads()
+        if cores > 1
+            LinearAlgebra.BLAS.set_num_threads(1)
+            try
+                @test_warn """ all available threads """ SSHT(0, 5; method="Direct")
+            finally
+                LinearAlgebra.BLAS.set_num_threads(blas_threads)
+            end
+        end
+    end
+
     FloatTypes = [Double64, Float64, Float32]
     methods = ["Direct", "Minimal", "RS"]
     inplacemethods = ["Direct", "Minimal"]

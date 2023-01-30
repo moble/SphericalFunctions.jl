@@ -75,6 +75,7 @@ inplaceable(s, ℓₘₐₓ, Rθϕ) = (ℓₘₐₓ + 1)^2 - s^2 == length(Rθϕ
 function check_threads()
     cores = num_physical_cores()
     threads = nthreads()
+    # COV_EXCL_START
     if threads < cores
         """
         You are using $threads threads on a machine with $cores physical cores.  While this
@@ -84,6 +85,7 @@ function check_threads()
     else
         ""
     end
+    # COV_EXCL_STOP
 end
 
 

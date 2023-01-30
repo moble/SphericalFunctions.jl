@@ -2,6 +2,7 @@ using SphericalFunctions
 using Test
 using Random, FFTW, FastTransforms, OffsetArrays, Quaternionic, DoubleFloats, ProgressMeter
 using LinearAlgebra, Base.Threads
+import Hwloc: num_physical_cores
 
 # Match the number of BLAS threads to the number of threads Julia was started with.
 # This may not always be a great idea, but will be useful for these tests.
