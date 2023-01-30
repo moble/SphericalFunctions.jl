@@ -53,9 +53,7 @@ Return the spherical coordinates (θ, ϕ) on which the spin-weighted spherical h
 evaluated.  See also [`rotors`](@ref), which provides the actual `Rotor`s on which they are
 evaluated.
 """
-function pixels(𝒯::SSHT)
-    error("Not implemented for abstract supertype")
-end
+function pixels end
 
 """
     rotors(𝒯)
@@ -63,13 +61,11 @@ end
 Return the `Rotor`s on which the spin-weighted spherical harmonics are evaluated.  See also
 [`pixels`](@ref), which provides the corresponding spherical coordinates.
 """
-function rotors(𝒯::SSHT)
-    error("Not implemented for abstract supertype")
-end
+function rotors end
 
 
-function Base.show(io::IO, ssht::SSHT)
-    print(io, typeof(ssht), "($(ssht.s), $(ssht.ℓₘₐₓ))")
+function Base.show(io::IO, 𝒯::SSHT)
+    print(io, typeof(𝒯), "($(𝒯.s), $(𝒯.ℓₘₐₓ))")
 end
 
 
@@ -96,9 +92,9 @@ function check_blas_threads()
     blas_threads = LinearAlgebra.BLAS.get_num_threads()
     if blas_threads < cores
         """
-        You are using $blas_threads BLAS threads on a machine with $cores physical cores.  While
-        this will leave cores free to work on other tasks, you may wish to increase the
-        number of threads with something like
+        You are using $blas_threads BLAS threads on a machine with $cores physical cores.
+        While this will leave cores free to work on other tasks, you may wish to increase
+        the number of threads with something like
 
             LinearAlgebra.BLAS.set_num_threads($cores)
         """

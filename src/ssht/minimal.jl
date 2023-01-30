@@ -177,16 +177,16 @@ function rotors(𝒯::SSHTMinimal)
 end
 
 function Base.:*(𝒯::SSHTMinimal, f̃)
-    mul!(𝒯::SSHTMinimal, copy(f̃))
+    mul!(𝒯, copy(f̃))
 end
 
 function Base.:*(𝒯::SSHTMinimal{T, true}, f̃) where {T}
-    mul!(𝒯::SSHTMinimal, f̃)
+    mul!(𝒯, f̃)
 end
 
 function LinearAlgebra.mul!(f, 𝒯::SSHTMinimal, f̃)
-    ff̃ .= f̃
-    mul!(𝒯.ₛ𝐘, ff̃)
+    f .= f̃
+    mul!(𝒯, f)
 end
 
 function LinearAlgebra.mul!(𝒯::SSHTMinimal{T}, ff̃) where {T}
@@ -258,7 +258,7 @@ function Base.:\(𝒯::SSHTMinimal{T, true}, ff̃) where {T}
 end
 
 function LinearAlgebra.ldiv!(f̃, 𝒯::SSHTMinimal, f)
-    f̃[:] = f
+    f̃ .= f
     ldiv!(𝒯, f̃)
 end
 
