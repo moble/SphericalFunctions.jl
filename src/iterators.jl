@@ -187,11 +187,6 @@ Base.size(Yi::Yiterator, dim) = dim > 1 ? 1 : length(Yi)
 
 
 
-# TODO: Deal with binomial coefficients in `λ_recursion_initialize` better
-
-"""Helper function for [`λ_recursion_initialize`](@ref)"""
-binom(T, n, k) = T(binomial(big(n), big(k)))
-
 # # Eq. (10) of Reinecke & Seljebotn https://dx.doi.org/10.1051/0004-6361/201321494
 # ₛλₗₘ(ϑ) = (-1)ᵐ √((2ℓ+1)/(4π)) dˡ₋ₘₛ(ϑ)
 #
@@ -229,7 +224,7 @@ function λ_recursion_initialize(sin½θ::T, cos½θ::T, s, ℓ, m) where T
         λ_recursion_initialize(-sin½θ, cos½θ, m, ℓ, s)
     else
         let π = T(π)
-            c = √((2ℓ+1) * binom(T, 2ℓ, ℓ-abs(s)) / (4π))
+            c = √((2ℓ+1) / (4π)) * sqrtbinomial(2ℓ, ℓ-abs(s), T)
             if s < 0
                 if m == ℓ
                     (-1)^ℓ * c * sin½θ^(ℓ+s) * cos½θ^(ℓ-s)

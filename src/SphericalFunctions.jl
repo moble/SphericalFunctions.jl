@@ -2,6 +2,7 @@ module SphericalFunctions
 
 using FFTW, AbstractFFTs, FastTransforms
 using LinearAlgebra, ProgressMeter, Quaternionic, OffsetArrays, StaticArrays
+import SpecialFunctions, DoubleFloats
 import LoopVectorization: @turbo
 import Hwloc: num_physical_cores
 import Base.Threads: @threads, nthreads, threadid
