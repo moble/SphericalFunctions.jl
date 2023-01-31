@@ -1,6 +1,14 @@
 using SphericalFunctions
-using Test, Random, ProgressMeter
-using FastTransforms, Quaternionic
+using Test
+using Random, FFTW, FastTransforms
+using OffsetArrays, StaticArrays, Quaternionic
+using DoubleFloats, ProgressMeter
+using LinearAlgebra, Base.Threads
+import Hwloc: num_physical_cores
+
+# Match the number of BLAS threads to the number of threads Julia was started with.
+# This may not always be a great idea, but will be useful for these tests.
+LinearAlgebra.BLAS.set_num_threads(nthreads())
 
 include("test_utilities.jl")
 
@@ -32,6 +40,7 @@ end
     addtests("wigner_matrices.jl")
     addtests("weights.jl")
     addtests("map2salm.jl")
+    addtests("ssht.jl")
 end
 
 

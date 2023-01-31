@@ -1,5 +1,4 @@
-### TODO:
-### 4. Test skipping all the complicated indexing tricks; use fancy indexing
+### TODO: Test skipping all the complicated indexing tricks; use fancy indexing
 ### NOTES:
 ### 1. Caching coefficients provides a ~11% speedup at low ℓ, but that falls off
 ###    as ℓ increases, reaching ~4% around ℓ=512.
@@ -275,10 +274,6 @@ function Y!(Y, R, ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢ�
     Y!(Y, expiϕ, expiθ, expiγ, ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ)
 end
 
-function Y!(Y, expiθ, expiϕ, ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ)
-    Y!(Y, expiϕ, expiθ, one(expiϕ), ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ)
-end
-
 function Y!(Y, expiϕ, expiθ, expiγ, ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ)
     if length(Y) < Ysize(ℓₘᵢₙ, ℓₘₐₓ)
         error("Input `Y` has length $(length(Y)); which is not enough for ℓₘₐₓ=$ℓₘₐₓ")
@@ -363,4 +358,47 @@ function Yprep(ℓₘₐₓ, sₘₐₓ, ::Type{T}, ℓₘᵢₙ=0) where {T<:Re
     H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, T)
     Hwedge, expimϕ = Yworkspace(ℓₘₐₓ, sₘₐₓ, T)
     Y, H_rec_coeffs, Hwedge, expimϕ
+end
+
+
+@doc raw"""
+    ₛ𝐘(s, ℓₘₐₓ, [T=Float64], [Rθϕ=golden_ratio_spiral_rotors(s, ℓₘₐₓ, T)])
+
+
+Construct a matrix of ``ₛYₗₘ(Rθϕ)`` values for the input `s` and all nontrivial
+``(\ell, m)`` up to `ℓₘₐₓ`.
+
+This is a fast and accurate method for mapping between the vector of
+spin-weighted spherical-harmonic mode weights ``ₛ𝐟ₗₘ`` and the vector of
+function values on the sphere ``ₛ𝐟ⱼₖ``, as
+```math
+ₛ𝐟ⱼₖ = ₛ𝐘\, ₛ𝐟ₗₘ,
+```
+where the right-hand side represents the matrix-vector product.  As usual, we
+assume that the ``ₛ𝐟ₗₘ`` modes are ordered by increasing ``m ∈ [-ℓ:ℓ]``, and
+``ℓ ∈ [|s|:ℓₘₐₓ]``.  The ordering of the ``ₛ𝐟ⱼₖ`` values will be determined by
+the ordering of the argument `Rθϕ`.
+
+Note that the number of modes need not be the same as the number of points on
+which the function is evaluated, which would imply that the output matrix is
+not square.  To be able to invert the relationship, however, we need the number
+of points ``ₛ𝐟ⱼₖ`` to be *at least as large* as the number of modes ``ₛ𝐟ₗₘ``.
+
+Note that the usefulness of this approach is limited by the fact that the size
+of this matrix scales as ℓₘₐₓ⁴.  As such, it is mostly useful only for ℓₘₐₓ of
+order dozens, rather than — say — the tens of thousands that CMB astronomy or
+lensing require, for example.
+
+Direct application and inversion of this matrix are used in the "direct"
+methods of ``s``-SHT transformations.  See [`SSHTDirect`](@ref) for details
+about the implementation.
+
+"""
+function ₛ𝐘(s, ℓₘₐₓ, T=Float64, Rθϕ=golden_ratio_spiral_rotors(s, ℓₘₐₓ, T))
+    Y, H_rec_coeffs, Hwedge, expimϕ = Yprep(ℓₘₐₓ, s, T, abs(s))
+    ₛ𝐘 = zeros(Complex{T}, length(Rθϕ), length(Y))
+    for (j1,j2) ∈ zip(axes(ₛ𝐘, 1), axes(Rθϕ, 1))
+        ₛ𝐘[j1, :] = Y!(Y, Rθϕ[j2], ℓₘₐₓ, s, H_rec_coeffs, Hwedge, expimϕ, abs(s))
+    end
+    ₛ𝐘
 end

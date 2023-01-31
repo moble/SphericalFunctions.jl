@@ -37,8 +37,10 @@
         Nφ = 18
         for (m, m2Y2m) in m_m2Y2m
             f1 = mapslices(ϕθ -> sYlm(s, ℓ, m, ϕθ[2], ϕθ[1]), phi_theta(Nφ, Nϑ, T), dims=[3])
-            f2 = mapslices(ϕθ -> m2Y2m(ϕθ[2], ϕθ[1]), phi_theta(Nφ, Nϑ, T), dims=[3])
+            f2 = mapslices(ϕθ -> NINJA.sYlm(s, ℓ, m, ϕθ[2], ϕθ[1]), phi_theta(Nφ, Nϑ, T), dims=[3])
+            f3 = mapslices(ϕθ -> m2Y2m(ϕθ[2], ϕθ[1]), phi_theta(Nφ, Nϑ, T), dims=[3])
             @test f1 ≈ f2 atol=10eps(T) rtol=10eps(T)
+            @test f1 ≈ f3 atol=10eps(T) rtol=10eps(T)
         end
     end
 

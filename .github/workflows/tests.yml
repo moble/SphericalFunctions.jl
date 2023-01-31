@@ -2,6 +2,9 @@ name: tests
 
 on: [push]
 
+env:
+  JULIA_NUM_THREADS: auto
+
 jobs:
   tests:
     name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ github.event_name }}
@@ -28,10 +31,11 @@ jobs:
         with:
           version: ${{ matrix.version }}
           show-versioninfo: true
+      - uses: julia-actions/cache@v1
       - uses: julia-actions/julia-buildpkg@latest
       - uses: julia-actions/julia-runtest@latest
       - uses: julia-actions/julia-processcoverage@latest
-      - uses: codecov/codecov-action@v1
+      - uses: codecov/codecov-action@v2
         if: "matrix.version == 'nightly' && matrix.os == 'ubuntu-latest'"
         with:
           file: lcov.info

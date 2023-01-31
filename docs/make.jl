@@ -2,7 +2,8 @@
 #   time julia --project=. make.jl && julia --project=. -e 'using LiveServer; serve(dir="build")'
 # assuming you are in this `docs` directory (otherwise point the project argument here)
 
-using Documenter, SphericalFunctions
+using SphericalFunctions
+using Documenter
 
 DocMeta.setdocmeta!(SphericalFunctions, :DocTestSetup, :(using SphericalFunctions); recursive=true)
 
@@ -27,6 +28,7 @@ makedocs(
 )
 
 deploydocs(
-    repo="github.com/moble/SphericalFunctions.jl.git",
-    devbranch="main"
+    repo="github.com/moble/SphericalFunctions.jl",
+    devbranch="main",
+    push_preview=true
 )

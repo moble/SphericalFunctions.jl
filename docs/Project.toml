@@ -9,4 +9,4 @@ SphericalFunctions = "af6d55de-b1f7-4743-b797-0829a72cf84e"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
-Documenter = "~0.26"
+Documenter = "~0.27"
