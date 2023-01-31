@@ -216,8 +216,11 @@ This provides initial values for the recursion to find
 [Kostelec & Rockmore](https://dx.doi.org/10.1007/s00041-008-9013-5).
 Specifically, this function computes values with ``\ell=m``.
 
-{}_{s}\lambda_{\ell,m}(\theta) := {}_{s}Y_{\ell,m}(\theta, 0) = (-1)^m\, \sqrt{\frac{2\ell+1}{4\pi}} d^\ell_{-m,s}(\theta)
-
+```math
+{}_{s}\lambda_{\ell,m}(\theta)
+    := {}_{s}Y_{\ell,m}(\theta, 0)
+    = (-1)^m\, \sqrt{\frac{2\ell+1}{4\pi}} d^\ell_{-m,s}(\theta)
+```
 """
 function λ_recursion_initialize(sin½θ::T, cos½θ::T, s, ℓ, m) where T
     if abs(s) > abs(m)

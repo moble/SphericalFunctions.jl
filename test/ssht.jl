@@ -196,6 +196,16 @@
                     (clenshaw_curtis_rings(2ℓmax+1, T), clenshaw_curtis(2ℓmax+1, T))
                 ]
                     𝒯 = SSHT(s, ℓmax; T=T, θ=θ, quadrature_weights=w, method="RS")
+                    p1 = [
+                        @SVector [θi, ϕi]
+                        for θi ∈ θ
+                        for ϕi ∈ LinRange(T(0), 2T(π), 2ℓmax+2)[begin:end-1]
+                    ]
+                    p2 = pixels(𝒯)
+                    @test p1 ≈ p2
+                    r1 = [from_spherical_coordinates(θϕ...) for θϕ ∈ p1]
+                    r2 = rotors(𝒯)
+                    @test r1 ≈ r2
                     let ℓmin = abs(s)
                         f = zeros(Complex{T}, SphericalFunctions.Ysize(ℓmin, ℓmax))
                         for ℓ in abs(s):ℓmax
@@ -236,7 +246,9 @@
                             LinearAlgebra.mul!(f′, 𝒯, f)
                             f′′ = 𝒯 * copy(f)
                             @test f′′ == f′
+                            LinearAlgebra.ldiv!(f′′, 𝒯, f′)
                             computed = 𝒯 \ copy(f′)
+                            @test f′′ == computed
                             explain(computed, expected, method, T, ℓmax, s, ℓ, m, ϵ)
                             @test computed ≈ expected atol=ϵ rtol=ϵ
                         end

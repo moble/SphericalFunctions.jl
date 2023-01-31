@@ -1,6 +1,8 @@
 using SphericalFunctions
 using Test
-using Random, FFTW, FastTransforms, OffsetArrays, Quaternionic, DoubleFloats, ProgressMeter
+using Random, FFTW, FastTransforms
+using OffsetArrays, StaticArrays, Quaternionic
+using DoubleFloats, ProgressMeter
 using LinearAlgebra, Base.Threads
 import Hwloc: num_physical_cores
 
