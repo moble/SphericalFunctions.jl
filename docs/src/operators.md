@@ -138,13 +138,13 @@ f_{\ell,m-1}\, \sqrt{(\ell-m+1)(\ell+m)}
 ```
 Note that this expression (and in particular its signs) more resembles the
 expression for ``L_- \left\{{}_{s}Y_{\ell,m}\right\}`` than for ``L_+
-\left\{{}_{s}Y_{\ell,m}\right\}``. Similar relations hold for the action of
+\left\{{}_{s}Y_{\ell,m}\right\}``.  Similar relations hold for the action of
 ``L_-``.
 
 [^2]:
     A technical note about the integrals above: the integrals should be taken
     over the appropriate space and with the appropriate weight such that the
-    SWSHs are orthonormal. In general, this integral should be over
+    SWSHs are orthonormal.  In general, this integral should be over
     ``\mathrm{Spin}(3)`` and weighted by ``1/2\pi`` so that the result will be
     either ``0`` or ``1``; in general the SWSHs are not truly orthonormal when
     integrated over an ``S^2`` subspace (nor even is the integral invariant).
@@ -170,6 +170,8 @@ for the spin-raising and -lowering operators:
 f_{\ell,m}\, \sqrt{(\ell-s)(\ell+s+1)}
 \end{aligned}
 ```
+Similarly ``\bar{\eth}`` — and ``R_\pm`` of course — obey this more "covariant"
+form of transformation.
 
 
 ## Module functions
