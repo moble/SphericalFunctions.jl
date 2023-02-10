@@ -18,6 +18,7 @@ makedocs(
     pages = [
         "Introduction" => "index.md",
         "Primary functions" => "manual.md",
+        "Differential operators" => "operators.md",
         "Utilities" => "utilities.md",
         "Notes" => map(
             s -> "notes/$(s)",
