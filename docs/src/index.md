@@ -17,13 +17,14 @@ elements, which will generally cause overflow or underflow beyond ℓ≈30 when
 using double precision, these recursion relations should be valid for far higher
 ℓ values.  More precisely, when using *this* package, `Inf` values appear
 starting at ℓ=22 for `Float16`, ℓ=183 for `Float32`, and ℓ=1474 for `Float64`.
-`BigFloat` also works, and presumably will not overflow for any ℓ value that
-could reasonably fit into computer memory — though it is far slower.  Also note
-that [`DoubleFloats`](https://github.com/JuliaMath/DoubleFloats.jl) will work,
-and achieve significantly greater accuracy (but no greater range) than
-`Float64`.  Using Julia's built-in `BigFloat` type will achieve far higher
-accuracy *and* range, but incurs memory-allocation costs.  Typically, results
-are accurate to roughly ℓ times the precision of the input quaternion.
+Julia's built-in `BigFloat` type also works, achieves very high accuracy, and
+presumably will not overflow for any ℓ value that could reasonably fit into
+computer memory — though it is far slower due to the memory allocation inherent
+to this type.  Also note that
+[`DoubleFloats`](https://github.com/JuliaMath/DoubleFloats.jl) will work, and
+achieve significantly greater accuracy (but no greater range) than `Float64`.
+In all cases, results are typically accurate to roughly ℓ times the precision of
+the input quaternion.
 
 The conventions for this package are described in detail on [this
 page](https://moble.github.io/spherical_functions/).

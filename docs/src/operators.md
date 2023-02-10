@@ -111,7 +111,7 @@ One important point to note is that mode weights transform "contravariantly"
 some operators.  For example, take the action of the ``L_+`` operator, which
 acts on a SWSH as
 ```math
-L_+ \left\{{}_{s}Y_{\ell,m}\right\} (R) = \sqrt{(\ell-m)(\ell+m+1))} {}_{s}Y_{\ell,m+1}(R).
+L_+ \left\{{}_{s}Y_{\ell,m}\right\} (R) = \sqrt{(\ell-m)(\ell+m+1)} {}_{s}Y_{\ell,m+1}(R).
 ```
 We can use this to derive the mode weights of a general spin-weighted function
 ``f`` under the action of this operator:[^2]
@@ -127,19 +127,19 @@ We can use this to derive the mode weights of a general spin-weighted function
 &=
 \sum_{\ell',m'} f_{\ell',m'}\, \int \left\{L_+ {}_{s}Y_{\ell',m'}(R)\right\}\, {}_{s}\bar{Y}_{\ell,m}(R)\, dR \\
 &=
-\sum_{\ell',m'} f_{\ell',m'}\, \int \left\{\sqrt{(\ell'-m')(\ell'+m'+1))} {}_{s}Y_{\ell',m'+1}(R)\right\}\, {}_{s}\bar{Y}_{\ell,m}(R)\, dR \\
+\sum_{\ell',m'} f_{\ell',m'}\, \int \left\{\sqrt{(\ell'-m')(\ell'+m'+1)} {}_{s}Y_{\ell',m'+1}(R)\right\}\, {}_{s}\bar{Y}_{\ell,m}(R)\, dR \\
 &=
-\sum_{\ell',m'} f_{\ell',m'}\, \sqrt{(\ell'-m')(\ell'+m'+1))} \int {}_{s}Y_{\ell',m'+1}(R)\, {}_{s}\bar{Y}_{\ell,m}(R)\, dR \\
+\sum_{\ell',m'} f_{\ell',m'}\, \sqrt{(\ell'-m')(\ell'+m'+1)} \int {}_{s}Y_{\ell',m'+1}(R)\, {}_{s}\bar{Y}_{\ell,m}(R)\, dR \\
 &=
-\sum_{\ell',m'} f_{\ell',m'}\, \sqrt{(\ell'-m')(\ell'+m'+1))} \delta_{\ell,\ell'} \delta_{m,m'+1} \\
+\sum_{\ell',m'} f_{\ell',m'}\, \sqrt{(\ell'-m')(\ell'+m'+1)} \delta_{\ell,\ell'} \delta_{m,m'+1} \\
 &=
-f_{\ell,m-1}\, \sqrt{(\ell-m+1)(\ell+m))}
+f_{\ell,m-1}\, \sqrt{(\ell-m+1)(\ell+m)}
 \end{aligned}
 ```
 Note that this expression (and in particular its signs) more resembles the
 expression for ``L_- \left\{{}_{s}Y_{\ell,m}\right\}`` than for ``L_+
-\left\{{}_{s}Y_{\ell,m}\right\}``. Similar relations hold for some other
-operators.
+\left\{{}_{s}Y_{\ell,m}\right\}``. Similar relations hold for the action of
+``L_-``.
 
 [^2]:
     A technical note about the integrals above: the integrals should be taken
@@ -167,7 +167,7 @@ for the spin-raising and -lowering operators:
 &=
 \sum_{\ell',m'} f_{\ell',m'}\, \sqrt{(\ell'-s)(\ell'+s+1)} \delta_{\ell,\ell'} \delta_{m,m'} \\
 &=
-f_{\ell,m}\, \sqrt{(\ell-s)(\ell+s+1))}
+f_{\ell,m}\, \sqrt{(\ell-s)(\ell+s+1)}
 \end{aligned}
 ```
 
