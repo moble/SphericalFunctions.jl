@@ -1,18 +1,5 @@
 @testset verbose=true "Operators" begin
 
-    function explain(computed, expected, info, T, s, ℓₘᵢₙ, ℓₘₐₓ, ϵ)
-        if ≉(computed, expected, atol=ϵ, rtol=ϵ)
-            @show info T s ℓₘᵢₙ ℓₘₐₓ ϵ
-            comp = copy(computed)
-            @. comp[abs(comp)<ϵ]=0
-            #@show comp expected
-            display(comp)
-            display(expected)
-            println("max_diff = ", maximum(abs, computed .- expected), ";")
-            println()
-        end
-    end
-
     @testset "Casimir $T" for T ∈ [Float32, Float64, Double64, BigFloat]
         ϵ = 100 * eps(T)
         for s ∈ -3:3
@@ -38,7 +25,6 @@
                             .+ R₋(s-1, ℓₘᵢₙ, ℓₘₐₓ, T) * R₊(s, ℓₘᵢₙ, ℓₘₐₓ, T)
                             .+ 2Rz(s, ℓₘᵢₙ, ℓₘₐₓ, T) * Rz(s, ℓₘᵢₙ, ℓₘₐₓ, T)
                         ) / 2)
-                        explain(R1, R2, "Casimir($s)", T, s, ℓₘᵢₙ, ℓₘₐₓ, ϵ)
                         @test R1 ≈ R2 atol=ϵ rtol=ϵ
                     end
                 end
@@ -63,12 +49,10 @@
                             ðY = 𝒯₊ * (ð(s, ℓₘᵢₙ, ℓₘₐₓ, T) * Y)[i₊:end]
                             Y₊ = 𝒯₊ * Y[i₊:end]
                             c₊ = ℓ < abs(s+1) ? zero(T) : √T((ℓ-s)*(ℓ+s+1))
-                            explain(ðY, c₊ * Y₊, "ð($s, $ℓ, $m)", T, s, ℓₘᵢₙ, ℓₘₐₓ, ϵ)
                             @test ðY ≈ c₊ * Y₊ atol=ϵ rtol=ϵ
                             ð̄Y = 𝒯₋ * (ð̄(s, ℓₘᵢₙ, ℓₘₐₓ, T) * Y)[i₋:end]
                             Y₋ = 𝒯₋ * Y[i₋:end]
                             c₋ = ℓ < abs(s-1) ? zero(T) : -√T((ℓ+s)*(ℓ-s+1))
-                            explain(ð̄Y, c₋ * Y₋, "ð̄($s, $ℓ, $m)", T, s, ℓₘᵢₙ, ℓₘₐₓ, ϵ)
                             @test ð̄Y ≈ c₋ * Y₋ atol=ϵ rtol=ϵ
                         end
                     end
@@ -93,7 +77,6 @@
                             let O²=O²(s, ℓₘᵢₙ, ℓₘₐₓ, T),
                                 Oᵢ=Oᵢ(s, ℓₘᵢₙ, ℓₘₐₓ, T)
                                 # [O², Oᵢ] = 0
-                                explain(O²*Oᵢ-Oᵢ*O², 0*O², "O²", T, s, ℓₘᵢₙ, ℓₘₐₓ, ϵ)
                                 @test O²*Oᵢ-Oᵢ*O² ≈ 0*O² atol=ϵ rtol=ϵ
                             end
                         end
