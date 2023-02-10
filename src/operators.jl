@@ -18,9 +18,8 @@ In terms of the SWSHs, we can write the action of ``L^2`` as
 L^2 {}_{s}Y_{\ell,m} = \ell\,(\ell+1) {}_{s}Y_{\ell,m}
 ```
 
-See also [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref),
-[`R²`](@ref), [`Rz`](@ref), [`R₊`](@ref), [`R₋`](@ref),
-[`ð`](@ref), [`ð̄`](@ref).
+See also [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`R²`](@ref), [`Rz`](@ref), [`R₊`](@ref),
+[`R₋`](@ref), [`ð`](@ref), [`ð̄`](@ref).
 """
 function L²(s, ℓₘᵢₙ, ℓₘₐₓ, T=Float64)
     Diagonal(T[ℓ < abs(s) ? zero(m) : ℓ*(ℓ+1) for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ for m ∈ -ℓ:ℓ])
@@ -31,8 +30,8 @@ end
     Lz(s, ℓₘᵢₙ, ℓₘₐₓ, [T])
 
 Compute the angular-momentum operator associated with the ``z`` direction.  This is the
-standard ``L_z`` operator, familiar from basic physics, extended to work with SWSHs.
-Note that this is the left Lie derivative; see [`Rz`](@ref) for the equivalent right Lie
+standard ``L_z`` operator, familiar from basic physics, extended to work with SWSHs.  Note
+that this is the left Lie derivative; see [`Rz`](@ref) for the equivalent right Lie
 derivative.  See [the documentation](/operators/) for more details.
 
 In terms of the SWSHs, we can write the action of ``L_z`` as
@@ -40,9 +39,8 @@ In terms of the SWSHs, we can write the action of ``L_z`` as
 L_z {}_{s}Y_{\ell,m} = m\, {}_{s}Y_{\ell,m}
 ```
 
-See also [`L²`](@ref), [`L₊`](@ref), [`L₋`](@ref),
-[`R²`](@ref), [`Rz`](@ref), [`R₊`](@ref), [`R₋`](@ref),
-[`ð`](@ref), [`ð̄`](@ref).
+See also [`L²`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`R²`](@ref), [`Rz`](@ref), [`R₊`](@ref),
+[`R₋`](@ref), [`ð`](@ref), [`ð̄`](@ref).
 """
 function Lz(s, ℓₘᵢₙ, ℓₘₐₓ, T=Float64)
     Diagonal(T[ℓ < abs(s) ? zero(m) : m for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ for m ∈ -ℓ:ℓ])
@@ -58,8 +56,8 @@ derivative; see [`R₊`](@ref) for the equivalent right Lie derivative.  See [th
 documentation](/operators/) for more details.
 
 We define ``L_+`` to be the raising operator for the left Lie derivative with respect to
-rotation about ``z``: ``L_z``.  By definition, this implies the commutator relation
-``[L_z, L_+] = L_+``, which allows us to derive ``L_+ = L_x + i\, L_y.``
+rotation about ``z``: ``L_z``.  By definition, this implies the commutator relation ``[L_z,
+L_+] = L_+``, which allows us to derive ``L_+ = L_x + i\, L_y.``
 
 In terms of the SWSHs, we can write the action of ``L_+`` as
 ```math
@@ -70,9 +68,8 @@ Consequently, the *mode weights* of a function are affected as
 \left\{L_+(f)\right\}_{s,\ell,m} = \sqrt{(\ell+m)(\ell-m+1)}\,\left\{f\right\}_{s,\ell,m-1}.
 ```
 
-See also [`L²`](@ref), [`Lz`](@ref), [`L₋`](@ref),
-[`R²`](@ref), [`Rz`](@ref), [`R₊`](@ref), [`R₋`](@ref),
-[`ð`](@ref), [`ð̄`](@ref).
+See also [`L²`](@ref), [`Lz`](@ref), [`L₋`](@ref), [`R²`](@ref), [`Rz`](@ref), [`R₊`](@ref),
+[`R₋`](@ref), [`ð`](@ref), [`ð̄`](@ref).
 """
 function L₊(s, ℓₘᵢₙ, ℓₘₐₓ, T=Float64)
     Bidiagonal(
@@ -95,8 +92,8 @@ derivative; see [`R₋`](@ref) for the equivalent right Lie derivative.  See [th
 documentation](/operators/) for more details.
 
 We define ``L_-`` to be the lowering operator for the left Lie derivative with respect to
-rotation about ``z``: ``L_z``.  By definition, this implies the commutator relation
-``[L_z, L_-] = -L_-``, which allows us to derive ``L_- = L_x - i\, L_y.``
+rotation about ``z``: ``L_z``.  By definition, this implies the commutator relation ``[L_z,
+L_-] = -L_-``, which allows us to derive ``L_- = L_x - i\, L_y.``
 
 In terms of the SWSHs, we can write the action of ``L_-`` as
 ```math
@@ -107,9 +104,8 @@ Consequently, the *mode weights* of a function are affected as
 \left\{L_-(f)\right\}_{s,\ell,m} = \sqrt{(\ell-m)(\ell+m+1)}\,\left\{f\right\}_{s,\ell,m+1}.
 ```
 
-See also [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref),
-[`R²`](@ref), [`Rz`](@ref), [`R₊`](@ref), [`R₋`](@ref),
-[`ð`](@ref), [`ð̄`](@ref).
+See also [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`R²`](@ref), [`Rz`](@ref),
+[`R₊`](@ref), [`R₋`](@ref), [`ð`](@ref), [`ð̄`](@ref).
 """
 function L₋(s, ℓₘᵢₙ, ℓₘₐₓ, T=Float64)
     Bidiagonal(
@@ -145,9 +141,8 @@ In terms of the SWSHs, we can write the action of ``R^2`` as
 R^2 {}_{s}Y_{\ell,m} = \ell\,(\ell+1) {}_{s}Y_{\ell,m}
 ```
 
-See also [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref),
-[`Rz`](@ref), [`R₊`](@ref), [`R₋`](@ref), [`ð`](@ref),
-[`ð̄`](@ref).
+See also [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`Rz`](@ref), [`R₊`](@ref),
+[`R₋`](@ref), [`ð`](@ref), [`ð̄`](@ref).
 """
 function R²(s, ℓₘᵢₙ, ℓₘₐₓ, T=Float64)
     Diagonal(T[ℓ < abs(s) ? zero(ℓ) : ℓ*(ℓ+1) for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ for m ∈ -ℓ:ℓ])
@@ -172,9 +167,8 @@ Note the unfortunate sign of ``s``, which seems to be opposite to what we expect
 from the choice of definition of ``s`` in [the original paper by Newman and
 Penrose](https://dx.doi.org/10.1063/1.1931221).
 
-See also [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref),
-[`R²`](@ref), [`R₊`](@ref), [`R₋`](@ref), [`ð`](@ref),
-[`ð̄`](@ref).
+See also [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`R²`](@ref), [`R₊`](@ref),
+[`R₋`](@ref), [`ð`](@ref), [`ð̄`](@ref).
 """
 function Rz(s, ℓₘᵢₙ, ℓₘₐₓ, T=Float64)
     Diagonal(T[ℓ < abs(s) ? zero(ℓ) : -s for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ for m ∈ -ℓ:ℓ])
@@ -192,8 +186,8 @@ for the equivalent left Lie derivative.  See [the documentation](/operators/) fo
 details.
 
 We define ``R_+`` to be the raising operator for the right Lie derivative with respect to
-rotation about ``z``: ``R_z``.  By definition, this implies the commutator relation
-``[R_z, R_+] = R_+``, which allows us to derive ``R_+ = R_x - i\, R_y.``
+rotation about ``z``: ``R_z``.  By definition, this implies the commutator relation ``[R_z,
+R_+] = R_+``, which allows us to derive ``R_+ = R_x - i\, R_y.``
 
 In terms of the SWSHs, we can write the action of ``R_+`` as
 ```math
@@ -208,9 +202,8 @@ Because of the unfortunate sign of ``s`` arising from the choice of definition o
 *lowering* operator for ``s``, though it really is a *raising* operator for ``R_z``, and
 raises the eigenvalue of the corresponding Wigner matrix.
 
-See also [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref),
-[`R²`](@ref), [`Rz`](@ref), [`R₋`](@ref), [`ð`](@ref),
-[`ð̄`](@ref).
+See also [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`R²`](@ref), [`Rz`](@ref),
+[`R₋`](@ref), [`ð`](@ref), [`ð̄`](@ref).
 """
 function R₊(s, ℓₘᵢₙ, ℓₘₐₓ, T=Float64)
     s′ = max(abs(s), abs(s-1))
@@ -234,8 +227,8 @@ for the equivalent left Lie derivative.  See [the documentation](/operators/) fo
 details.
 
 We define ``R_-`` to be the raising operator for the right Lie derivative with respect to
-rotation about ``z``: ``R_z``.  By definition, this implies the commutator relation
-``[R_z, R_-] = -R_-``, which allows us to derive ``R_- = R_x + i\, R_y.``
+rotation about ``z``: ``R_z``.  By definition, this implies the commutator relation ``[R_z,
+R_-] = -R_-``, which allows us to derive ``R_- = R_x + i\, R_y.``
 
 In terms of the SWSHs, we can write the action of ``R_-`` as
 ```math
@@ -247,12 +240,12 @@ Consequently, the *mode weights* of a function are affected as
 ```
 Because of the unfortunate sign of ``s`` arising from the choice of definition of ``s`` in
 [the original paper by Newman and Penrose](https://dx.doi.org/10.1063/1.1931221), this is a
-*raising* operator for ``s``, though it really is a *lowering* operator for ``R_z``, and lowers the eigenvalue of the corresponding Wigner matrix - though that raises
-the eigenvalue of the corresponding Wigner matrix.
+*raising* operator for ``s``, though it really is a *lowering* operator for ``R_z``, and
+lowers the eigenvalue of the corresponding Wigner matrix - though that raises the eigenvalue
+of the corresponding Wigner matrix.
 
-See also [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref),
-[`R²`](@ref), [`Rz`](@ref), [`R₊`](@ref), [`ð`](@ref),
-[`ð̄`](@ref).
+See also [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`R²`](@ref), [`Rz`](@ref),
+[`R₊`](@ref), [`ð`](@ref), [`ð̄`](@ref).
 """
 function R₋(s, ℓₘᵢₙ, ℓₘₐₓ, T=Float64)
     s′ = max(abs(s), abs(s+1))
@@ -287,8 +280,8 @@ Consequently, the *mode weights* of a function are affected as
 \left\{\eth f\right\}_{s,\ell,m} = \sqrt{(\ell-s)(\ell+s+1)}\,\left\{f\right\}_{s+1,\ell,m}.
 ```
 
-See also [`ð̄`](@ref),  [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref),
-[`L₋`](@ref), [`R²`](@ref), [`Rz`](@ref), [`R₊`](@ref).
+See also [`ð̄`](@ref),  [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref),
+[`R²`](@ref), [`Rz`](@ref), [`R₊`](@ref).
 """
 function ð(s, ℓₘᵢₙ, ℓₘₐₓ, T=Float64)
     R₋(s, ℓₘᵢₙ, ℓₘₐₓ, T)
@@ -305,10 +298,9 @@ Penrose](https://dx.doi.org/10.1063/1.1931221), but is more completely defined i
 paper](https://arxiv.org/abs/1604.08140).  It is opposite to [`R₊`](@ref) — meaning that
 ``\bar{\eth} = -R₊``.  Refer to that function's documentation for more details.
 
-By definition, the spin-lowering operator satisfies the commutator relation
-``[S, \bar{\eth}] = -\bar{\eth}`` (where ``S`` is the spin operator, which just multiplies
-the function by its spin).  In terms of the SWSHs, we can write the action of ``\bar{\eth}``
-as
+By definition, the spin-lowering operator satisfies the commutator relation ``[S,
+\bar{\eth}] = -\bar{\eth}`` (where ``S`` is the spin operator, which just multiplies the
+function by its spin).  In terms of the SWSHs, we can write the action of ``\bar{\eth}`` as
 ```math
 \bar{\eth} {}_{s}Y_{\ell,m} = -\sqrt{(\ell+s)(\ell-s+1)} {}_{s-1}Y_{\ell,m}.
 ```
@@ -318,8 +310,8 @@ Consequently, the *mode weights* of a function are affected as
 = -\sqrt{(\ell-s)(\ell+s+1)}\,\left\{f\right\}_{s+1,\ell,m}.
 ```
 
-See also [`ð`](@ref),  [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref),
-[`L₋`](@ref), [`R²`](@ref), [`Rz`](@ref), [`R₊`](@ref).
+See also [`ð`](@ref),  [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`R²`](@ref),
+[`Rz`](@ref), [`R₊`](@ref).
 """
 function ð̄(s, ℓₘᵢₙ, ℓₘₐₓ, T=Float64)
     -R₊(s, ℓₘᵢₙ, ℓₘₐₓ, T)
