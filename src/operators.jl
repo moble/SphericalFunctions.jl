@@ -75,21 +75,6 @@ See also [`L²`](@ref), [`Lz`](@ref), [`L₋`](@ref),
 [`ð`](@ref), [`ð̄`](@ref).
 """
 function L₊(s, ℓₘᵢₙ, ℓₘₐₓ, T=Float64)
-    # sYlm = (-1)**s sqrt((2ell+1)/(4pi)) D{l,m,-s}
-    # Lplus {s}Y{l,m} = (-1)**s sqrt((2ell+1)/(4pi)) Lplus D{l,m,-s}
-    #                 = (-1)**s sqrt((2ell+1)/(4pi)) sqrt((l-m)(l+m+1)) D{l,m+1,-s}
-    #                 = sqrt((l-m)(l+m+1)) (-1)**s sqrt((2ell+1)/(4pi)) D{l,m+1,-s}
-    #                 = sqrt((l-m)(l+m+1)) {s}Y{l,m+1}
-    # {L+ f}{s', l', m'}
-    #    = integral(L+ f {s'}Ybar{l',m'})  # Integral over rotation group
-    #    = integral(L+ sum(f{s,l,m}{s}Y{l,m}) {s'}Ybar{l',m'})
-    #    = sum(f{s,l,m} integral(L+ {s}Y{l,m} {s'}Ybar{l',m'}))
-    #    = sum(f{s,l,m} integral(sqrt((l-m)(l+m+1)) {s}Y{l,m+1} {s'}Ybar{l',m'}))
-    #    = sum(sqrt((l-m)(l+m+1)) f{s,l,m} integral({s}Y{l,m+1} {s'}Ybar{l',m'}))
-    #    = sum(sqrt((l-m)(l+m+1)) f{s,l,m} delta{s, s'} delta{m+1, m'} delta{l, l'}
-    #    = sqrt((l'-(m'-1))(l'+(m'-1)+1)) f{s',l',m'-1}
-    #    = sqrt((l'+m')(l'-m'+1)) f{s',l',m'-1}
-    # {L+ f}{s, l, m} = sqrt((l+m)(l-m+1)) f{s,l,m-1}
     Bidiagonal(
         zeros(T, (ℓₘₐₓ+1)^2-ℓₘᵢₙ^2),
         T[
@@ -127,21 +112,6 @@ See also [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref),
 [`ð`](@ref), [`ð̄`](@ref).
 """
 function L₋(s, ℓₘᵢₙ, ℓₘₐₓ, T=Float64)
-    # sYlm = (-1)**s sqrt((2ell+1)/(4pi)) D{l,m,-s}
-    # Lminus {s}Y{l,m} = (-1)**s sqrt((2ell+1)/(4pi)) Lminus D{l,m,-s}
-    #                  = (-1)**s sqrt((2ell+1)/(4pi)) sqrt((l+m)(l-m+1)) D{l,m-1,-s}
-    #                  = sqrt((l+m)(l-m+1)) (-1)**s sqrt((2ell+1)/(4pi)) D{l,m-1,-s}
-    #                  = sqrt((l+m)(l-m+1)) {s}Y{l,m-1}
-    # {L- f}{s', l', m'}
-    #    = integral(L- f {s'}Ybar{l',m'})  # Integral over rotation group
-    #    = integral(L- sum(f{s,l,m}{s}Y{l,m}) {s'}Ybar{l',m'})
-    #    = sum(f{s,l,m} integral(L- {s}Y{l,m} {s'}Ybar{l',m'}))
-    #    = sum(f{s,l,m} integral(sqrt((l+m)(l-m+1)) {s}Y{l,m-1} {s'}Ybar{l',m'}))
-    #    = sum(sqrt((l+m)(l-m+1)) f{s,l,m} integral({s}Y{l,m-1} {s'}Ybar{l',m'}))
-    #    = sum(sqrt((l+m)(l-m+1)) f{s,l,m} delta{s, s'} delta{m-1, m'} delta{l, l'}
-    #    = sqrt((l'+(m'+1))(l'-(m'+1)+1)) f{s',l',m'+1}
-    #    = sqrt((l'-m')(l'+m'+1)) f{s',l',m'+1}
-    # {L- f}{s, l, m} = sqrt((l-m)(l+m+1)) f{s,l,m+1}
     Bidiagonal(
         zeros(T, (ℓₘₐₓ+1)^2-ℓₘᵢₙ^2),
         T[
@@ -231,38 +201,22 @@ R_+ {}_{s}Y_{\ell,m} = \sqrt{(\ell+s)(\ell-s+1)}\, {}_{s-1}Y_{\ell,m}
 ```
 Consequently, the *mode weights* of a function are affected as
 ```math
-\left\{R_+(f)\right\}_{s,\ell,m} = \sqrt{(\ell-s)(\ell+s+1)}\,\left\{f\right\}_{s+1,\ell,m}.
+\left\{R_+(f)\right\}_{s,\ell,m} = \sqrt{(\ell+s)(\ell-s+1)}\,\left\{f\right\}_{s-1,\ell,m}.
 ```
 Because of the unfortunate sign of ``s`` arising from the choice of definition of ``s`` in
-[the original paper by Newman and Penrose](https://dx.doi.org/10.1063/1.1931221), this looks
-like a *lowering* operator for ``s``.  But it really is a raising operator for ``R_z``, and
-raises the eigenvalue of the corresponding Wigner matrix - though that lowers the value of
-`s`.  This is the critical distinction: it is a *raising operator for ``R_z``*, but also a
-*spin-lowering operator*.
+[the original paper by Newman and Penrose](https://dx.doi.org/10.1063/1.1931221), this is a
+*lowering* operator for ``s``, though it really is a *raising* operator for ``R_z``, and
+raises the eigenvalue of the corresponding Wigner matrix.
 
 See also [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref),
 [`R²`](@ref), [`Rz`](@ref), [`R₋`](@ref), [`ð`](@ref),
 [`ð̄`](@ref).
 """
 function R₊(s, ℓₘᵢₙ, ℓₘₐₓ, T=Float64)
-    # sYlm = (-1)**s sqrt((2ell+1)/(4pi)) D{l,m,-s}
-    # Rplus {s}Y{l,m} = (-1)**s sqrt((2ell+1)/(4pi)) Rplus D{l,m,-s}
-    #                 = (-1)**s sqrt((2ell+1)/(4pi)) sqrt((l+s)(l-s+1)) D{l,m,-s+1}
-    #                 = sqrt((l+s)(l-s+1)) (-1)**s sqrt((2ell+1)/(4pi)) D{l,m,-s+1}
-    #                 = sqrt((l+s)(l-s+1)) {s-1}Y{l,m}
-    # {R+f}{s', l', m'}
-    #    = integral(R+ f {s'}Ybar{l',m'})  # Integral over rotation group
-    #    = integral(R+ sum(f{s,l,m}{s}Y{l,m}) {s'}Ybar{l',m'})
-    #    = sum(f{s,l,m} integral(R+ {s}Y{l,m} {s'}Ybar{l',m'}))
-    #    = sum(f{s,l,m} integral(sqrt((l+s)(l-s+1)) {s-1}Y{l,m} {s'}Ybar{l',m'}))
-    #    = sum(sqrt((l+s)(l-s+1)) f{s,l,m} integral({s-1}Y{l,m} {s'}Ybar{l',m'}))
-    #    = sum(sqrt((l+s)(l-s+1)) f{s,l,m} delta{s-1, s'} delta{m, m'} delta{l, l'}
-    #    = sqrt((l'+s'+1)(l'-(s'+1)+1) f{s'+1,l',m'}
-    # {R+f}{s, l, m} = sqrt((l-s)(l+s+1)) f{s+1,l,m}
     s′ = max(abs(s), abs(s-1))
     Diagonal(
         [
-            ℓ < s′ ? zero(T) : √T((ℓ-s)*(ℓ+s+1))
+            ℓ < s′ ? zero(T) : √T((ℓ+s)*(ℓ-s+1))
             for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ for m ∈ -ℓ:ℓ
         ]
     )
@@ -289,39 +243,22 @@ R_- {}_{s}Y_{\ell,m} = \sqrt{(\ell-s)(\ell+s+1)}\, {}_{s+1}Y_{\ell,m}
 ```
 Consequently, the *mode weights* of a function are affected as
 ```math
-\left\{R_-(f)\right\}_{s,\ell,m} = \sqrt{(\ell+s)(\ell-s+1)}\,\left\{f\right\}_{s-1,\ell,m}.
+\left\{R_-(f)\right\}_{s,\ell,m} = \sqrt{(\ell-s)(\ell+s+1)}\,\left\{f\right\}_{s+1,\ell,m}.
 ```
 Because of the unfortunate sign of ``s`` arising from the choice of definition of ``s`` in
-[the original paper by Newman and Penrose](https://dx.doi.org/10.1063/1.1931221), this
-looks like a *raising* operator for ``s``.  But it really is a lowering operator for
-``R_z``, and lowers the eigenvalue of the corresponding Wigner matrix - though that raises
-the value of `s`.  This is the critical distinction: it is a *lowering operator for
-``R_z``*, but also a *spin-raising operator*.
+[the original paper by Newman and Penrose](https://dx.doi.org/10.1063/1.1931221), this is a
+*raising* operator for ``s``, though it really is a *lowering* operator for ``R_z``, and lowers the eigenvalue of the corresponding Wigner matrix - though that raises
+the eigenvalue of the corresponding Wigner matrix.
 
 See also [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref),
 [`R²`](@ref), [`Rz`](@ref), [`R₊`](@ref), [`ð`](@ref),
 [`ð̄`](@ref).
 """
 function R₋(s, ℓₘᵢₙ, ℓₘₐₓ, T=Float64)
-    # sYlm = (-1)**s sqrt((2ell+1)/(4pi)) D{l,m,-s}
-    # Rminus {s}Y{l,m} = (-1)**s sqrt((2ell+1)/(4pi)) Rminus D{l,m,-s}
-    #                  = (-1)**s sqrt((2ell+1)/(4pi)) sqrt((l-s)(l+s+1)) D{l,m,-s-1}
-    #                  = sqrt((l-s)(l+s+1)) (-1)**s sqrt((2ell+1)/(4pi)) D{l,m,-s-1}
-    #                  = sqrt((l-s)(l+s+1)) {s+1}Y{l,m}
-    # {R- f}{s', l', m'}
-    #    = integral(R- f {s'}Ybar{l',m'})  # Integral over rotation group
-    #    = integral(R- sum(f{s,l,m}{s}Y{l,m}) {s'}Ybar{l',m'})
-    #    = sum(f{s,l,m} integral(R- {s}Y{l,m} {s'}Ybar{l',m'}))
-    #    = sum(f{s,l,m} integral(sqrt((l-s)(l+s+1)) {s+1}Y{l,m} {s'}Ybar{l',m'}))
-    #    = sum(sqrt((l-s)(l+s+1)) f{s,l,m} integral({s+1}Y{l,m} {s'}Ybar{l',m'}))
-    #    = sum(sqrt((l-s)(l+s+1)) f{s,l,m} delta{s+1, s'} delta{m, m'} delta{l, l'}
-    #    = sqrt((l'-(s'-1))(l'+(s'-1)+1)) f{s'-1,l',m'}
-    #    = sqrt((l'-s'+1)(l'+s')) f{s'-1,l',m'}
-    # {R- f}{s, l, m} = sqrt((l+s)(l-s+1)) f{s-1,l,m}
     s′ = max(abs(s), abs(s+1))
     Diagonal(
         [
-            ℓ < s′ ? zero(T) : √T((ℓ+s)*(ℓ-s+1))
+            ℓ < s′ ? zero(T) : √T((ℓ-s)*(ℓ+s+1))
             for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ for m ∈ -ℓ:ℓ
         ]
     )
@@ -347,7 +284,7 @@ In terms of the SWSHs, we can write the action of ``\eth`` as
 ```
 Consequently, the *mode weights* of a function are affected as
 ```math
-\left\{\eth f\right\}_{s,\ell,m} = \sqrt{(\ell+s)(\ell-s+1)}\,\left\{f\right\}_{s-1,\ell,m}.
+\left\{\eth f\right\}_{s,\ell,m} = \sqrt{(\ell-s)(\ell+s+1)}\,\left\{f\right\}_{s+1,\ell,m}.
 ```
 
 See also [`ð̄`](@ref),  [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref),
