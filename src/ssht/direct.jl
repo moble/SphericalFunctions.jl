@@ -22,18 +22,18 @@ of speed and accuracy.  However, this advantage quickly falls away.  A warning w
 accurate choice.
 
 """
-struct SSHTDirect{T<:Real, Inplace} <: SSHT{T}
+struct SSHTDirect{T<:Real, Inplace, Tdecomp} <: SSHT{T}
     """Spin weight"""
-    s
+    s::Integer
 
     """Highest ℓ value present in the data"""
-    ℓₘₐₓ
+    ℓₘₐₓ::Integer
 
     """Rotors at which to evalue the ``s``-SH"""
-    Rθϕ
+    Rθϕ::Vector{Rotor{T}}
 
     """Spin-weighted spherical harmonic values"""
-    ₛ𝐘
+    ₛ𝐘::Matrix{Complex{T}}
 
     """Decomposed ₛ𝐘 matrix used in inversion
 
@@ -43,7 +43,7 @@ struct SSHTDirect{T<:Real, Inplace} <: SSHT{T}
     but have an error level roughly 10 times lower.  Also note that QR decomposition does not
     currently scale effectively with multiple threads.
     """
-    ₛ𝐘decomposition
+    ₛ𝐘decomposition::Tdecomp
 end
 
 function SSHTDirect(
@@ -66,7 +66,8 @@ function SSHTDirect(
         """
     end
     let ₛ𝐘 = ₛ𝐘(s, ℓₘₐₓ, T, Rθϕ)
-        SSHTDirect{T, inplace}(s, ℓₘₐₓ, Rθϕ, ₛ𝐘, decomposition(ₛ𝐘))
+        ₛ𝐘decomp = decomposition(ₛ𝐘)
+        SSHTDirect{T, inplace, typeof(ₛ𝐘decomp)}(s, ℓₘₐₓ, Rθϕ, ₛ𝐘, ₛ𝐘decomp)
     end
 end
 
