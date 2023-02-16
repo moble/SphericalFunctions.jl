@@ -47,9 +47,10 @@
         # Check what `show` looks like
         @testset "SSHT show" begin
             let io=IOBuffer(), s=-2, ℓmax=8, T=Float64, method="Direct"
+                TD = "LU{ComplexF64, Matrix{ComplexF64}, Vector{Int64}}"
                 for inplace ∈ [true, false]
-                    expected = "SphericalFunctions.SSHT$method{$T, $inplace}($s, $ℓmax)"
-                    𝒯 = SSHT(s, ℓmax; T=T, method=method, inplace=inplace)
+                    expected = "SphericalFunctions.SSHT$method{$T, $inplace, $TD}($s, $ℓmax)"
+                    𝒯 = SSHT(s, ℓmax; T, method, inplace)
                     Base.show(io, MIME("text/plain"), 𝒯)
                     @test String(take!(io)) == expected
                 end

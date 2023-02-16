@@ -208,7 +208,7 @@ See also [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`R²`](@r
 function R₊(s, ℓₘᵢₙ, ℓₘₐₓ, T=Float64)
     s′ = max(abs(s), abs(s-1))
     Diagonal(
-        [
+        T[
             ℓ < s′ ? zero(T) : √T((ℓ+s)*(ℓ-s+1))
             for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ for m ∈ -ℓ:ℓ
         ]
@@ -250,7 +250,7 @@ See also [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`R²`](@r
 function R₋(s, ℓₘᵢₙ, ℓₘₐₓ, T=Float64)
     s′ = max(abs(s), abs(s+1))
     Diagonal(
-        [
+        T[
             ℓ < s′ ? zero(T) : √T((ℓ-s)*(ℓ+s+1))
             for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ for m ∈ -ℓ:ℓ
         ]
