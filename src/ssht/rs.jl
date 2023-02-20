@@ -76,12 +76,12 @@ respectively.  They are passed to
 [`AbstractFFTs.plan_fft`](https://juliamath.github.io/AbstractFFTs.jl/stable/api/#AbstractFFTs.plan_fft).
 """
 function SSHTRS(
-    s, ℓₘₐₓ; T=Float64,
+    s, ℓₘₐₓ; T::Type{TT}=Float64,
     θ=fejer1_rings(2ℓₘₐₓ+1, T),
     quadrature_weights=fejer1(length(θ), T),
     Nϕ=fill(2ℓₘₐₓ+1, length(θ)),
     plan_fft_flags=FFTW.ESTIMATE, plan_fft_timelimit=Inf
-)
+) where TT
     @assert size(θ) == size(quadrature_weights) """
         size(θ) should equal size(quadrature_weights)
         size(θ) = $(size(θ))
@@ -103,13 +103,13 @@ function SSHTRS(
     iθ = let iθ = cumsum(Nϕ)
         [a:b for (a,b) in eachrow(hcat([1; iθ[begin:end-1].+1], iθ))]
     end
-    Gs = [Vector{Complex{T}}(undef, N) for N ∈ Nϕ]
-    plans = if T ∈ [Float64, Float32]  # Only supported types in FFTW
+    Gs = [Vector{Complex{TT}}(undef, N) for N ∈ Nϕ]
+    plans = if TT ∈ [Float64, Float32]  # Only supported types in FFTW
         [plan_fft!(G, flags=plan_fft_flags, timelimit=plan_fft_timelimit) for G ∈ Gs]
     else
         [plan_fft!(G) for G ∈ Gs]
     end
-    SSHTRS{T}(s, ℓₘₐₓ, θ, quadrature_weights, Nϕ, iθ, Gs, plans)
+    SSHTRS{TT}(s, ℓₘₐₓ, θ, quadrature_weights, Nϕ, iθ, Gs, plans)
 end
 
 function pixels(𝒯::SSHTRS{T}) where {T}

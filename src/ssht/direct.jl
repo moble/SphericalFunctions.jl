@@ -49,9 +49,9 @@ end
 function SSHTDirect(
     s, ℓₘₐₓ;
     decomposition=LinearAlgebra.lu,
-    T=Float64, Rθϕ=golden_ratio_spiral_rotors(s, ℓₘₐₓ, T),
+    T::Type{TT}=Float64, Rθϕ=golden_ratio_spiral_rotors(s, ℓₘₐₓ, T),
     inplace=inplaceable(s, ℓₘₐₓ, Rθϕ)
-)
+) where TT
     if ((ℓₘₐₓ+1)^2-s^2)^2 > 65^4
         @warn """
         The "Direct" method for s-SHT is only recommended for fairly small ℓ values (or comparably large s values).
@@ -65,9 +65,9 @@ function SSHTDirect(
         functions are to be transformed.
         """
     end
-    let ₛ𝐘 = ₛ𝐘(s, ℓₘₐₓ, T, Rθϕ)
+    let ₛ𝐘 = ₛ𝐘(s, ℓₘₐₓ, TT, Rθϕ)
         ₛ𝐘decomp = decomposition(ₛ𝐘)
-        SSHTDirect{T, inplace, typeof(ₛ𝐘decomp)}(s, ℓₘₐₓ, Rθϕ, ₛ𝐘, ₛ𝐘decomp)
+        SSHTDirect{TT, inplace, typeof(ₛ𝐘decomp)}(s, ℓₘₐₓ, Rθϕ, ₛ𝐘, ₛ𝐘decomp)
     end
 end
 
