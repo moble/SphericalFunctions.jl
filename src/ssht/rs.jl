@@ -77,8 +77,8 @@ respectively.  They are passed to
 """
 function SSHTRS(
     s, ℓₘₐₓ; T::Type{TT}=Float64,
-    θ=fejer1_rings(2ℓₘₐₓ+1, TT),
-    quadrature_weights=fejer1(length(θ), TT),
+    θ=fejer1_rings(2ℓₘₐₓ+1, T),
+    quadrature_weights=fejer1(length(θ), T),
     Nϕ=fill(2ℓₘₐₓ+1, length(θ)),
     plan_fft_flags=FFTW.ESTIMATE, plan_fft_timelimit=Inf
 ) where TT

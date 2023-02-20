@@ -79,7 +79,7 @@
         end
 
         # Check pixels and rotors of Minimal
-        @testset "Minimal pixels" for T ∈ FloatTypes
+        @testset "Minimal pixels $T" for T ∈ FloatTypes
             for ℓmax ∈ [3, 4, 5, 13, 64]
                 for s ∈ -min(2,abs(ℓmax)-1):min(2,abs(ℓmax)-1)
                     𝒯 = SSHT(s, ℓmax; T=T, method="Minimal")
