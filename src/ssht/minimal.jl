@@ -69,25 +69,25 @@ end
 
 function SSHTMinimal(
     s, ℓₘₐₓ;
-    T::Type{TT}=Float64, θ=sorted_rings(s, ℓₘₐₓ, T),
+    T::Type{TT}=Float64, θ=sorted_rings(s, ℓₘₐₓ, TT),
     plan_fft_flags=FFTW.ESTIMATE, plan_fft_timelimit=Inf,
     inplace=true
 ) where TT
     @assert length(θ) == ℓₘₐₓ-abs(s)+1 """
         Length of `θ` ($(length(θ))) must equal `ℓₘₐₓ-abs(s)+1` ($(ℓₘₐₓ-abs(s)+1))
     """
-    T = eltype(θ)
+    @assert TT === eltype(θ)
 
     θindices = let iθ = cumsum([2j+1 for j ∈ abs(s):ℓₘₐₓ])
         [a:b for (a,b) in eachrow(hcat([1; iθ[begin:end-1].+1], iθ))]
     end
 
-    ₛfₘ = OffsetVector(Vector{Complex{T}}(undef, ℓₘₐₓ+1), 0:ℓₘₐₓ)
-    ₛf̃ₘ = OffsetVector(Vector{Complex{T}}(undef, ℓₘₐₓ+1), 0:ℓₘₐₓ)
-    ₛf̃ⱼ = OffsetVector([Vector{Complex{T}}(undef, 2j+1) for j ∈ abs(s):ℓₘₐₓ], abs(s):ℓₘₐₓ)
+    ₛfₘ = OffsetVector(Vector{Complex{TT}}(undef, ℓₘₐₓ+1), 0:ℓₘₐₓ)
+    ₛf̃ₘ = OffsetVector(Vector{Complex{TT}}(undef, ℓₘₐₓ+1), 0:ℓₘₐₓ)
+    ₛf̃ⱼ = OffsetVector([Vector{Complex{TT}}(undef, 2j+1) for j ∈ abs(s):ℓₘₐₓ], abs(s):ℓₘₐₓ)
 
     plans = OffsetVector(
-        if T ∈ [Float64, Float32]  # Only supported types in FFTW
+        if TT ∈ [Float64, Float32]  # Only supported types in FFTW
             [
                 plan_fft!(
                     ₛf̃ⱼ[j],
@@ -102,25 +102,25 @@ function SSHTMinimal(
         abs(s):ℓₘₐₓ  # This is the range of valid indices
     )
     bplans = OffsetVector(
-        if T ∈ [Float64, Float32]  # Only supported types in FFTW
+        if TT ∈ [Float64, Float32]  # Only supported types in FFTW
             [
                 plan_bfft!(
-                    Vector{Complex{T}}(undef, 2j+1),
+                    Vector{Complex{TT}}(undef, 2j+1),
                     flags=plan_fft_flags,
                     timelimit=plan_fft_timelimit
                 )
                 for j ∈ abs(s):ℓₘₐₓ
             ]
         else
-            [plan_bfft!(Vector{Complex{T}}(undef, 2j+1)) for j ∈ abs(s):ℓₘₐₓ]
+            [plan_bfft!(Vector{Complex{TT}}(undef, 2j+1)) for j ∈ abs(s):ℓₘₐₓ]
         end,
         abs(s):ℓₘₐₓ  # This is the range of valid indices
     )
 
     # Compute ₛ𝐝 as a series of LU-decomposed matrices — one for each m=k value
-    ₛΛ, luₛΛ = let π=T(π)
-        H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, T)
-        d = dstorage(ℓₘₐₓ, T)
+    ₛΛ, luₛΛ = let π=TT(π)
+        H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, TT)
+        d = dstorage(ℓₘₐₓ, TT)
         ₛΛ = OffsetVector(
             [
                 let J = abs(s):abs(m), Δ = max(abs(s), abs(m)):ℓₘₐₓ
@@ -156,7 +156,7 @@ function SSHTMinimal(
         ₛΛ, OffsetVector([LinearAlgebra.lu(luₛΛ[m]) for m ∈ -ℓₘₐₓ:ℓₘₐₓ], -ℓₘₐₓ:ℓₘₐₓ)
     end
 
-    SSHTMinimal{T, inplace}(
+    SSHTMinimal{TT, inplace}(
         s, ℓₘₐₓ, OffsetVector(θ, abs(s):ℓₘₐₓ), OffsetVector(θindices, abs(s):ℓₘₐₓ),
         plans, bplans, ₛΛ, luₛΛ, ₛfₘ, ₛf̃ₘ, ₛf̃ⱼ
     )

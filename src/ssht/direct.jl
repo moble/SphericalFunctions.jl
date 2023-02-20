@@ -65,9 +65,9 @@ function SSHTDirect(
         functions are to be transformed.
         """
     end
-    let ₛ𝐘 = ₛ𝐘(s, ℓₘₐₓ, T, Rθϕ)
+    let ₛ𝐘 = ₛ𝐘(s, ℓₘₐₓ, TT, Rθϕ)
         ₛ𝐘decomp = decomposition(ₛ𝐘)
-        SSHTDirect{T, inplace, typeof(ₛ𝐘decomp)}(s, ℓₘₐₓ, Rθϕ, ₛ𝐘, ₛ𝐘decomp)
+        SSHTDirect{TT, inplace, typeof(ₛ𝐘decomp)}(s, ℓₘₐₓ, Rθϕ, ₛ𝐘, ₛ𝐘decomp)
     end
 end
 
