@@ -76,12 +76,12 @@ respectively.  They are passed to
 [`AbstractFFTs.plan_fft`](https://juliamath.github.io/AbstractFFTs.jl/stable/api/#AbstractFFTs.plan_fft).
 """
 function SSHTRS(
-    s, ℓₘₐₓ; T=Float64,
+    s, ℓₘₐₓ; T::Type{TT}=Float64,
     θ=fejer1_rings(2ℓₘₐₓ+1, T),
     quadrature_weights=fejer1(length(θ), T),
     Nϕ=fill(2ℓₘₐₓ+1, length(θ)),
     plan_fft_flags=FFTW.ESTIMATE, plan_fft_timelimit=Inf
-)
+) where TT
     @assert size(θ) == size(quadrature_weights) """
         size(θ) should equal size(quadrature_weights)
         size(θ) = $(size(θ))

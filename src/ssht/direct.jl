@@ -49,9 +49,9 @@ end
 function SSHTDirect(
     s, ℓₘₐₓ;
     decomposition=LinearAlgebra.lu,
-    T=Float64, Rθϕ=golden_ratio_spiral_rotors(s, ℓₘₐₓ, T),
+    T::Type{TT}=Float64, Rθϕ=golden_ratio_spiral_rotors(s, ℓₘₐₓ, T),
     inplace=inplaceable(s, ℓₘₐₓ, Rθϕ)
-)
+) where TT
     if ((ℓₘₐₓ+1)^2-s^2)^2 > 65^4
         @warn """
         The "Direct" method for s-SHT is only recommended for fairly small ℓ values (or comparably large s values).

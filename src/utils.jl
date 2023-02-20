@@ -26,8 +26,8 @@ Base.parent(M::OffsetMat) = M.parent
 #@propagate_inbounds Base.getindex(M::OffsetMat, ::Colon, j::Int) = parent(M)[:, j-offset2(M)]
 
 
-loggamma(a, T::Type{<:DoubleFloats.MultipartFloat}) = DoubleFloats.loggamma(T(a))
-loggamma(a, T::Type) = SpecialFunctions.loggamma(T(a))
+loggamma(a, ::Type{T}) where {T<:DoubleFloats.MultipartFloat} = DoubleFloats.loggamma(T(a))
+loggamma(a, ::Type{T}) where T = SpecialFunctions.loggamma(T(a))
 function logbinomial(n::T, k::T, S=float(T)) where {T<:Integer}
     if k == 0 || k == n
         return zero(S)
@@ -56,6 +56,6 @@ interest in many applications in this package).
 
 Computations are carried out (and returned) in type `T`, which defaults to `Float64`.
 """
-function sqrtbinomial(n, k, T=Float64)
+function sqrtbinomial(n, k, ::Type{T}=Float64) where T
     exp(logbinomial(n, k, T)/2)
 end

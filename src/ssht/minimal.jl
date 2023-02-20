@@ -69,10 +69,10 @@ end
 
 function SSHTMinimal(
     s, ℓₘₐₓ;
-    T=Float64, θ=sorted_rings(s, ℓₘₐₓ, T),
+    T::Type{TT}=Float64, θ=sorted_rings(s, ℓₘₐₓ, T),
     plan_fft_flags=FFTW.ESTIMATE, plan_fft_timelimit=Inf,
     inplace=true
-)
+) where TT
     @assert length(θ) == ℓₘₐₓ-abs(s)+1 """
         Length of `θ` ($(length(θ))) must equal `ℓₘₐₓ-abs(s)+1` ($(ℓₘₐₓ-abs(s)+1))
     """

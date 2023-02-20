@@ -394,7 +394,7 @@ methods of ``s``-SHT transformations.  See [`SSHTDirect`](@ref) for details
 about the implementation.
 
 """
-function ₛ𝐘(s, ℓₘₐₓ, T=Float64, Rθϕ=golden_ratio_spiral_rotors(s, ℓₘₐₓ, T))
+function ₛ𝐘(s, ℓₘₐₓ, ::Type{T}=Float64, Rθϕ=golden_ratio_spiral_rotors(s, ℓₘₐₓ, T)) where T
     Y, H_rec_coeffs, Hwedge, expimϕ = Yprep(ℓₘₐₓ, s, T, abs(s))
     ₛ𝐘 = zeros(Complex{T}, length(Rθϕ), length(Y))
     for (j1,j2) ∈ zip(axes(ₛ𝐘, 1), axes(Rθϕ, 1))

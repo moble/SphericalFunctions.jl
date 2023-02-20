@@ -21,7 +21,7 @@ L^2 {}_{s}Y_{\ell,m} = \ell\,(\ell+1) {}_{s}Y_{\ell,m}
 See also [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`R²`](@ref), [`Rz`](@ref), [`R₊`](@ref),
 [`R₋`](@ref), [`ð`](@ref), [`ð̄`](@ref).
 """
-function L²(s, ℓₘᵢₙ, ℓₘₐₓ, T=Float64)
+function L²(s, ℓₘᵢₙ, ℓₘₐₓ, ::Type{T}=Float64) where T
     Diagonal(T[ℓ < abs(s) ? zero(m) : ℓ*(ℓ+1) for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ for m ∈ -ℓ:ℓ])
 end
 
@@ -42,7 +42,7 @@ L_z {}_{s}Y_{\ell,m} = m\, {}_{s}Y_{\ell,m}
 See also [`L²`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`R²`](@ref), [`Rz`](@ref), [`R₊`](@ref),
 [`R₋`](@ref), [`ð`](@ref), [`ð̄`](@ref).
 """
-function Lz(s, ℓₘᵢₙ, ℓₘₐₓ, T=Float64)
+function Lz(s, ℓₘᵢₙ, ℓₘₐₓ, ::Type{T}=Float64) where T
     Diagonal(T[ℓ < abs(s) ? zero(m) : m for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ for m ∈ -ℓ:ℓ])
 end
 
@@ -71,7 +71,7 @@ Consequently, the *mode weights* of a function are affected as
 See also [`L²`](@ref), [`Lz`](@ref), [`L₋`](@ref), [`R²`](@ref), [`Rz`](@ref), [`R₊`](@ref),
 [`R₋`](@ref), [`ð`](@ref), [`ð̄`](@ref).
 """
-function L₊(s, ℓₘᵢₙ, ℓₘₐₓ, T=Float64)
+function L₊(s, ℓₘᵢₙ, ℓₘₐₓ, ::Type{T}=Float64) where T
     Bidiagonal(
         zeros(T, (ℓₘₐₓ+1)^2-ℓₘᵢₙ^2),
         T[
@@ -107,7 +107,7 @@ Consequently, the *mode weights* of a function are affected as
 See also [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`R²`](@ref), [`Rz`](@ref),
 [`R₊`](@ref), [`R₋`](@ref), [`ð`](@ref), [`ð̄`](@ref).
 """
-function L₋(s, ℓₘᵢₙ, ℓₘₐₓ, T=Float64)
+function L₋(s, ℓₘᵢₙ, ℓₘₐₓ, ::Type{T}=Float64) where T
     Bidiagonal(
         zeros(T, (ℓₘₐₓ+1)^2-ℓₘᵢₙ^2),
         T[
@@ -144,7 +144,7 @@ R^2 {}_{s}Y_{\ell,m} = \ell\,(\ell+1) {}_{s}Y_{\ell,m}
 See also [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`Rz`](@ref), [`R₊`](@ref),
 [`R₋`](@ref), [`ð`](@ref), [`ð̄`](@ref).
 """
-function R²(s, ℓₘᵢₙ, ℓₘₐₓ, T=Float64)
+function R²(s, ℓₘᵢₙ, ℓₘₐₓ, ::Type{T}=Float64) where T
     Diagonal(T[ℓ < abs(s) ? zero(ℓ) : ℓ*(ℓ+1) for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ for m ∈ -ℓ:ℓ])
 end
 
@@ -170,7 +170,7 @@ Penrose](https://dx.doi.org/10.1063/1.1931221).
 See also [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`R²`](@ref), [`R₊`](@ref),
 [`R₋`](@ref), [`ð`](@ref), [`ð̄`](@ref).
 """
-function Rz(s, ℓₘᵢₙ, ℓₘₐₓ, T=Float64)
+function Rz(s, ℓₘᵢₙ, ℓₘₐₓ, ::Type{T}=Float64) where T
     Diagonal(T[ℓ < abs(s) ? zero(ℓ) : -s for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ for m ∈ -ℓ:ℓ])
 end
 
@@ -205,7 +205,7 @@ raises the eigenvalue of the corresponding Wigner matrix.
 See also [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`R²`](@ref), [`Rz`](@ref),
 [`R₋`](@ref), [`ð`](@ref), [`ð̄`](@ref).
 """
-function R₊(s, ℓₘᵢₙ, ℓₘₐₓ, T=Float64)
+function R₊(s, ℓₘᵢₙ, ℓₘₐₓ, ::Type{T}=Float64) where T
     s′ = max(abs(s), abs(s-1))
     Diagonal(
         T[
@@ -247,7 +247,7 @@ of the corresponding Wigner matrix.
 See also [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`R²`](@ref), [`Rz`](@ref),
 [`R₊`](@ref), [`ð`](@ref), [`ð̄`](@ref).
 """
-function R₋(s, ℓₘᵢₙ, ℓₘₐₓ, T=Float64)
+function R₋(s, ℓₘᵢₙ, ℓₘₐₓ, ::Type{T}=Float64) where T
     s′ = max(abs(s), abs(s+1))
     Diagonal(
         T[
@@ -283,7 +283,7 @@ Consequently, the *mode weights* of a function are affected as
 See also [`ð̄`](@ref),  [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref),
 [`R²`](@ref), [`Rz`](@ref), [`R₊`](@ref).
 """
-function ð(s, ℓₘᵢₙ, ℓₘₐₓ, T=Float64)
+function ð(s, ℓₘᵢₙ, ℓₘₐₓ, ::Type{T}=Float64) where T
     R₋(s, ℓₘᵢₙ, ℓₘₐₓ, T)
 end
 
@@ -313,6 +313,6 @@ Consequently, the *mode weights* of a function are affected as
 See also [`ð`](@ref),  [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`R²`](@ref),
 [`Rz`](@ref), [`R₊`](@ref).
 """
-function ð̄(s, ℓₘᵢₙ, ℓₘₐₓ, T=Float64)
+function ð̄(s, ℓₘᵢₙ, ℓₘₐₓ, ::Type{T}=Float64) where T
     -R₊(s, ℓₘᵢₙ, ℓₘₐₓ, T)
 end
