@@ -131,7 +131,7 @@ end
 
 
 """
-    D!(𝔇, R, ℓₘₐₓ, (aₙᵐ,bₙᵐ,dₙᵐ), expimα, expimγ)
+    D!(𝔇, R, ℓₘₐₓ, (aₙᵐ,bₙᵐ,dₙᵐ), eⁱᵐᵅ, eⁱᵐᵞ)
 
 Compute Wigner's 𝔇 matrix
 
@@ -151,11 +151,11 @@ array ordered as
     ]
 
 """
-function D!(𝔇, R::AbstractQuaternion, ℓₘₐₓ, H_rec_coeffs, expimα, expimγ)
+function D!(𝔇, R::AbstractQuaternion, ℓₘₐₓ, H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ)
     expiα, expiβ, expiγ = to_euler_phases(R)
     H!(𝔇, expiβ, ℓₘₐₓ, ℓₘₐₓ, H_rec_coeffs, WignerDindex)
-    complex_powers!(expimα, expiα)
-    complex_powers!(expimγ, expiγ)
+    complex_powers!(eⁱᵐᵅ, expiα)
+    complex_powers!(eⁱᵐᵞ, expiγ)
 
     # 𝔇ˡₘₚ,ₘ(R) = dˡₘₚ,ₘ(R) exp[iϕₐ(m-mp)+iϕₛ(m+mp)] = dˡₘₚ,ₘ(R) exp[i(ϕₛ+ϕₐ)m+i(ϕₛ-ϕₐ)mp]
     # exp[iϕₛ] = R̂ₛ = hat(R[0] + 1j * R[3]) = zp
@@ -169,46 +169,46 @@ function D!(𝔇, R::AbstractQuaternion, ℓₘₐₓ, H_rec_coeffs, expimα, ex
             for m′ in -ℓ:m
                 i1 = i0 + (ℓ + m′) * (2ℓ + 1) + m + ℓ
                 i2 = i0 + (ℓ - m) * (2ℓ + 1) - m′ + ℓ
-                𝔇[i1] = oddm_factor * 𝔇[i2] * conj(expimγ[-m+1] * expimα[-m′+1])
+                𝔇[i1] = oddm_factor * 𝔇[i2] * conj(eⁱᵐᵞ[-m+1] * eⁱᵐᵅ[-m′+1])
             end
             for m′ in m+1:0
                 i1 = i0 + (ℓ + m′) * (2ℓ + 1) + m + ℓ
                 i2 = i0 + (ℓ - m′) * (2ℓ + 1) - m + ℓ
-                𝔇[i1] = oddm_factor * 𝔇[i2] * conj(expimγ[-m+1] * expimα[-m′+1])
+                𝔇[i1] = oddm_factor * 𝔇[i2] * conj(eⁱᵐᵞ[-m+1] * eⁱᵐᵅ[-m′+1])
             end
             for m′ in 1:-m
                 i1 = i0 + (ℓ + m′) * (2ℓ + 1) + m + ℓ
                 i2 = i0 + (ℓ - m′) * (2ℓ + 1) - m + ℓ
-                𝔇[i1] = ifelse(isodd(m′), -1, 1) * oddm_factor * 𝔇[i2] * conj(expimγ[-m+1]) * expimα[m′+1]
+                𝔇[i1] = ifelse(isodd(m′), -1, 1) * oddm_factor * 𝔇[i2] * conj(eⁱᵐᵞ[-m+1]) * eⁱᵐᵅ[m′+1]
             end
             for m′ in 1-m:ℓ
                 i1 = i0 + (ℓ + m′) * (2ℓ + 1) + m + ℓ
                 i2 = i0 + (ℓ + m) * (2ℓ + 1) + m′ + ℓ
-                𝔇[i1] = ifelse(isodd(m′), -1, 1) * oddm_factor * 𝔇[i2] * conj(expimγ[-m+1]) * expimα[m′+1]
+                𝔇[i1] = ifelse(isodd(m′), -1, 1) * oddm_factor * 𝔇[i2] * conj(eⁱᵐᵞ[-m+1]) * eⁱᵐᵅ[m′+1]
             end
         end
         for m in 0:ℓ
             for m′ in -ℓ:-m-1
                 i1 = i0 + (ℓ + m′) * (2ℓ + 1) + m + ℓ
                 i2 = i0 + (ℓ - m) * (2ℓ + 1) - m′ + ℓ
-                𝔇[i1] = 𝔇[i2] * expimγ[m+1] * conj(expimα[-m′+1])
+                𝔇[i1] = 𝔇[i2] * eⁱᵐᵞ[m+1] * conj(eⁱᵐᵅ[-m′+1])
             end
             for m′ in m+1:ℓ
                 i1 = i0 + (ℓ + m′) * (2ℓ + 1) + m + ℓ
                 i2 = i0 + (ℓ + m) * (2ℓ + 1) + m′ + ℓ
-                𝔇[i1] = ifelse(isodd(m′), -𝔇[i2], 𝔇[i2]) * expimγ[m+1] * expimα[m′+1]
+                𝔇[i1] = ifelse(isodd(m′), -𝔇[i2], 𝔇[i2]) * eⁱᵐᵞ[m+1] * eⁱᵐᵅ[m′+1]
             end
         end
         for m′ in -ℓ:0
             i1 = i0 + (ℓ + m′) * (2ℓ + 1) + ℓ
             for m in abs(m′):ℓ
-                𝔇[i1+m] *= expimγ[m+1] * conj(expimα[-m′+1])
+                𝔇[i1+m] *= eⁱᵐᵞ[m+1] * conj(eⁱᵐᵅ[-m′+1])
             end
         end
         for m′ in 1:ℓ
             i1 = i0 + (ℓ + m′) * (2ℓ + 1) + ℓ
             for m in abs(m′):ℓ
-                𝔇[i1+m] *= ifelse(isodd(m′), -1, 1) * expimγ[m+1] * expimα[m′+1]
+                𝔇[i1+m] *= ifelse(isodd(m′), -1, 1) * eⁱᵐᵞ[m+1] * eⁱᵐᵅ[m′+1]
             end
         end
     end
@@ -234,16 +234,16 @@ end
 Construct space and pre-compute recursion coefficients to compute Wigner's
 ``𝔇`` matrix in place.
 
-This returns the `(D, H_rec_coeffs, expimα, expimγ)` arguments needed by
+This returns the `(D, H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ)` arguments needed by
 [`D!`](@ref).
 
 """
 function Dprep(ℓₘₐₓ, ::Type{T}) where {T<:Real}
     𝔇 = Dstorage(ℓₘₐₓ, T)
     H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, T)
-    expimα = Vector{Complex{T}}(undef, ℓₘₐₓ+1)
-    expimγ = Vector{Complex{T}}(undef, ℓₘₐₓ+1)
-    𝔇, H_rec_coeffs, expimα, expimγ
+    eⁱᵐᵅ = Vector{Complex{T}}(undef, ℓₘₐₓ+1)
+    eⁱᵐᵞ = Vector{Complex{T}}(undef, ℓₘₐₓ+1)
+    𝔇, H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ
 end
 
 

@@ -85,13 +85,13 @@
         sₘₐₓ = 2
         ℓₘᵢₙ = 0
         tol = 4ℓₘₐₓ * eps(T)
-        𝔇, _, expimα, expimγ = Dprep(ℓₘₐₓ, T)
+        𝔇, _, eⁱᵐᵅ, eⁱᵐᵞ = Dprep(ℓₘₐₓ, T)
         Y, H_rec_coeffs, Hwedge, expimϕ = Yprep(ℓₘₐₓ, sₘₐₓ, T)
         @showprogress "sYlm vs WignerD ($T)" for s in -sₘₐₓ:sₘₐₓ
             for ι in βrange(T)
                 for ϕ in αrange(T)
                     R = from_spherical_coordinates(ι, ϕ)
-                    D!(𝔇, R, ℓₘₐₓ, H_rec_coeffs, expimα, expimγ)
+                    D!(𝔇, R, ℓₘₐₓ, H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ)
                     Y!(Y, R, ℓₘₐₓ, s, H_rec_coeffs, Hwedge, expimϕ)
                     i = 1
                     for ℓ in 0:abs(s)-1

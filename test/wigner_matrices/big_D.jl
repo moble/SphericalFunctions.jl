@@ -34,14 +34,14 @@
         for ℓₘₐₓ in 0:4
             H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, T)
             𝔇 = Array{Complex{T}}(undef, WignerDsize(ℓₘₐₓ, ℓₘₐₓ))
-            expimα = Array{Complex{T}}(undef, ℓₘₐₓ+1)
-            expimγ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
+            eⁱᵐᵅ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
+            eⁱᵐᵞ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
             expiα = complex(one(T))
             expiγ = complex(one(T))
             for β in βrange(T)
                 expiβ = cis(β)
                 R = from_euler_angles(zero(T), β, zero(T))
-                D!(𝔇, R, ℓₘₐₓ, H_rec_coeffs, expimα, expimγ)
+                D!(𝔇, R, ℓₘₐₓ, H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ)
                 for n in 0:ℓₘₐₓ
                     for m′ in -n:n
                         for m in -n:n
@@ -64,14 +64,14 @@
         ℓₘₐₓ = T===BigFloat ? 4 : 8
         H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, T)
         𝔇 = Array{Complex{T}}(undef, WignerDsize(ℓₘₐₓ, ℓₘₐₓ))
-        expimα = Array{Complex{T}}(undef, ℓₘₐₓ+1)
-        expimγ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
+        eⁱᵐᵅ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
+        eⁱᵐᵞ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
         @showprogress "Compare 𝔇 to formulaic 𝔇 ($T)" for α in αrange(T, 5)
             for β in βrange(T, 5)
                 for γ in γrange(T, 5)
                     R = from_euler_angles(α, β, γ)
                     expiα, expiβ, expiγ = to_euler_phases(R)
-                    D!(𝔇, R, ℓₘₐₓ, H_rec_coeffs, expimα, expimγ)
+                    D!(𝔇, R, ℓₘₐₓ, H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ)
                     for n in 0:ℓₘₐₓ
                         for m′ in -n:n
                             for m in -n:n
@@ -97,8 +97,8 @@
         H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, T)
         d = Array{T}(undef, WignerDsize(ℓₘₐₓ, m′ₘₐₓ))
         𝔇 = Array{Complex{T}}(undef, WignerDsize(ℓₘₐₓ, m′ₘₐₓ))
-        expimα = Array{Complex{T}}(undef, ℓₘₐₓ+1)
-        expimγ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
+        eⁱᵐᵅ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
+        eⁱᵐᵞ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
         @showprogress "Group characters $T" for β in βrange(T)
             expiβ = cis(β)
             d!(d, expiβ, ℓₘₐₓ, H_rec_coeffs)
@@ -113,7 +113,7 @@
                 @test χʲ ≈ sin_ratio atol=500eps(T) rtol=500eps(T)
                 for v̂ in v̂range(T)
                     R = exp(β/2 * v̂)
-                    D!(𝔇, R, ℓₘₐₓ, H_rec_coeffs, expimα, expimγ)
+                    D!(𝔇, R, ℓₘₐₓ, H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ)
                     χʲ = sum(𝔇[WignerDindex(j, m, m)] for m in -j:j)
                     @test χʲ ≈ sin_ratio atol=500eps(T) rtol=500eps(T)
                 end
@@ -129,13 +129,13 @@
         𝔇₂ = Array{Complex{T}}(undef, WignerDsize(ℓₘₐₓ))
         𝔇₁₂ = Array{Complex{T}}(undef, WignerDsize(ℓₘₐₓ))
         H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, T)
-        expimα = Array{Complex{T}}(undef, ℓₘₐₓ+1)
-        expimγ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
+        eⁱᵐᵅ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
+        eⁱᵐᵞ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
         @showprogress "Representation property ($T)" for R₁ in Rrange(T)
             for R₂ in Rrange(T)
-                D!(𝔇₁, R₁, ℓₘₐₓ, H_rec_coeffs, expimα, expimγ)
-                D!(𝔇₂, R₂, ℓₘₐₓ, H_rec_coeffs, expimα, expimγ)
-                D!(𝔇₁₂, R₁*R₂, ℓₘₐₓ, H_rec_coeffs, expimα, expimγ)
+                D!(𝔇₁, R₁, ℓₘₐₓ, H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ)
+                D!(𝔇₂, R₂, ℓₘₐₓ, H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ)
+                D!(𝔇₁₂, R₁*R₂, ℓₘₐₓ, H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ)
                 for ℓ in 0:ℓₘₐₓ
                     i = WignerDindex(ℓ, -ℓ, -ℓ)
                     j = WignerDindex(ℓ, ℓ, ℓ)
