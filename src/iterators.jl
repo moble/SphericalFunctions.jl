@@ -40,7 +40,7 @@ function Base.iterate(
     Di::Diterator{VT},
     state=(Di.ℓₘᵢₙ,WignerDsize(Di.ℓₘᵢₙ-1)+1)
 ) where VT
-    if state[1] ≥ Di.ℓₘₐₓ
+    if state[1] > Di.ℓₘₐₓ
         nothing
     else
         ℓ = state[1]
@@ -100,7 +100,7 @@ function Base.iterate(
     di::diterator{VT},
     state=(di.ℓₘᵢₙ,WignerDsize(di.ℓₘᵢₙ-1)+1)
 ) where VT
-    if state[1] ≥ di.ℓₘₐₓ
+    if state[1] > di.ℓₘₐₓ
         nothing
     else
         ℓ = state[1]
@@ -168,7 +168,7 @@ function Base.iterate(
     Yi::Yiterator{VT},
     state=(Yi.ℓₘᵢₙ,Yi.iₘᵢₙ)
 ) where VT
-    if state[1] ≥ Yi.ℓₘₐₓ
+    if state[1] > Yi.ℓₘₐₓ
         nothing
     else
         ℓ = state[1]
