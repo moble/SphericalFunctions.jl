@@ -4,16 +4,24 @@
 
 using SphericalFunctions
 using Documenter
+using DocumenterCitations
+
+bib = CitationBibliography(
+    joinpath(@__DIR__, "src", "references.bib");
+    #style=:authoryear,
+)
 
 DocMeta.setdocmeta!(SphericalFunctions, :DocTestSetup, :(using SphericalFunctions); recursive=true)
 
 makedocs(
+    bib,
     sitename="SphericalFunctions.jl",
     modules = [SphericalFunctions],
     format = Documenter.HTML(
         prettyurls = !("local" in ARGS),  # Use clean URLs, unless built as a "local" build
         edit_link = "main",  # Link out to "main" branch on github
         canonical = "https://moble.github.io/SphericalFunctions.jl/stable/",
+        assets = String["assets/citations.css"],
     ),
     pages = [
         "Introduction" => "index.md",
@@ -24,6 +32,7 @@ makedocs(
             s -> "notes/$(s)",
             sort(readdir(joinpath(@__DIR__, "src/notes")))
         ),
+        "References" => "references.md",
     ],
     #doctest = false
 )
