@@ -3,7 +3,7 @@
     # map2salm on Float16
 
     function sYlm(s::Int, ell::Int, m::Int, theta::T, phi::T) where {T<:Real}
-        # Eqs. (II.7) and (II.8) of https://arxiv.org/abs/0709.0093v3
+        # Eqs. (II.7) and (II.8) of https://arxiv.org/abs/0709.0093v3 [Ajith_2007](@cite)
         # Note their weird definition w.r.t. `-s`
         k_min = max(0, m + s)
         k_max = min(ell + m, ell + s)

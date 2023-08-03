@@ -1,6 +1,6 @@
 ### The code in this module is based on a paper by Xing et al.:
-### https://doi.org/10.1007/s00190-019-01331-0.  All references to equation numbers are for that
-### paper.
+### https://doi.org/10.1007/s00190-019-01331-0 [Xing_2019](@cite).  All references to equation
+### numbers are for that paper.
 
 
 # These functions implement Eqs. (13), absorbing a factor of 1/2 into b, and converting to the

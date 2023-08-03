@@ -163,9 +163,9 @@ In terms of the SWSHs, we can write the action of ``R_z`` as
 ```math
 R_z {}_{s}Y_{\ell,m} = -s\, {}_{s}Y_{\ell,m}
 ```
-Note the unfortunate sign of ``s``, which seems to be opposite to what we expect, and arises
-from the choice of definition of ``s`` in [the original paper by Newman and
-Penrose](https://dx.doi.org/10.1063/1.1931221).
+Note the unfortunate sign of ``s``, which seems to be opposite to what we
+expect, and arises from the choice of definition of ``s`` in the original paper
+by [Newman and Penrose](@cite Newman_1966).
 
 See also [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`R²`](@ref), [`R₊`](@ref),
 [`R₋`](@ref), [`ð`](@ref), [`ð̄`](@ref).
@@ -197,10 +197,10 @@ Consequently, the *mode weights* of a function are affected as
 ```math
 \left\{R_+(f)\right\}_{s,\ell,m} = \sqrt{(\ell+s)(\ell-s+1)}\,\left\{f\right\}_{s-1,\ell,m}.
 ```
-Because of the unfortunate sign of ``s`` arising from the choice of definition of ``s`` in
-[the original paper by Newman and Penrose](https://dx.doi.org/10.1063/1.1931221), this is a
-*lowering* operator for ``s``, though it really is a *raising* operator for ``R_z``, and
-raises the eigenvalue of the corresponding Wigner matrix.
+Because of the unfortunate sign of ``s`` arising from the choice of definition
+of ``s`` in the original paper by [Newman and Penrose](@cite Newman_1966), this
+is a *lowering* operator for ``s``, though it really is a *raising* operator
+for ``R_z``, and raises the eigenvalue of the corresponding Wigner matrix.
 
 See also [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`R²`](@ref), [`Rz`](@ref),
 [`R₋`](@ref), [`ð`](@ref), [`ð̄`](@ref).
@@ -238,11 +238,11 @@ Consequently, the *mode weights* of a function are affected as
 ```math
 \left\{R_-(f)\right\}_{s,\ell,m} = \sqrt{(\ell-s)(\ell+s+1)}\,\left\{f\right\}_{s+1,\ell,m}.
 ```
-Because of the unfortunate sign of ``s`` arising from the choice of definition of ``s`` in
-[the original paper by Newman and Penrose](https://dx.doi.org/10.1063/1.1931221), this is a
-*raising* operator for ``s``, though it really is a *lowering* operator for ``R_z``, and
-lowers the eigenvalue of the corresponding Wigner matrix - though that raises the eigenvalue
-of the corresponding Wigner matrix.
+Because of the unfortunate sign of ``s`` arising from the choice of definition
+of ``s`` in the original paper by [Newman and Penrose](@cite Newman_1966), this
+is a *raising* operator for ``s``, though it really is a *lowering* operator
+for ``R_z``, and lowers the eigenvalue of the corresponding Wigner matrix -
+though that raises the eigenvalue of the corresponding Wigner matrix.
 
 See also [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`R²`](@ref), [`Rz`](@ref),
 [`R₊`](@ref), [`ð`](@ref), [`ð̄`](@ref).
@@ -264,10 +264,10 @@ end
 
 Compute coefficients for the spin-raising operator ``\eth``.
 
-This operator was originally defined by [Newman and
-Penrose](https://dx.doi.org/10.1063/1.1931221), but is more completely defined in [this
-paper](https://arxiv.org/abs/1604.08140).  It is identical to [`R₋`](@ref).  Refer to that
-function's documentation for more details.
+This operator was originally defined by [Newman and Penrose](@cite
+Newman_1966), but is more completely defined by [Boyle](@cite Boyle_2016).  It
+is identical to [`R₋`](@ref).  Refer to that function's documentation for more
+details.
 
 By definition, the spin-raising operator satisfies the commutator relation ``[S, \eth] =
 \eth`` (where ``S`` is the spin operator, which just multiplies the function by its spin).
@@ -293,10 +293,10 @@ end
 
 Compute coefficients for the spin-lowering operator ``\bar{\eth}``.
 
-This operator was originally defined by [Newman and
-Penrose](https://dx.doi.org/10.1063/1.1931221), but is more completely defined in [this
-paper](https://arxiv.org/abs/1604.08140).  It is opposite to [`R₊`](@ref) — meaning that
-``\bar{\eth} = -R₊``.  Refer to that function's documentation for more details.
+This operator was originally defined by [Newman and Penrose](@cite
+Newman_1966), but is more completely defined by [Boyle](@cite Boyle_2016).  It
+is opposite to [`R₊`](@ref) — meaning that ``\bar{\eth} = -R₊``.  Refer to that
+function's documentation for more details.
 
 By definition, the spin-lowering operator satisfies the commutator relation ``[S,
 \bar{\eth}] = -\bar{\eth}`` (where ``S`` is the spin operator, which just multiplies the

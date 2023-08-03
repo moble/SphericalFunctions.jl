@@ -6,8 +6,8 @@
 
 """Storage for  spin-spherical-harmonic transform
 
-The algorithm was described in [this paper by Reinecke and
-Seljebotn](https://arxiv.org/abs/1303.4945).
+The algorithm was described in by [Reinecke and Seljebotn](@cite
+Reinecke_2013).
 
 """
 struct SSHTRS{T<:Real} <: SSHT{T}
@@ -46,8 +46,8 @@ end
 Construct a `SSHTRS` object directly.  This may also be achieved by calling the
 main `SSHT` function with the same keywords, along with `method="RS"`.
 
-This object uses the algorithm described in [this paper by Reinecke and
-Seljebotn](https://arxiv.org/abs/1303.4945).
+This object uses the algorithm described by [Reinecke and Seljebotn](@cite
+Reinecke_2013).
 
 The basic floating-point number type may be adjusted with the keyword
 argument `T`, which defaults to `Float64`.

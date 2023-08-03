@@ -187,15 +187,15 @@ Base.size(Yi::Yiterator, dim) = dim > 1 ? 1 : length(Yi)
 
 
 
-# # Eq. (10) of Reinecke & Seljebotn https://dx.doi.org/10.1051/0004-6361/201321494
+# # Eq. (10) of [Reinecke & Seljebotn](@cite Reinecke_2013)
 # ₛλₗₘ(ϑ) = (-1)ᵐ √((2ℓ+1)/(4π)) dˡ₋ₘₛ(ϑ)
 #
-# # Eq. (4.11) of Kostelec & Rockmore https://dx.doi.org/10.1007/s00041-008-9013-5
+# # Eq. (4.11) of [Kostelec & Rockmore](@cite Kostelec_2008)
 # # Note that terms with out-of-range indices should be treated as 0.
 # ₛλₗ₊₁ₘ = √((2ℓ+3)/(2ℓ+1)) (ℓ+1) (2ℓ+1) / √(((ℓ+1)²-m²) ((ℓ+1)²-s²)) (cosϑ + ms/(ℓ(ℓ+1))) ₛλₗₘ
 #          -  √((2ℓ+3)/(2ℓ-1)) (ℓ+1) (2ℓ+1) √((ℓ-m²) (ℓ-s²)) / √(((ℓ+1)²-m²) ((ℓ+1)²-s²)) ((ℓ+1)/ℓ) ₛλₗ₋₁ₘ
 #
-# # Eqs. (4.7) and (4.6) of Kostelec & Rockmore
+# # Eqs. (4.7) and (4.6) of [Kostelec & Rockmore](@cite Kostelec_2008)
 # for 0 ≤ s ≤ ℓ
 # ₛλₗₗ(ϑ) = (-1)ᵐ √((2ℓ+1)/(4π)) √(((2ℓ)!)/((ℓ+s)!(ℓ-s)!)) cosˡ⁻ˢ ϑ/2 sinˡ⁺ˢ ϑ/2
 # ₛλₗ₋ₗ(ϑ) = (-1)ᵐ⁺ˡ⁺ˢ √((2ℓ+1)/(4π)) √(((2ℓ)!)/((ℓ+s)!(ℓ-s)!)) cosˡ⁺ˢ ϑ/2 sinˡ⁻ˢ ϑ/2
@@ -213,8 +213,8 @@ Base.size(Yi::Yiterator, dim) = dim > 1 ? 1 : length(Yi)
 
 This provides initial values for the recursion to find
 ``{}_{s}\lambda_{\ell,m}`` along indices of increasing ``\ell``, due to
-[Kostelec & Rockmore](https://dx.doi.org/10.1007/s00041-008-9013-5).
-Specifically, this function computes values with ``\ell=m``.
+[Kostelec & Rockmore](@cite Kostelec_2008) Specifically, this function computes
+values with ``\ell=m``.
 
 ```math
 {}_{s}\lambda_{\ell,m}(\theta)
@@ -260,7 +260,7 @@ The ``ₛλₗₘ(θ)`` function is defined as the spin-weighted spherical harmo
 spherical coordinates ``(θ, ϕ)``, with ``ϕ=0``.  In particular, note that it is real-valued.
 The return type is determined by the type of `θ` (or more precisely, cos½θ).
 
-This algorithm by [Kostelec & Rockmore](https://dx.doi.org/10.1007/s00041-008-9013-5) allows
+This algorithm by [Kostelec & Rockmore](@cite Kostelec_2008) allows
 us to iterate over increasing ``ℓ`` values, for given fixed ``s`` and ``m`` values.
 
 Note that this iteration has no inherent bound, so if you try to iterate over all values,

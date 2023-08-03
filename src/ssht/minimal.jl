@@ -1,8 +1,8 @@
 
 """Storage for Minimal spin-spherical-harmonic transform
 
-The Minimal algorithm was described in [this paper](https://arxiv.org/abs/1809.01321), and allows for
-the minimal number of function samples.
+The Minimal algorithm was described by [Elahi et al.](@cite Elahi_2018), and
+allows for the minimal number of function samples.
 
 """
 struct SSHTMinimal{T<:Real, Inplace} <: SSHT{T}
