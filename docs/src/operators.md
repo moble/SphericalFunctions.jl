@@ -1,12 +1,10 @@
 # Differential operators
 
-Spin-weighted spherical functions *cannot* be defined on the sphere $S^2$, but
-are well defined on the group ``\mathrm{Spin}(3) \cong \mathrm{SU}(2)`` or the
-rotation group ``\mathrm{SO}(3)``.  (See [this
-paper](https://arxiv.org/abs/1604.08140) for the explanation.)  However, this
-also allows us to define a variety of differential operators acting on these
-functions, relating to infinitesimal motions in these groups, acting either from
-the left or the right on their arguments.  Right or left matters because the
+Spin-weighted spherical functions *cannot* be defined on the sphere $S^2$, but are well defined on
+the group ``\mathrm{Spin}(3) \cong \mathrm{SU}(2)`` or the rotation group ``\mathrm{SO}(3)``.  (See
+[Boyle_2016](@citet) for the explanation.)  However, this also allows us to define a variety of
+differential operators acting on these functions, relating to infinitesimal motions in these groups,
+acting either from the left or the right on their arguments.  Right or left matters because the
 groups mentioned above are all non-commutative groups.
 
 In general, the *left* Lie derivative of a function ``f(Q)`` over the unit
@@ -35,17 +33,14 @@ R_g(f)\{Q\} := \frac{1}{2i} \left. \frac{f\left(Q\, \exp(t\,g)\right)}{dt} \righ
 ```
 Note that the exponential multiplies ``Q`` *on the right* — hence the name.
 
-This operator is less common in physics, because it represents the dependence of
-the function on the choice of frame (or coordinate system), which is not usually
-of interest. Multiplication on the left represents a rotation of the physical
-system, while rotation on the right represents a rotation of the coordinate
-system.  However, this dependence on coordinate system is precisely what defines
-the *spin weight* of a function, so this class of operators is relevant in
-discussions of spin-weighted spherical functions.  In particular, the operators
-``R_\pm`` correspond (up to a sign) to the spin-raising and -lowering operators
-``\eth`` and ``\bar{\eth}`` originally introduced by [Newman and
-Penrose](https://dx.doi.org/10.1063/1.1931221), as explained in greater detail
-in [this paper](https://arxiv.org/abs/1604.08140).
+This operator is less common in physics, because it represents the dependence of the function on the
+choice of frame (or coordinate system), which is not usually of interest. Multiplication on the left
+represents a rotation of the physical system, while rotation on the right represents a rotation of
+the coordinate system.  However, this dependence on coordinate system is precisely what defines the
+*spin weight* of a function, so this class of operators is relevant in discussions of spin-weighted
+spherical functions.  In particular, the operators ``R_\pm`` correspond (up to a sign) to the
+spin-raising and -lowering operators ``\eth`` and ``\bar{\eth}`` originally introduced by
+[Newman_1966](@citet), as explained in greater detail by [Boyle_2016](@citet).
 
 
 ## Commutators
