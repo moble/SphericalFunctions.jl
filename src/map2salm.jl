@@ -13,8 +13,8 @@ is more efficient to pre-compute `plan` using [`plan_map2salm`](@ref).  These
 functions will create a new `salm` array on each call.  To operate in place on
 a pre-allocated `salm` array, use [`map2salm!`](@ref).
 
-The core of this function follows the method described by [Reinecke and
-Seljebotn](https://dx.doi.org/10.1051/0004-6361/201321494).
+The core of this function follows the method described by [Reinecke and Seljebotn](@cite
+Reinecke_2013).
 
 """
 function map2salm(map::AbstractArray{Complex{T}}, spin::Int, ℓmax::Int, show_progress=false) where {T<:Real}

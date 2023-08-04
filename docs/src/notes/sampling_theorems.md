@@ -1,12 +1,11 @@
 # Sampling theorems and transformations of spin-weighted spherical harmonics
 
-[McEwen and Wiaux](https://arxiv.org/abs/1110.6298) (MW) provide a very thorough review of the
-literature on sampling theorems related to spin-weighted spherical harmonics up to 2011.
-[Reinecke and Seljebotn](https://arxiv.org/abs/1303.4945) (RS) outlined one of the more efficient
-and accurate implementations of spin-weighted spherical harmonic transforms (``s``SHT) currently
-available as `libsharp`, but their algorithm is ``∼4L²``, whereas McEwen and Wiaux's is``∼2L²``,
-while [Elahi, Khalid, Kennedy, and McEwen](https://arxiv.org/abs/1809.01321) (EKKM) have obtained
-the optimal result that scales as ``∼L²``.
+[McEwen_2011](@citet) (MW) provide a very thorough review of the literature on sampling theorems
+related to spin-weighted spherical harmonics up to 2011.  [Reinecke_2013](@citet) (RS) outlined one
+of the more efficient and accurate implementations of spin-weighted spherical harmonic transforms
+(``s``SHT) currently available as `libsharp`, but their algorithm is ``∼4L²``, whereas McEwen and
+Wiaux's is``∼2L²``, while [Elahi_2018](@citet) (EKKM) have obtained the optimal result that scales
+as ``∼L²``.
 
 The downside of the EKKM algorithm is that the ``θ`` values at which to sample have to be obtained
 by iteratively minimizing the condition numbers of various matrices (which are involved in the

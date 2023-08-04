@@ -1,9 +1,8 @@
 # Algorithm for computing ``H``
 
-The ``H`` array, as given by [Gumerov and
-Duraiswami](https://arxiv.org/abs/1403.7698), is related to Wigner's (small)
-``d`` matrices — which is itself related to the (big) ``\mathfrak{D}`` matrices and
-the various spin-weighted spherical harmonics ``{}_{s}Y_{\ell,m}`` — via
+The ``H`` array, as given by [Gumerov_2015](@citet), is related to Wigner's (small) ``d`` matrices —
+which is itself related to the (big) ``\mathfrak{D}`` matrices and the various spin-weighted
+spherical harmonics ``{}_{s}Y_{\ell,m}`` — via
 
 ```math
 d_{\ell}^{m',m} = \epsilon_{m'} \epsilon_{-m} H_{\ell}^{m',m},
@@ -38,8 +37,7 @@ elements.
 ## Steps to compute ``H``
 
 The following describes various details that are not spelled out correctly by
-[Gumerov and Duraiswami](https://arxiv.org/abs/1403.7698).  All equation
-numbers refer to that paper.
+[Gumerov_2015](@citet).  All equation numbers refer to that paper.
 
 Because of the symmetries noted above, we only compute ``H^{m', m}_n`` with ``m
 ≥ |m'|`` — roughly one quarter of all possible values.  Furthermore, for
@@ -87,11 +85,9 @@ the convention used here, and is related to the
 Note that Gumerov and Duraiswami use the notation ``P^{|m|}_{n}``, whereas we are
 using the notation ``P_{n,|m|}`` — which usually differ by a factor of ``(-1)^m``.
 
-We use the "fully normalized" associated Legendre functions (fnALF) ``P̄``
-because, as explained by [Xing et
-al. (2020)](https://doi.org/10.1007/s00190-019-01331-0), it is possible to
-compute these values very efficiently and accurately, while also delaying the
-onset of overflow and underflow.
+We use the "fully normalized" associated Legendre functions (fnALF) ``P̄`` because, as explained by
+[Xing_2019](@citet), it is possible to compute these values very efficiently and accurately, while
+also delaying the onset of overflow and underflow.
 
 The algorithm Xing et al. describe as the best for computing ``P̄`` is due to
 Belikov (1991), and is given by them as

@@ -212,7 +212,7 @@ function sYlm(s, ell, m, ι::T, ϕ::T) where {T<:Real}
     )
 end
 
-# Eqs. (II.9) through (II.13) of https://arxiv.org/abs/0709.0093v3
+# Eqs. (II.9) through (II.13) of https://arxiv.org/abs/0709.0093v3 [Ajith_2007](@cite)
 m2Y22(ι::T, ϕ::T) where {T<:Real} = √(5 / (64T(π))) * (1 + cos(ι))^2 * cis(2ϕ)
 m2Y21(ι::T, ϕ::T) where {T<:Real} = √(5 / (16T(π))) * sin(ι) * (1 + cos(ι)) * cis(ϕ)
 m2Y20(ι::T, ϕ::T) where {T<:Real} = √(15 / (32T(π))) * sin(ι)^2
