@@ -24,19 +24,3 @@ details.
 using Pkg
 Pkg.add("SphericalFunctions")
 ```
-
-
-<br/>
-
----
-
-###### <sup>1</sup> Euler angles are inadequate
-
-Euler angles are quite generally a very poor choice for computing with rotations.  (The only context
-in which they may be preferred is when *analytically* integrating some analytically known
-functions.)  Almost universally, it is best to use quaternions when computing with rotations.  All
-the computations done within this package use quaternions; the user interfaces involving Euler
-angles essentially convert to/from quaternions.  While the calculations needed for those conversions
-would still need to be done if this package used Euler angles internally — meaning that this
-approach is as efficient as any — that work can be avoided entirely if you work with quaternions
-directly.
