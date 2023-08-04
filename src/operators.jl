@@ -10,8 +10,9 @@ SWSHs.  It is also known as the Casimir operator, and is equal to
 ```math
 L^2 = L_x^2 + L_y^2 + L_z^2 = \frac{L_+L_- + L_-L_+ + 2L_zL_z}{2}.
 ```
-Note that these are the left Lie derivatives, but ``L^2 = R^2``, where `R` is the right Lie
-derivative.  See [the documentation](/operators/) for more details.
+Note that these are the left Lie derivatives, but ``L^2 = R^2``, where `R` is the right
+Lie derivative.  See [the documentation](/operators/) or [Boyle](@cite Boyle_2016) for
+more details.
 
 In terms of the SWSHs, we can write the action of ``L^2`` as
 ```math
@@ -32,7 +33,8 @@ end
 Compute the angular-momentum operator associated with the ``z`` direction.  This is the
 standard ``L_z`` operator, familiar from basic physics, extended to work with SWSHs.  Note
 that this is the left Lie derivative; see [`Rz`](@ref) for the equivalent right Lie
-derivative.  See [the documentation](/operators/) for more details.
+derivative.  See [the documentation](/operators/) or [Boyle](@cite Boyle_2016) for more
+details.
 
 In terms of the SWSHs, we can write the action of ``L_z`` as
 ```math
@@ -53,7 +55,7 @@ end
 Compute the angular-momentum raising operator.  This is the standard ``L_+`` operator,
 familiar from basic physics, extended to work with SWSHs.  Note that this is the left Lie
 derivative; see [`R₊`](@ref) for the equivalent right Lie derivative.  See [the
-documentation](/operators/) for more details.
+documentation](/operators/) or [Boyle](@cite Boyle_2016) for more details.
 
 We define ``L_+`` to be the raising operator for the left Lie derivative with respect to
 rotation about ``z``: ``L_z``.  By definition, this implies the commutator relation ``[L_z,
@@ -89,7 +91,7 @@ end
 Compute the angular-momentum lowering operator.  This is the standard ``L_-`` operator,
 familiar from basic physics, extended to work with SWSHs.  Note that this is the left Lie
 derivative; see [`R₋`](@ref) for the equivalent right Lie derivative.  See [the
-documentation](/operators/) for more details.
+documentation](/operators/) or [Boyle](@cite Boyle_2016) for more details.
 
 We define ``L_-`` to be the lowering operator for the left Lie derivative with respect to
 rotation about ``z``: ``L_z``.  By definition, this implies the commutator relation ``[L_z,
@@ -133,8 +135,9 @@ as the Casimir operator, and is equal to
 ```math
 R^2 = R_x^2 + R_y^2 + R_z^2 = \frac{R_+R_- + R_-R_+ + 2R_zR_z}{2}.
 ```
-Note that these are the right Lie derivatives, but ``L^2 = R^2``, where `L` is the left Lie
-derivative.  See [the documentation](/operators/) for more details.
+Note that these are the right Lie derivatives, but ``L^2 = R^2``, where `L` is the left
+Lie derivative.  See [the documentation](/operators/) or [Boyle](@cite Boyle_2016) for
+more details.
 
 In terms of the SWSHs, we can write the action of ``R^2`` as
 ```math
@@ -155,9 +158,9 @@ end
 Compute the *right* angular-momentum operator associated with the ``z`` direction.
 
 This is the ``R_z`` operator, much like the ``L_z`` operator familiar from basic physics,
-but in terms of the right Lie derivative, and extended to work with SWSHs.  See [`Lz`](@ref)
-for the equivalent left Lie derivative.  See [the documentation](/operators/) for more
-details.
+but in terms of the right Lie derivative, and extended to work with SWSHs.  See
+[`Lz`](@ref) for the equivalent left Lie derivative.  See [the documentation](/operators/)
+or [Boyle](@cite Boyle_2016) for more details.
 
 In terms of the SWSHs, we can write the action of ``R_z`` as
 ```math
@@ -181,9 +184,9 @@ end
 Compute the *right* angular-momentum raising operator.
 
 This is the ``R_+`` operator, much like the ``L_+`` operator familiar from basic physics,
-but in terms of the right Lie derivative, and extended to work with SWSHs.  See [`L₊`](@ref)
-for the equivalent left Lie derivative.  See [the documentation](/operators/) for more
-details.
+but in terms of the right Lie derivative, and extended to work with SWSHs.  See
+[`L₊`](@ref) for the equivalent left Lie derivative.  See [the documentation](/operators/)
+or [Boyle](@cite Boyle_2016) for more details.
 
 We define ``R_+`` to be the raising operator for the right Lie derivative with respect to
 rotation about ``z``: ``R_z``.  By definition, this implies the commutator relation ``[R_z,
@@ -222,9 +225,9 @@ end
 Compute the *right* angular-momentum lowering operator.
 
 This is the ``R_-`` operator, much like the ``L_-`` operator familiar from basic physics,
-but in terms of the right Lie derivative, and extended to work with SWSHs.  See [`L₋`](@ref)
-for the equivalent left Lie derivative.  See [the documentation](/operators/) for more
-details.
+but in terms of the right Lie derivative, and extended to work with SWSHs.  See
+[`L₋`](@ref) for the equivalent left Lie derivative.  See [the documentation](/operators/)
+or [Boyle](@cite Boyle_2016) for more details.
 
 We define ``R_-`` to be the raising operator for the right Lie derivative with respect to
 rotation about ``z``: ``R_z``.  By definition, this implies the commutator relation ``[R_z,
