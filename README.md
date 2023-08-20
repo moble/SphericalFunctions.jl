@@ -12,10 +12,10 @@
 [![DOI](https://zenodo.org/badge/381490836.svg)](https://zenodo.org/badge/latestdoi/381490836)
 
 
-This is a Julia package for evaluating and transforming Wigner's 𝔇 matrices, the associated Legendre
-functions, and spin-weighted spherical harmonics (which includes the ordinary scalar spherical
-harmonics).  See [the documentation](https://moble.github.io/SphericalFunctions.jl/) for more
-details.
+This is a Julia package for evaluating and transforming Wigner's 𝔇 matrices,
+the associated Legendre functions, and spin-weighted spherical harmonics (which
+includes the ordinary scalar spherical harmonics).  See [the
+documentation](https://moble.github.io/SphericalFunctions.jl/) for more details.
 
 
 ## Installation
