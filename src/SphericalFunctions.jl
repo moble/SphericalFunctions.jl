@@ -35,9 +35,11 @@ include("Hrecursion.jl")
 export H!, H_recursion_coefficients
 
 include("evaluate.jl")
-export d!, d, D!, Y!
-export dprep, dstorage, Dprep, Dstorage, Yprep, Ystorage
-export ₛ𝐘
+export d_prep, d_matrices, d_matrices!
+export D_prep, D_matrices, D_matrices!
+export sYlm_prep, sYlm_values, sYlm_values!
+# Legacy API:
+export d!, d, D!, Y!, dprep, Dprep, Yprep, ₛ𝐘
 
 include("weights.jl")
 export fejer1, fejer2, clenshaw_curtis

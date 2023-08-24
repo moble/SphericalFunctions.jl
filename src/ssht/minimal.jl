@@ -119,8 +119,7 @@ function SSHTMinimal(
 
     # Compute ₛ𝐝 as a series of LU-decomposed matrices — one for each m=k value
     ₛΛ, luₛΛ = let π=TT(π)
-        H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, TT)
-        d = dstorage(ℓₘₐₓ, TT)
+        d, H_rec_coeffs = dprep(ℓₘₐₓ, TT)
         ₛΛ = OffsetVector(
             [
                 let J = abs(s):abs(m), Δ = max(abs(s), abs(m)):ℓₘₐₓ
