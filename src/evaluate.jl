@@ -10,33 +10,105 @@ using Quaternionic: AbstractQuaternion, to_euler_phases!
 @inline ϵ(m) = ifelse(m > 0 && isodd(m), -1, 1)
 
 
+@doc raw"""
+    d_matrices(β, ℓₘₐₓ)
+    d_matrices(expiβ, ℓₘₐₓ)
+
+Compute Wigner's ``d`` matrices ``d^{(\ell)}_{m',m}(\beta)`` for all ``\ell \leq
+\ell_\mathrm{max}``.
+
+See [`d_matrices!`](@ref) for details about the input and output values.
+
+This function only appropriate when you need to evaluate the matrices for a single value of
+`β` or `expiβ` because it allocates large arrays and performs many calculations that could
+be reused.  If you need to evaluate the matrices for many values of `β` or `expiβ`, you
+should pre-allocate the storage with [`d_prep`](@ref), and then call [`d_matrices!`](@ref)
+with the result instead.
+
 """
-    d!(d, expiβ, ℓₘₐₓ, H_rec_coeffs)
-    d!(d, expiβ, ℓₘₐₓ)
-    d!(d, β, ℓₘₐₓ, H_rec_coeffs)
-    d!(d, β, ℓₘₐₓ)
-    d(expiβ, ℓₘₐₓ)
-    d(β, ℓₘₐₓ)
+d_matrices(β::Real, ℓₘₐₓ) = d_matrices(cis(β), ℓₘₐₓ)
 
-Compute Wigner's d matrix dˡₘₚ,ₘ(β)
 
-# Notes
+@doc raw"""
+    d_matrices!(d_storage, β)
+    d_matrices!(d_storage, expiβ)
+    d_matrices!(d, β, ℓₘₐₓ)
+    d_matrices!(d, expiβ, ℓₘₐₓ)
 
-This function is the preferred method of computing the d matrix for large ell
-values.  In particular, above ell≈32 standard formulas become completely
-unusable because of numerical instabilities and overflow.  This function uses
-stable recursion methods instead, and should be usable beyond ell≈1000.
+Compute Wigner's ``d`` matrices ``d^{(\ell)}_{m',m}(\beta)`` for all ``\ell \leq
+\ell_\mathrm{max}``.
 
-The result is returned in a 1-dimensional array ordered as
+In all cases, the result is returned in a 1-dimensional array ordered as
 
     [
-        d(ell, mp, m, β)
-        for ell in range(ell_max+1)
-        for mp in range(-min(ℓ, mp_max), min(ℓ, mp_max)+1)
-        for m in range(-ell, ell+1)
+        dˡₘₚ,ₘ(β)
+        for ℓ ∈ 0:ℓₘₐₓ
+        for mp ∈ -ℓ:ℓ
+        for m ∈ -ℓ:ℓ
     ]
 
+When the first argument is `d`, it will be modified, so it must be at least as large as that
+array.  When the first argument is `d_storage`, it should be the quantity returned by
+[`d_prep`](@ref), and the result will be written into the `d` field of that tuple.  Both of
+these options — especially the latter — reduce the number of allocations needed on each call
+to the corresponding functions, which should increase the speed significantly.
+
+!!! warn
+    When using the `d_storage` argument (which is recommended), the returned quantity `d`
+    will be an alias of `d_storage[1]`.  If you want to retain that data after the next call
+    to [`d_matrices!`](@ref), you should copy it with `copy(d)`.
+
+See also [`d_matrices`](@ref) for a simpler function call when you only need to evaluate the
+matrices for a single value of `β` or `expiβ`.
+
+# Examples
+
+```julia
+using SphericalFunctions
+ℓₘₐₓ = 8
+T = Float64
+β = T(1)/8
+d_storage = d_prep(ℓₘₐₓ, T)
+d = d_matrices!(d_storage, β)
+```
+
 """
+d_matrices!(d, β::Real, ℓₘₐₓ) = d_matrices!(d, cis(β), ℓₘₐₓ)
+
+d_matrices!(d_storage, β::Real) = d_matrices!(d_storage, cis(β))
+
+function d_matrices(expiβ::Complex, ℓₘₐₓ)
+    d = d_storage(ℓₘₐₓ)
+    d_matrices!(d, expiβ, ℓₘₐₓ)
+    return d
+end
+
+function d_matrices!(d, expiβ::Complex{T}, ℓₘₐₓ) where T
+    d!(d, expiβ, ℓₘₐₓ, H_recursion_coefficients(ℓₘₐₓ, T))
+    return d
+end
+
+function d_matrices!(d_storage, expiβ::Complex{T}) where T
+    d, H_rec_coeffs, ℓₘₐₓ = d_storage
+    d!(d, expiβ, ℓₘₐₓ, H_rec_coeffs)
+    d
+end
+
+"""
+    d_prep(ℓₘₐₓ, T)
+
+Construct space and pre-compute recursion coefficients to compute Wigner's ``d`` matrix in
+place.
+
+This returns the `d_storage` arguments needed by [`d_matrices!`](@ref).
+
+"""
+function d_prep(ℓₘₐₓ, ::Type{T}) where {T<:Real}
+    d, H_rec_coeffs = dprep(ℓₘₐₓ, T)
+    (d, H_rec_coeffs, ℓₘₐₓ)
+end
+
+# Legacy API for d_matrices
 function d!(d, expiβ::Complex, ℓₘₐₓ, H_rec_coeffs)
     H!(d, expiβ, ℓₘₐₓ, ℓₘₐₓ, H_rec_coeffs, WignerDindex)
 
@@ -100,59 +172,130 @@ function d(expiβ::Complex{T}, ℓₘₐₓ) where {T<:Real}
     d!(𝔡, expiβ, ℓₘₐₓ, H_recursion_coefficients(ℓₘₐₓ, T))
 end
 d(β::T, ℓₘₐₓ) where {T<:Real} = d(cis(β), ℓₘₐₓ)
-
-"""
-    dstorage(ℓₘₐₓ, T)
-
-Construct space to compute Wigner's ``d`` matrix in place.
-
-This returns the `d` argument needed by [`d!`](@ref).
-
-"""
-function dstorage(ℓₘₐₓ, ::Type{T}) where {T<:Real}
-    Vector{T}(undef, WignerDsize(ℓₘₐₓ))
-end
-
-
-"""
-    dprep(ℓₘₐₓ, T)
-
-Construct space and pre-compute recursion coefficients to compute Wigner's
-``d`` matrix in place.
-
-This returns the `(d, H_rec_coeffs)` arguments needed by [`d!`](@ref).
-
-"""
 function dprep(ℓₘₐₓ, ::Type{T}) where {T<:Real}
-    d = dstorage(ℓₘₐₓ, T)
+    d = Vector{T}(undef, WignerDsize(ℓₘₐₓ))
     H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, T)
     d, H_rec_coeffs
 end
 
 
+@doc raw"""
+    D_matrices(R, ℓₘₐₓ)
+    D_matrices(α, β, γ, ℓₘₐₓ)
+
+Compute Wigner's 𝔇 matrices ``\mathfrak{D}^{(\ell)}_{m',m}(\beta)`` for all ``\ell \leq
+\ell_\mathrm{max}``.
+
+See [`D_matrices!`](@ref) for details about the input and output values.
+
+This function only appropriate when you need to evaluate the matrices for a single value of
+`R` or `α, β, γ` because it allocates large arrays and performs many calculations that could
+be reused.  If you need to evaluate the matrices for many values of `R` or `α, β, γ`, you
+should pre-allocate the storage with [`D_prep`](@ref), and then call [`D_matrices!`](@ref)
+with the result instead.
+
 """
-    D!(𝔇, R, ℓₘₐₓ, (aₙᵐ,bₙᵐ,dₙᵐ), eⁱᵐᵅ, eⁱᵐᵞ)
+function D_matrices(R, ℓₘₐₓ)
+    D_storage = D_prep(ℓₘₐₓ, eltype(R))
+    D_matrices!(D_storage, R)
+end
 
-Compute Wigner's 𝔇 matrix
+function D_matrices(α, β, γ, ℓₘₐₓ)
+    T = promote_type(typeof.((α, β, γ))...)
+    D_storage = D_prep(ℓₘₐₓ, T)
+    D_matrices!(D_storage, R)
+end
 
-This function implements the preferred method of computing the 𝔇 matrix for large ell
-values.  In particular, above ell≈32 standard formulas become completely
-unusable because of numerical instabilities and overflow.  This function uses
-stable recursion methods instead, and should be usable beyond ell≈1000.
+@doc raw"""
+    D_matrices!(D_storage, R)
+    D_matrices!(D_storage, α, β, γ)
+    D_matrices!(D, R, ℓₘₐₓ)
+    D_matrices!(D, α, β, γ, ℓₘₐₓ)
 
-This function computes 𝔇ˡₘₚ,ₘ(R).  The result is returned in a 1-dimensional
-array ordered as
+Compute Wigner's 𝔇 matrices ``\mathfrak{D}^{(\ell)}_{m',m}(\beta)`` for all ``\ell \leq
+\ell_\mathrm{max}``.
+
+In all cases, the result is returned in a 1-dimensional array ordered as
 
     [
-        𝔇(ell, mp, m, R)
-        for ell in range(ell_max+1)
-        for mp in range(-min(ℓ, mp_max), min(ℓ, mp_max)+1)
-        for m in range(-ell, ell+1)
+        𝔇ˡₘₚ,ₘ(R)
+        for ℓ ∈ 0:ℓₘₐₓ
+        for mp ∈ -ℓ:ℓ
+        for m ∈ -ℓ:ℓ
     ]
 
+When the first argument is `D`, it will be modified, so it must be at least as large as that
+array. When the first argument is `D_storage`, it should be the quantity returned by
+[`D_prep`](@ref), and the result will be written into the `D` field of that tuple.  Both of
+these options — especially the latter — reduce the number of allocations needed on each call
+to the corresponding functions, which should increase the speed significantly.  Note that
+the `D` or `D_storage` arguments must have types compatible with the type of `R` or `α, β,
+γ`.
+
+!!! warn
+    When using the `D_storage` argument (which is recommended), the returned quantity `D`
+    will be an alias of `D_storage[1]`.  If you want to retain that data after the next call
+    to [`D_matrices!`](@ref), you should copy it with `copy(D)`.
+
+The `α, β, γ` arguments are Euler angles as described in the documentation of
+[`Quaternionic.from_euler_angles`](https://moble.github.io/Quaternionic.jl/dev/manual/#Quaternionic.from_euler_angles-Tuple{Any,%20Any,%20Any}).
+
+See also [`D_matrices`](@ref) for a simpler function call when you only need to evaluate the
+matrices for a single value of `R` or `α, β, γ`.
+
+# Examples
+
+```julia
+using Quaternionic, SphericalFunctions
+ℓₘₐₓ = 8
+T = Float64
+R = Rotor{T}(1, 2, 3, 4)  # Will be normalized automatically
+D_storage = D_prep(ℓₘₐₓ, T)
+D = D_matrices!(D_storage, R)
+```
+
 """
+function D_matrices!(D, R, ℓₘₐₓ)
+    D_storage = (D, Dworkspace(ℓₘₐₓ, eltype(R))...)
+    D_matrices!(D_storage, R)
+end
+
+function D_matrices!(D, α, β, γ, ℓₘₐₓ)
+    T = promote_type(typeof.((α, β, γ))...)
+    D_storage = (D, Dworkspace(ℓₘₐₓ, T)...)
+    D_matrices!(D_storage, α, β, γ)
+end
+
+function D_matrices!(D_storage, R)
+    (𝔇, ℓₘₐₓ, H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ) = D_storage
+    D!(𝔇, R, ℓₘₐₓ, H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ)
+end
+
+function D_matrices!(D_storage, α, β, γ)
+    (𝔇, ℓₘₐₓ, H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ) = D_storage
+    D!(𝔇, cis(α), cis(β), cis(γ), ℓₘₐₓ, H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ)
+end
+
+@doc raw"""
+    D_prep(ℓₘₐₓ, T)
+
+Construct storage space and pre-compute recursion coefficients to compute Wigner's
+``\mathfrak{D}`` matrix in place.
+
+This returns the `D_storage` arguments needed by [`D_matrices!`](@ref).
+
+"""
+function D_prep(ℓₘₐₓ, ::Type{T}) where {T<:Real}
+    𝔇, H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ = Dprep(ℓₘₐₓ, T)
+    (𝔇, ℓₘₐₓ, H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ)
+end
+
+# Legacy API for D_matrices
 function D!(𝔇, R::AbstractQuaternion, ℓₘₐₓ, H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ)
     expiα, expiβ, expiγ = to_euler_phases(R)
+    D!(𝔇, expiα, expiβ, expiγ, ℓₘₐₓ, H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ)
+end
+function D!(𝔇, expiα, expiβ, expiγ, ℓₘₐₓ, H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ)
     H!(𝔇, expiβ, ℓₘₐₓ, ℓₘₐₓ, H_rec_coeffs, WignerDindex)
     complex_powers!(eⁱᵐᵅ, expiα)
     complex_powers!(eⁱᵐᵞ, expiγ)
@@ -214,53 +357,56 @@ function D!(𝔇, R::AbstractQuaternion, ℓₘₐₓ, H_rec_coeffs, eⁱᵐᵅ,
     end
     𝔇
 end
-
-"""
-    Dstorage(ℓₘₐₓ, T)
-
-Construct space to compute Wigner's ``𝔇`` matrix in place.
-
-This returns the `D` argument needed by [`D!`](@ref).
-
-"""
-function Dstorage(ℓₘₐₓ, ::Type{T}) where {T<:Real}
-    Vector{Complex{T}}(undef, WignerDsize(ℓₘₐₓ))
-end
-
-
-"""
-    Dprep(ℓₘₐₓ, T)
-
-Construct space and pre-compute recursion coefficients to compute Wigner's
-``𝔇`` matrix in place.
-
-This returns the `(D, H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ)` arguments needed by
-[`D!`](@ref).
-
-"""
 function Dprep(ℓₘₐₓ, ::Type{T}) where {T<:Real}
-    𝔇 = Dstorage(ℓₘₐₓ, T)
+    𝔇 = Vector{Complex{T}}(undef, WignerDsize(ℓₘₐₓ))
+    H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ = Dworkspace(ℓₘₐₓ, T)
+    𝔇, H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ
+end
+function Dworkspace(ℓₘₐₓ, ::Type{T}) where {T<:Real}
     H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, T)
     eⁱᵐᵅ = Vector{Complex{T}}(undef, ℓₘₐₓ+1)
     eⁱᵐᵞ = Vector{Complex{T}}(undef, ℓₘₐₓ+1)
-    𝔇, H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ
+    H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ
 end
 
 
 @doc raw"""
-    Y!(Y, R, ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ=0)
-    Y!(Y, expiθ, expiϕ, ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ=0)
-    Y!(Y, expiϕ, expiθ, expiγ, ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ=0)
+    sYlm_values(R, ℓₘₐₓ, spin)
+    sYlm_values(θ, ϕ, ℓₘₐₓ, spin)
 
-Evaluate (and write into `Y`, if present) the values of ``{}_{s}Y_{\ell,
-m}(R)`` for the input value of `s`, for all ``(\ell, m)`` throughout the range
-specified by `wigner`.  `R` is assumed to be a unit quaternion (which may be
-`Rotor`, or simply a `Quaternion`).  If `R` does not have unit magnitude, the
-output elements will be too large by a factor ``|R|^{\ell}``.  If `Y` is not
-present, a new array will be created.
+Compute values of the spin-weighted spherical harmonic ``{}_{s}Y_{\ell, m}(R)`` for all
+``\ell \leq \ell_\mathrm{max}``.
 
-The spherical harmonics of spin weight ``s`` are related to Wigner's
-``\mathfrak{D}`` matrix as
+See [`sYlm_values!`](@ref) for details about the input and output values.
+
+This function only appropriate when you need to evaluate the ``{}_{s}Y_{\ell, m}`` for a
+single value of `R` or `θ, ϕ` because it allocates large arrays and performs many
+calculations that could be reused.  If you need to evaluate the matrices for many values of
+`R` or `θ, ϕ`, you should pre-allocate the storage with [`sYlm_prep`](@ref), and then call
+[`sYlm_values!`](@ref) with the result instead.
+
+"""
+function sYlm_values(R::AbstractQuaternion, ℓₘₐₓ, spin)
+    sYlm_storage = sYlm_prep(ℓₘₐₓ, spin, eltype(R), abs(spin))
+    sYlm_values!(sYlm_storage, R, spin)
+end
+
+function sYlm_values(θ::Tθ, ϕ::Tϕ, ℓₘₐₓ, spin) where {Tθ<:Real, Tϕ<:Real}
+    sYlm_storage = sYlm_prep(ℓₘₐₓ, spin, promote_type(Tθ, Tϕ), abs(spin))
+    sYlm_values!(sYlm_storage, θ, ϕ, spin)
+end
+
+@doc raw"""
+    sYlm_values!(sYlm_storage, R, spin)
+    sYlm_values!(sYlm_storage, θ, ϕ, spin)
+    sYlm_values!(sYlm, R, ℓₘₐₓ, spin)
+    sYlm_values!(sYlm, θ, ϕ, ℓₘₐₓ, spin)
+
+Compute values of the spin-weighted spherical harmonic ``{}_{s}Y_{\ell, m}(R)`` for all
+``\ell \leq \ell_\mathrm{max}``.
+
+The spherical harmonics of spin weight ``s`` are related to Wigner's ``\mathfrak{D}`` matrix
+as
 ```math
 \begin{aligned}
 {}_{s}Y_{\ell, m}(R)
@@ -268,13 +414,114 @@ The spherical harmonics of spin weight ``s`` are related to Wigner's
   &= (-1)^s \sqrt{\frac{2\ell+1}{4\pi}} \bar{\mathfrak{D}}^{(\ell)}_{-s, m}(\bar{R}).
 \end{aligned}
 ```
+
+In all cases, the result is returned in a 1-dimensional array ordered as
+
+    [
+        ₛYₗₘ(R)
+        for ℓ ∈ 0:ℓₘₐₓ
+        for m ∈ -ℓ:ℓ
+    ]
+
+When the first argument is `Y`, it will be modified, so it must be at least as large as that
+array. When the first argument is `sYlm_storage`, it should be the quantity returned by
+[`sYlm_prep`](@ref), and the result will be written into the `Y` field of that tuple.  Both
+of these options — especially the latter — reduce the number of allocations needed on each
+call to the corresponding functions, which should increase the speed significantly.  Note
+that the `Y` or `sYlm_storage` arguments must have types compatible with the type of `R` or
+`θ, ϕ`.
+
+!!! warn
+    When using the `sYlm_storage` argument (which is recommended), the returned quantity
+    `sYlm` will be an alias of `sYlm_storage[1]`.  If you want to retain that data after the
+    next call to [`sYlm_values!`](@ref), you should copy it with `copy(sYlm)`.
+
+The `θ, ϕ` arguments are spherical coordinates as described in the documentation of
+[`Quaternionic.from_spherical_coordinates`](https://moble.github.io/Quaternionic.jl/dev/manual/#Quaternionic.from_spherical_coordinates-Tuple{Any,%20Any}).
+
+See also [`sYlm_values`](@ref) for a simpler function call when you only need to evaluate
+the ``{}_{s}Y_{\ell, m}`` for a single value of `R` or `θ, ϕ`.
+
+# Examples
+
+```julia
+using Quaternionic, SphericalFunctions
+spin = -2
+ℓₘₐₓ = 8
+T = Float64
+R = Rotor{T}(1, 2, 3, 4)  # Will be normalized automatically
+sYlm_storage = sYlm_prep(ℓₘₐₓ, spin, T)
+sYlm = sYlm_values!(sYlm_storage, R, spin)
+```
+
 """
+function sYlm_values!(Y, R::AbstractQuaternion, ℓₘₐₓ, spin)
+    sYlm_storage = (Y, Y_workspace(ℓₘₐₓ, spin, eltype(R), abs(spin))...)
+    sYlm_values!(sYlm_storage, R, spin)
+end
+
+function sYlm_values!(Y, θ::Tθ, ϕ::Tϕ, ℓₘₐₓ, spin) where {Tθ<:Real, Tϕ<:Real}
+    sYlm_storage = (Y, Y_workspace(ℓₘₐₓ, spin, promote_type(Tθ, Tϕ), abs(spin))...)
+    sYlm_values!(sYlm_storage, θ, ϕ, spin)
+end
+
+function sYlm_values!(sYlm_storage, R::AbstractQuaternion, spin)
+    (Y, ℓₘₐₓ, sₘₐₓ, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ) = sYlm_storage
+    if abs(spin) > abs(sₘₐₓ)
+        error(
+            "Input `sYlm_storage` was built created for maximum spin `sₘₐₓ`=$(sₘₐₓ), "
+            *"but `spin`=$(spin) was requested."
+        )
+    end
+    Y!(Y, R, ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ)
+end
+
+function sYlm_values!(sYlm_storage, θ::Tθ, ϕ::Tϕ, spin) where {Tθ<:Real, Tϕ<:Real}
+    (Y, ℓₘₐₓ, sₘₐₓ, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ) = sYlm_storage
+    if abs(spin) > abs(sₘₐₓ)
+        error(
+            "Input `sYlm_storage` was created for maximum spin `sₘₐₓ`=$(sₘₐₓ), "
+            *"but `spin`=$(spin) was requested."
+        )
+    end
+    expiθ, expiϕ = cis.(promote(θ, ϕ))
+    expiγ = zero(typeof(expiθ))
+    Y!(Y, expiϕ, expiθ, expiγ, ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ)
+end
+
+function Y_workspace(ℓₘₐₓ, sₘₐₓ, ::Type{T}, ℓₘᵢₙ=0) where {T<:Real}
+    H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, T)
+    Hwedge = Vector{T}(undef, WignerHsize(ℓₘₐₓ, abs(sₘₐₓ)))
+    expimϕ = Vector{Complex{T}}(undef, ℓₘₐₓ+1)
+    ℓₘₐₓ, sₘₐₓ, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ
+end
+
+@doc raw"""
+    sYlm_prep(ℓₘₐₓ, sₘₐₓ, T, ℓₘᵢₙ=0)
+
+Construct storage space and pre-compute recursion coefficients to compute spin-weighted
+spherical-harmonic values ``{}_{s}Y_{\ell, m}`` in place.
+
+This returns the `sYlm_storage` arguments needed by [`sYlm_values!`](@ref).
+
+Note that the result of this function can be passed to `sYlm_values!`, even if the value of
+`spin` passed to that function is smaller (in absolute value) than the `sₘₐₓ` passed to this
+function.  That is, the `sYlm_storage` returned by this function can be used to compute
+``{}_{s}Y_{\ell, m}`` values for numerous values of the spin.
+
+"""
+function sYlm_prep(ℓₘₐₓ, sₘₐₓ, ::Type{T}, ℓₘᵢₙ=0) where {T<:Real}
+    Y = Vector{Complex{T}}(undef, Ysize(ℓₘᵢₙ, ℓₘₐₓ))
+    ℓₘₐₓ, sₘₐₓ, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ = Y_workspace(ℓₘₐₓ, sₘₐₓ, T, ℓₘᵢₙ)
+    (Y, ℓₘₐₓ, sₘₐₓ, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ)
+end
+
+# Legacy API for sYlm_values
 function Y!(Y, R, ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ=0)
     expiϕ, expiθ, expiγ = to_euler_phases(R)
     Y!(Y, expiϕ, expiθ, expiγ, ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ)
 end
-
-function Y!(Y, expiϕ, expiθ, expiγ, ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ)
+function Y!(Y, expiϕ, expiθ, expiγ, ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ=0)
     if length(Y) < Ysize(ℓₘᵢₙ, ℓₘₐₓ)
         error("Input `Y` has length $(length(Y)); which is not enough for ℓₘₐₓ=$ℓₘₐₓ")
     end
@@ -315,83 +562,39 @@ function Y!(Y, expiϕ, expiθ, expiγ, ℓₘₐₓ, spin, H_rec_coeffs, Hwedge,
     end
     Y
 end
-
-"""
-    Ystorage(ℓₘₐₓ, T)
-    Ystorage(ℓₘₐₓ, T, ℓₘᵢₙ)
-
-Construct space to compute the spin-weighted spherical harmonics ``ₛYₗ,ₘ`` in
-place.
-
-This returns the `Y` argument needed by [`Y!`](@ref).
-
-"""
-function Ystorage(ℓₘₐₓ, ::Type{T}, ℓₘᵢₙ=0) where {T<:Real}
-    Vector{Complex{T}}(undef, Ysize(ℓₘᵢₙ, ℓₘₐₓ))
-end
-
-function Yworkspace(ℓₘₐₓ, sₘₐₓ, ::Type{T}) where {T<:Real}
-    Hwedge = Vector{T}(undef, WignerHsize(ℓₘₐₓ, abs(sₘₐₓ)))
-    expimϕ = Vector{Complex{T}}(undef, ℓₘₐₓ+1)
-    Hwedge, expimϕ
-end
-
-"""
-    Yprep(ℓₘₐₓ, sₘₐₓ, T, ℓₘᵢₙ)
-
-Prepare the storage, recursion coefficients, and workspace to compute ₛYₗ,ₘ
-data up to the maximum sizes given.
-
-Returns a tuple of `Y, H_rec_coeffs, Hwedge, expimϕ`, which can be passed to
-the correspondingly named arguments of `Y!`.
-
-Note that the same results of this function can be passed to `Y!`, even if the
-value of `ℓₘₐₓ` passed to that function is smaller than the value passed to
-this function, or the value of `spin` passed to that function is smaller (in
-absolute value) than the `sₘₐₓ` passed to this function.  However, the value of
-`ℓₘᵢₙ` passed to that function *must not* be smaller than the value passed to
-this function (unless one of the other sizes is sufficiently smaller).
-
-"""
 function Yprep(ℓₘₐₓ, sₘₐₓ, ::Type{T}, ℓₘᵢₙ=0) where {T<:Real}
-    Y = Ystorage(ℓₘₐₓ, T, ℓₘᵢₙ)
-    H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, T)
-    Hwedge, expimϕ = Yworkspace(ℓₘₐₓ, sₘₐₓ, T)
-    Y, H_rec_coeffs, Hwedge, expimϕ
+    sYlm_storage = Yprep(ℓₘₐₓ, sₘₐₓ, T, ℓₘᵢₙ)
+    # Y, H_rec_coeffs, Hwedge, expimϕ
+    sYlm_storage[1], sYlm_storage[4], sYlm_storage[5], sYlm_storage[6]
 end
-
-
 @doc raw"""
     ₛ𝐘(s, ℓₘₐₓ, [T=Float64], [Rθϕ=golden_ratio_spiral_rotors(s, ℓₘₐₓ, T)])
 
 
-Construct a matrix of ``ₛYₗₘ(Rθϕ)`` values for the input `s` and all nontrivial
-``(\ell, m)`` up to `ℓₘₐₓ`.
+Construct a matrix of ``ₛYₗₘ(Rθϕ)`` values for the input `s` and all nontrivial ``(\ell,
+m)`` up to `ℓₘₐₓ`.
 
-This is a fast and accurate method for mapping between the vector of
-spin-weighted spherical-harmonic mode weights ``ₛ𝐟ₗₘ`` and the vector of
-function values on the sphere ``ₛ𝐟ⱼₖ``, as
+This is a fast and accurate method for mapping between the vector of spin-weighted
+spherical-harmonic mode weights ``ₛ𝐟ₗₘ`` and the vector of function values on the sphere
+``ₛ𝐟ⱼₖ``, as
 ```math
 ₛ𝐟ⱼₖ = ₛ𝐘\, ₛ𝐟ₗₘ,
 ```
-where the right-hand side represents the matrix-vector product.  As usual, we
-assume that the ``ₛ𝐟ₗₘ`` modes are ordered by increasing ``m ∈ [-ℓ:ℓ]``, and
-``ℓ ∈ [|s|:ℓₘₐₓ]``.  The ordering of the ``ₛ𝐟ⱼₖ`` values will be determined by
-the ordering of the argument `Rθϕ`.
+where the right-hand side represents the matrix-vector product.  As usual, we assume that
+the ``ₛ𝐟ₗₘ`` modes are ordered by increasing ``m ∈ [-ℓ:ℓ]``, and ``ℓ ∈ [|s|:ℓₘₐₓ]``.  The
+ordering of the ``ₛ𝐟ⱼₖ`` values will be determined by the ordering of the argument `Rθϕ`.
 
-Note that the number of modes need not be the same as the number of points on
-which the function is evaluated, which would imply that the output matrix is
-not square.  To be able to invert the relationship, however, we need the number
-of points ``ₛ𝐟ⱼₖ`` to be *at least as large* as the number of modes ``ₛ𝐟ₗₘ``.
+Note that the number of modes need not be the same as the number of points on which the
+function is evaluated, which would imply that the output matrix is not square.  To be able
+to invert the relationship, however, we need the number of points ``ₛ𝐟ⱼₖ`` to be *at least
+as large* as the number of modes ``ₛ𝐟ₗₘ``.
 
-Note that the usefulness of this approach is limited by the fact that the size
-of this matrix scales as ℓₘₐₓ⁴.  As such, it is mostly useful only for ℓₘₐₓ of
-order dozens, rather than — say — the tens of thousands that CMB astronomy or
-lensing require, for example.
+Note that the usefulness of this approach is limited by the fact that the size of this
+matrix scales as ℓₘₐₓ⁴.  As such, it is mostly useful only for ℓₘₐₓ of order dozens, rather
+than — say — the tens of thousands that CMB astronomy or lensing require, for example.
 
-Direct application and inversion of this matrix are used in the "direct"
-methods of ``s``-SHT transformations.  See [`SSHTDirect`](@ref) for details
-about the implementation.
+Direct application and inversion of this matrix are used in the "direct" methods of
+``s``-SHT transformations.  See [`SSHTDirect`](@ref) for details about the implementation.
 
 """
 function ₛ𝐘(s, ℓₘₐₓ, ::Type{T}=Float64, Rθϕ=golden_ratio_spiral_rotors(s, ℓₘₐₓ, T)) where T
