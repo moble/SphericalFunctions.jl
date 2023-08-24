@@ -280,7 +280,16 @@ function WignerHrange(ℓₘₐₓ, m′ₘₐₓ=ℓₘₐₓ)
 end
 
 
-"""Helper function for `WignerHindex`"""
+"""
+WignerHindex(ℓ, m′, m, m′ₘₐₓ)
+
+Helper function for [`WignerHindex`](@ref), with more constraints.
+
+This function assumes that `m ≥ |m′|`.  The main [`WignerHindex`](@ref) function uses
+symmetries of the H array to account for cases that violate this assumption.  (But note that
+both that function and this one assume that `|m| ≤ ℓ` and `|m′| ≤ ℓ`.)
+
+"""
 function _WignerHindex(ℓ, m′, m, m′ₘₐₓ)
     m′ₘₐₓ = min(m′ₘₐₓ, ℓ)
     i = WignerHsize(ℓ-1, m′ₘₐₓ)  # total size of everything with smaller ℓ
@@ -298,7 +307,7 @@ end
 """
     WignerHindex(ℓ, m′, m, m′ₘₐₓ)
 
-Index to "wedge" arrays
+Index to "wedge" arrays.
 
 See also [`WignerHsize`](@ref) and [`WignerHrange`](@ref).
 
