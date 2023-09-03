@@ -1,4 +1,23 @@
 @testset verbose=true "Operators" begin
+    ε(j,k,l) = ifelse(
+        (j,k,l)∈((1,2,3),(2,3,1),(3,1,2)),
+        1,
+        ifelse(
+            (j,k,l)∈((2,1,3),(1,3,2),(3,2,1)),
+            -1,
+            0
+        )
+    )
+    @testset "Pretest ε and basis commutators" begin
+        # Test that [eⱼ, eₖ] = 2∑ₗ ε(j,k,l) eₗ
+        let e = [imx, imy, imz]
+            for (j,eⱼ) ∈ enumerate(e)
+                for (k,eₖ) ∈ enumerate(e)
+                    @test eⱼ*eₖ - eₖ*eⱼ == 2sum(ε(j,k,l)*e[l] for l ∈ 1:3)
+                end
+            end
+        end
+    end
 
     # These are just simple versions of the operators defined in
     # notes/operators/explicit_definition.jl, for testing purposes.  Note that we explicitly
@@ -236,38 +255,10 @@
         end
     end
 
-    # @testset "General commutators $T" for T ∈ [Float32, Float64, Double64, BigFloat]
-    #     # Pretest: Test that [eⱼ, eₖ] = 2∑ₗ ε(j,k,l) eₗ
-    #     ε(j,k,l) = ifelse((j,k,l)∈((1,2,3),(2,3,1),(3,1,2)), 1, ifelse((j,k,l)∈((2,1,3),(1,3,2),(3,2,1)), -1, 0))
-    #     let e = [imx, imy, imz]
-    #         for (j,eⱼ) ∈ enumerate(e)
-    #             for (k,eₖ) ∈ enumerate(e)
-    #                 @test eⱼ*eₖ - eₖ*eⱼ == 2sum(ε(j,k,l)*e[l] for l ∈ 1:3)
-    #             end
-    #         end
-    #     end
-    #     # Therefore, we are about to test the following relations (and then some):
-    #     #   [Lⱼ, Lₖ] =  im L_{[eⱼ,eₖ]/2} =  im ∑ₗ ε(j,k,l) Lₗ
-    #     #   [Rⱼ, Rₖ] = -im R_{[eⱼ,eₖ]/2} = -im ∑ₗ ε(j,k,l) Rₗ
-
-    #     # Test the following relations:
-    #     # [L_a, L_b] = - L_{[a,b]} / 2im
-    #     # [R_a, R_b] =   R_{[a,b]} / 2im
-    #     ϵ = 100 * eps(T)
-    #     vectors = [e; randn(Rotor{T}, 10)]
-    #     @testset "$ℓₘₐₓ" for ℓₘₐₓ ∈ 4:7
-    #         for s in -3:3
-    #             let ℓₘᵢₙ = 0
-    #                 Y = zeros(Complex{T}, Ysize(ℓₘᵢₙ, ℓₘₐₓ))
-    #                 let Lz=Array(Lz(s, ℓₘᵢₙ, ℓₘₐₓ, T)),
-    #                     L₊=Array(L₊(s, ℓₘᵢₙ, ℓₘₐₓ, T)),
-    #                     L₋=Array(L₋(s, ℓₘᵢₙ, ℓₘₐₓ, T))
-    #                     # [Lz, L₊] = L₊
-    #                     @test Lz*L₊ - L₊*Lz ≈ L₊ atol=ϵ rtol=ϵ
-    #                     # [Lz, L₋] = -L₋
-    #                     @test Lz*L₋ - L₋*Lz ≈ -L₋ atol=ϵ rtol=ϵ
-    #                     # [L₊, L₋] = 2Lz
-    #                     @test L₊*L₋ - L₋*L₊ ≈ 2Lz atol=ϵ rtol=ϵ
-    #                 end
+    ## TODO: Add L_x, L_y, R_x, and R_y, then test these commutators.
+    ## Note that R is harder because the basis in which all the matrices are returned
+    ## assumes that you are dealing with a particular `s` eigenvalue.
+    # [Lⱼ, Lₖ] =  im L_{[eⱼ,eₖ]/2} =  im ∑ₗ ε(j,k,l) Lₗ
+    # [Rⱼ, Rₖ] = -im R_{[eⱼ,eₖ]/2} = -im ∑ₗ ε(j,k,l) Rₗ
 
 end
