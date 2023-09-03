@@ -14,8 +14,9 @@ using Quaternionic: AbstractQuaternion, to_euler_phases!
     d_matrices(β, ℓₘₐₓ)
     d_matrices(expiβ, ℓₘₐₓ)
 
-Compute Wigner's ``d`` matrices ``d^{(\ell)}_{m',m}(\beta)`` for all ``\ell \leq
-\ell_\mathrm{max}``.
+Compute Wigner's ``d^{(\ell)}`` matrices with elements ``d^{(\ell)}_{m',m}(\beta)`` for all
+``\ell \leq \ell_\mathrm{max}``.  The ``d`` matrices are sometimes called the "reduced"
+Wigner matrices, in contrast to the full ``\mathfrak{D}`` matrices.
 
 See [`d_matrices!`](@ref) for details about the input and output values.
 
@@ -35,8 +36,9 @@ d_matrices(β::Real, ℓₘₐₓ) = d_matrices(cis(β), ℓₘₐₓ)
     d_matrices!(d, β, ℓₘₐₓ)
     d_matrices!(d, expiβ, ℓₘₐₓ)
 
-Compute Wigner's ``d`` matrices ``d^{(\ell)}_{m',m}(\beta)`` for all ``\ell \leq
-\ell_\mathrm{max}``.
+Compute Wigner's ``d^{(\ell)}`` matrices with elements ``d^{(\ell)}_{m',m}(\beta)`` for all
+``\ell \leq \ell_\mathrm{max}``.  The ``d`` matrices are sometimes called the "reduced"
+Wigner matrices, in contrast to the full ``\mathfrak{D}`` matrices.
 
 In all cases, the result is returned in a 1-dimensional array ordered as
 

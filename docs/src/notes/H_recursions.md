@@ -120,7 +120,7 @@ Now, we can directly obtain a recurrence relation for
   H^{0,0}_{0} &= 1 \\
   H^{0,0}_{1} &= \cos β \\
   H^{0,1}_{1} &= \sqrt{1/2} \sin β \\
-  H^{0,0}_{n} &= ā_n \cos β H^{0,0}_{n-1} - b̄_n \sin β H^{0,1}_{n-1} \\
+  H^{0,0}_{n} &= \cos β H^{0,0}_{n-1} - b̄_n \sin β H^{0,1}_{n-1} \\
   H^{0,m}_{n} &=
     c̄_{n,m} \cos β H^{0,m}_{n-1}
     - \sin β \left[ d̄_{n,m} H^{0,m+1}_{n-1} - ē_{n,m} H^{0,m-1}_{n-1} \right],
@@ -130,9 +130,9 @@ where the coefficients are given by
 ```math
 \begin{aligned}
   b̄_n &= \sqrt{\frac{n-1}{n}} \\
-  c̄_{n,m} &= \frac{1}{n} \sqrt{(n+m)*(n-m)} \\
-  d̄_{n,m} &= \frac{1}{2n} \sqrt{(n-m)*(n-m-1)} \\
-  ē_{n,m} &= \frac{1}{2n} \sqrt{(n+m)*(n+m-1)}.
+  c̄_{n,m} &= \frac{1}{n} \sqrt{(n+m)(n-m)} \\
+  d̄_{n,m} &= \frac{1}{2n} \sqrt{(n-m)(n-m-1)} \\
+  ē_{n,m} &= \frac{1}{2n} \sqrt{(n+m)(n+m-1)}.
 \end{aligned}
 ```
 Note that the coefficients all simplified (in fact, ``a_n`` disappeared), without any
