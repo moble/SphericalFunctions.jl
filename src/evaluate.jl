@@ -565,7 +565,7 @@ function Y!(Y, expiϕ, expiθ, expiγ, ℓₘₐₓ, spin, H_rec_coeffs, Hwedge,
     Y
 end
 function Yprep(ℓₘₐₓ, sₘₐₓ, ::Type{T}, ℓₘᵢₙ=0) where {T<:Real}
-    sYlm_storage = Yprep(ℓₘₐₓ, sₘₐₓ, T, ℓₘᵢₙ)
+    sYlm_storage = sYlm_prep(ℓₘₐₓ, sₘₐₓ, T, ℓₘᵢₙ)
     # Y, H_rec_coeffs, Hwedge, expimϕ
     sYlm_storage[1], sYlm_storage[4], sYlm_storage[5], sYlm_storage[6]
 end
