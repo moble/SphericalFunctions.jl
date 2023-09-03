@@ -2,7 +2,7 @@ using SphericalFunctions
 using Test
 using Random, FFTW, FastTransforms
 using OffsetArrays, StaticArrays, Quaternionic
-using DoubleFloats, ProgressMeter
+using DoubleFloats, ForwardDiff, ProgressMeter
 using LinearAlgebra, Base.Threads
 import Hwloc: num_physical_cores
 
