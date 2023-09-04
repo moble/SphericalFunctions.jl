@@ -79,9 +79,9 @@ d_matrices!(d, β::Real, ℓₘₐₓ) = d_matrices!(d, cis(β), ℓₘₐₓ)
 
 d_matrices!(d_storage, β::Real) = d_matrices!(d_storage, cis(β))
 
-function d_matrices(expiβ::Complex, ℓₘₐₓ)
-    d = d_storage(ℓₘₐₓ)
-    d_matrices!(d, expiβ, ℓₘₐₓ)
+function d_matrices(expiβ::Complex{T}, ℓₘₐₓ) where T
+    d_storage = d_prep(ℓₘₐₓ, T)
+    d = d_matrices!(d_storage, expiβ)
     return d
 end
 

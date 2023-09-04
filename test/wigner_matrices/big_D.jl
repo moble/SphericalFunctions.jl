@@ -32,16 +32,13 @@
         # Now, we're ready to check that d_{n}^{m′,m}(β) matches the expected values
         # for a range of β values
         for ℓₘₐₓ in 0:4
-            H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, T)
-            𝔇 = Array{Complex{T}}(undef, WignerDsize(ℓₘₐₓ, ℓₘₐₓ))
-            eⁱᵐᵅ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
-            eⁱᵐᵞ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
+            D_storage = D_prep(ℓₘₐₓ, T)
             expiα = complex(one(T))
             expiγ = complex(one(T))
             for β in βrange(T)
                 expiβ = cis(β)
                 R = from_euler_angles(zero(T), β, zero(T))
-                D!(𝔇, R, ℓₘₐₓ, H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ)
+                𝔇 = D_matrices!(D_storage, R)
                 for n in 0:ℓₘₐₓ
                     for m′ in -n:n
                         for m in -n:n
@@ -62,16 +59,13 @@
         # for a range of α, β, γ values
         Random.seed!(123)
         ℓₘₐₓ = T===BigFloat ? 4 : 8
-        H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, T)
-        𝔇 = Array{Complex{T}}(undef, WignerDsize(ℓₘₐₓ, ℓₘₐₓ))
-        eⁱᵐᵅ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
-        eⁱᵐᵞ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
+        D_storage = D_prep(ℓₘₐₓ, T)
         @showprogress "Compare 𝔇 to formulaic 𝔇 ($T)" for α in αrange(T, 5)
             for β in βrange(T, 5)
                 for γ in γrange(T, 5)
                     R = from_euler_angles(α, β, γ)
                     expiα, expiβ, expiγ = to_euler_phases(R)
-                    D!(𝔇, R, ℓₘₐₓ, H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ)
+                    𝔇 = D_matrices!(D_storage, R)
                     for n in 0:ℓₘₐₓ
                         for m′ in -n:n
                             for m in -n:n
@@ -93,27 +87,24 @@
         # Here, v̂ is any unit vector; group characters are constant on conjugacy classes and
         # conjugacy classes of SO(3) are rotations through the same angle about any axis.
         ℓₘₐₓ = T===BigFloat ? 10 : 20
-        m′ₘₐₓ = ℓₘₐₓ
-        H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, T)
-        d = Array{T}(undef, WignerDsize(ℓₘₐₓ, m′ₘₐₓ))
-        𝔇 = Array{Complex{T}}(undef, WignerDsize(ℓₘₐₓ, m′ₘₐₓ))
-        eⁱᵐᵅ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
-        eⁱᵐᵞ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
+        D_storage = D_prep(ℓₘₐₓ, T)
+        d_storage = d_prep(ℓₘₐₓ, T)
         @showprogress "Group characters $T" for β in βrange(T)
             expiβ = cis(β)
-            d!(d, expiβ, ℓₘₐₓ, H_rec_coeffs)
+            d = d_matrices!(d_storage, expiβ)
             for j in 0:ℓₘₐₓ
-                sin_ratio = sin((2j+1)*β/2) / sin(β/2)
-                if abs(β) < 10eps(T)
-                    sin_ratio = T(2j+1)
+                sin_ratio = if abs(β) < 10eps(T)
+                    T(2j+1)
                 elseif abs(β-π) < 10eps(T)
-                    sin_ratio = T(-1)^j
+                    T(-1)^j
+                else
+                    sin((2j+1)*β/2) / sin(β/2)
                 end
                 χʲ = sum(d[WignerDindex(j, m, m)] for m in -j:j)
                 @test χʲ ≈ sin_ratio atol=500eps(T) rtol=500eps(T)
                 for v̂ in v̂range(T)
                     R = exp(β/2 * v̂)
-                    D!(𝔇, R, ℓₘₐₓ, H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ)
+                    𝔇 = D_matrices!(D_storage, R)
                     χʲ = sum(𝔇[WignerDindex(j, m, m)] for m in -j:j)
                     @test χʲ ≈ sin_ratio atol=500eps(T) rtol=500eps(T)
                 end
@@ -125,17 +116,17 @@
         # For each l, 𝔇ˡₙ,ₘ(R₁ R₂) = Σₚ 𝔇ˡₙ,ₚ(R₁) 𝔇ˡₚ,ₘ(R₂)
         tol = 3eps(T)
         ℓₘₐₓ = 10
-        𝔇₁ = Array{Complex{T}}(undef, WignerDsize(ℓₘₐₓ))
-        𝔇₂ = Array{Complex{T}}(undef, WignerDsize(ℓₘₐₓ))
-        𝔇₁₂ = Array{Complex{T}}(undef, WignerDsize(ℓₘₐₓ))
-        H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, T)
-        eⁱᵐᵅ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
-        eⁱᵐᵞ = Array{Complex{T}}(undef, ℓₘₐₓ+1)
+        D₁_storage = D_prep(ℓₘₐₓ, T)
+        𝔇₁ = D₁_storage[1]
+        𝔇₂ = similar(𝔇₁)
+        D₂_storage = (𝔇₂, D₁_storage[2:end]...)
+        𝔇₁₂ = similar(𝔇₁)
+        D₁₂_storage = (𝔇₁₂, D₁_storage[2:end]...)
         @showprogress "Representation property ($T)" for R₁ in Rrange(T)
             for R₂ in Rrange(T)
-                D!(𝔇₁, R₁, ℓₘₐₓ, H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ)
-                D!(𝔇₂, R₂, ℓₘₐₓ, H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ)
-                D!(𝔇₁₂, R₁*R₂, ℓₘₐₓ, H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ)
+                D_matrices!(D₁_storage, R₁)
+                D_matrices!(D₂_storage, R₂)
+                D_matrices!(D₁₂_storage, R₁*R₂)
                 for ℓ in 0:ℓₘₐₓ
                     i = WignerDindex(ℓ, -ℓ, -ℓ)
                     j = WignerDindex(ℓ, ℓ, ℓ)

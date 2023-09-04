@@ -20,20 +20,18 @@
         sₘₐₓ = 2
         ℓₘᵢₙ = 0
         tol = ℓₘₐₓ^2 * 2eps(T)  # Mostly because the NINJA.sYlm expressions are inaccurate
-        Y, H_rec_coeffs, Hwedge, expimϕ = Yprep(ℓₘₐₓ, sₘₐₓ, T)
+        sYlm_storage = sYlm_prep(ℓₘₐₓ, sₘₐₓ, T)
 
         let R = randn(Rotor{T})
-            @test_throws ErrorException Y!(Y, R, ℓₘₐₓ+1, 0, H_rec_coeffs, Hwedge, expimϕ)
-            ℓ = ℓₘₐₓ - 1
-            i = WignerHsize(ℓ, abs(0)) - 1
-            @test_throws ErrorException Y!(Y, R, ℓ, 0, H_rec_coeffs, Hwedge[1:i], expimϕ)
+            @test_throws ErrorException sYlm_values!(sYlm_storage, R, sₘₐₓ+1)
+            @test_throws ErrorException sYlm_values!(sYlm_storage, R, -sₘₐₓ-1)
         end
 
         @showprogress "Compare to NINJA expressions ($T)" for spin in -sₘₐₓ:sₘₐₓ
             for ι in βrange(T)
                 for ϕ in αrange(T)
                     R = from_spherical_coordinates(ι, ϕ)
-                    Y!(Y, R, ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ)
+                    Y = sYlm_values!(sYlm_storage, R, spin)
                     i = 1
                     for ℓ in 0:abs(spin)-1
                         for m in -ℓ:ℓ
@@ -62,15 +60,14 @@
         sₘₐₓ = 2
         ℓₘᵢₙ = 0
         tol = 4ℓₘₐₓ * eps(T)
-        Y1, H_rec_coeffs, Hwedge, expimϕ = Yprep(ℓₘₐₓ, sₘₐₓ, T)
-        Y2 = Ystorage(ℓₘₐₓ, T)
+        sYlm_storage = sYlm_prep(ℓₘₐₓ, sₘₐₓ, T)
         @showprogress "Spin property ($T)" for spin in -sₘₐₓ:sₘₐₓ
             for ι in βrange(T)
                 for ϕ in αrange(T)
                     for γ in γrange(T)
                         R = from_spherical_coordinates(ι, ϕ)
-                        Y!(Y1, R * exp(γ*𝐤/2), ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ)
-                        Y!(Y2, R, ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ)
+                        Y1 = copy(sYlm_values!(sYlm_storage, R * exp(γ*𝐤/2), spin))
+                        Y2 = sYlm_values!(sYlm_storage, R, spin)
                         @test Y1 ≈ Y2 * cis(-spin*γ) atol=tol rtol=tol
                     end
                 end
@@ -85,14 +82,14 @@
         sₘₐₓ = 2
         ℓₘᵢₙ = 0
         tol = 4ℓₘₐₓ * eps(T)
-        𝔇, _, eⁱᵐᵅ, eⁱᵐᵞ = Dprep(ℓₘₐₓ, T)
-        Y, H_rec_coeffs, Hwedge, expimϕ = Yprep(ℓₘₐₓ, sₘₐₓ, T)
+        D_storage = D_prep(ℓₘₐₓ, T)
+        sYlm_storage = sYlm_prep(ℓₘₐₓ, sₘₐₓ, T)
         @showprogress "sYlm vs WignerD ($T)" for s in -sₘₐₓ:sₘₐₓ
             for ι in βrange(T)
                 for ϕ in αrange(T)
                     R = from_spherical_coordinates(ι, ϕ)
-                    D!(𝔇, R, ℓₘₐₓ, H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ)
-                    Y!(Y, R, ℓₘₐₓ, s, H_rec_coeffs, Hwedge, expimϕ)
+                    𝔇 = D_matrices!(D_storage, R)
+                    Y = sYlm_values!(sYlm_storage, R, s)
                     i = 1
                     for ℓ in 0:abs(s)-1
                         for m in -ℓ:ℓ
@@ -124,15 +121,14 @@
         sₘₐₓ = 2
         ℓₘᵢₙ = 0
         tol = 4ℓₘₐₓ * eps(T)
-        Y1, H_rec_coeffs, Hwedge, expimϕ = Yprep(ℓₘₐₓ, sₘₐₓ, T)
-        Y2 = Ystorage(ℓₘₐₓ, T)
+        sYlm_storage = sYlm_prep(ℓₘₐₓ, sₘₐₓ, T)
         @showprogress "sYlm conjugation ($T)" for ι in βrange(T)
             for ϕ in αrange(T)
                 for γ in γrange(T)
                     for s in -sₘₐₓ:sₘₐₓ
                         R = from_spherical_coordinates(ι, ϕ)
-                        Y!(Y1, R, ℓₘₐₓ, s, H_rec_coeffs, Hwedge, expimϕ)
-                        Y!(Y2, R, ℓₘₐₓ, -s, H_rec_coeffs, Hwedge, expimϕ)
+                        Y1 = copy(sYlm_values!(sYlm_storage, R, s))
+                        Y2 = sYlm_values!(sYlm_storage, R, -s)
                         for ℓ in abs(s):ℓₘₐₓ
                             for m in -ℓ:ℓ
                                 sYlm1 = conj(Y1[Yindex(ℓ, m)])
