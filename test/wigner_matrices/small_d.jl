@@ -29,8 +29,8 @@
         for β in βrange(T)
             expiβ = cis(β)
             for ℓₘₐₓ in 0:4
-                d, H_rec_coeffs = dprep(ℓₘₐₓ, T)
-                d!(d, expiβ, ℓₘₐₓ, H_rec_coeffs)
+                d_storage = d_prep(ℓₘₐₓ, T)
+                d = d_matrices!(d_storage, expiβ)
                 for n in 0:ℓₘₐₓ
                     for m′ in -n:n
                         for m in -n:n
@@ -45,26 +45,29 @@
     end
 
     @testset "Test d signatures ($T)" for T in [BigFloat, Float64, Float32]
-        # 1 d!(𝔡, expiβ::Complex{T}, ℓₘₐₓ) where {T<:Real}
-        # 2 d!(𝔡, β::T, ℓₘₐₓ, (a,b,d)) where {T<:Real}
-        # 3 d!(𝔡, β::T, ℓₘₐₓ) where {T<:Real}
-        # 4 d(expiβ::Complex{T}, ℓₘₐₓ) where {T<:Real}
-        # 5 d(β::Real, ℓₘₐₓ)
+        # 1 d_matrices(β, ℓₘₐₓ)
+        # 2 d_matrices(expiβ, ℓₘₐₓ)
+        # 3 d_matrices!(d_storage, β)
+        # 4 d_matrices!(d_storage, expiβ)
+        # 5 d_matrices!(d, β, ℓₘₐₓ)
+        # 6 d_matrices!(d, expiβ, ℓₘₐₓ)
         ℓₘₐₓ = 8
         for β in βrange(T)
             expiβ = cis(β)
-            dA = d(β, ℓₘₐₓ)
-            dB = d(expiβ, ℓₘₐₓ)
+            dA = d_matrices(β, ℓₘₐₓ)  # 1
+            dB = d_matrices(expiβ, ℓₘₐₓ)  # 2
             @test array_equal(dA, dB)
             dB .= 0
-            d!(dB, β, ℓₘₐₓ)
+            d_matrices!(dB, β, ℓₘₐₓ)  # 5
             @test array_equal(dA, dB)
             dB .= 0
-            d!(dB, expiβ, ℓₘₐₓ)
+            d_matrices!(dB, expiβ, ℓₘₐₓ)  # 6
+            @test array_equal(dA, dB)
+            d_storage = d_prep(ℓₘₐₓ, T)
+            dB = d_matrices!(d_storage, β)  # 3
             @test array_equal(dA, dB)
             dB .= 0
-            H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, T)
-            d!(dB, β, ℓₘₐₓ, H_rec_coeffs)
+            dB = d_matrices!(d_storage, expiβ)  # 4
             @test array_equal(dA, dB)
         end
     end
