@@ -11,7 +11,8 @@ left matters because the groups mentioned above are all non-commutative groups.
 In general, the *left* Lie derivative of a function ``f(Q)`` over the unit
 quaternions with respect to a generator of rotation ``g`` is defined as
 ```math
-L_g(f)\{Q\} := \frac{1}{2i} \left. \frac{f\left(\exp(t\,g)\, Q\right)}{dt} \right|_{t=0}.
+L_g(f)\{Q\} := -\frac{i}{2}
+    \left. \frac{df\left(\exp(t\,g)\, Q\right)}{dt} \right|_{t=0}.
 ```
 Note that the exponential multiplies ``Q`` *on the left* — hence the name.  We
 will see below that this agrees with the usual definition of the
@@ -33,7 +34,8 @@ In just the same way, we can define the *right* Lie derivative of a function
 ``f(Q)`` over the unit quaternions with respect to a generator of rotation ``g``
 as
 ```math
-R_g(f)\{Q\} := \frac{1}{2i} \left. \frac{f\left(Q\, \exp(t\,g)\right)}{dt} \right|_{t=0}.
+R_g(f)\{Q\} := -\frac{i}{2}
+    \left. \frac{df\left(Q\, \exp(t\,g)\right)}{dt} \right|_{t=0}.
 ```
 Note that the exponential multiplies ``Q`` *on the right* — hence the name.
 
