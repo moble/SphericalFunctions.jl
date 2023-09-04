@@ -23,7 +23,7 @@ jobs:
       matrix:
         version:
           - '1'
-          - 'nightly'
+          # - 'nightly'  # https://github.com/julia-actions/julia-buildpkg/issues/34
         os:
           - ubuntu-latest
         include:
