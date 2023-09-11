@@ -43,16 +43,6 @@ higher-precision numbers — even at the cost of a very slight decrease in speed
 in some cases — which are what this package provides.
 
 
-## Function list
-
-The following list contains the public functions inside the `SphericalFunctions`
-module.
-
-```@index
-Modules = [SphericalFunctions]
-```
-
-
 [^1]:
     Euler angles are quite generally a very poor choice for computing with
     rotations.  (The only context in which they may be preferred is when

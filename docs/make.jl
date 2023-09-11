@@ -28,6 +28,9 @@ makedocs(
         "Primary functions" => "manual.md",
         "Differential operators" => "operators.md",
         "Utilities" => "utilities.md",
+        "API" => [
+            "functions.md",
+        ]
         "Notes" => map(
             s -> "notes/$(s)",
             sort(readdir(joinpath(@__DIR__, "src/notes")))
