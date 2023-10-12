@@ -36,7 +36,6 @@ jobs:
       - uses: julia-actions/setup-julia@v1
         with:
           version: ${{ matrix.version }}
-          arch: ${{ matrix.arch }}
           show-versioninfo: true
       - uses: julia-actions/cache@v1
       - uses: julia-actions/julia-buildpkg@v1
