@@ -31,7 +31,7 @@ makedocs(
         "operators.md",
         "utilities.md",
         "API" => [
-            "manual.md",
+            "internal.md",
             "functions.md",
         ],
         "Notes" => map(
