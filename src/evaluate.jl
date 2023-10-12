@@ -97,7 +97,7 @@ function d_matrices!(d_storage, expiβ::Complex{T}) where T
 end
 
 """
-    d_prep(ℓₘₐₓ, T)
+    d_prep(ℓₘₐₓ, [T=Float64])
 
 Construct space and pre-compute recursion coefficients to compute Wigner's ``d`` matrix in
 place.
@@ -105,7 +105,7 @@ place.
 This returns the `d_storage` arguments needed by [`d_matrices!`](@ref).
 
 """
-function d_prep(ℓₘₐₓ, ::Type{T}) where {T<:Real}
+function d_prep(ℓₘₐₓ, ::Type{T}=Float64) where {T<:Real}
     d, H_rec_coeffs = dprep(ℓₘₐₓ, T)
     (d, H_rec_coeffs, ℓₘₐₓ)
 end
@@ -279,7 +279,7 @@ function D_matrices!(D_storage, α, β, γ)
 end
 
 @doc raw"""
-    D_prep(ℓₘₐₓ, T)
+    D_prep(ℓₘₐₓ, [T=Float64])
 
 Construct storage space and pre-compute recursion coefficients to compute Wigner's
 ``\mathfrak{D}`` matrix in place.
@@ -287,7 +287,7 @@ Construct storage space and pre-compute recursion coefficients to compute Wigner
 This returns the `D_storage` arguments needed by [`D_matrices!`](@ref).
 
 """
-function D_prep(ℓₘₐₓ, ::Type{T}) where {T<:Real}
+function D_prep(ℓₘₐₓ, ::Type{T}=Float64) where {T<:Real}
     𝔇, H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ = Dprep(ℓₘₐₓ, T)
     (𝔇, ℓₘₐₓ, H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ)
 end
@@ -499,7 +499,7 @@ function Y_workspace(ℓₘₐₓ, sₘₐₓ, ::Type{T}, ℓₘᵢₙ=0) where 
 end
 
 @doc raw"""
-    sYlm_prep(ℓₘₐₓ, sₘₐₓ, T, ℓₘᵢₙ=0)
+    sYlm_prep(ℓₘₐₓ, sₘₐₓ, [T=Float64, [ℓₘᵢₙ=0]])
 
 Construct storage space and pre-compute recursion coefficients to compute spin-weighted
 spherical-harmonic values ``{}_{s}Y_{\ell, m}`` in place.
@@ -512,7 +512,7 @@ function.  That is, the `sYlm_storage` returned by this function can be used to 
 ``{}_{s}Y_{\ell, m}`` values for numerous values of the spin.
 
 """
-function sYlm_prep(ℓₘₐₓ, sₘₐₓ, ::Type{T}, ℓₘᵢₙ=0) where {T<:Real}
+function sYlm_prep(ℓₘₐₓ, sₘₐₓ, ::Type{T}=Float64, ℓₘᵢₙ=0) where {T<:Real}
     Y = Vector{Complex{T}}(undef, Ysize(ℓₘᵢₙ, ℓₘₐₓ))
     ℓₘₐₓ, sₘₐₓ, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ = Y_workspace(ℓₘₐₓ, sₘₐₓ, T, ℓₘᵢₙ)
     (Y, ℓₘₐₓ, sₘₐₓ, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ)

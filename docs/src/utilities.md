@@ -18,16 +18,7 @@ Order   = [:module, :type, :constant, :function, :macro]
 ```
 
 
-## Quadrature weights
-
-```@autodocs
-Modules = [SphericalFunctions]
-Pages   = ["weights.jl"]
-Order   = [:module, :type, :constant, :function, :macro]
-```
-
-
-## ``Y`` and ``D`` data
+## Sizes of and indexing into ``𝔇``, ``d``, and ``Y`` data
 
 By ``Y`` data, we mean anything indexed like ``Y_{\ell, m}`` modes; by ``D``
 data, we mean anything indexed like Wigner's ``\mathfrak{D}`` matrices, or

@@ -4,7 +4,7 @@ This is a Julia package for evaluating and transforming Wigner's 𝔇 matrices,
 and spin-weighted spherical harmonics ``{}_{s}Y_{\ell,m}`` (which includes the
 ordinary scalar spherical harmonics).  Because [*both* 𝔇 *and* the harmonics
 are most correctly considered](@cite Boyle_2016) functions on the rotation group
-$𝐒𝐎(3)$ — or more generally, the spin group $𝐒𝐩𝐢𝐧(3)$ that covers it —
+``𝐒𝐎(3)`` — or more generally, the spin group ``𝐒𝐩𝐢𝐧(3)`` that covers it —
 these functions are evaluated directly in terms of quaternions.  Concessions are
 also made for more standard forms of spherical coordinates and Euler angles.[^1]
 Among other applications, those functions permit "synthesis" (evaluation of the

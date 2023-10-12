@@ -7,7 +7,7 @@
             SphericalFunctions.WignerDrange(ℓₘₐₓ);
             dims=[2]
         )[:, 1]
-        𝔇 = Diterator(Drange, ℓₘₐₓ)
+        𝔇 = D_iterator(Drange, ℓₘₐₓ)
         for (ℓ, 𝔇ˡ) in enumerate(𝔇)
             ℓ -= 1
             Dˡ = [
@@ -25,7 +25,7 @@
         @test eltype(collection) == eltype(𝔇)
 
         for ℓₘᵢₙ in 0:ℓₘₐₓ
-            𝔇 = Diterator(Drange, ℓₘₐₓ, ℓₘᵢₙ)
+            𝔇 = D_iterator(Drange, ℓₘₐₓ, ℓₘᵢₙ)
             for (ℓ, 𝔇ˡ) in enumerate(𝔇)
                 ℓ += ℓₘᵢₙ - 1
                 Dˡ = [
@@ -43,7 +43,7 @@
             SphericalFunctions.WignerDrange(ℓₘₐₓ);
             dims=[2]
         )[:, 1]
-        𝔡 = diterator(drange, ℓₘₐₓ)
+        𝔡 = d_iterator(drange, ℓₘₐₓ)
         for (ℓ, 𝔡ˡ) in enumerate(𝔡)
             ℓ -= 1
             dˡ = [
@@ -61,7 +61,7 @@
         @test eltype(collection) == eltype(𝔡)
 
         for ℓₘᵢₙ in 0:ℓₘₐₓ
-            𝔡 = diterator(drange, ℓₘₐₓ, ℓₘᵢₙ)
+            𝔡 = d_iterator(drange, ℓₘₐₓ, ℓₘᵢₙ)
             for (ℓ, 𝔡ˡ) in enumerate(𝔡)
                 ℓ += ℓₘᵢₙ - 1
                 dˡ = [
@@ -79,7 +79,7 @@
             SphericalFunctions.Yrange(ℓₘₐₓ);
             dims=[2]
         )[:, 1]
-        𝔜 = Yiterator(Yrange, ℓₘₐₓ)
+        𝔜 = sYlm_iterator(Yrange, ℓₘₐₓ)
         for (ℓ, 𝔜ˡ) in enumerate(𝔜)
             ℓ -= 1
             Yˡ = [
@@ -97,7 +97,7 @@
         @test eltype(collection) == eltype(𝔜)
 
         for ℓₘᵢₙ in 0:ℓₘₐₓ
-            𝔜 = Yiterator(Yrange, ℓₘₐₓ, ℓₘᵢₙ)
+            𝔜 = sYlm_iterator(Yrange, ℓₘₐₓ, ℓₘᵢₙ)
             for (ℓ, 𝔜ˡ) in enumerate(𝔜)
                 ℓ += ℓₘᵢₙ - 1
                 Yˡ = [
@@ -108,7 +108,7 @@
             end
             iₘᵢₙ = Ysize(ℓₘᵢₙ-1)+1
             @test Yrange[iₘᵢₙ] == (ℓₘᵢₙ, -ℓₘᵢₙ)
-            𝔜 = Yiterator(Yrange[iₘᵢₙ:end], ℓₘₐₓ, ℓₘᵢₙ, 1)
+            𝔜 = sYlm_iterator(Yrange[iₘᵢₙ:end], ℓₘₐₓ, ℓₘᵢₙ, 1)
             for (ℓ, 𝔜ˡ) in enumerate(𝔜)
                 ℓ += ℓₘᵢₙ - 1
                 Yˡ = [

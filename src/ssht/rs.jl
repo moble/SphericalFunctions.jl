@@ -164,7 +164,7 @@ function LinearAlgebra.mul!(f, 𝒯::SSHTRS{T}, f̃) where {T}
                 ℓ₀ = max(abs(s), abs(m))
                 for (θ, Fy) ∈ zip(𝒯.θ, 𝒯.G)
                     Fmy = zero(T)
-                    λ = λiterator(θ, s, m)
+                    λ = λ_iterator(θ, s, m)
                     for (ℓ, ₛλₗₘ) ∈ zip(ℓ₀:ℓₘₐₓ, λ)
                         Fmy += f̃′ⱼ[Yindex(ℓ, m, abs(s))] * ₛλₗₘ
                     end  # ℓ
@@ -227,7 +227,7 @@ function LinearAlgebra.ldiv!(f̃, 𝒯::SSHTRS{T}, f) where {T}
                 ℓ₀ = max(abs(s), abs(m))
                 for (θ, Gy) ∈ zip(𝒯.θ, 𝒯.G)
                     Gmy = Gy[1+mod(m, length(Gy))]
-                    λ = λiterator(θ, s, m)
+                    λ = λ_iterator(θ, s, m)
                     for (ℓ, ₛλₗₘ) ∈ zip(ℓ₀:ℓₘₐₓ, λ)
                         # Be careful of the following when adding threads!!!
                         # We need this element of f̃′ⱼ to be used in only one thread,
