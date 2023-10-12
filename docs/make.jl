@@ -40,7 +40,7 @@ makedocs(
         ),
         "References" => "references.md",
     ],
-    warnonly=true,
+    #warnonly=true,
     #doctest = false
 )
 
