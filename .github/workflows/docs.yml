@@ -24,8 +24,8 @@ jobs:
       - uses: julia-actions/setup-julia@v1
         with:
           version: '1'
+          show-versioninfo: true
       - uses: julia-actions/cache@v1
-      #- uses: julia-actions/julia-buildpkg@latest  # https://github.com/julia-actions/julia-buildpkg/issues/34
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-docdeploy@v1
         env:
