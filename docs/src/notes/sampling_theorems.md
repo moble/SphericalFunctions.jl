@@ -147,7 +147,7 @@ for m ∈ AlternatingCountdown(ℓₘₐₓ)  # Iterate over +m, then -m, down t
         m′ = mod(j′+m, 2j′+1)-j′  # `m` aliases into `(j′, m′)`
         α = 2π * sum(
             𝒯.ₛf̃ₘ[ℓ] * ₛλₗₘ
-            for (ℓ, ₛλₗₘ) ∈ zip(Δ:ℓₘₐₓ, λiterator(𝒯.θ[j′], s, m))
+            for (ℓ, ₛλₗₘ) ∈ zip(Δ:ℓₘₐₓ, λ_iterator(𝒯.θ[j′], s, m))
         )
         ₛf[Yindex(j′, m′, abs(s))] -= α
     end
@@ -168,7 +168,7 @@ for m ∈ AlternatingCountup(ℓₘₐₓ)  # Iterate over +m, then -m, up from 
         ₛfₘ[j] = false
 
         # Direct (non-aliased) contributions from m′ == m
-        λ = λiterator(𝒯.θ[j], s, m)
+        λ = λ_iterator(𝒯.θ[j], s, m)
         for (ℓ, ₛλₗₘ) ∈ zip(Δ:ℓₘₐₓ, λ)
             ₛfₘ[j] += ₛf̃[Yindex(ℓ, m, abs(s))] * ₛλₗₘ
         end

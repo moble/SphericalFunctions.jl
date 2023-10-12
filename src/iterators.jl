@@ -1,5 +1,5 @@
 """
-    Diterator(D, ℓₘₐₓ, [ℓₘᵢₙ])
+    D_iterator(D, ℓₘₐₓ, [ℓₘᵢₙ])
 
 Construct an Iterator that returns sub-matrices of `D`, each of which consists
 of elements ``(ℓ,-ℓ,-ℓ)`` through ``(ℓ,ℓ,ℓ)``, for ``ℓ`` from `ℓₘᵢₙ` through
@@ -12,7 +12,7 @@ Because the result is a matrix restricted to a particular ``ℓ`` value, you can
 index the ``(ℓ, m′, m)`` element as `[ℓ+m′+1, ℓ+m+1]`.  For example, you might
 use this as something like
 
-    for (ℓ, Dˡ) in zip(ℓₘᵢₙ:ℓₘₐₓ, Diterator(D, ℓₘₐₓ))
+    for (ℓ, Dˡ) in zip(ℓₘᵢₙ:ℓₘₐₓ, D_iterator(D, ℓₘₐₓ))
         for m′ in -ℓ:ℓ
             for m in -ℓ:ℓ
                 Dˡ[ℓ+m′+1, ℓ+m+1] = <...>
@@ -25,19 +25,20 @@ during iteration.  You are responsible for ensuring that the size of `D` and
 the values of `ℓₘₐₓ` and `ℓₘᵢₙ` make sense.
 
 """
-struct Diterator{VT<:Vector}
+struct D_iterator{VT<:Vector}
     D::VT
     ℓₘₐₓ::Int
     ℓₘᵢₙ::Int
-    function Diterator{VT}(D, ℓₘₐₓ, ℓₘᵢₙ=0) where VT
+    function D_iterator{VT}(D, ℓₘₐₓ, ℓₘᵢₙ=0) where VT
         #@assert ℓₘₐₓ ≥ ℓₘᵢₙ ≥ 0
         new{VT}(D, ℓₘₐₓ, ℓₘᵢₙ)
     end
 end
-Diterator(D::VT, ℓₘₐₓ, ℓₘᵢₙ=0) where VT = Diterator{VT}(D, ℓₘₐₓ, ℓₘᵢₙ)
+D_iterator(D::VT, ℓₘₐₓ, ℓₘᵢₙ=0) where VT = D_iterator{VT}(D, ℓₘₐₓ, ℓₘᵢₙ)
+const Diterator = D_iterator
 
 function Base.iterate(
-    Di::Diterator{VT},
+    Di::D_iterator{VT},
     state=(Di.ℓₘᵢₙ,WignerDsize(Di.ℓₘᵢₙ-1)+1)
 ) where VT
     if state[1] > Di.ℓₘₐₓ
@@ -50,16 +51,16 @@ function Base.iterate(
         (Dˡ, (ℓ+1, i2+1))
     end
 end
-Base.IteratorSize(::Type{<:Diterator}) = Base.HasShape{1}()
-Base.IteratorEltype(::Type{<:Diterator}) = Base.HasEltype()
-Base.eltype(::Type{Diterator{VT}}) where VT = Base.ReshapedArray{eltype(VT), 2, SubArray{eltype(VT), 1, VT, Tuple{UnitRange{Int64}}, true}, Tuple{}}
-Base.length(Di::Diterator) = Di.ℓₘₐₓ - Di.ℓₘᵢₙ + 1
-Base.size(Di::Diterator) = (length(Di),)
-Base.size(Di::Diterator, dim) = dim > 1 ? 1 : length(Di)
+Base.IteratorSize(::Type{<:D_iterator}) = Base.HasShape{1}()
+Base.IteratorEltype(::Type{<:D_iterator}) = Base.HasEltype()
+Base.eltype(::Type{D_iterator{VT}}) where VT = Base.ReshapedArray{eltype(VT), 2, SubArray{eltype(VT), 1, VT, Tuple{UnitRange{Int64}}, true}, Tuple{}}
+Base.length(Di::D_iterator) = Di.ℓₘₐₓ - Di.ℓₘᵢₙ + 1
+Base.size(Di::D_iterator) = (length(Di),)
+Base.size(Di::D_iterator, dim) = dim > 1 ? 1 : length(Di)
 
 
 """
-    diterator(d, ℓₘₐₓ, [ℓₘᵢₙ])
+    d_iterator(d, ℓₘₐₓ, [ℓₘᵢₙ])
 
 Construct an Iterator that returns sub-matrices of `d`, each of which consists
 of elements ``(ℓ,-ℓ,-ℓ)`` through ``(ℓ,ℓ,ℓ)``, for ``ℓ`` from `ℓₘᵢₙ` through
@@ -72,7 +73,7 @@ Because the result is a matrix restricted to a particular ``ℓ`` value, you can
 index the ``(ℓ, m′, m)`` element as `[ℓ+m′+1, ℓ+m+1]`.  For example, you might
 use this as something like
 
-    for (ℓ, dˡ) in zip(ℓₘᵢₙ:ℓₘₐₓ, diterator(d, ℓₘₐₓ))
+    for (ℓ, dˡ) in zip(ℓₘᵢₙ:ℓₘₐₓ, d_iterator(d, ℓₘₐₓ))
         for m′ in -ℓ:ℓ
             for m in -ℓ:ℓ
                 dˡ[ℓ+m′+1, ℓ+m+1] = <...>
@@ -85,19 +86,20 @@ during iteration.  You are responsible for ensuring that the size of `d` and
 the values of `ℓₘₐₓ` and `ℓₘᵢₙ` make sense.
 
 """
-struct diterator{VT<:Vector}
+struct d_iterator{VT<:Vector}
     d::VT
     ℓₘₐₓ::Int
     ℓₘᵢₙ::Int
-    function diterator{VT}(d, ℓₘₐₓ, ℓₘᵢₙ=0) where VT
+    function d_iterator{VT}(d, ℓₘₐₓ, ℓₘᵢₙ=0) where VT
         #@assert ℓₘₐₓ ≥ ℓₘᵢₙ ≥ 0
         new{VT}(d, ℓₘₐₓ, ℓₘᵢₙ)
     end
 end
-diterator(d::VT, ℓₘₐₓ, ℓₘᵢₙ=0) where VT = diterator{VT}(d, ℓₘₐₓ, ℓₘᵢₙ)
+d_iterator(d::VT, ℓₘₐₓ, ℓₘᵢₙ=0) where VT = d_iterator{VT}(d, ℓₘₐₓ, ℓₘᵢₙ)
+const diterator = d_iterator
 
 function Base.iterate(
-    di::diterator{VT},
+    di::d_iterator{VT},
     state=(di.ℓₘᵢₙ,WignerDsize(di.ℓₘᵢₙ-1)+1)
 ) where VT
     if state[1] > di.ℓₘₐₓ
@@ -110,16 +112,16 @@ function Base.iterate(
         (dˡ, (ℓ+1, i2+1))
     end
 end
-Base.IteratorSize(::Type{<:diterator}) = Base.HasShape{1}()
-Base.IteratorEltype(::Type{<:diterator}) = Base.HasEltype()
-Base.eltype(::Type{diterator{VT}}) where VT = Base.ReshapedArray{eltype(VT), 2, SubArray{eltype(VT), 1, VT, Tuple{UnitRange{Int64}}, true}, Tuple{}}
-Base.length(di::diterator) = di.ℓₘₐₓ - di.ℓₘᵢₙ + 1
-Base.size(di::diterator) = (length(di),)
-Base.size(di::diterator, dim) = dim > 1 ? 1 : length(di)
+Base.IteratorSize(::Type{<:d_iterator}) = Base.HasShape{1}()
+Base.IteratorEltype(::Type{<:d_iterator}) = Base.HasEltype()
+Base.eltype(::Type{d_iterator{VT}}) where VT = Base.ReshapedArray{eltype(VT), 2, SubArray{eltype(VT), 1, VT, Tuple{UnitRange{Int64}}, true}, Tuple{}}
+Base.length(di::d_iterator) = di.ℓₘₐₓ - di.ℓₘᵢₙ + 1
+Base.size(di::d_iterator) = (length(di),)
+Base.size(di::d_iterator, dim) = dim > 1 ? 1 : length(di)
 
 
 """
-    Yiterator(Y, ℓₘₐₓ, [ℓₘᵢₙ, [iₘᵢₙ]])
+    sYlm_iterator(Y, ℓₘₐₓ, [ℓₘᵢₙ, [iₘᵢₙ]])
 
 Construct an Iterator that returns sub-vectors of `Y`, each of which consists
 of elements ``(ℓ,-ℓ)`` through ``(ℓ,ℓ)``, for ``ℓ`` from `ℓₘᵢₙ` through `ℓₘₐₓ`.
@@ -131,7 +133,7 @@ Because the result is a vector restricted to a particular ``ℓ`` value, you can
 index the ``(ℓ, m)`` element as `[ℓ+m+1]`.  For example, you might
 use this as something like
 
-    for (ℓ, Yˡ) in zip(ℓₘᵢₙ:ℓₘₐₓ, Yiterator(Y, ℓₘₐₓ))
+    for (ℓ, Yˡ) in zip(ℓₘᵢₙ:ℓₘₐₓ, sYlm_iterator(Y, ℓₘₐₓ))
         for m in -ℓ:ℓ
             Yˡ[ℓ+m+1] = <...>
         end
@@ -151,21 +153,22 @@ during iteration.  You are responsible for ensuring that the size of `Y` and
 the values of `ℓₘₐₓ`, `ℓₘᵢₙ`, and `iₘᵢₙ` make sense.
 
 """
-struct Yiterator{VT<:Vector}
+struct sYlm_iterator{VT<:Vector}
     Y::VT
     ℓₘₐₓ::Int
     ℓₘᵢₙ::Int
     iₘᵢₙ::Int
-    function Yiterator{VT}(Y, ℓₘₐₓ, ℓₘᵢₙ=0, iₘᵢₙ=Ysize(ℓₘᵢₙ-1)+1) where VT
+    function sYlm_iterator{VT}(Y, ℓₘₐₓ, ℓₘᵢₙ=0, iₘᵢₙ=Ysize(ℓₘᵢₙ-1)+1) where VT
         #@assert ℓₘₐₓ ≥ ℓₘᵢₙ ≥ 0
         new{VT}(Y, ℓₘₐₓ, ℓₘᵢₙ, iₘᵢₙ)
     end
 end
-Yiterator(Y::VT, ℓₘₐₓ, ℓₘᵢₙ=0) where VT = Yiterator{VT}(Y, ℓₘₐₓ, ℓₘᵢₙ)
-Yiterator(Y::VT, ℓₘₐₓ, ℓₘᵢₙ, iₘᵢₙ) where VT = Yiterator{VT}(Y, ℓₘₐₓ, ℓₘᵢₙ, iₘᵢₙ)
+sYlm_iterator(Y::VT, ℓₘₐₓ, ℓₘᵢₙ=0) where VT = sYlm_iterator{VT}(Y, ℓₘₐₓ, ℓₘᵢₙ)
+sYlm_iterator(Y::VT, ℓₘₐₓ, ℓₘᵢₙ, iₘᵢₙ) where VT = sYlm_iterator{VT}(Y, ℓₘₐₓ, ℓₘᵢₙ, iₘᵢₙ)
+const Yiterator = sYlm_iterator
 
 function Base.iterate(
-    Yi::Yiterator{VT},
+    Yi::sYlm_iterator{VT},
     state=(Yi.ℓₘᵢₙ,Yi.iₘᵢₙ)
 ) where VT
     if state[1] > Yi.ℓₘₐₓ
@@ -178,12 +181,12 @@ function Base.iterate(
         (Yˡ, (ℓ+1, i2+1))
     end
 end
-Base.IteratorSize(::Type{<:Yiterator}) = Base.HasShape{1}()
-Base.IteratorEltype(::Type{<:Yiterator}) = Base.HasEltype()
-Base.eltype(::Type{Yiterator{VT}}) where VT = SubArray{eltype(VT), 1, VT, Tuple{UnitRange{Int64}}, true}
-Base.length(Yi::Yiterator) = Yi.ℓₘₐₓ - Yi.ℓₘᵢₙ + 1
-Base.size(Yi::Yiterator) = (length(Yi),)
-Base.size(Yi::Yiterator, dim) = dim > 1 ? 1 : length(Yi)
+Base.IteratorSize(::Type{<:sYlm_iterator}) = Base.HasShape{1}()
+Base.IteratorEltype(::Type{<:sYlm_iterator}) = Base.HasEltype()
+Base.eltype(::Type{sYlm_iterator{VT}}) where VT = SubArray{eltype(VT), 1, VT, Tuple{UnitRange{Int64}}, true}
+Base.length(Yi::sYlm_iterator) = Yi.ℓₘₐₓ - Yi.ℓₘᵢₙ + 1
+Base.size(Yi::sYlm_iterator) = (length(Yi),)
+Base.size(Yi::sYlm_iterator, dim) = dim > 1 ? 1 : length(Yi)
 
 
 
@@ -252,7 +255,7 @@ function λ_recursion_coefficients(cosθ::T, s, ℓ, m) where T
 end
 
 """
-    λiterator(θ, s, m)
+    λ_iterator(θ, s, m)
 
 Construct an object to iterate over ₛλₗₘ values.
 
@@ -269,7 +272,7 @@ you will end up in an infinite loop.  Instead, you can `zip` this iterator with 
 θ = 0.1
 s = -2
 m = 1
-λ = λiterator(θ, s, m)
+λ = λ_iterator(θ, s, m)
 Δ = max(abs(s), abs(m))
 for (ℓ, ₛλₗₘ) ∈ zip(Δ:Δ+5, λ)
     @show (ℓ, ₛλₗₘ)
@@ -279,25 +282,27 @@ Alternatively, you could use `Iterates.take(λ, 6)`, for example.
 
 Note that the iteration always begins with `ℓ = Δ = max(abs(s), abs(m))`.
 """
-struct λiterator{T}
+struct λ_iterator{T}
     cosθ::T
     sin½θ::T
     cos½θ::T
     s::Integer
     m::Integer
 end
-function λiterator(θ, s, m)
+function λ_iterator(θ, s, m)
     cosθ = cos(θ)
     sin½θ, cos½θ = sincos(θ/2)
-    λiterator{typeof(cos½θ)}(cosθ, sin½θ, cos½θ, s, m)
+    λ_iterator{typeof(cos½θ)}(cosθ, sin½θ, cos½θ, s, m)
 end
-function Base.iterate(λ::λiterator{T}) where {T}
+const λiterator = λ_iterator
+
+function Base.iterate(λ::λ_iterator{T}) where {T}
     Δ = max(abs(λ.s), abs(λ.m))
     ₛλₗₘ = λ_recursion_initialize(λ.sin½θ, λ.cos½θ, λ.s, Δ, λ.m)
     state = (zero(λ.cos½θ), ₛλₗₘ, zero(λ.cos½θ), Δ)
     (ₛλₗₘ, state)
 end
-function Base.iterate(λ::λiterator{T}, state) where {T}
+function Base.iterate(λ::λ_iterator{T}, state) where {T}
     (ₛλₗ₋₁ₘ, ₛλₗₘ, cₗ₋₁, ℓ) = state
     cₗ₊₁, cₗ = λ_recursion_coefficients(λ.cosθ, λ.s, ℓ, λ.m)
     ₛλₗ₊₁ₘ = if ℓ == 0
@@ -313,9 +318,9 @@ function Base.iterate(λ::λiterator{T}, state) where {T}
     ℓ += 1
     (ₛλₗₘ, (ₛλₗ₋₁ₘ, ₛλₗₘ, cₗ₋₁, ℓ))
 end
-Base.IteratorSize(::Type{<:λiterator}) = Base.IsInfinite()
-Base.IteratorEltype(::Type{<:λiterator}) = Base.HasEltype()
-Base.eltype(λ::λiterator{T}) where {T} = T
+Base.IteratorSize(::Type{<:λ_iterator}) = Base.IsInfinite()
+Base.IteratorEltype(::Type{<:λ_iterator}) = Base.HasEltype()
+Base.eltype(λ::λ_iterator{T}) where {T} = T
 
 
 

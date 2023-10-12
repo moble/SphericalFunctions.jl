@@ -229,7 +229,7 @@ Similarly ``\bar{\eth}`` — and ``R_\pm`` of course — obey this more "covaria
 form of transformation.
 
 
-## Module functions
+## Docstrings
 
 ```@autodocs
 Modules = [SphericalFunctions]

@@ -26,6 +26,8 @@ export WignerHsize, WignerHindex, _WignerHindex, WignerHrange
 export WignerDsize, WignerDindex, WignerDrange
 
 include("iterators.jl")
+export D_iterator, d_iterator, sYlm_iterator, λ_iterator
+# Legacy API:
 export Diterator, diterator, Yiterator, λiterator
 
 include("associated_legendre.jl")

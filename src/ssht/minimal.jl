@@ -67,6 +67,35 @@ struct SSHTMinimal{T<:Real, Inplace} <: SSHT{T}
     ₛf̃ⱼ
 end
 
+
+
+"""
+    SSHTMinimal(s, ℓₘₐₓ; kwargs...)
+
+Construct a `SSHTMinimal` object directly.  This may also be achieved by calling the main
+`SSHT` function with the same keywords, along with `method="Minimal"`.
+
+This object uses the algorithm described by [Elahi et al](@cite Elahi_2018).
+
+The basic floating-point number type may be adjusted with the keyword argument `T`, which
+defaults to `Float64`.
+
+The SSHs are evaluated on a series of "rings" at constant colatitude.  Their locations are
+specified by the `θ` keyword argument, which defaults to [`sorted_rings(s, ℓₘₐₓ, T)`](@ref
+sorted_rings).  The first element of `θ` is the colatitude of the smallest ring (containing
+``2s+1`` elements), and so on to the last element of `θ`, which is the colatitude of the
+largest ring (containing ``2ℓₘₐₓ+1`` elements).
+
+Whenever `T` is either `Float64` or `Float32`, the keyword arguments `plan_fft_flags` and
+`plan_fft_timelimit` may also be useful for obtaining more efficient FFTs.  They default to
+`FFTW.ESTIMATE` and `Inf`, respectively.  They are passed to
+[`AbstractFFTs.plan_fft`](https://juliamath.github.io/AbstractFFTs.jl/stable/api/#AbstractFFTs.plan_fft).
+
+Note that, because this algorithm achieves optimal dimensionality, the transformation will
+be performed in place by default.  If this is not desired, pass the keyword argument
+`inplace=false`.  This will cause the algorithm to copy the input and perform in-place
+transformation on that copy.
+"""
 function SSHTMinimal(
     s, ℓₘₐₓ;
     T::Type{TT}=Float64, θ=sorted_rings(s, ℓₘₐₓ, T),
@@ -210,7 +239,7 @@ function LinearAlgebra.mul!(𝒯::SSHTMinimal{T}, ff̃) where {T}
                     𝒯.ₛfₘ[j] = false
 
                     # Direct (non-aliased) contributions from m′ == m
-                    λ = λiterator(𝒯.θ[j], s, m)
+                    λ = λ_iterator(𝒯.θ[j], s, m)
                     for (ℓ, ₛλₗₘ) ∈ zip(Δ:ℓₘₐₓ, λ)
                         𝒯.ₛfₘ[j] += ₛf̃[Yindex(ℓ, m, abs(s))] * ₛλₗₘ
                     end
@@ -303,7 +332,7 @@ function LinearAlgebra.ldiv!(𝒯::SSHTMinimal{T}, ff̃) where {T}
                     m′ = mod(j′+m, 2j′+1)-j′  # `m` aliases into `(j′, m′)`
                     α = 2π * sum(
                         𝒯.ₛf̃ₘ[ℓ] * ₛλₗₘ
-                        for (ℓ, ₛλₗₘ) ∈ zip(Δ:ℓₘₐₓ, λiterator(𝒯.θ[j′], s, m))
+                        for (ℓ, ₛλₗₘ) ∈ zip(Δ:ℓₘₐₓ, λ_iterator(𝒯.θ[j′], s, m))
                     )
                     ₛf[Yindex(j′, m′, abs(s))] -= α
                 end  # j′

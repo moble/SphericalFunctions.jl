@@ -6,6 +6,8 @@
 # will monitor the docs for any changes, then rebuild them and refresh the browser
 # until this script is stopped.
 
+using Revise
+
 import Dates
 println("Building docs starting at ", Dates.format(Dates.now(), "HH:MM:SS"), ".")
 
