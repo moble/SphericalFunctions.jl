@@ -1,5 +1,6 @@
 using SphericalFunctions
 using Test
+using Aqua
 using Random, FFTW, FastTransforms
 using OffsetArrays, StaticArrays, Quaternionic
 using DoubleFloats, ForwardDiff, ProgressMeter
@@ -33,6 +34,7 @@ end
 
 
 @testset verbose=true "All tests" begin
+    addtests("aqua.jl")
     addtests("complex_powers.jl")
     addtests("indexing.jl")
     addtests("iterators.jl")
