@@ -32,7 +32,7 @@ jobs:
           - os: macOS-latest
             version: '1'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v1
         with:
           version: ${{ matrix.version }}
@@ -45,3 +45,4 @@ jobs:
         if: "matrix.version == 'nightly' && matrix.os == 'ubuntu-latest'"
         with:
           file: lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
