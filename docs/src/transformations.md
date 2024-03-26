@@ -71,21 +71,46 @@ Pages   = ["ssht.jl", "ssht/direct.jl", "ssht/minimal.jl", "ssht/rs.jl"]
 
 ## Pixelizations
 
-The algorithms implemented here require pixelizations.  While the "Direct"
-algorithm can be used with arbitrary pixelizations, the "Minimal" and "RS"
-algorithms require more specific choices, as noted in their docstrings.
+The algorithms implemented here require pixelizations.  While the
+"Direct" algorithm can be used with arbitrary pixelizations, the
+"Minimal" and "RS" algorithms require more specific choices, as noted
+in their docstrings.
 
-Typically, "pixelization" refers exclusively to a choice of points on the sphere
-𝕊² at which to compute function values.  Of course, as mentioned
-[elsewhere](@cite Boyle_2016), it is not *technically possible* to define
-spin-weighted functions as functions of a point on 𝕊² alone; we also need some
-sense of reference direction in the tangent space.  Quite generally, we can
-define spin-weighted functions on the group 𝐒𝐎(3) or 𝐒𝐩𝐢𝐧(3), so we will
-also refer to a choice of a set of points in 𝐒𝐩𝐢𝐧(3) (which is essentially
-the group of unit quaternions) as a "pixelization".  However, assuming spherical
-coordinates, a choice of *coordinates* on the sphere almost everywhere induces a
-choice of the reference direction in the tangent space, so it is *almost*
-possible to define pixelizations just in terms of points on 𝕊².
+Typically, "pixelization" refers exclusively to a choice of points on
+the sphere 𝕊² at which to compute function values.  Of course, as
+mentioned [elsewhere](@cite Boyle_2016), it is not *technically
+possible* to define spin-weighted functions as functions of a point on
+𝕊² alone; we also need some sense of reference direction in the
+tangent space.  Quite generally, we can define spin-weighted functions
+on the group 𝐒𝐎(3) or 𝐒𝐩𝐢𝐧(3), so we will also refer to a choice
+of a set of points in 𝐒𝐩𝐢𝐧(3) (which is essentially the group of
+unit quaternions) as a "pixelization".  However, assuming spherical
+coordinates, a choice of *coordinates* on the sphere almost everywhere
+induces a choice of the reference direction in the tangent space, so
+it is *almost* possible to define pixelizations just in terms of
+points on 𝕊².  But using spherical coordinates is actually enough to
+fully specify the pixelization, because the degeneracies at the poles
+also allow us to define the reference direction.
+
+In principle, we could be concerned about the choice of reference
+direction in the tangent space.  That is, we might expect to care
+about pixelizations over 𝕊³.  However, we are dealing with
+spin-weighted functions, which are eigenfunctions of a final rotation
+about the reference direction.  This means that once we choose any
+reference direction at each point, we know the function values for any
+other reference direction at those points.  In particular, an
+important property of a pixelization is the condition number of the
+transformation matrix between the function values and the mode
+weights.  If we rotate the reference direction at a single point, this
+is equivalent to multiplying the matrix by a diagonal matrix with
+entries of 1 everywhere except the entry corresponding to that point,
+where the entry is some complex phase.  This does not change the
+condition number of the matrix, so we can ignore the choice of
+reference direction at every point.  For other situations, where we
+might care about the choice of reference direction, it might be
+interesting to consider [this work by Marc
+Alexa](https://github.com/moble/superfibonacci), and references
+therein.
 
 Interesting discussions of various pixelizations and metrics can be
 found in [Saff and Kuijlaars (1997)](@cite SaffKuijlaars_1997) and
