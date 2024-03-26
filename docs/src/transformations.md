@@ -87,6 +87,19 @@ coordinates, a choice of *coordinates* on the sphere almost everywhere induces a
 choice of the reference direction in the tangent space, so it is *almost*
 possible to define pixelizations just in terms of points on 𝕊².
 
+Interesting discussions of various pixelizations and metrics can be
+found in [Saff and Kuijlaars (1997)](@cite SaffKuijlaars_1997) and
+[Brauchart and Grabner (2015)](@cite BrauchartGrabner_2015), as well
+as blog posts
+[here](https://web.archive.org/web/20220303150307/https://www.maths.unsw.edu.au/about/distributing-points-sphere)
+and
+[here](https://extremelearning.com.au/how-to-evenly-distribute-points-on-a-sphere-more-effectively-than-the-canonical-fibonacci-lattice/).
+Note that the "equal-area" pixelizations of
+[Healpix](https://healpix.sourceforge.io/) are very restrictive—only
+being available for very specific numbers of points—and do not provide
+any obvious advantages over the more flexible pixelizations available
+here.
+
 The various pixelizations may be computed as follows:
 
 ```@autodocs
