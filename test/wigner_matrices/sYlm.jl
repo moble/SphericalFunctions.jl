@@ -1,5 +1,9 @@
 @testset verbose=true "sYlm" begin
 
+    @testset "Issue #40" begin
+        @test maximum(abs, sYlm_values(0.0, 0.0, 3, -2)) > 0
+    end
+
     @testset "Test NINJA expressions ($T)" for T in [Float64, Float32, BigFloat]
         ## This is just to test my implementation of the equations give in the paper.
         ## Note that this is a test of the testing code itself, not of the main code.
@@ -32,6 +36,8 @@
                 for ϕ in αrange(T)
                     R = from_spherical_coordinates(ι, ϕ)
                     Y = sYlm_values!(sYlm_storage, R, spin)
+                    Y′ = sYlm_values(ι, ϕ, ℓₘₐₓ, spin)  # Also tests issue #40
+                    @test Y[(spin^2+1):end] ≈ Y′ atol=tol rtol=tol
                     i = 1
                     for ℓ in 0:abs(spin)-1
                         for m in -ℓ:ℓ

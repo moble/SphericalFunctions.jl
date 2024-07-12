@@ -487,7 +487,7 @@ function sYlm_values!(sYlm_storage, θ::Tθ, ϕ::Tϕ, spin) where {Tθ<:Real, T�
         )
     end
     expiθ, expiϕ = cis.(promote(θ, ϕ))
-    expiγ = zero(typeof(expiθ))
+    expiγ = one(typeof(expiθ))
     Y!(Y, expiϕ, expiθ, expiγ, ℓₘₐₓ, spin, H_rec_coeffs, Hwedge, expimϕ, ℓₘᵢₙ)
 end
 
