@@ -1,7 +1,7 @@
 name = "SphericalFunctions"
 uuid = "af6d55de-b1f7-4743-b797-0829a72cf84e"
 authors = ["Michael Boyle <michael.oliver.boyle@gmail.com>"]
-version = "2.2.3"
+version = "2.2.4"
 
 [deps]
 AbstractFFTs = "621f4979-c628-5d54-868e-fcf4e3e8185c"
