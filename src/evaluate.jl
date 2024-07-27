@@ -5,7 +5,7 @@
 ### 2. This is probably a much more significant advantage for ALFs.
 
 using .SphericalFunctions: complex_powers!
-using Quaternionic: AbstractQuaternion, to_euler_phases!
+using Quaternionic: AbstractQuaternion, to_euler_phases
 
 @inline ϵ(m) = ifelse(m > 0 && isodd(m), -1, 1)
 

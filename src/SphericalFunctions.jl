@@ -1,11 +1,17 @@
 module SphericalFunctions
 
-using FFTW, AbstractFFTs, FastTransforms
-using LinearAlgebra, ProgressMeter, Quaternionic, OffsetArrays, StaticArrays
-import SpecialFunctions, DoubleFloats
-import LoopVectorization: @turbo
-import Hwloc: num_physical_cores
-import Base.Threads: @threads, nthreads, threadid
+using FastTransforms: FFTW, fft, fftshift!, ifft, ifftshift!, irfft,
+                      plan_bfft!, plan_fft, plan_fft!
+using LinearAlgebra: LinearAlgebra, Bidiagonal, Diagonal, convert, ldiv!, mul!
+using OffsetArrays: OffsetArray, OffsetVector
+using ProgressMeter: Progress, next!
+using Quaternionic: Quaternionic, Rotor, from_spherical_coordinates,
+                    to_euler_phases, to_spherical_coordinates
+using StaticArrays: @SVector
+using SpecialFunctions, DoubleFloats
+using LoopVectorization: @turbo
+using Hwloc: num_physical_cores
+using Base.Threads: @threads, nthreads
 
 const MachineFloat = Union{Float16, Float32, Float64}
 

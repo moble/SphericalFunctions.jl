@@ -67,7 +67,7 @@ function plan_map2salm(map_data::AbstractArray{Complex{T}}, spin::Int, ℓmax::I
     H_rec_coeffs = H_recursion_coefficients(ℓmax, T)
     weight = clenshaw_curtis(Nϑ, T)
     expiθ = complex_powers(cis(π / T(Nϑ-1)), Nϑ-1)
-    ϵs = SphericalFunctions.ϵ(-spin)
+    ϵs = ϵ(-spin)
     extra_dims = Base.Iterators.product((1:e for e in Nextra)...)
     fftplan = T<:MachineFloat ? plan_fft(map_data[:, 1, first(extra_dims)...]) : nothing
 
