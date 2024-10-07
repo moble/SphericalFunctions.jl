@@ -203,7 +203,8 @@ function D_matrices(R, ℓₘₐₓ)
 end
 
 function D_matrices(α, β, γ, ℓₘₐₓ)
-    T = promote_type(typeof.((α, β, γ))...)
+    R = Quaternionic.from_euler_angles(α, β, γ)
+    T = eltype(R)
     D_storage = D_prep(ℓₘₐₓ, T)
     D_matrices!(D_storage, R)
 end
