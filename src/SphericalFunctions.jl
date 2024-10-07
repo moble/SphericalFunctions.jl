@@ -65,5 +65,8 @@ export L², Lz, L₊, L₋, R², Rz, R₊, R₋, ð, ð̄
 #include("rotate.jl")
 #export rotate!
 
+include("conventions/sakurai.jl")
+include("conventions/goldbergetal.jl")
+
 
 end # module
