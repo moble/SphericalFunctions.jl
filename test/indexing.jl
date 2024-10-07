@@ -1,4 +1,4 @@
-@testset verbose=true "indexing" begin
+@testitem "Indexing" begin
     import SphericalFunctions: WignerHsize, WignerHrange, WignerHindex
     import SphericalFunctions: WignerDsize, WignerDrange, WignerDindex
     import SphericalFunctions: Ysize, Yrange, Yindex, deduce_limits

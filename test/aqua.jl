@@ -1,4 +1,5 @@
-@testset verbose=true "Aqua quality assurance tests" begin
+@testitem "Aqua quality assurance tests" begin
+    using Aqua: Aqua
     Aqua.test_all(
         SphericalFunctions;
         ambiguities=false,
