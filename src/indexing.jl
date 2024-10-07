@@ -14,8 +14,8 @@ This assumes that the modes are arranged (with fixed s value) as
 
     [
         Y(s, ℓ, m)
-        for ℓ in range(ℓₘᵢₙ, ℓₘₐₓ+1)
-        for m in range(-ℓ, ℓ+1)
+        for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ
+        for m ∈ -ℓ:ℓ
     ]
 
 """
@@ -57,7 +57,7 @@ function deduce_limits(ysize, ℓmin=0)
     else
         ℓmin_range = [ℓmin]
     end
-    for ℓmin in ℓmin_range
+    for ℓmin ∈ ℓmin_range
         ℓmax = round(Int, √(ysize + ℓmin^2) - 1, RoundDown)
         if ℓmax * (ℓmax + 2) - ℓmin^2 + 1 == ysize
             return (ℓmin, ℓmax)
@@ -95,8 +95,8 @@ This assumes that the modes are arranged (with fixed s value) as
 
     [
         Y(s, ℓ, m)
-        for ℓ in range(ℓₘᵢₙ, ℓₘₐₓ+1)
-        for m in range(-ℓ, ℓ+1)
+        for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ
+        for m ∈ -ℓ:ℓ
     ]
 
 """
@@ -104,8 +104,8 @@ Yrange(ℓₘₐₓ) = Yrange(0, ℓₘₐₓ)
 function Yrange(ℓₘᵢₙ, ℓₘₐₓ)
     r = zeros(typeof(ℓₘₐₓ), (Ysize(ℓₘᵢₙ, ℓₘₐₓ), 2))
     i = 1
-    for ℓ in ℓₘᵢₙ:ℓₘₐₓ
-        for m in -ℓ:ℓ
+    for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ
+        for m ∈ -ℓ:ℓ
             r[i, 1] = ℓ
             r[i, 2] = m
             i += 1
@@ -145,8 +145,8 @@ This assumes that the modes are arranged (with fixed s value) as
 
     [
         Y(s, ℓ, m)
-        for ℓ in range(ℓₘᵢₙ, ℓₘₐₓ+1)
-        for m in range(-ℓ, ℓ+1)
+        for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ
+        for m ∈ -ℓ:ℓ
     ]
 
 """
@@ -178,9 +178,9 @@ use [`phi_theta`](@ref) for the opposite ordering.
 function theta_phi(nθ, nϕ, ::Type{T}=Float64) where T
     [
         [θ, ϕ][i]
-        for θ in range(0, T(π), length=nθ),
-            ϕ in range(0, 2*T(π), length=nϕ+1)[begin:end-1],
-            i in 1:2
+        for θ ∈ range(0, T(π), length=nθ),
+            ϕ ∈ range(0, 2*T(π), length=nϕ+1)[begin:end-1],
+            i ∈ 1:2
     ]
 end
 
@@ -195,9 +195,9 @@ See also [`theta_phi`](@ref) for the opposite ordering.
 function phi_theta(nϕ, nθ, ::Type{T}=Float64) where T
     [
         [ϕ, θ][i]
-        for ϕ in range(0, 2*T(π), length=nϕ+1)[begin:end-1],
-            θ in range(0, T(π), length=nθ),
-            i in 1:2
+        for ϕ ∈ range(0, 2*T(π), length=nϕ+1)[begin:end-1],
+            θ ∈ range(0, T(π), length=nθ),
+            i ∈ 1:2
     ]
 end
 
@@ -216,9 +216,9 @@ corresponding values are passed.  We also assume |m|≤ℓ and |m′|≤ℓ.  Ne
 of these are checked.  The wedge array that this function indexes is ordered as
 
     [
-        H(ℓ, m′, m) for ℓ in 0:ℓₘₐₓ
-        for m′ in -min(ℓ, m′ₘₐₓ):min(ℓ, m′ₘₐₓ)
-        for m in abs(m′):ℓ
+        H(ℓ, m′, m) for ℓ ∈ 0:ℓₘₐₓ
+        for m′ ∈ -min(ℓ, m′ₘₐₓ):min(ℓ, m′ₘₐₓ)
+        for m ∈ abs(m′):ℓ
     ]
 
 """
@@ -257,18 +257,18 @@ corresponding values are passed.  We also assume |m|≤ℓ and |m'|≤ℓ.  Neit
 these are checked.  The wedge array that this function indexes is ordered as
 
     [
-        H(ℓ, m′, m) for ℓ in range(ℓₘₐₓ+1)
-        for m′ in range(-min(ℓ, m′ₘₐₓ), min(ℓ, m′ₘₐₓ)+1)
-        for m in range(abs(m′), ℓ+1)
+        H(ℓ, m′, m) for ℓ ∈ 0:ℓₘₐₓ
+        for m′ ∈ -min(ℓ, m′ₘₐₓ):min(ℓ, m′ₘₐₓ)
+        for m ∈ abs(m′):ℓ
     ]
 
 """
 function WignerHrange(ℓₘₐₓ, m′ₘₐₓ=ℓₘₐₓ)
     r = zeros(typeof(m′ₘₐₓ), (WignerHsize(ℓₘₐₓ, m′ₘₐₓ), 3))
     i = 1
-    for ℓ in 0:ℓₘₐₓ
-        for m′ in -min(ℓ, m′ₘₐₓ):min(ℓ, m′ₘₐₓ)
-            for m in abs(m′):ℓ
+    for ℓ ∈ 0:ℓₘₐₓ
+        for m′ ∈ -min(ℓ, m′ₘₐₓ):min(ℓ, m′ₘₐₓ)
+            for m ∈ abs(m′):ℓ
                 r[i, 1] = ℓ
                 r[i, 2] = m′
                 r[i, 3] = m
@@ -318,9 +318,9 @@ corresponding values are passed.  We also assume |m|≤ℓ and |m'|≤ℓ.  Neit
 of these are checked.  The wedge array that this function indexes is ordered as
 
     [
-        H(ℓ, m′, m) for ℓ in range(ℓₘₐₓ+1)
-        for m′ in range(-min(ℓ, m′ₘₐₓ), min(ℓ, m′ₘₐₓ)+1)
-        for m in range(abs(m′), ℓ+1)
+        H(ℓ, m′, m) for ℓ ∈ 0:ℓₘₐₓ
+        for m′ ∈ -min(ℓ, m′ₘₐₓ):min(ℓ, m′ₘₐₓ)
+        for m ∈ abs(m′):ℓ
     ]
 
 """
@@ -358,9 +358,9 @@ This assumes that the Wigner 𝔇 matrix is arranged as
 
     [
         𝔇(ℓ, m′, m)
-        for ℓ in ℓₘᵢₙ:ℓₘₐₓ
-        for m′ in -min(ℓ, m′ₘₐₓ):min(ℓ, m′ₘₐₓ)
-        for m in -ℓ:ℓ
+        for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ
+        for m′ ∈ -min(ℓ, m′ₘₐₓ):min(ℓ, m′ₘₐₓ)
+        for m ∈ -ℓ:ℓ
     ]
 
 """
@@ -442,18 +442,18 @@ This assumes that the Wigner 𝔇 matrix is arranged as
 
     [
         𝔇(ℓ, m′, m)
-        for ℓ in range(ℓₘᵢₙ, ℓₘₐₓ+1)
-        for m′ in range(-min(ℓ, m′ₘₐₓ), min(ℓ, m′ₘₐₓ)+1)
-        for m in range(-ℓ, ℓ+1)
+        for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ
+        for m′ ∈ -min(ℓ, m′ₘₐₓ):min(ℓ, m′ₘₐₓ)
+        for m ∈ -ℓ:ℓ
     ]
 
 """
 function WignerDrange(ℓₘₐₓ, m′ₘₐₓ=ℓₘₐₓ)
     r = zeros(typeof(ℓₘₐₓ), (WignerDsize(ℓₘₐₓ, m′ₘₐₓ), 3))
     i = 1
-    for ℓ in 0:ℓₘₐₓ
-        for m′ in -min(ℓ, m′ₘₐₓ):min(ℓ, m′ₘₐₓ)
-            for m in -ℓ:ℓ
+    for ℓ ∈ 0:ℓₘₐₓ
+        for m′ ∈ -min(ℓ, m′ₘₐₓ):min(ℓ, m′ₘₐₓ)
+            for m ∈ -ℓ:ℓ
                 r[i, 1] = ℓ
                 r[i, 2] = m′
                 r[i, 3] = m
@@ -478,9 +478,9 @@ This assumes that the Wigner 𝔇 matrix is arranged as
 
     [
         𝔇(ℓ, m′, m)
-        for ℓ in range(ℓₘᵢₙ, ℓₘₐₓ+1)
-        for m′ in range(-min(ℓ, m′ₘₐₓ), min(ℓ, m′ₘₐₓ)+1)
-        for m in range(-ℓ, ℓ+1)
+        for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ
+        for m′ ∈ -min(ℓ, m′ₘₐₓ):min(ℓ, m′ₘₐₓ)
+        for m ∈ -ℓ:ℓ
     ]
 
 """
