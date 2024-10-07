@@ -1,4 +1,5 @@
-@testset "complex_powers" begin
+@testitem "Complex powers" setup=[Utilities] begin
+
     complex_powers_comparison(z, m, T=Float64) = (
         complex_powers(Complex{T}(z), m),
         z.^collect(0:m),
