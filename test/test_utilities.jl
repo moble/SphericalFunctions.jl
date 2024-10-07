@@ -21,7 +21,7 @@ Such an array can be created for type `T` with something like
     arr = fill(NaNCheck{T}(NaN), arr_size)
 
 """
-module NaNChecker
+@testmodule NaNChecker begin
 
 struct NaNCheck{T<:Real} <: Real
     val::T
@@ -87,7 +87,7 @@ end  # module NaNChecker
 NaNCheck = NaNChecker.NaNCheck;
 
 
-module ExplicitWignerMatrices
+@testmodule ExplicitWignerMatrices begin
 
 function d_explicit(n, m′, m, expiβ::Complex{T}) where T
     if abs(m′) < abs(m)
@@ -171,7 +171,7 @@ end
 end  # module ExplicitWignerMatrices
 
 
-module NINJA
+@testmodule NINJA begin
 
 function Wigner_d(ι::T, ell, m, s) where {T<:Real}
     # Eq. II.8 of Ajith et al. (2007) 'Data formats...'
@@ -222,7 +222,7 @@ m2Y2m2(ι::T, ϕ::T) where {T<:Real} = √(5 / (64T(π))) * (1 - cos(ι))^2 * ci
 end  # module NINJA
 
 
-module LAL
+@testmodule LAL begin
 
 """
 Reproduces the XLALSpinWeightedSphericalHarmonic function from the LALSuite C library:
@@ -429,6 +429,8 @@ end
 end  # module LAL
 
 
+@testsnippet Utilities begin
+
 αrange(::Type{T}, n=15) where T = T[
     0; nextfloat(T(0)); rand(T(0):eps(T(π)):T(π), n÷2); prevfloat(T(π)); T(π);
     nextfloat(T(π)); rand(T(π):eps(2T(π)):2T(π), n÷2); prevfloat(T(π)); 2T(π)
@@ -477,3 +479,5 @@ function array_equal(a1::T1, a2::T2, equal_nan=false) where {T1, T2}
     end
     all(e->e[1]==e[2] || (equal_nan && isnan(e1) && isnan(e2)), zip(a1, a2))
 end
+
+end  # Utilities snippet

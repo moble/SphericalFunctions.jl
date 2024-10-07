@@ -1,4 +1,6 @@
-@testset "Associated Legendre Functions" begin
+@testitem "Associated Legendre Functions" setup=[Utilities] begin
+    using OffsetArrays
+
     nmax = 1_000
     min_length = (nmax * (nmax + 3)) ÷ 2 + 1
 

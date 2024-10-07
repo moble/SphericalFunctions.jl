@@ -12,6 +12,7 @@ using SpecialFunctions, DoubleFloats
 using LoopVectorization: @turbo
 using Hwloc: num_physical_cores
 using Base.Threads: @threads, nthreads
+using TestItems: @testitem
 
 const MachineFloat = Union{Float16, Float32, Float64}
 
