@@ -1,41 +1,21 @@
-@testset verbose=true "Operators" begin
-    ε(j,k,l) = ifelse(
-        (j,k,l)∈((1,2,3),(2,3,1),(3,1,2)),
-        1,
-        ifelse(
-            (j,k,l)∈((2,1,3),(1,3,2),(3,2,1)),
-            -1,
-            0
-        )
-    )
-    @testset "Pretest ε and basis commutators" begin
-        # Test that [eⱼ, eₖ] = 2∑ₗ ε(j,k,l) eₗ
-        let e = [imx, imy, imz]
-            for (j,eⱼ) ∈ enumerate(e)
-                for (k,eₖ) ∈ enumerate(e)
-                    @test eⱼ*eₖ - eₖ*eⱼ == 2sum(ε(j,k,l)*e[l] for l ∈ 1:3)
-                end
+@testitem "Pretest ε and basis commutators" setup=[Utilities] begin
+    using Quaternionic
+    # Test that [eⱼ, eₖ] = 2∑ₗ ε(j,k,l) eₗ
+    let e = [imx, imy, imz]
+        for (j,eⱼ) ∈ enumerate(e)
+            for (k,eₖ) ∈ enumerate(e)
+                @test eⱼ*eₖ - eₖ*eⱼ == 2sum(ε(j,k,l)*e[l] for l ∈ 1:3)
             end
         end
     end
+end
 
-    # These are just simple versions of the operators defined in
-    # notes/operators/explicit_definition.jl, for testing purposes.  Note that we explicitly
-    # use `cos(θ) + sin(θ)*g` instead of simply `exp(θ*g)`, because the `exp` implementation
-    # currently has a special case at zero, which messes with the derivative at that point.
-    # But also note that these are incorrect for `g=0` because we oversimplify.
-    function L(g::QuatVec{T}, f) where T
-        function L_g(Q)
-            -im * ForwardDiff.derivative(θ -> f((cos(θ) + sin(θ)*g) * Q), zero(T)) / 2
-        end
-    end
-    function R(g::QuatVec{T}, f) where T
-        function R_g(Q)
-            -im * ForwardDiff.derivative(θ -> f(Q * (cos(θ) + sin(θ)*g)), zero(T)) / 2
-        end
-    end
-
-    @testset "Explicit definition $T" for T ∈ [Float32, Float64, Double64, BigFloat]
+@testitem "Explicit definition" setup=[ExplicitOperators] begin
+    using Quaternionic
+    using DoubleFloats
+    const L = ExplicitOperators.L
+    const R = ExplicitOperators.R
+    for T ∈ [Float32, Float64, Double64, BigFloat]
         # Test the `L` and `R` operators as defined above
         ϵ = 100 * eps(T)
         for Q ∈ randn(Rotor{T}, 10)
@@ -75,8 +55,14 @@
             end
         end
     end
+end
 
-    @testset "Scalar multiplication $T" for T ∈ [Float32, Float64, Double64]
+@testitem "Scalar multiplication" setup=[ExplicitOperators] begin
+    using Quaternionic
+    using DoubleFloats
+    const L = ExplicitOperators.L
+    const R = ExplicitOperators.R
+    for T ∈ [Float32, Float64, Double64]
         # Test L_{sg} = sL_{g} and R_{sg} = sR_{g}
         ϵ = 100 * eps(T)
         Ss = randn(T, 5)
@@ -97,8 +83,14 @@
             end
         end
     end
+end
 
-    @testset "Additivity $T" for T ∈ [Float32, Float64, Double64]
+@testitem "Additivity" setup=[ExplicitOperators] begin
+    using Quaternionic
+    using DoubleFloats
+    const L = ExplicitOperators.L
+    const R = ExplicitOperators.R
+    for T ∈ [Float32, Float64, Double64]
         # Test L_{a+b} = L_{a}+L_{b} and R_{a+b} = R_{a}+R_{b}
         ϵ = 100 * eps(T)
         Gs = randn(QuatVec{T}, 5)
@@ -118,8 +110,11 @@
             end
         end
     end
+end
 
-    @testset "Casimir $T" for T ∈ [Float32, Float64, Double64, BigFloat]
+@testitem "Casimir" begin
+    using DoubleFloats
+    for T ∈ [Float32, Float64, Double64, BigFloat]
         # Test that L² = (L₊L₋ + L₋L₊ + 2Lz²)/2 = R² = (R₊R₋ + R₋R₊ + 2Rz²)/2
         ϵ = 100 * eps(T)
         for s ∈ -3:3
@@ -151,8 +146,11 @@
             end
         end
     end
+end
 
-    @testset verbose=false "Applied to ₛYₗₘ $T" for T ∈ [Float32, Float64, Double64, BigFloat]
+@testitem "Applied to ₛYₗₘ" begin
+    using DoubleFloats
+    for T ∈ [Float32, Float64, Double64, BigFloat]
         # Evaluate (on points) ðY = √((ℓ-s)(ℓ+s+1)) Y, and similarly for ð̄Y
         ϵ = 100 * eps(T)
         @testset "$ℓₘₐₓ" for ℓₘₐₓ ∈ 4:7
@@ -181,8 +179,11 @@
             end
         end
     end
+end
 
-    @testset verbose=false "Commutators $T" for T ∈ [Float32, Float64, Double64, BigFloat]
+@testitem "Commutators" begin
+    using DoubleFloats
+    for T ∈ [Float32, Float64, Double64, BigFloat]
         # Test the following relations:
         # [L², Lz] = 0     [L², L₊] = 0     [L², L₋] = 0
         # [R², Rz] = 0     [R², R₊] = 0     [R², R₋] = 0
@@ -254,11 +255,10 @@
             end
         end
     end
-
-    ## TODO: Add L_x, L_y, R_x, and R_y, then test these commutators.
-    ## Note that R is harder because the basis in which all the matrices are returned
-    ## assumes that you are dealing with a particular `s` eigenvalue.
-    # [Lⱼ, Lₖ] =  im L_{[eⱼ,eₖ]/2} =  im ∑ₗ ε(j,k,l) Lₗ
-    # [Rⱼ, Rₖ] = -im R_{[eⱼ,eₖ]/2} = -im ∑ₗ ε(j,k,l) Rₗ
-
 end
+
+## TODO: Add L_x, L_y, R_x, and R_y, then test these commutators.
+## Note that R is harder because the basis in which all the matrices are returned
+## assumes that you are dealing with a particular `s` eigenvalue.
+# [Lⱼ, Lₖ] =  im L_{[eⱼ,eₖ]/2} =  im ∑ₗ ε(j,k,l) Lₗ
+# [Rⱼ, Rₖ] = -im R_{[eⱼ,eₖ]/2} = -im ∑ₗ ε(j,k,l) Rₗ

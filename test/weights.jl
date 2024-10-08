@@ -1,4 +1,4 @@
-@testset "weights" begin
+@testitem "weights" begin
     @testset "$T" for T in [BigFloat, Float64, Float32]
         ϵ = 50eps(T)
 
@@ -53,20 +53,21 @@
             @test clenshaw_curtis(n, T) ≈ wᶜᶜ.(0:n-1, n-1) rtol=ϵ atol=ϵ
         end
     end
+end
 
-    @testset "FastTransforms" begin
-        ϵ = eps()
+@testitem "FastTransforms" begin
+    import FastTransforms
+    ϵ = eps()
 
-        for N in [3, 10, 11, 12, 13, 170, 171, 1070, 1071]
-            μ1 = FastTransforms.chebyshevmoments1(Float64, N)
-            μ2 = FastTransforms.chebyshevmoments2(Float64, N)
-            w1 = fejerweights1(μ1)
-            w2 = fejerweights2(μ2)
-            wc = clenshawcurtisweights(μ1)
+    for N in [3, 10, 11, 12, 13, 170, 171, 1070, 1071]
+        μ1 = FastTransforms.chebyshevmoments1(Float64, N)
+        μ2 = FastTransforms.chebyshevmoments2(Float64, N)
+        w1 = FastTransforms.fejerweights1(μ1)
+        w2 = FastTransforms.fejerweights2(μ2)
+        wc = FastTransforms.clenshawcurtisweights(μ1)
 
-            @test w1 ≈ fejer1(N) rtol=ϵ atol=ϵ
-            @test w2 ≈ fejer2(N) rtol=ϵ atol=ϵ
-            @test wc ≈ clenshaw_curtis(N) rtol=ϵ atol=ϵ
-        end
+        @test w1 ≈ fejer1(N) rtol=ϵ atol=ϵ
+        @test w2 ≈ fejer2(N) rtol=ϵ atol=ϵ
+        @test wc ≈ clenshaw_curtis(N) rtol=ϵ atol=ϵ
     end
 end

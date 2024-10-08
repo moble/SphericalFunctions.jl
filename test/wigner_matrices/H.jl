@@ -1,6 +1,5 @@
-@testset verbose=true "H" begin
-
-    @testset "Test H(0) ($T)" for T in [BigFloat, Float64, Float32]
+@testitem "H(0)" begin
+    @testset "$T" for T in [BigFloat, Float64, Float32]
         # We have H_{n}^{m′,m}(0) = (-1)^m′ δ_{m′,m}
         let β = zero(T)
             expiβ = cis(β)
@@ -24,8 +23,10 @@
             end
         end
     end
+end
 
-    @testset "Test H(π) ($T)" for T in [BigFloat, Float64, Float32]
+@testitem "H(π)" begin
+    @testset "$T" for T in [BigFloat, Float64, Float32]
         # We have H_{n}^{m′,m}(0) = (-1)^m′ δ_{m′,m}
         let β = T(π)
             expiβ = cis(β)
@@ -49,8 +50,10 @@
             end
         end
     end
+end
 
-    @testset "Compare H to explicit d ($T)" for T in [BigFloat, Float64, Float32]
+@testitem "Compare H to explicit d" setup=[ExplicitWignerMatrices,Utilities] begin
+    @testset "$T" for T in [BigFloat, Float64, Float32]
         # This compares the H obtained via recurrence with the explicit Wigner d
         # d_{\ell}^{n,m} = \epsilon_n \epsilon_{-m} H_{\ell}^{n,m},
         for β in βrange(T)
@@ -99,8 +102,10 @@
             end
         end
     end
+end
 
-    @testset "Compare H to formulaic d ($T)" for T in [BigFloat, Float64, Float32]
+@testitem "Compare H to formulaic d" setup=[ExplicitWignerMatrices,Utilities] begin
+    @testset "$T" for T in [BigFloat, Float64, Float32]
         # This compares the H obtained via recurrence with the formulaic Wigner d
         # d_{\ell}^{n,m} = \epsilon_n \epsilon_{-m} H_{\ell}^{n,m},
         tol = ifelse(T === BigFloat, 100, 1) * 30eps(T)
@@ -123,5 +128,4 @@
             end
         end
     end
-
 end

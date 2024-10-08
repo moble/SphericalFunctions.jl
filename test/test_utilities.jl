@@ -212,12 +212,24 @@ function sYlm(s, ell, m, ι::T, ϕ::T) where {T<:Real}
     )
 end
 
+function sYlm(s, ℓ, m, ιϕ)
+    sYlm(s, ℓ, m, ιϕ[1], ιϕ[2])
+end
+
 # Eqs. (II.9) through (II.13) of https://arxiv.org/abs/0709.0093v3 [Ajith_2007](@cite)
 m2Y22(ι::T, ϕ::T) where {T<:Real} = √(5 / (64T(π))) * (1 + cos(ι))^2 * cis(2ϕ)
 m2Y21(ι::T, ϕ::T) where {T<:Real} = √(5 / (16T(π))) * sin(ι) * (1 + cos(ι)) * cis(ϕ)
 m2Y20(ι::T, ϕ::T) where {T<:Real} = √(15 / (32T(π))) * sin(ι)^2
 m2Y2m1(ι::T, ϕ::T) where {T<:Real} = √(5 / (16T(π))) * sin(ι) * (1 - cos(ι)) * cis(-1ϕ)
 m2Y2m2(ι::T, ϕ::T) where {T<:Real} = √(5 / (64T(π))) * (1 - cos(ι))^2 * cis(-2ϕ)
+
+m_m2Y2m = [
+    (2, m2Y22),
+    (1, m2Y21),
+    (0, m2Y20),
+    (-1, m2Y2m1),
+    (-2, m2Y2m2)
+]
 
 end  # module NINJA
 
@@ -480,4 +492,55 @@ function array_equal(a1::T1, a2::T2, equal_nan=false) where {T1, T2}
     all(e->e[1]==e[2] || (equal_nan && isnan(e1) && isnan(e2)), zip(a1, a2))
 end
 
+function sYlm(s::Int, ell::Int, m::Int, theta::T, phi::T) where {T<:Real}
+    # Eqs. (II.7) and (II.8) of https://arxiv.org/abs/0709.0093v3 [Ajith_2007](@cite)
+    # Note their weird definition w.r.t. `-s`
+    k_min = max(0, m + s)
+    k_max = min(ell + m, ell + s)
+    sin_half_theta, cos_half_theta = sincos(theta / 2)
+    return (-1)^(-s) * sqrt((2 * ell + 1) / (4 * T(π))) *
+        T(sum(
+            (-1) ^ (k)
+            * sqrt(factorial(big(ell + m)) * factorial(big(ell - m)) * factorial(big(ell - s)) * factorial(big(ell + s)))
+            * (cos_half_theta ^ (2 * ell + m + s - 2 * k))
+            * (sin_half_theta ^ (2 * k - s - m))
+            / (factorial(big(ell + m - k)) * factorial(big(ell + s - k)) * factorial(big(k)) * factorial(big(k - s - m)))
+            for k in k_min:k_max
+        )) *
+        cis(m * phi)
+end
+
+ε(j,k,l) = ifelse(
+    (j,k,l)∈((1,2,3),(2,3,1),(3,1,2)),
+    1,
+    ifelse(
+        (j,k,l)∈((2,1,3),(1,3,2),(3,2,1)),
+        -1,
+        0
+    )
+)
+
 end  # Utilities snippet
+
+
+@testmodule ExplicitOperators begin
+    using Quaternionic
+    import ForwardDiff
+
+    # These are just simple versions of the operators defined in
+    # notes/operators/explicit_definition.jl, for testing purposes.  Note that we explicitly
+    # use `cos(θ) + sin(θ)*g` instead of simply `exp(θ*g)`, because the `exp` implementation
+    # currently has a special case at zero, which messes with the derivative at that point.
+    # But also note that these are incorrect for `g=0` because we oversimplify.
+    function L(g::QuatVec{T}, f) where T
+        function L_g(Q)
+            -im * ForwardDiff.derivative(θ -> f((cos(θ) + sin(θ)*g) * Q), zero(T)) / 2
+        end
+    end
+    function R(g::QuatVec{T}, f) where T
+        function R_g(Q)
+            -im * ForwardDiff.derivative(θ -> f(Q * (cos(θ) + sin(θ)*g)), zero(T)) / 2
+        end
+    end
+
+end
