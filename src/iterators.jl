@@ -15,7 +15,7 @@ use this as something like
     for (ℓ, Dˡ) in zip(ℓₘᵢₙ:ℓₘₐₓ, D_iterator(D, ℓₘₐₓ))
         for m′ in -ℓ:ℓ
             for m in -ℓ:ℓ
-                Dˡ[ℓ+m′+1, ℓ+m+1] = <...>
+                Dˡ[ℓ+m′+1, ℓ+m+1]  # ... do something with Dˡ
             end
         end
     end
@@ -76,7 +76,7 @@ use this as something like
     for (ℓ, dˡ) in zip(ℓₘᵢₙ:ℓₘₐₓ, d_iterator(d, ℓₘₐₓ))
         for m′ in -ℓ:ℓ
             for m in -ℓ:ℓ
-                dˡ[ℓ+m′+1, ℓ+m+1] = <...>
+                dˡ[ℓ+m′+1, ℓ+m+1]  # ... do something with dˡ
             end
         end
     end
@@ -135,7 +135,7 @@ use this as something like
 
     for (ℓ, Yˡ) in zip(ℓₘᵢₙ:ℓₘₐₓ, sYlm_iterator(Y, ℓₘₐₓ))
         for m in -ℓ:ℓ
-            Yˡ[ℓ+m+1] = <...>
+            Yˡ[ℓ+m+1]  # ... do something with Yˡ
         end
     end
 
