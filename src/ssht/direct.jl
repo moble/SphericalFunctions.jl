@@ -59,12 +59,12 @@ function SSHTDirect(
         You will likely benefit from trying other methods for these parameters.
         """
     end
-    if (message = check_blas_threads()) != ""
-        @warn """$message
-        Computations with SSHTDirect can benefit greatly from using all available threads if many
-        functions are to be transformed.
-        """
-    end
+    # if (message = check_blas_threads()) != ""
+    #     @warn """$message
+    #     Computations with SSHTDirect can benefit greatly from using all available threads if many
+    #     functions are to be transformed.
+    #     """
+    # end
     let ₛ𝐘 = ₛ𝐘(s, ℓₘₐₓ, TT, Rθϕ)
         ₛ𝐘decomp = decomposition(ₛ𝐘)
         SSHTDirect{TT, inplace, typeof(ₛ𝐘decomp)}(s, ℓₘₐₓ, Rθϕ, ₛ𝐘, ₛ𝐘decomp)
