@@ -1,10 +1,10 @@
-@testset verbose=true "sYlm" begin
+@testitem "Issue #40" begin
+    @test maximum(abs, sYlm_values(0.0, 0.0, 3, -2)) > 0
+end
 
-    @testset "Issue #40" begin
-        @test maximum(abs, sYlm_values(0.0, 0.0, 3, -2)) > 0
-    end
-
-    @testset "Test NINJA expressions ($T)" for T in [Float64, Float32, BigFloat]
+@testitem "Test NINJA expressions" setup=[NINJA,Utilities] begin
+    using ProgressMeter
+    @testset "$T" for T in [Float64, Float32, BigFloat]
         ## This is just to test my implementation of the equations give in the paper.
         ## Note that this is a test of the testing code itself, not of the main code.
         tol = 2eps(T)
@@ -18,8 +18,12 @@
             end
         end
     end
+end
 
-    @testset "Compare to NINJA expressions ($T)" for T in [Float64, Float32, BigFloat]
+@testitem "Compare to NINJA expressions" setup=[NINJA,LAL,Utilities] begin
+    using ProgressMeter
+    using Quaternionic
+    @testset "$T" for T in [Float64, Float32, BigFloat]
         ℓₘₐₓ = 8
         sₘₐₓ = 2
         ℓₘᵢₙ = 0
@@ -61,8 +65,12 @@
             end
         end
     end
+end
 
-    @testset "Spin property ($T)" for T in [Float64, Float32, BigFloat]
+@testitem "Spin property" setup=[Utilities] begin
+    using ProgressMeter
+    using Quaternionic
+    @testset "$T" for T in [Float64, Float32, BigFloat]
         # Test that ₛYₗₘ(R exp(γ*z/2)) = ₛYₗₘ(R) * exp(-im*s*γ)
         # See https://spherical.readthedocs.io/en/main/SWSHs/
         # for a more detailed explanation
@@ -84,8 +92,12 @@
             end
         end
     end
+end
 
-    @testset "sYlm vs WignerD ($T)" for T in [Float64, Float32, BigFloat]
+@testitem "sYlm vs WignerD" setup=[Utilities] begin
+    using ProgressMeter
+    using Quaternionic
+    @testset "$T" for T in [Float64, Float32, BigFloat]
         # ₛYₗₘ(R) = (-1)ˢ √((2ℓ+1)/(4π)) 𝔇ˡₘ₋ₛ(R)
         #        = (-1)ˢ √((2ℓ+1)/(4π)) 𝔇̄ˡ₋ₛₘ(R̄)
         ℓₘₐₓ = 8
@@ -124,8 +136,12 @@
             end
         end
     end
+end
 
-    @testset "sYlm conjugation ($T)" for T in [Float64, Float32, BigFloat]
+@testitem "sYlm conjugation" setup=[Utilities] begin
+    using ProgressMeter
+    using Quaternionic
+    @testset "$T" for T in [Float64, Float32, BigFloat]
         # ₛȲₗₘ = (-1)ˢ⁺ᵐ ₋ₛYₗ₋ₘ
         ℓₘₐₓ = 8
         sₘₐₓ = 2
@@ -151,5 +167,4 @@
             end
         end
     end
-
 end

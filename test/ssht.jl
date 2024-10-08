@@ -1,14 +1,10 @@
-@testset verbose=true "SSHT" begin
-
+@testsnippet SSHT begin
+    using DoubleFloats
     FloatTypes = [Double64, Float64, Float32]
     methods = ["Direct", "Minimal", "RS"]
     inplacemethods = ["Direct", "Minimal"]
     cases = Iterators.product(methods, FloatTypes)
     inplacecases = Iterators.product(inplacemethods, FloatTypes)
-
-    function sYlm(s, ℓ, m, θϕ)
-        NINJA.sYlm(s, ℓ, m, θϕ[1], θϕ[2])
-    end
 
     function explain(computed, expected, method, T, ℓmax, s, ℓ, m, ϵ)
         if ≉(computed, expected, atol=ϵ, rtol=ϵ)
@@ -21,78 +17,84 @@
             #error("")
         end
     end
+end
 
-    @testset "Preliminaries" begin
-
-        # Preliminary check that `sqrtbinomial` works as expected
-        @testset "sqrtbinomial" for T ∈ [Float16, Float32, Float64, Double64, BigFloat]
-            for ℓ ∈ [1, 2, 3, 4, 5, 13, 64, 1025]
-                for s ∈ -2:2
-                    # Note that `ℓ-abs(s)` is more relevant, but we test without `abs` here
-                    # to exercise more code paths
-                    a = SphericalFunctions.sqrtbinomial(2ℓ, ℓ-s, T)
-                    b = T(√binomial(big(2ℓ), big(ℓ-s)))
-                    @test a ≈ b
-                end
+# Preliminary check that `sqrtbinomial` works as expected
+@testitem "Preliminaries: sqrtbinomial" begin
+    using DoubleFloats
+    for T ∈ [Float16, Float32, Float64, Double64, BigFloat]
+        for ℓ ∈ [1, 2, 3, 4, 5, 13, 64, 1025]
+            for s ∈ -2:2
+                # Note that `ℓ-abs(s)` is more relevant, but we test without `abs` here
+                # to exercise more code paths
+                a = SphericalFunctions.sqrtbinomial(2ℓ, ℓ-s, T)
+                b = T(√binomial(big(2ℓ), big(ℓ-s)))
+                @test a ≈ b
             end
         end
+    end
+end
 
-        # Check that an error results from a nonsense method request
-        @testset "Nonsense method" begin
-            let s=-2, ℓmax=8
-                @test_throws ErrorException SSHT(s, ℓmax; method="NonsenseGarbage")
+# Check that an error results from a nonsense method request
+@testitem "Preliminaries: Nonsense method" begin
+    let s=-2, ℓmax=8
+        @test_throws ErrorException SSHT(s, ℓmax; method="NonsenseGarbage")
+    end
+end
+
+# Check what `show` looks like
+@testitem "Preliminaries: SSHT show" begin
+    let io=IOBuffer(), s=-2, ℓmax=8, T=Float64, method="Direct"
+        TD = "LinearAlgebra.LU{ComplexF64, Matrix{ComplexF64}, Vector{Int64}}"
+        for inplace ∈ [true, false]
+            expected = "SphericalFunctions.SSHT$method{$T, $inplace, $TD}($s, $ℓmax)"
+            𝒯 = SSHT(s, ℓmax; T, method, inplace)
+            Base.show(io, MIME("text/plain"), 𝒯)
+            @test String(take!(io)) == expected
+        end
+    end
+end
+
+# Check that SSHTDirect warns if ℓₘₐₓ is too large
+@testitem "Preliminaries: Direct ℓₘₐₓ" begin
+    let s=0, ℓₘₐₓ=65
+        @test_warn """ "Direct" method for s-SHT is only """ SSHT(s, ℓₘₐₓ; method="Direct")
+    end
+end
+
+# # Check that SSHTDirect warns if `check_blas_threads` is too low
+# @testitem "Preliminaries: Direct threads" begin
+#     using LinearAlgebra
+#     import Hwloc: num_physical_cores
+#     let cores=num_physical_cores(), blas_threads=LinearAlgebra.BLAS.get_num_threads()
+#         if cores > 1
+#             LinearAlgebra.BLAS.set_num_threads(1)
+#             try
+#                 @test_warn """ all available threads """ SSHT(0, 5; method="Direct")
+#             finally
+#                 LinearAlgebra.BLAS.set_num_threads(blas_threads)
+#             end
+#         end
+#     end
+# end
+
+# Check pixels and rotors of Minimal
+@testitem "Preliminaries: Minimal pixels" setup=[SSHT] begin
+    for T ∈ FloatTypes
+        for ℓmax ∈ [3, 4, 5, 13, 64]
+            for s ∈ -min(2,abs(ℓmax)-1):min(2,abs(ℓmax)-1)
+                𝒯 = SSHT(s, ℓmax; T=T, method="Minimal")
+                @test pixels(𝒯) ≈ sorted_ring_pixels(s, ℓmax, T)
+                @test rotors(𝒯) ≈ sorted_ring_rotors(s, ℓmax, T)
             end
         end
+    end
+end
 
-        # Check what `show` looks like
-        @testset "SSHT show" begin
-            let io=IOBuffer(), s=-2, ℓmax=8, T=Float64, method="Direct"
-                TD = "LU{ComplexF64, Matrix{ComplexF64}, Vector{Int64}}"
-                for inplace ∈ [true, false]
-                    expected = "SphericalFunctions.SSHT$method{$T, $inplace, $TD}($s, $ℓmax)"
-                    𝒯 = SSHT(s, ℓmax; T, method, inplace)
-                    Base.show(io, MIME("text/plain"), 𝒯)
-                    @test String(take!(io)) == expected
-                end
-            end
-        end
 
-        # Check that SSHTDirect warns if ℓₘₐₓ is too large
-        @testset "Direct ℓₘₐₓ" begin
-            let s=0, ℓₘₐₓ=65
-                @test_warn """ "Direct" method for s-SHT is only """ SSHT(s, ℓₘₐₓ; method="Direct")
-            end
-        end
-
-        # Check that SSHTDirect warns if `check_blas_threads` is too low
-        @testset "Direct threads" begin
-            let cores=num_physical_cores(), blas_threads=LinearAlgebra.BLAS.get_num_threads()
-                if cores > 1
-                    LinearAlgebra.BLAS.set_num_threads(1)
-                    try
-                        @test_warn """ all available threads """ SSHT(0, 5; method="Direct")
-                    finally
-                        LinearAlgebra.BLAS.set_num_threads(blas_threads)
-                    end
-                end
-            end
-        end
-
-        # Check pixels and rotors of Minimal
-        @testset "Minimal pixels $T" for T ∈ FloatTypes
-            for ℓmax ∈ [3, 4, 5, 13, 64]
-                for s ∈ -min(2,abs(ℓmax)-1):min(2,abs(ℓmax)-1)
-                    𝒯 = SSHT(s, ℓmax; T=T, method="Minimal")
-                    @test pixels(𝒯) ≈ sorted_ring_pixels(s, ℓmax, T)
-                    @test rotors(𝒯) ≈ sorted_ring_rotors(s, ℓmax, T)
-                end
-            end
-        end
-
-    end  # Preliminaries
-
-    # These test the ability of ssht to precisely reconstruct a pure `sYlm`.
-    @testset "Synthesis: $T $method" for (method, T) in cases
+# These test the ability of ssht to precisely reconstruct a pure `sYlm`.
+@testitem "Synthesis" setup=[NINJA,SSHT] begin
+    for (method, T) in cases
 
         # We can't go to very high ℓ, because NINJA.sYlm fails for low-precision numbers
         for ℓmax ∈ 3:7
@@ -111,7 +113,7 @@
                             f = zeros(Complex{T}, SphericalFunctions.Ysize(ℓmin, ℓmax))
                             f[SphericalFunctions.Yindex(ℓ, m, ℓmin)] = one(T)
                             computed = 𝒯 * f
-                            expected = sYlm.(s, ℓ, m, pixels(𝒯))
+                            expected = NINJA.sYlm.(s, ℓ, m, pixels(𝒯))
                             explain(computed, expected, method, T, ℓmax, s, ℓ, m, ϵ)
                             @test computed ≈ expected atol=ϵ rtol=ϵ
                         end
@@ -119,11 +121,13 @@
                 end
             end
         end
-    end  # Synthesis
+    end
+end
 
 
-    # These test the ability of ssht to precisely decompose the results of `sYlm`.
-    @testset "Analysis: $T $method" for (method, T) in cases
+# These test the ability of ssht to precisely decompose the results of `sYlm`.
+@testitem "Analysis" setup=[NINJA,SSHT] begin
+    for (method, T) in cases
 
         # We can't go to very high ℓ, because NINJA.sYlm fails for low-precision numbers
         for ℓmax ∈ 3:7
@@ -140,7 +144,7 @@
                 let ℓmin = abs(s)
                     for ℓ in abs(s):ℓmax
                         for m in -ℓ:ℓ
-                            f = sYlm.(s, ℓ, m, pixels(𝒯))
+                            f = NINJA.sYlm.(s, ℓ, m, pixels(𝒯))
                             computed = 𝒯 \ f
                             expected = zeros(Complex{T}, size(computed))
                             expected[SphericalFunctions.Yindex(ℓ, m, ℓmin)] = one(T)
@@ -151,11 +155,13 @@
                 end
             end
         end
-    end  # Analysis
+    end
+end
 
-    # These test the ability of ssht to precisely reconstruct a pure `sYlm`,
-    # and then reverse that process to find the pure mode again.
-    @testset verbose=false "A ∘ S: $T $method" for (method, T) in cases
+# These test the ability of ssht to precisely reconstruct a pure `sYlm`,
+# and then reverse that process to find the pure mode again.
+@testitem "A ∘ S" setup=[SSHT] begin
+    for (method, T) in cases
         # Note that the number of tests here scales as ℓmax^2, and
         # the time needed for each scales as (ℓmax log(ℓmax))^2,
         # so we don't bother going to very high ℓmax.
@@ -182,10 +188,14 @@
                 end
             end
         end
-    end  # A ∘ S
+    end
+end
 
-    # These test A ∘ S in the RS method when using different quadratures
-    @testset verbose=false "RS quadratures: $T" for T in FloatTypes
+# These test A ∘ S in the RS method when using different quadratures
+@testitem "RS quadratures" setup=[SSHT] begin
+    using StaticArrays
+    using Quaternionic
+    for T in FloatTypes
         method = "RS"
         @testset "$ℓmax" for ℓmax ∈ 3:7
             #ϵ = 20ℓmax^2 * eps(T)
@@ -223,10 +233,13 @@
                 end
             end
         end
-    end  # RS quadratures
+    end
+end
 
-    # These test that the non-inplace versions of transformers that *can* work in place
-    # still work.
+# These test that the non-inplace versions of transformers that *can* work in place
+# still work.
+@testitem "Non-inplace" setup=[SSHT] begin
+    using LinearAlgebra
     @testset verbose=false "Non-inplace: $T $method" for (method, T) in inplacecases
         @testset "$ℓmax" for ℓmax ∈ [4,5]
             #ϵ = 20ℓmax^2 * eps(T)
@@ -257,6 +270,5 @@
                 end
             end
         end
-    end  # Non-inplace
-
+    end
 end

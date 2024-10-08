@@ -1,6 +1,6 @@
-@testset verbose=true "𝔇" begin
-
-    @testset "Compare H/D indexing ($T)" for T in [Float64, Float32]
+@testitem "Compare H/D indexing" setup=[NaNChecker] begin
+    const NaNCheck = NaNChecker.NaNCheck
+    @testset "$T" for T in [Float64, Float32]
         # Here, we check that we can pass in either an "H wedge" array to be used with
         # WignerHindex, or a full 𝔇 array used with WignerDindex, and obtain the same
         # H recurrence results
@@ -27,8 +27,11 @@
             end
         end
     end
+end
 
-    @testset "Compare 𝔇 to formulaic d ($T)" for T in [BigFloat, Float64, Float32]
+@testitem "Compare 𝔇 to formulaic d" setup=[ExplicitWignerMatrices,Utilities] begin
+    using Quaternionic
+    @testset "$T" for T in [BigFloat, Float64, Float32]
         # Now, we're ready to check that d_{n}^{m′,m}(β) matches the expected values
         # for a range of β values
         for ℓₘₐₓ in 0:4
@@ -53,8 +56,13 @@
             end
         end
     end
+end
 
-    @testset "Compare 𝔇 to formulaic 𝔇 ($T)" for T in [BigFloat, Float64, Float32]
+@testitem "Compare 𝔇 to formulaic 𝔇" setup=[ExplicitWignerMatrices,Utilities] begin
+    using Quaternionic
+    using ProgressMeter
+    using Random
+    @testset "$T" for T in [BigFloat, Float64, Float32]
         # Now, we're ready to check that 𝔇_{n}^{m′,m}(β) matches the expected values
         # for a range of α, β, γ values
         Random.seed!(123)
@@ -81,11 +89,17 @@
             end
         end
     end
+end
 
-    @testset "Group characters $T" for T in [BigFloat, Float64, Float32]
+@testitem "Group characters" setup=[Utilities] begin
+    using Quaternionic
+    using ProgressMeter
+    using Random
+    @testset "$T" for T in [BigFloat, Float64, Float32]
         # χʲ(β) ≔ Σₘ dʲₘₘ(β) ≡ Σₘ 𝔇ʲₘₘ(exp(v̂ β/2)) = sin((2j+1)β/2) / sin(β/2)
         # Here, v̂ is any unit vector; group characters are constant on conjugacy classes and
         # conjugacy classes of SO(3) are rotations through the same angle about any axis.
+        Random.seed!(123)
         ℓₘₐₓ = T===BigFloat ? 10 : 20
         D_storage = D_prep(ℓₘₐₓ, T)
         d_storage = d_prep(ℓₘₐₓ, T)
@@ -111,9 +125,15 @@
             end
         end
     end
+end
 
-    @testset "Representation property ($T)" for T in [Float64, Float32, BigFloat]
+@testitem "Representation property" setup=[Utilities] begin
+    using Quaternionic
+    using ProgressMeter
+    using Random
+    @testset "$T" for T in [Float64, Float32, BigFloat]
         # For each l, 𝔇ˡₙ,ₘ(R₁ R₂) = Σₚ 𝔇ˡₙ,ₚ(R₁) 𝔇ˡₚ,ₘ(R₂)
+        Random.seed!(123)
         tol = 3eps(T)
         ℓₘₐₓ = 10
         D₁_storage = D_prep(ℓₘₐₓ, T)
@@ -138,5 +158,4 @@
             end
         end
     end
-
 end
