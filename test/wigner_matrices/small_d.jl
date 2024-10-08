@@ -1,6 +1,5 @@
-@testset verbose=true "d" begin
-
-    @testset "Compare d expressions ($T)" for T in [BigFloat, Float64, Float32]
+@testitem "Compare d expressions" setup=[ExplicitWignerMatrices,Utilities] begin
+    @testset "$T" for T in [BigFloat, Float64, Float32]
         # This just compares the two versions of the `d` function from test_utilities
         # to ensure that later tests that use those functions are reliable
         tol = ifelse(T === BigFloat, 100, 1) * 30eps(T)
@@ -21,8 +20,10 @@
             end
         end
     end
+end
 
-    @testset "Compare d to formulaic d ($T)" for T in [BigFloat, Float64, Float32]
+@testitem "Compare d to formulaic d" setup=[ExplicitWignerMatrices,Utilities] begin
+    @testset "$T" for T in [BigFloat, Float64, Float32]
         # Now, we're ready to check that d_{n}^{m′,m}(β) matches the expected values
         # for a range of β values
         tol = ifelse(T === BigFloat, 100, 1) * 30eps(T)
@@ -43,8 +44,10 @@
             end
         end
     end
+end
 
-    @testset "Test d signatures ($T)" for T in [BigFloat, Float64, Float32]
+@testitem "Test d signatures" setup=[Utilities] begin
+    @testset "$T" for T in [BigFloat, Float64, Float32]
         # 1 d_matrices(β, ℓₘₐₓ)
         # 2 d_matrices(expiβ, ℓₘₐₓ)
         # 3 d_matrices!(d_storage, β)
@@ -71,5 +74,4 @@
             @test array_equal(dA, dB)
         end
     end
-
 end
