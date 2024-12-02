@@ -1,9 +1,29 @@
+const iterator_warning = """Inconsistent behavior relative to documentation.
+
+This iterator mistakenly returns the transpose of the result implied by the documentation.
+To avoid breaking code that relies on this behavior, this is a final release in this major
+version of the package.  On the other hand, to avoid silent bugs, this version is being
+released with this warning.  The next major version of the package will likely provide the
+expected behavior, though with inefficient performance; and the major version after that
+will likely provide the expected behavior with efficient performance.
+"""
+
+
 """
     D_iterator(D, ℓₘₐₓ, [ℓₘᵢₙ])
 
 Construct an Iterator that returns sub-matrices of `D`, each of which consists
 of elements ``(ℓ,-ℓ,-ℓ)`` through ``(ℓ,ℓ,ℓ)``, for ``ℓ`` from `ℓₘᵢₙ` through
 `ℓₘₐₓ`.  By default, `ℓₘᵢₙ` is 0.
+
+!!! danger "Incorrect behavior"
+    This iterator mistakenly returns the transpose of the result implied by the
+    documentation.  To avoid breaking code that relies on this behavior, this is a final
+    release in this major version of the package.  On the other hand, to avoid silent bugs,
+    this version is being released with this warning.  The next major version of the package
+    will likely provide the expected behavior, though with inefficient performance; and the
+    major version after that will likely provide the expected behavior with efficient
+    performance.
 
 Note that the returned objects are *views* into the original `D` data — meaning
 that you may alter their values.
@@ -31,6 +51,7 @@ struct D_iterator{VT<:Vector}
     ℓₘᵢₙ::Int
     function D_iterator{VT}(D, ℓₘₐₓ, ℓₘᵢₙ=0) where VT
         #@assert ℓₘₐₓ ≥ ℓₘᵢₙ ≥ 0
+        @warn iterator_warning
         new{VT}(D, ℓₘₐₓ, ℓₘᵢₙ)
     end
 end
@@ -66,6 +87,15 @@ Construct an Iterator that returns sub-matrices of `d`, each of which consists
 of elements ``(ℓ,-ℓ,-ℓ)`` through ``(ℓ,ℓ,ℓ)``, for ``ℓ`` from `ℓₘᵢₙ` through
 `ℓₘₐₓ`.  By default, `ℓₘᵢₙ` is 0.
 
+!!! danger "Incorrect behavior"
+    This iterator mistakenly returns the transpose of the result implied by the
+    documentation.  To avoid breaking code that relies on this behavior, this is a final
+    release in this major version of the package.  On the other hand, to avoid silent bugs,
+    this version is being released with this warning.  The next major version of the package
+    will likely provide the expected behavior, though with inefficient performance; and the
+    major version after that will likely provide the expected behavior with efficient
+    performance.
+
 Note that the returned objects are *views* into the original `d` data — meaning
 that you may alter their values.
 
@@ -92,6 +122,7 @@ struct d_iterator{VT<:Vector}
     ℓₘᵢₙ::Int
     function d_iterator{VT}(d, ℓₘₐₓ, ℓₘᵢₙ=0) where VT
         #@assert ℓₘₐₓ ≥ ℓₘᵢₙ ≥ 0
+        @warn iterator_warning
         new{VT}(d, ℓₘₐₓ, ℓₘᵢₙ)
     end
 end
