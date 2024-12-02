@@ -107,7 +107,7 @@ end # module GoldbergEtAl
     Random.seed!(1234)
     const T = Float64
     const ℓₘₐₓ = 8
-    ϵₐ = nextfloat(T(0), 4)
+    ϵₐ = 2eps(T)
     ϵᵣ = 50eps(T)
 
     # Tests for Y(ℓ, m, θ, ϕ)
