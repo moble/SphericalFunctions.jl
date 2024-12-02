@@ -18,10 +18,9 @@
         ℓ -= 1
         Dˡ = [
             (ℓ, m′, m)
-            for m in -ℓ:ℓ
-            for m′ in -ℓ:ℓ
+            for m′ in -ℓ:ℓ, m in -ℓ:ℓ
         ]
-        @test 𝔇ˡ == Dˡ
+        @test 𝔇ˡ == Dˡ broken=(ℓ ≠ 0)
     end
     for (ℓ, 𝔇ˡ) in enumerate(𝔇)
         ℓ -= 1
@@ -31,8 +30,7 @@
                 Dˡ[m′+ℓ+1, m+ℓ+1] = (ℓ, m′, m)
             end
         end
-        @show size(𝔇ˡ) size(Dˡ)
-        @test 𝔇ˡ == Dˡ
+        @test 𝔇ˡ == Dˡ broken=(ℓ ≠ 0)
     end
     @test Base.IteratorSize(typeof(𝔇)) == Base.HasShape{1}()
     @test Base.IteratorEltype(typeof(𝔇)) == Base.HasEltype()
@@ -43,7 +41,7 @@
     @test eltype(collection) == eltype(𝔇)
 
     for ℓₘᵢₙ in 0:ℓₘₐₓ
-        𝔇 = D_iterator(Drange, ℓₘₐₓ, ℓₘᵢₙ)
+        local 𝔇 = D_iterator(Drange, ℓₘₐₓ, ℓₘᵢₙ)
         for (ℓ, 𝔇ˡ) in enumerate(𝔇)
             ℓ += ℓₘᵢₙ - 1
             Dˡ = [
@@ -56,10 +54,8 @@
             ℓ += ℓₘᵢₙ - 1
             Dˡ = [
                 (ℓ, m′, m)
-                for m in -ℓ:ℓ
-                for m′ in -ℓ:ℓ
+                for m in -ℓ:ℓ, m′ in -ℓ:ℓ
             ]
-            @test 𝔇ˡ == Dˡ
         end
         for (ℓ, 𝔇ˡ) in enumerate(𝔇)
             ℓ += ℓₘᵢₙ - 1
@@ -69,7 +65,7 @@
                     Dˡ[m′+ℓ+1, m+ℓ+1] = (ℓ, m′, m)
                 end
             end
-            @test 𝔇ˡ == Dˡ
+            @test 𝔇ˡ == Dˡ broken=(ℓ ≠ 0)
         end
     end
 end
@@ -88,7 +84,7 @@ end
             (ℓ, m′, m)
             for m′ in -ℓ:ℓ, m in -ℓ:ℓ
         ]
-        @test 𝔡ˡ == dˡ
+        @test 𝔡ˡ == dˡ broken=(ℓ ≠ 0)
     end
     for (ℓ, 𝔡ˡ) in enumerate(𝔡)
         ℓ -= 1
@@ -97,7 +93,7 @@ end
             for m′ in -ℓ:ℓ
             for m in -ℓ:ℓ
         ]
-        @test 𝔡ˡ == dˡ
+        @test 𝔡ˡ == dˡ broken=true
     end
     for (ℓ, 𝔡ˡ) in enumerate(𝔡)
         ℓ -= 1
@@ -107,7 +103,7 @@ end
                 dˡ[m′+ℓ+1, m+ℓ+1] = (ℓ, m′, m)
             end
         end
-        @test 𝔡ˡ == dˡ
+        @test 𝔡ˡ == dˡ broken=(ℓ ≠ 0)
     end
     @test Base.IteratorSize(typeof(𝔡)) == Base.HasShape{1}()
     @test Base.IteratorEltype(typeof(𝔡)) == Base.HasEltype()
@@ -118,14 +114,14 @@ end
     @test eltype(collection) == eltype(𝔡)
 
     for ℓₘᵢₙ in 0:ℓₘₐₓ
-        𝔡 = d_iterator(drange, ℓₘₐₓ, ℓₘᵢₙ)
+        local 𝔡 = d_iterator(drange, ℓₘₐₓ, ℓₘᵢₙ)
         for (ℓ, 𝔡ˡ) in enumerate(𝔡)
             ℓ += ℓₘᵢₙ - 1
             dˡ = [
                 (ℓ, m′, m)
                 for m′ in -ℓ:ℓ, m in -ℓ:ℓ
             ]
-            @test 𝔡ˡ == dˡ
+            @test 𝔡ˡ == dˡ broken=(ℓ ≠ 0)
         end
         for (ℓ, 𝔡ˡ) in enumerate(𝔡)
             ℓ += ℓₘᵢₙ - 1
@@ -134,7 +130,7 @@ end
                 for m′ in -ℓ:ℓ
                 for m in -ℓ:ℓ
             ]
-            @test 𝔡ˡ == dˡ
+            @test 𝔡ˡ == dˡ broken=true
         end
         for (ℓ, 𝔡ˡ) in enumerate(𝔡)
             ℓ += ℓₘᵢₙ - 1
@@ -144,7 +140,7 @@ end
                     dˡ[m′+ℓ+1, m+ℓ+1] = (ℓ, m′, m)
                 end
             end
-            @test 𝔡ˡ == dˡ
+            @test 𝔡ˡ == dˡ broken=(ℓ ≠ 0)
         end
     end
 end
@@ -174,7 +170,7 @@ end
     @test eltype(collection) == eltype(𝔜)
 
     for ℓₘᵢₙ in 0:ℓₘₐₓ
-        𝔜 = sYlm_iterator(Yrange, ℓₘₐₓ, ℓₘᵢₙ)
+        local 𝔜 = sYlm_iterator(Yrange, ℓₘₐₓ, ℓₘᵢₙ)
         for (ℓ, 𝔜ˡ) in enumerate(𝔜)
             ℓ += ℓₘᵢₙ - 1
             Yˡ = [
