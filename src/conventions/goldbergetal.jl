@@ -2,9 +2,10 @@
 Formulas and conventions from [Goldberg et al.'s "Spin-``s`` Spherical Harmonics and
 ``\eth``"](@cite GoldbergEtAl_1967).
 
-The conclusion here is that Goldberg et al.'s ``ₛYₗₘ(θ, ϕ)`` differs from ours by a
-factor of ``(-1)^m``, while Goldberg et al.'s ``Dʲₘₚ,ₘ`` differs from ours by a transpose
-and a factor of ``(-1)^{m+m'}``.
+The conclusion here is that Goldberg et al.'s ``ₛYₗₘ(θ, ϕ)`` differs from ours by a factor
+of ``(-1)^m``, while Goldberg et al.'s ``Dʲₘₚ,ₘ`` differs from ours by a transpose and a
+factor of ``(-1)^{m+m'}`` — which is equivalent to swapping the order of the arguments as
+Euler angles.
 
 """
 module GoldbergEtAl
@@ -34,8 +35,8 @@ function D(j, m′, m, α, β, γ)
 
     α, β, γ = promote(α, β, γ)
 
-    # The summation index `r` ranges over all values for which the binomials are
-    # positive.
+    # The summation index `r` ranges over all values for which the binomial arguments are
+    # valid.
     rₘᵢₙ = max(0, m+m′)
     rₘₐₓ = min(j+m′, j+m)
 
@@ -57,11 +58,15 @@ end
 @doc raw"""
     Y(s, ℓ, m, θ, ϕ)
 
-Eq. (3.1) of [Goldberg et al.](@cite GoldbergEtAl_1967),
-implementing
+Eq. (3.1) of [Goldberg et al.](@cite GoldbergEtAl_1967), implementing
 ```math
     {}_sY_{\ell,m}(\theta, \phi).
 ```
+
+Note that there is a difference in conventions between the ``Y`` of Goldberg et al. and
+ours, involving a factor of ``(-1)^m``.  This is consistent with the Condon-Shortley phase
+convention.
+
 """
 function Y(s, ℓ, m, θ, ϕ)
     if ℓ < 0
@@ -144,6 +149,7 @@ end # module GoldbergEtAl
                         for m′ in -j:j
                             for m in -j:j
                                 @test (-1)^(m+m′) * 𝒟(j, m, m′, α, β, γ) ≈ D[i] atol=ϵₐ rtol=ϵᵣ
+                                @test 𝒟(j, m′, m, γ, β, α) ≈ D[i] atol=ϵₐ rtol=ϵᵣ
                                 i += 1
                             end
                         end

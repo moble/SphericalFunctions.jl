@@ -198,6 +198,34 @@ function Wigner_d(ι::T, ell, m, s) where {T<:Real}
     )
 end
 
+raw"""
+
+Eq. II.7 of Ajith et al. (2007) 'Data formats...' says
+```math
+{}_sY_{\ell,m} = (-1)^s \sqrt{\frac{2\ell+1}{4\pi}} d^\ell_{m,-s}(\iota) e^{im\phi}
+```
+
+Below Eq. (2.53) of [Torres del Castillo](@cite TorresDelCastillo_2003), we see
+```math
+{}_sY_{j,m} = (-1)^m \sqrt{\frac{2j+1}{4\pi}} d^j_{-m,s}(\iota) e^{im\phi}
+```
+We can use identities to modify the latter as follows:
+```math
+\begin{aligned}
+{}_sY_{j,m} &= (-1)^m \sqrt{\frac{2j+1}{4\pi}} d^j_{-m,s}(\iota) e^{im\phi} \\
+           &= (-1)^m \sqrt{\frac{2j+1}{4\pi}} d^j_{-s,m}(\iota) e^{im\phi} \\
+           &= (-1)^{j-s+m} \sqrt{\frac{2j+1}{4\pi}} d^j_{-s,-m}(\pi-\iota) e^{im\phi} \\
+           &= (-1)^{j-s+m} \sqrt{\frac{2j+1}{4\pi}} d^j_{m,s}(\pi-\iota) e^{im\phi} \\
+           &= (-1)^{2j-s+2m} \sqrt{\frac{2j+1}{4\pi}} d^j_{m,-s}(\pi-(\pi-\iota)) e^{im\phi} \\
+           &= (-1)^{s} \sqrt{\frac{2j+1}{4\pi}} d^j_{m,-s}(\iota) e^{im\phi} \\
+\end{aligned}
+```
+The last line assumes that `j`, `m`, and `s` are integers.  But in that case, the NINJA
+expression agrees with the Torres del Castillo expression.
+
+
+"""
+
 function sYlm(s, ell, m, ι::T, ϕ::T) where {T<:Real}
     # Eq. II.7 of Ajith et al. (2007) 'Data formats...'
     # Note the weird definition w.r.t. `-s`
@@ -543,4 +571,19 @@ end  # Utilities snippet
         end
     end
 
+end
+
+
+"""Write factorials in the obvious way, for testing purposes.
+
+This snippet lets us write things like `5❗` to get `120`, for example.  This should
+probably only be used in tests, because factorials are not very efficient.  Therefore,
+to ensure accuracy and avoid overflow, the argument is first converted to a `BigInt`,
+making it even more inefficient.  This "big" conversion should be preserved as long as
+possible to ensure accurate cancellations in the final result.
+"""
+@testsnippet NaiveFactorials begin
+    struct Factorial end
+    Base.:*(n::Integer, ::Factorial) = factorial(big(n))
+    const ❗ = Factorial()
 end
