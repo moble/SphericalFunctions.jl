@@ -16,8 +16,26 @@ which appears to represent a final rotation about the ``z'`` axis.  In our conve
 rotation would be described by the final Euler angle, γ.
 
 On the other hand, on page 156, if ``𝔇^{(\ell)}`` obeys the representation-composition
-property, then {α, β, γ} represents the rotation {α, 0, 0}∘{0, β, 0}∘{0, 0, γ}, which is
-the same as our convention.
+property, then {α, β, γ} represents the rotation {α, 0, 0}∘{0, β, 0}∘{0, 0, γ}, which is the
+same as our convention.
+
+Wigner is most explicit about his Euler angles in Appendix A.  Specifically, note Eq. (A.2),
+where he gives the rotation matrix in terms of the Euler angles.  If we multiply on the left
+by the column vector (0, 0, 1), we can see where the point on the ``z`` axis should be
+rotated in Fig. 2.  Specifically, it is independent of γ, and depends on α (and β).  This is
+inconsistent with Fig. 2, indicating that the labels for α and γ have just been swapped.
+
+Eq. (15.8) says
+
+    D(ℓ, m′, m, α, β, γ) = exp(𝒾*m′*α) * d(ℓ, m′, m, β) * exp(𝒾*m*γ)
+
+while Eq. (A.11) says
+
+    Y(ℓ, m, θ, ϕ) = c * (-1)^m * exp(𝒾*m*ϕ) * d(ℓ, m, 0, θ)
+                  = c * (-1)^m * D(ℓ, m, 0, ϕ, θ, 0)
+
+Note the factor of (-1)^m, which I do not include.  But also note that there is no
+conjugation of the D function, which is consistent with our convention.
 
 """
 
