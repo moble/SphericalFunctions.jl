@@ -62,22 +62,6 @@ end
     end
 end
 
-# # Check that SSHTDirect warns if `check_blas_threads` is too low
-# @testitem "Preliminaries: Direct threads" begin
-#     using LinearAlgebra
-#     import Hwloc: num_physical_cores
-#     let cores=num_physical_cores(), blas_threads=LinearAlgebra.BLAS.get_num_threads()
-#         if cores > 1
-#             LinearAlgebra.BLAS.set_num_threads(1)
-#             try
-#                 @test_warn """ all available threads """ SSHT(0, 5; method="Direct")
-#             finally
-#                 LinearAlgebra.BLAS.set_num_threads(blas_threads)
-#             end
-#         end
-#     end
-# end
-
 # Check pixels and rotors of Minimal
 @testitem "Preliminaries: Minimal pixels" setup=[SSHT] begin
     for T ∈ FloatTypes
