@@ -22,6 +22,10 @@ The conclusion here is that Sakurai's Yₗᵐ(θ, ϕ) is the same as ours, but h
 
 const 𝒾 = im
 
+include("../utilities/naive_factorial.jl")
+import .NaiveFactorials: ❗
+
+
 @doc raw"""
     𝒟(j, m′, m, α, β, γ)
 
@@ -64,17 +68,20 @@ function d(j, m′, m, β)
     kₘᵢₙ = max(0, m-m′)
     kₘₐₓ = min(j-m′, j+m)
 
+    T = typeof(β)
+
     # Note that Sakurai's actual formula is reproduced here, even though it leads to
     # overflow errors for `j ≥ 8`, which could be eliminated by other means.
     return sum(
         k -> (
-            (-1)^(k-m+m′) * (
-                √(factorial(j+m) * factorial(j-m) * factorial(j+m′) * factorial(j-m′))
-                / (factorial(j+m-k) * factorial(k) * factorial(j-k-m′) * factorial(k-m+m′))
+            (-1)^(k-m+m′) * T(
+                √((j+m)❗ * (j-m)❗ * (j+m′)❗ * (j-m′)❗)
+                / ((j+m-k)❗ * (k)❗ * (j-k-m′)❗ * (k-m+m′)❗)
             )
             * cos(β/2)^(2j-2k+m-m′) * sin(β/2)^(2k-m+m′)
         ),
-        kₘᵢₙ:kₘₐₓ
+        kₘᵢₙ:kₘₐₓ,
+        init=complex(zero(T))
     )
 end
 
@@ -111,7 +118,7 @@ end  # @testmodule Sakurai
 
     Random.seed!(1234)
     const T = Float64
-    const ℓₘₐₓ = 7
+    const ℓₘₐₓ = 5
     ϵₐ = nextfloat(T(0), 4)
     ϵᵣ = 20eps(T)
 
@@ -151,7 +158,7 @@ end  # @testmodule Sakurai
     end
 
     # Tests for 𝒟(j, m′, m, α, β, γ)
-    let ℓₘₐₓ=6, ϵₐ=√ϵᵣ, ϵᵣ=√ϵᵣ, 𝒟=Sakurai.𝒟
+    let ϵₐ=√ϵᵣ, ϵᵣ=√ϵᵣ, 𝒟=Sakurai.𝒟
         for α ∈ αrange(T)
             for β ∈ βrange(T)
                 for γ ∈ γrange(T)

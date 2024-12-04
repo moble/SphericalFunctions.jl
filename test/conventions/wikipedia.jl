@@ -1,5 +1,8 @@
 @testmodule ExplicitWignerMatrices begin
 
+    include("../utilities/naive_factorial.jl")
+    import .NaiveFactorials: ❗
+
     function d_explicit(n, m′, m, expiβ::Complex{T}) where T
         if abs(m′) < abs(m)
             return (-1)^(m-m′) * d_explicit(n, m, m′, expiβ)
@@ -52,22 +55,11 @@
         cosβ = expiβ.re
         sin½β = √((1-cosβ)/2)
         cos½β = √((1+cosβ)/2)
-        prefactor =√T(
-            factorial(big(n + m′))
-            * factorial(big(n - m′))
-            * factorial(big(n + m))
-            * factorial(big(n - m))
-        )
-        prefactor * sum(
-            ifelse(iseven(m′ - m + s), 1, -1)
+        √T((n + m′)❗ * (n - m′)❗ * (n + m)❗ * (n - m)❗) * sum(
+            (-1)^(m′ - m + s)
             * cos½β ^ (2n + m - m′ - 2s)
             * sin½β ^ (m′ - m + 2s)
-            / (
-                factorial(big(n + m - s))
-                * factorial(big(s))
-                * factorial(big(m′ - m + s))
-                * factorial(big(n - m′ - s))
-            )
+            / ((n + m - s)❗ * (s)❗ * (m′ - m + s)❗ * (n - m′ - s)❗)
             for s in max(0, m - m′):min(n + m, n - m′)
         )
     end

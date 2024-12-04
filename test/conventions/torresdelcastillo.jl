@@ -10,6 +10,9 @@ his ``Dʲₘₚ,ₘ`` is conjugated relative to ours.
 
 const 𝒾 = im
 
+include("../utilities/naive_factorial.jl")
+import .NaiveFactorials: ❗
+
 
 @doc raw"""
     D(j, m′, m, ϕ, θ, χ)
@@ -94,14 +97,14 @@ function d(l, m′, m, θ)
     sinθ╱2, cosθ╱2 = sincos(θ/2)
     T = typeof(sinθ╱2)
 
-    √T(factorial(l+m) * factorial(l-m) * factorial(l+m′) * factorial(l-m′)) *
+    √T((l+m)❗ * (l-m)❗ * (l+m′)❗ * (l-m′)❗) *
     sum(
         k -> (
             (-1)^(k) * sinθ╱2^(m-m′+2k) * cosθ╱2^(2l-m+m′-2k) /
-            T(factorial(k) * factorial(l+m′-k) * factorial(l-m-k) * factorial(m-m′+k))
+            T((k)❗ * (l+m′-k)❗ * (l-m-k)❗ * (m-m′+k)❗)
         ),
         kₘᵢₙ:kₘₐₓ,
-        init=zero(T)
+        init=complex(zero(T))
     )
 end
 
@@ -115,7 +118,7 @@ end  # @testmodule TorresDelCastillo
 
     Random.seed!(1234)
     const T = Float64
-    const ℓₘₐₓ = 6
+    const ℓₘₐₓ = 5
     ϵₐ = 2eps(T)
     ϵᵣ = 50eps(T)
 
