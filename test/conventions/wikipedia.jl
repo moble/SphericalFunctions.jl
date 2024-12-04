@@ -1,0 +1,82 @@
+@testmodule ExplicitWignerMatrices begin
+
+    function d_explicit(n, m′, m, expiβ::Complex{T}) where T
+        if abs(m′) < abs(m)
+            return (-1)^(m-m′) * d_explicit(n, m, m′, expiβ)
+        end
+        if m′ < 0
+            return (-1)^(m-m′) * d_explicit(n, -m′, -m, expiβ)
+        end
+        cosβ = expiβ.re
+        sinβ = expiβ.im
+        if (n,m′,m) == (0,0,0)
+            T(1)
+        elseif (n,m′,m) == (1,0,0)
+            cosβ
+        elseif (n,m′,m) == (1,1,-1)
+            (1-cosβ) / 2
+        elseif (n,m′,m) == (1,1,0)
+            -sinβ / √T(2)
+        elseif (n,m′,m) == (1,1,1)
+            (1+cosβ) / 2
+        elseif (n,m′,m) == (2,0,0)
+            (3cosβ^2-1) / 2
+        elseif (n,m′,m) == (2,1,-1)
+            (1+cosβ-2cosβ^2) / 2
+        elseif (n,m′,m) == (2,1,0)
+            -√(T(3)/8) * 2 * sinβ * cosβ
+        elseif (n,m′,m) == (2,1,1)
+            (-1+cosβ+2cosβ^2) / 2
+        elseif (n,m′,m) == (2,2,-2)
+            (1-cosβ)^2 / 4
+        elseif (n,m′,m) == (2,2,-1)
+            -sinβ * (1-cosβ) / 2
+        elseif (n,m′,m) == (2,2,0)
+            √(T(3)/8) * sinβ^2
+        elseif (n,m′,m) == (2,2,1)
+            -sinβ * (1+cosβ) / 2
+        elseif (n,m′,m) == (2,2,2)
+            (1+cosβ)^2/4
+        else
+            T(NaN)
+        end
+    end
+
+    function D_explicit(n, m′, m, expiα::Complex{T}, expiβ::Complex{T}, expiγ::Complex{T}) where T
+        return expiα^(-m′) * d_explicit(n, m′, m, expiβ) * expiγ^(-m)
+    end
+
+
+    function d_formula(n, m′, m, expiβ::Complex{T}) where T
+        # https://en.wikipedia.org/wiki/Wigner_D-matrix#Wigner_.28small.29_d-matrix
+        cosβ = expiβ.re
+        sin½β = √((1-cosβ)/2)
+        cos½β = √((1+cosβ)/2)
+        prefactor =√T(
+            factorial(big(n + m′))
+            * factorial(big(n - m′))
+            * factorial(big(n + m))
+            * factorial(big(n - m))
+        )
+        prefactor * sum(
+            ifelse(iseven(m′ - m + s), 1, -1)
+            * cos½β ^ (2n + m - m′ - 2s)
+            * sin½β ^ (m′ - m + 2s)
+            / (
+                factorial(big(n + m - s))
+                * factorial(big(s))
+                * factorial(big(m′ - m + s))
+                * factorial(big(n - m′ - s))
+            )
+            for s in max(0, m - m′):min(n + m, n - m′)
+        )
+    end
+
+    function D_formula(n, m′, m, expiα::Complex{T}, expiβ::Complex{T}, expiγ::Complex{T}) where T
+        # https://en.wikipedia.org/wiki/Wigner_D-matrix#Definition_of_the_Wigner_D-matrix
+        # Note that the convention in this package is conjugated relative to the convention
+        # used by Wikipedia, so we include that conjugation here.
+        return expiα^(m′) * d_formula(n, m′, m, expiβ) * expiγ^(m)
+    end
+
+end  # module ExplicitWignerMatrices
