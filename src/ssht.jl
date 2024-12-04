@@ -28,8 +28,8 @@ number of threads must be set appropriately.
 Certain `SSHT` types (currently, only `Minimal` and `Direct`) also have an option to
 *always* act in place — meaning that they simply re-use the input storage, even when used in
 an expression like `𝒯 \ f`.  The option must be passed as the `inplace` argument to the
-constructors, and part of the type of the resulting object.  Regardless of the value of that
-option, for those types where the option exists, it is also possible to use `mul!` and
+constructors, and is part of the type of the resulting object.  Regardless of the value of
+that option, for those types where the option exists, it is also possible to use `mul!` and
 `ldiv!` from the `LinearAlgebra` package to force operation in place.
 
 Note that different algorithms require different "pixelizations", or sets of `Rotor`s on
@@ -59,6 +59,7 @@ evaluated.
 """
 function pixels end
 
+
 """
     rotors(𝒯)
 
@@ -74,40 +75,6 @@ end
 
 
 inplaceable(s, ℓₘₐₓ, Rθϕ) = (ℓₘₐₓ + 1)^2 - s^2 == length(Rθϕ)
-
-
-function check_threads()
-    cores = num_physical_cores()
-    threads = nthreads()
-    # COV_EXCL_START
-    if threads < cores
-        """
-        You are using $threads threads on a machine with $cores physical cores.  While this
-        will leave cores free to work on other tasks, you may wish to increase the
-        number of threads available to Julia by restarting with the `--threads` flag.
-        """
-    else
-        ""
-    end
-    # COV_EXCL_STOP
-end
-
-
-function check_blas_threads()
-    cores = num_physical_cores()
-    blas_threads = LinearAlgebra.BLAS.get_num_threads()
-    if blas_threads < cores
-        """
-        You are using $blas_threads BLAS threads on a machine with $cores physical cores.
-        While this will leave cores free to work on other tasks, you may wish to increase
-        the number of threads with something like
-
-            LinearAlgebra.BLAS.set_num_threads($cores)
-        """
-    else
-        ""
-    end
-end
 
 
 include("ssht/direct.jl")
