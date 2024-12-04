@@ -1,4 +1,4 @@
-# TODO: Add enough `G` storage to use on multiple threads / SIMD registers (`plan`s are thread-safe)
+# TODO: Add enough `G` storage to use on multiple threads / SIMD registers (`plan`s are thread-safe) — maybe using `ChunkSplitters`
 # TODO: Reorganize to match actual R&S algorithm recommendations
 # TODO: Allow SSHTRS to take a single Int, rather than a full vector for Nϕ
 # TODO: Optimize: Check allocations, fuse ±m loops, etc.
