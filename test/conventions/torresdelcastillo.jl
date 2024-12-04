@@ -1,4 +1,4 @@
-@doc raw"""
+raw"""
 Formulas and conventions from [Torres del Castillo's "3-D spinors, spin-weighted functions
 and their applications"](@cite TorresDelCastillo_2003).
 
@@ -6,7 +6,7 @@ The conclusion here is that del Castillo's ``ₛYₗₘ(θ, ϕ)`` is identical t
 his ``Dʲₘₚ,ₘ`` is conjugated relative to ours.
 
 """
-module TorresDelCastillo
+@testmodule TorresDelCastillo begin
 
 const 𝒾 = im
 
@@ -106,12 +106,11 @@ function d(l, m′, m, θ)
 end
 
 
-end  # module TorresDelCastillo
+end  # @testmodule TorresDelCastillo
 
 
-@testitem "TorresDelCastillo conventions" setup=[Utilities] begin
+@testitem "TorresDelCastillo conventions" setup=[Utilities, TorresDelCastillo] begin
     using Random
-    import SphericalFunctions: TorresDelCastillo
     using Quaternionic: from_spherical_coordinates
 
     Random.seed!(1234)

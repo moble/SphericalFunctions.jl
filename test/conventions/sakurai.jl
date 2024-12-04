@@ -1,4 +1,4 @@
-@doc raw"""
+raw"""
 Formulas and conventions from [Sakurai's "Modern Quantum Mechanics"](@cite Sakurai_1994).
 
 The conclusion here is that Sakurai's Yₗᵐ(θ, ϕ) is the same as ours, but his
@@ -18,7 +18,7 @@ The conclusion here is that Sakurai's Yₗᵐ(θ, ϕ) is the same as ours, but h
 - On p. 223 he gives an explicit formula for ``d``.
 - On p. 203 he relates ``\mathcal{D} to Y_{\ell}^m$ (note the upper index of ``m``).
 """
-module Sakurai
+@testmodule Sakurai begin
 
 const 𝒾 = im
 
@@ -102,12 +102,11 @@ Y₂⁰(θ, ϕ) = √(5/(16π)) * (3cos(θ)^2 - 1)
 Y₂⁺¹(θ, ϕ) = -√(15/(8π)) * sin(θ) * cos(θ) * exp(+𝒾*ϕ)
 Y₂⁺²(θ, ϕ) = √(15/(32π)) * sin(θ)^2 * exp(+2𝒾*ϕ)
 
-end  # module Sakurai
+end  # @testmodule Sakurai
 
 
-@testitem "Sakurai conventions" setup=[Utilities] begin
+@testitem "Sakurai conventions" setup=[Utilities, Sakurai] begin
     using Random
-    import SphericalFunctions: Sakurai
     using Quaternionic: from_spherical_coordinates
 
     Random.seed!(1234)
