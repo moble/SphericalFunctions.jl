@@ -81,7 +81,7 @@ function d(j, m′, m, β)
             * cos(β/2)^(2j-2k+m-m′) * sin(β/2)^(2k-m+m′)
         ),
         kₘᵢₙ:kₘₐₓ,
-        init=complex(zero(T))
+        init=zero(T)
     )
 end
 
