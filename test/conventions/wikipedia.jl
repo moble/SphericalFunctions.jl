@@ -59,7 +59,7 @@
             (-1)^(m′ - m + s)
             * cos½β ^ (2n + m - m′ - 2s)
             * sin½β ^ (m′ - m + 2s)
-            / ((n + m - s)❗ * (s)❗ * (m′ - m + s)❗ * (n - m′ - s)❗)
+            / T((n + m - s)❗ * (s)❗ * (m′ - m + s)❗ * (n - m′ - s)❗)
             for s in max(0, m - m′):min(n + m, n - m′)
         )
     end
