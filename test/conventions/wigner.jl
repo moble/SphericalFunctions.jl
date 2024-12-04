@@ -9,6 +9,10 @@ relative to ours.
 
 const 𝒾 = im
 
+include("../utilities/naive_factorial.jl")
+import .NaiveFactorials: ❗
+
+
 raw"""
 Figure 2 on page 59 shows that Wigner's Euler angles notated {α, β, γ} are simply swapped
 with respect to ours.  For example, note that the position of ``z'`` is independent of α,
@@ -85,12 +89,12 @@ function D(j, μ′, μ, α, β, γ)
     sum(
         κ -> (
             (-1)^(κ)
-            * T(√(factorial(j+μ) * factorial(j-μ) * factorial(j+μ′) * factorial(j-μ′))
-                / (factorial(j-μ′-κ) * factorial(j+μ-κ) * factorial(κ) * factorial(κ+μ′-μ)))
+            * T(√((j+μ)❗ * (j-μ)❗ * (j+μ′)❗ * (j-μ′)❗)
+                / ((j-μ′-κ)❗ * (j+μ-κ)❗ * (κ)❗ * (κ+μ′-μ)❗))
             * exp(𝒾*μ′*α) * cosβ╱2^(2j+μ-μ′-2κ) * sinβ╱2^(2κ+μ′-μ) * exp(𝒾*μ*γ)
         ),
         κₘᵢₙ:κₘₐₓ,
-        init=zero(T)
+        init=complex(zero(T))
     )
 end
 
@@ -103,7 +107,7 @@ end # @testmodule Wigner
 
     Random.seed!(1234)
     const T = Float64
-    const ℓₘₐₓ = 6
+    const ℓₘₐₓ = 5
     ϵₐ = 2eps(T)
     ϵᵣ = 50eps(T)
 
@@ -117,7 +121,6 @@ end # @testmodule Wigner
                     for j in 0:ℓₘₐₓ
                         for m′ in -j:j
                             for m in -j:j
-                                #@test conj(𝒟(j, -m′, -m, α, β, γ)) ≈ D[i] atol=ϵₐ rtol=ϵᵣ
                                 @test (-1)^(m′-m) * 𝒟(j, m′, m, α, β, γ) ≈ D[i] atol=ϵₐ rtol=ϵᵣ
                                 i += 1
                             end

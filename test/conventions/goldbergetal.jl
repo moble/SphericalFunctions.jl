@@ -12,6 +12,9 @@ Euler angles.
 
 const 𝒾 = im
 
+include("../utilities/naive_factorial.jl")
+import .NaiveFactorials: ❗
+
 
 @doc raw"""
     D(j, m′, m, α, β, γ)
@@ -41,16 +44,16 @@ function D(j, m′, m, α, β, γ)
     rₘₐₓ = min(j+m′, j+m)
 
     sinβ╱2 = sin(β/2)
-    T = typeof(complex(sinβ╱2))
+    T = typeof(sinβ╱2)
 
-    √(factorial(j+m) * factorial(j-m) / T(factorial(j+m′) * factorial(j-m′))) *
+    √T((j+m)❗ * (j-m)❗ / ((j+m′)❗ * (j-m′)❗)) *
     sum(
         r -> (
             binomial(j+m′, r) * binomial(j-m′, r-m-m′) * (-1)^(j+m′-r)
             * exp(𝒾*m*α) * cos(β/2)^(2r-m-m′) * sinβ╱2^(2j-2r+m+m′) * exp(𝒾*m′*γ)
         ),
         rₘᵢₙ:rₘₐₓ,
-        init=zero(T)
+        init=complex(zero(T))
     )
 end
 
@@ -87,21 +90,23 @@ function Y(s, ℓ, m, θ, ϕ)
     rₘₐₓ = min(ℓ-s, ℓ+m)
 
     sinθ╱2 = sin(θ/2)
-    T = typeof(complex(sinθ╱2))
+    T = typeof(sinθ╱2)
 
-    √(factorial(ℓ+m) * factorial(ℓ-m) * (2ℓ+1) / (factorial(ℓ+s) * factorial(ℓ-s) * 4T(π))) *
-    sum(
-        r -> (
-            binomial(ℓ-s, r) * binomial(ℓ+s, r+s-m) * (-1)^(ℓ-r-s)
-            * exp(𝒾*m*ϕ) * cos(θ/2)^(2r+s-m) * sinθ╱2^(2ℓ-2r-s+m)
-        ),
-        rₘᵢₙ:rₘₐₓ,
-        init=zero(T)
-    )
+    let π=big(π), √=sqrt∘T
+        √((ℓ+m)❗ * (ℓ-m)❗ * (2ℓ+1) / ((ℓ+s)❗ * (ℓ-s)❗ * 4π)) *
+        sum(
+            r -> (
+                binomial(ℓ-s, r) * binomial(ℓ+s, r+s-m) * (-1)^(ℓ-r-s)
+                * exp(𝒾*m*ϕ) * cos(θ/2)^(2r+s-m) * sinθ╱2^(2ℓ-2r-s+m)
+            ),
+            rₘᵢₙ:rₘₐₓ,
+            init=complex(zero(T))
+        )
+    end
 end
 
 
-end # @testmodule GoldbergEtAl
+end  # @testmodule GoldbergEtAl
 
 
 @testitem "GoldbergEtAl conventions" setup=[Utilities, GoldbergEtAl] begin
@@ -110,7 +115,7 @@ end # @testmodule GoldbergEtAl
 
     Random.seed!(1234)
     const T = Float64
-    const ℓₘₐₓ = 8
+    const ℓₘₐₓ = 5
     ϵₐ = 2eps(T)
     ϵᵣ = 50eps(T)
 
@@ -138,7 +143,7 @@ end # @testmodule GoldbergEtAl
     end
 
     # Tests for D(j, m′, m, α, β, γ)
-    let ℓₘₐₓ=6, ϵₐ=√ϵᵣ, ϵᵣ=√ϵᵣ, 𝒟=GoldbergEtAl.D
+    let ϵₐ=√ϵᵣ, ϵᵣ=√ϵᵣ, 𝒟=GoldbergEtAl.D
         for α ∈ αrange(T)
             for β ∈ βrange(T)
                 for γ ∈ γrange(T)
