@@ -1,4 +1,4 @@
-@doc raw"""
+raw"""
 Formulas and conventions from [Goldberg et al.'s "Spin-``s`` Spherical Harmonics and
 ``\eth``"](@cite GoldbergEtAl_1967).
 
@@ -8,7 +8,7 @@ factor of ``(-1)^{m+m'}`` — which is equivalent to swapping the order of the a
 Euler angles.
 
 """
-module GoldbergEtAl
+@testmodule GoldbergEtAl begin
 
 const 𝒾 = im
 
@@ -101,12 +101,11 @@ function Y(s, ℓ, m, θ, ϕ)
 end
 
 
-end # module GoldbergEtAl
+end # @testmodule GoldbergEtAl
 
 
-@testitem "GoldbergEtAl conventions" setup=[Utilities] begin
+@testitem "GoldbergEtAl conventions" setup=[Utilities, GoldbergEtAl] begin
     using Random
-    import SphericalFunctions: GoldbergEtAl
     using Quaternionic: from_spherical_coordinates
 
     Random.seed!(1234)

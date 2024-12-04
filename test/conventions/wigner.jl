@@ -1,11 +1,11 @@
-@doc raw"""
+raw"""
 Formulas and conventions from [Wigner's "Group Theory and Its Applications to the Quantum
 Mechanics of Atomic Spectra"](@cite Wigner_1959).
 
 The conclusion here is that Wigner's ``Dʲₘₚ,ₘ`` includes a factor of ``(-1)^{m'-m}``
 relative to ours.
 """
-module Wigner
+@testmodule Wigner begin
 
 const 𝒾 = im
 
@@ -94,12 +94,11 @@ function D(j, μ′, μ, α, β, γ)
     )
 end
 
-end # module
+end # @testmodule Wigner
 
 
-@testitem "Wigner conventions" setup=[Utilities] begin
+@testitem "Wigner conventions" setup=[Utilities, Wigner] begin
     using Random
-    import SphericalFunctions: Wigner
     using Quaternionic: from_spherical_coordinates
 
     Random.seed!(1234)
