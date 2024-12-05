@@ -29,6 +29,9 @@ struct NaNCheck{T<:Real} <: Real
     end
 end
 export NaNCheck
+function NaNCheck(a::T) where {T<:Real}
+    NaNCheck{T}(a)
+end
 Base.isnan(a::NaNCheck{T}) where{T} = isnan(a.val)
 Base.isinf(a::NaNCheck{T}) where{T} = isinf(a.val)
 Base.typemin(::Type{NaNCheck{T}}) where{T} = NaNCheck{T}(typemin(T))
@@ -47,6 +50,9 @@ Base.promote_rule(::Type{T}, ::Type{NaNCheck{T}}) where {T<:Number} = NaNCheck{T
 Base.promote_rule(::Type{S}, ::Type{NaNCheck{T}}) where {T<:Number, S<:Number} = NaNCheck{promote_type(T,S)}
 Base.promote_rule(::Type{NaNCheck{T}}, ::Type{S}) where {T<:Number, S<:Number} = NaNCheck{promote_type(T,S)}
 Base.promote_rule(::Type{NaNCheck{S}}, ::Type{NaNCheck{T}}) where {T<:Number, S<:Number} = NaNCheck{promote_type(T,S)}
+
+# This needs to be here to avoid an ambiguity
+Base.promote_rule(::Type{BigFloat}, ::Type{NaNCheck{T}}) where T<:Number = NaNCheck{promote_type(T,BigFloat)}
 
 for op = (:sin, :cos, :tan, :log, :exp, :sqrt, :abs, :-, :atan, :acos, :asin, :log1p, :floor, :ceil, :float)
     eval(quote
