@@ -90,14 +90,40 @@ function ϕ(ℓ, mₗ, θ, φ)
     Θ(ℓ, mₗ, θ) * Φ(mₗ, φ)
 end
 
+@doc raw"""
+    ϴ(ℓ, m, θ)
+
+Explicit formulas for the first few spherical harmonics as given by Condon-Shortley in the
+footnote to Eq. (15) of Sec. 4³ (page 52).
+
+Note that the name of this function is `\varTheta`, as opposed to the `\Theta` function
+that implements Condon-Shortley's general form.
+"""
+ϴ(ℓ, m, θ) = ϴ(Val(ℓ), Val(m), θ) / √(2π)
+ϴ(::Val{0}, ::Val{0}, θ) = √(1/2)
+ϴ(::Val{1}, ::Val{0}, θ) = √(3/2) * cos(θ)
+ϴ(::Val{2}, ::Val{0}, θ) = √(5/8) * (2cos(θ)^2 - sin(θ)^2)
+ϴ(::Val{3}, ::Val{0}, θ) = √(7/8) * (2cos(θ)^3 - 3cos(θ)sin(θ)^2)
+ϴ(::Val{1}, ::Val{+1}, θ) = -√(3/4) * sin(θ)
+ϴ(::Val{1}, ::Val{-1}, θ) = +√(3/4) * sin(θ)
+ϴ(::Val{2}, ::Val{+1}, θ) = -√(15/4) * cos(θ) * sin(θ)
+ϴ(::Val{2}, ::Val{-1}, θ) = +√(15/4) * cos(θ) * sin(θ)
+ϴ(::Val{3}, ::Val{+1}, θ) = -√(21/32) * (4cos(θ)^2*sin(θ) - sin(θ)^3)
+ϴ(::Val{3}, ::Val{-1}, θ) = +√(21/32) * (4cos(θ)^2*sin(θ) - sin(θ)^3)
+ϴ(::Val{2}, ::Val{+2}, θ) = √(15/16) * sin(θ)^2
+ϴ(::Val{2}, ::Val{-2}, θ) = √(15/16) * sin(θ)^2
+ϴ(::Val{3}, ::Val{+2}, θ) = √(105/16) * cos(θ) * sin(θ)^2
+ϴ(::Val{3}, ::Val{-2}, θ) = √(105/16) * cos(θ) * sin(θ)^2
+ϴ(::Val{3}, ::Val{+3}, θ) = -√(35/32) * sin(θ)^3
+ϴ(::Val{3}, ::Val{-3}, θ) = +√(35/32) * sin(θ)^3
 
 end  # @testmodule CondonShortley
 
 
-@testitem "Condon-Shortley conventions" setup=[Utilities, NaNChecker, CondonShortley] begin
+@testitem "Condon-Shortley conventions" setup=[Utilities, CondonShortley] begin
     using Random
     using Quaternionic: from_spherical_coordinates
-    const check = NaNChecker.NaNCheck
+    #const check = NaNChecker.NaNCheck
 
     Random.seed!(1234)
     const T = Float64
@@ -106,18 +132,32 @@ end  # @testmodule CondonShortley
     ϵᵣ = 1000eps(T)
 
     # Tests for Y(ℓ, m, θ, ϕ)
-    let Y=CondonShortley.ϕ, ϕ=zero(T)
+    let Y=CondonShortley.ϕ, Θ=CondonShortley.Θ, ϴ=CondonShortley.ϴ, ϕ=zero(T)
         for θ ∈ βrange(T)
             if abs(sin(θ)) < ϵₐ
                 continue
             end
 
-            # Test Eq. (2.6) of [Goldberg et al.](@cite GoldbergEtAl_1967)
+            # # Find where NaNs are coming from
+            # for ℓ ∈ 0:ℓₘₐₓ
+            #     for m ∈ -ℓ:ℓ
+            #         Θ(ℓ,  m, check(θ))
+            #     end
+            # end
+
+            # Test footnote to Eq. (15) of Sec. 4³ of Condon-Shortley
+            let Y = ₛ𝐘(0, 3, T, [from_spherical_coordinates(θ, ϕ)])[1,:]
+                for ℓ ∈ 0:3
+                    for m ∈ -ℓ:ℓ
+                        @test ϴ(ℓ, m, θ) ≈ Y[Yindex(ℓ, m)] atol=ϵₐ rtol=ϵᵣ
+                    end
+                end
+            end
+
+            # Test Eq. (18) of Sec. 4³ of Condon-Shortley
             for ℓ ∈ 0:ℓₘₐₓ
                 for m ∈ -ℓ:ℓ
-                    # Y(ℓ,  m, check(θ), check(ϕ))
-                    # Y(ℓ, -m, check(θ), check(ϕ))
-                    @test conj(Y(ℓ, m, θ, ϕ)) ≈ (-1)^(m) * Y(ℓ, -m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+                    @test Θ(ℓ, m, θ) ≈ (-1)^(m) * Θ(ℓ, -m, θ) atol=ϵₐ rtol=ϵᵣ
                 end
             end
 
