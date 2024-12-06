@@ -11,8 +11,7 @@ automatic differentiation to compute the derivatives explicitly.
 The result is that the original Condon-Shortley spherical harmonics agree perfectly with the
 ones computed by this package.
 
-Note that Condony and Shortley do not give an explicit formula for what are now called the
-Wigner D-matrices.
+(Condon and Shortley do not give an expression for the Wigner D-matrices.)
 
 """
 @testmodule CondonShortley begin
@@ -99,7 +98,7 @@ footnote to Eq. (15) of Sec. 4³ (page 52).
 Note that the name of this function is `\varTheta`, as opposed to the `\Theta` function
 that implements Condon-Shortley's general form.
 """
-ϴ(ℓ, m, θ) = ϴ(Val(ℓ), Val(m), θ) / √(2π)
+ϴ(ℓ, m, θ) = ϴ(Val(ℓ), Val(m), θ)
 ϴ(::Val{0}, ::Val{0}, θ) = √(1/2)
 ϴ(::Val{1}, ::Val{0}, θ) = √(3/2) * cos(θ)
 ϴ(::Val{2}, ::Val{0}, θ) = √(5/8) * (2cos(θ)^2 - sin(θ)^2)
@@ -149,7 +148,7 @@ end  # @testmodule CondonShortley
             let Y = ₛ𝐘(0, 3, T, [from_spherical_coordinates(θ, ϕ)])[1,:]
                 for ℓ ∈ 0:3
                     for m ∈ -ℓ:ℓ
-                        @test ϴ(ℓ, m, θ) ≈ Y[Yindex(ℓ, m)] atol=ϵₐ rtol=ϵᵣ
+                        @test ϴ(ℓ, m, θ) / √(2π) ≈ Y[Yindex(ℓ, m)] atol=ϵₐ rtol=ϵᵣ
                     end
                 end
             end
