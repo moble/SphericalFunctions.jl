@@ -44,8 +44,8 @@ end
 @doc raw"""
     d(j, m′, m, β)
 
-Eqs. (3.5.50)-(3.5.51) of [Sakurai](@cite Sakurai_1994), p. 194,
-implementing
+Eqs. (3.5.50)-(3.5.51) of [Sakurai](@cite Sakurai_1994), p. 194
+(or Eq. (3.8.33), p. 223), implementing
 ```math
     d^{(j)}_{m',m}(\beta).
 ```
