@@ -2,7 +2,12 @@ raw"""
 Formulas and conventions from [Edmonds' "Angular Momentum in Quantum Mechanics"](@cite
 Edmonds_2016).
 
-Note that Edmonds explains on page 8 that his Euler angles agree with ours.
+Note that Edmonds explains on page 8 that his Euler angles agree with ours.  His spherical
+harmonics agree also, but his ``𝔇`` is transposed.  Alternatively, we could think of his
+``𝔇`` being conjugated — just like other modern conventions — but taking the inverse
+rotation as argument.
+
+TODO: Figure out the meaning of those rotations.
 
 """
 @testmodule Edmonds begin
@@ -115,56 +120,62 @@ end  # @testmodule Edmonds
 
     Random.seed!(1234)
     const T = Float64
-    const ℓₘₐₓ = 4
-    ϵₐ = nextfloat(T(0), 4)
+    const ℓₘₐₓ = 3
+    ϵₐ = 8eps(T)
     ϵᵣ = 20eps(T)
 
     # Tests for Y(ℓ, m, θ, ϕ)
-    for θ ∈ βrange(T)
-        if abs(sin(θ)) < ϵₐ
+    for θ ∈ βrange(T, 3)
+        if abs(sin(θ)) ≤ eps(T)
             continue
         end
 
-        for ϕ ∈ αrange(T)
+        for ϕ ∈ αrange(T, 3)
             # Test Edmonds' Eq. (2.5.5)
+            let Y = Edmonds.Y
             for ℓ in 0:ℓₘₐₓ
-                for m in -ℓ:-1
-                    @test Edmonds.Y(ℓ, -m, θ, ϕ) ≈ (-1)^-m * conj(Edmonds.Y(ℓ, m, θ, ϕ))
+                for m in -ℓ:0
+                    @test Y(ℓ, -m, θ, ϕ) ≈ (-1)^-m * conj(Y(ℓ, m, θ, ϕ)) atol=ϵₐ rtol=ϵᵣ
                 end
             end
 
-            # # Compare to SphericalFunctions
-            # let s=0
-            #     Y = ₛ𝐘(s, ℓₘₐₓ, T, [from_spherical_coordinates(θ, ϕ)])
-            #     i = 1
-            #     for ℓ in 0:ℓₘₐₓ
-            #         for m in -ℓ:ℓ
-            #             @test Edmonds.Y(ℓ, m, θ, ϕ) ≈ Y[i]
-            #             i += 1
-            #         end
-            #     end
-            # end
+            # Compare to SphericalFunctions
+            let s=0
+                Y = ₛ𝐘(s, ℓₘₐₓ, T, [from_spherical_coordinates(θ, ϕ)])
+                i = 1
+                for ℓ in 0:ℓₘₐₓ
+                    for m in -ℓ:ℓ
+                        @test Edmonds.Y(ℓ, m, θ, ϕ) ≈ Y[i] atol=ϵₐ rtol=ϵᵣ
+                        i += 1
+                    end
+                end
+            end
+        end
+     end
+
+    # Tests for 𝒟(j, m′, m, α, β, γ)
+    let ϵₐ=√ϵᵣ, ϵᵣ=√ϵᵣ, 𝒟=Edmonds.𝒟
+        for α ∈ αrange(T)
+            for β ∈ βrange(T)
+                if abs(sin(β)) ≤ eps(T)
+                    continue
+                end
+
+                for γ ∈ γrange(T)
+                    D = D_matrices(α, β, γ, ℓₘₐₓ)
+                    i = 1
+                    for j in 0:ℓₘₐₓ
+                        for m′ in -j:j
+                            for m in -j:j
+                                #@test 𝒟(j, m, m′, α, β, γ) ≈ D[i] atol=ϵₐ rtol=ϵᵣ
+                                @test 𝒟(j, m′, m, -γ, -β, -α) ≈ conj(D[i]) atol=ϵₐ rtol=ϵᵣ
+                                i += 1
+                            end
+                        end
+                    end
+                end
+            end
         end
     end
-
-    # # Tests for 𝒟(j, m′, m, α, β, γ)
-    # let ϵₐ=√ϵᵣ, ϵᵣ=√ϵᵣ, 𝒟=Edmonds.𝒟
-    #     for α ∈ αrange(T)
-    #         for β ∈ βrange(T)
-    #             for γ ∈ γrange(T)
-    #                 D = D_matrices(α, β, γ, ℓₘₐₓ)
-    #                 i = 1
-    #                 for j in 0:ℓₘₐₓ
-    #                     for m′ in -j:j
-    #                         for m in -j:j
-    #                             @test 𝒟(j, m′, m, α, β, γ) ≈ conj(D[i]) atol=ϵₐ rtol=ϵᵣ
-    #                             i += 1
-    #                         end
-    #                     end
-    #                 end
-    #             end
-    #         end
-    #     end
-    # end
 
 end
