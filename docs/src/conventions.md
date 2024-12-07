@@ -1,3 +1,10 @@
+Saul felt that following Wigner was a mistake, and to just bite the
+bullet and use the conjugate.  That's reasonable; I just have to
+conjugate the entire representation equation to turn it into an
+equation for rotating spherical harmonics.
+
+---
+
 We first define the rotor that takes ``(\hat{x}, \hat{y}, \hat{z})``
 onto ``(\hat{\theta}, \hat{\phi}, \hat{r})``.  Then, we can invert
 that, so that given a rotor that specifies such a rotation exactly, we
