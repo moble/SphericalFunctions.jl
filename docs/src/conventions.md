@@ -5,6 +5,104 @@ equation for rotating spherical harmonics.
 
 ---
 
+# Outline
+
+* Three-dimensional Euclidean space
+  - Cartesian coordinates ``(x, y, z)`` => ℝ³
+  - Cartesian basis vectors ``(𝐱, 𝐲, 𝐳,)``
+  - Euclidean norm => Euclidean metric
+  - Spherical coordinates
+    - Specifically give transformation to/from ``(x, y, z)``
+    - Derive metric in these coordinates from transformation
+  - Integration / measure on two-sphere
+    - Derive as restriction of full metric, in both coordinate systems
+* Four-dimensional Euclidean space
+  - Eight-dimensional Clifford algebra over the tangent *vector space* ``Tℝ³``
+  - Four-dimensional even sub-algebra => ℝ⁴
+  - Coordinates ``(W, X, Y, Z)``
+  - Basis vectors ``(𝟏, 𝐢, 𝐣, 𝐤)``, but we usually just omit ``𝟏``
+    - Show a few essential formulas establishing the product and its conventions
+  - Unit quaternions are isomorphic to ``\mathbf{Spin}(3) =
+    \mathbf{SU}(2)``; double covers ``\mathbf{SO}(3)``
+    - Be explicit about the mapping between vector in ℝ³ and quaternions
+    - Show how a unit quaternion can be used to rotate a vector
+  - Spherical coordinates (hyperspherical / Euler)
+    - Specifically give transformation to/from ``(W, X, Y, Z)``
+    - Derive metric in these coordinates from transformation
+    - Express unit quaternion in Euler angles
+  - Integration / measure / Haar measure on three-sphere
+    - Derive as restriction of full metric, in both coordinate systems
+* Angular momentum operators / functional analysis
+  - Express angular momentum operators in terms of quaternion components
+  - Express angular momentum operators in terms of Euler angles
+  - Show for both the three- and two-spheres
+  - Show how they act on functions on the three-sphere
+* Representation theory / harmonic analysis
+  - Representations show up in Fourier analysis on groups
+  - Peter-Weyl theorem
+    - Generalizes Fourier analysis to compact groups
+    - A basis of functions on the group is given by matrix elements of
+      group representations
+  - Representation theory of ``\mathbf{Spin}(3)``
+    - Show how the Lie algebra is represented by the angular-momentum operators
+    - Show how the Lie group is represented by the Wigner D-matrices
+    - Demonstrate that ``\mathfrak{D}`` is a representation
+    - Demonstrate its behavior under left and right rotation
+    - Demonstrate orthonormality
+  - Representation theory of ``\mathbf{SO}(3)``
+    - There are several places in [Folland](@cite Folland_2016) (e.g.,
+      above corollary 5.48) where he mentions that representations of
+      a quotient group are just representations that are trivial
+      (evidently meaning mapping everything to the identity matrix) on
+      the factor.  I can't find anywhere that he explains this
+      explicitly, but it seems easy enough to show.  He might do it
+      using characters.
+    - For ``\mathbf{Spin}(3)`` and ``\mathbf{SO}(3)``, the factor
+      group is just ``\{1, -1\}``.  Presumably, every representation
+      acting on ``1`` will give the identity matrix, so that's
+      trivial.  So we just need a criterion for when a representation
+      is trivial on ``-1``.  Noting that ``\exp(\pi \vec{v}) = -1``
+      for any ``\vec{v}``, I think we can show that this requires
+      ``m \in \mathbb{Z}``.
+    - Basically, the point is that the representations of
+      ``\mathbf{SO}(3)`` are just the integer representations of
+      ``\mathbf{Spin}(3)``.
+  - Restrict to homogeneous space (S³ -> S²)
+    - The circle group is a closed (normal?) subgroup of
+      ``\mathbf{Spin}(3)``, which we might implement as initial
+      multiplication about a particular axis.
+    - In Eq. (2.47) [Folland (2016)](@cite Folland_2016) defines a
+      functional taking a function on the group to a function on the
+      homogeneous space by integrating over the factor (the circle
+      group).  This gives you the spherical harmonics, but *not* the
+      spin-weighted spherical harmonics — because the spin-weighted
+      spherical harmonics cannot be defined on the 2-sphere.
+    - Spin weight comes from Fourier analysis on the subgroup.
+    - Representation matrices transfer to the homogeneous space, with
+      sparsity patterns
+
+ 
+
+---
+
+Spherical harmonics as functions on homogeneous space.
+https://www.youtube.com/watch?v=TnFvOa9v7do gives some nice
+discussion; maybe the paper has better references.
+
+Theorem 2.16 of [Hanson-Yakovlev](@cite HansonYakovlev_2002) says that
+an orthonormal basis of a product of ``L^2`` spaces is given by the
+product of the orthonormal bases of the individual spaces.
+Furthermore, on page 354, they point out that ``\{(1/\sqrt{2\pi})
+e^{im\phi}\}`` is an orthonormal basis of ``L^2(0,2\pi)``, while the
+set ``\{1/c_{n,m} P_n^m(\cos\theta)`` is an orthonormal basis of
+``L^2(0, \pi)`` in the ``\theta`` coordinate.  Therefore, the product
+of these two sets is an orthonormal basis of the product space
+``L^2\left((0,2\pi) \times (0, \pi)\right)``, which forms a coordinate
+space for ``S^2``.  I would probably modify this to point out that
+``(0,2\pi)`` is really ``S^1``, and then we could extend it to point
+out that you can throw on another factor of ``S^1`` to cover ``S^3``,
+which happens to give us the Wigner D-matrices.
+
 We first define the rotor that takes ``(\hat{x}, \hat{y}, \hat{z})``
 onto ``(\hat{\theta}, \hat{\phi}, \hat{r})``.  Then, we can invert
 that, so that given a rotor that specifies such a rotation exactly, we
@@ -168,6 +266,24 @@ spherical-harmonic functions provided by this package obey the
 Condon-Shortley phase convention.***
 
 ## Angular-momentum operators
+
+* First, a couple points about ``-i\hbar``:
+  - The finite transformations look like ``\exp[-i \theta L_j]``, but
+    the factor of ``i`` introduced here just cancels the one in the
+    ``L_j``, and the sign is just chosen to make the result consistent
+    with our notion of active or passive transformations.
+  - Any factors of ``\hbar`` are included *purely* for the sake of
+     convenience.
+  - The factor ``i`` comes from plain functional analysis: We need a
+    self-adjoint operator, and ``\partial_x`` by itself is
+    anti-self-adjoint (as can be verified by evaluating on ``\langle
+    x' | x \rangle = \delta(x-x')``, which switches sign based on
+    which is being differentiated).  We want self-adjoint operators so
+    that we get purely real eigenvalues.  [Van Neerven](@cite
+    vanNeerven_2022) cites this in a more rigorous context in his
+    Example (10.40) (page 331), with more explanation around Eq.
+    (15.17) (page 592).  The "self-adjoint ``\iff`` real eigenvalues"
+    condition is item (1) in his Corollary 9.18.
 
 Wigner's $𝔇$ matrices are defined as matrix elements of a rotation in
 the basis of spherical harmonics.  That rotation is defined in terms
