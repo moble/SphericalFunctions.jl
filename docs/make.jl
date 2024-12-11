@@ -34,6 +34,10 @@ makedocs(
             "internal.md",
             "functions.md",
         ],
+        "Conventions" => [
+            "conventions/conventions.md",
+            "conventions/comparisons.md",
+        ],
         "Notes" => map(
             s -> "notes/$(s)",
             sort(readdir(joinpath(@__DIR__, "src/notes")))
