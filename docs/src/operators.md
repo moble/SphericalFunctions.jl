@@ -1,6 +1,6 @@
 # Differential operators
 
-Spin-weighted spherical functions *cannot* be defined on the sphere $S^2$, but
+Spin-weighted spherical functions *cannot* be defined on the sphere ``S^2``, but
 are well defined on the group ``\mathrm{Spin}(3) \cong \mathrm{SU}(2)`` or the
 rotation group ``\mathrm{SO}(3)``.  (See [Boyle_2016](@citet) for the
 explanation.)  However, this also allows us to define a variety of differential
