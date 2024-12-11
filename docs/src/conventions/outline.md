@@ -266,11 +266,11 @@ Condon-Shortley phase convention.***
     (15.17) (page 592).  The "self-adjoint ``\iff`` real eigenvalues"
     condition is item (1) in his Corollary 9.18.
 
-Wigner's $𝔇$ matrices are defined as matrix elements of a rotation in
+Wigner's ``𝔇`` matrices are defined as matrix elements of a rotation in
 the basis of spherical harmonics.  That rotation is defined in terms
 of the generators of rotation, which are expressed in terms of the
 angular-momentum operators.  Therefore, to really understand
-conventions for the $𝔇$ matrices, we need to understand conventions
+conventions for the ``𝔇`` matrices, we need to understand conventions
 for the angular-momentum operators.
 
 There is universal agreement that the angular momentum is defined as
@@ -338,7 +338,7 @@ L_z &= -i\hbar \frac{\partial}{\partial\alpha}.
 ```
 
 
-## Wigner $𝔇$ and $d$ matrices
+## Wigner ``𝔇`` and ``d`` matrices
 
 Wigner's Eqs. (11.18) and (11.19) define the real orthogonal
 transformation ``\mathbf{R}`` by
@@ -388,11 +388,11 @@ convention.
 
 ### Properties
 
-* $D^j_{m'm}(\alpha,\beta,\gamma) = (-1)^{m'-m} D^j_{-m',-m}(\alpha,\beta,\gamma)^*$
-* $(-1)^{m'-m}D^{j}_{mm'}(\alpha,\beta,\gamma)=D^{j}_{m'm}(\gamma,\beta,\alpha)$
-* $d_{m',m}^{j}=(-1)^{m-m'}d_{m,m'}^{j}=d_{-m,-m'}^{j}$
+* ``D^j_{m'm}(\alpha,\beta,\gamma) = (-1)^{m'-m} D^j_{-m',-m}(\alpha,\beta,\gamma)^*``
+* ``(-1)^{m'-m}D^{j}_{mm'}(\alpha,\beta,\gamma)=D^{j}_{m'm}(\gamma,\beta,\alpha)``
+* ``d_{m',m}^{j}=(-1)^{m-m'}d_{m,m'}^{j}=d_{-m,-m'}^{j}``
 
-$
+```math
 \begin{aligned}
 d_{m',m}^{j}(\pi)        &= (-1)^{j-m}  \delta_{m',-m} \\[6pt]
 d_{m',m}^{j}(\pi-\beta)  &= (-1)^{j+m'}  d_{m',-m}^{j}(\beta)\\[6pt]
@@ -400,4 +400,4 @@ d_{m',m}^{j}(\pi+\beta)  &= (-1)^{j-m}  d_{m',-m}^{j}(\beta)\\[6pt]
 d_{m',m}^{j}(2\pi+\beta) &= (-1)^{2j}    d_{m',m}^{j}(\beta)\\[6pt]
 d_{m',m}^{j}(-\beta)     &= d_{m,m'}^{j}(\beta) = (-1)^{m'-m} d_{m',m}^{j}(\beta)
 \end{aligned}
-$
+```
