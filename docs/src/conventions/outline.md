@@ -1,10 +1,3 @@
-Saul felt that following Wigner was a mistake, and to just bite the
-bullet and use the conjugate.  That's reasonable; I just have to
-conjugate the entire representation equation to turn it into an
-equation for rotating spherical harmonics.
-
----
-
 # Outline
 
 * Three-dimensional Euclidean space
@@ -83,7 +76,7 @@ equation for rotating spherical harmonics.
 
  
 
----
+# Notes
 
 Spherical harmonics as functions on homogeneous space.
 https://www.youtube.com/watch?v=TnFvOa9v7do gives some nice
@@ -173,35 +166,23 @@ conjugate transpose, which is why we see the relative conjugate.
 \mathfrak{D}^{(\ell)}_{m,\propto s}(R_{\theta, \phi})
 ```
 
-# Conventions
 
-## Quaternions
+## collapsible markdown?
 
-
-## Rotations
-
-
-## Euler angles and spherical coordinates
-
-We start with a standard Cartesian coordinate system ``(x, y, z)``.
-The spherical coordinates ``(r, \theta, \phi)`` are defined by
-```math
-\begin{aligned}
-x &= r \sin\theta \cos\phi, \\
-y &= r \sin\theta \sin\phi, \\
-z &= r \cos\theta.
-\end{aligned}
+```@raw html
+<details><summary>CLICK ME</summary>
 ```
-The inverse transformation is given by
-```math
-\begin{aligned}
-r &= \sqrt{x^2 + y^2 + z^2}, \\
-\theta &= \arccos\left(\frac{z}{r}\right), \\
-\phi &= \arctan\left(\frac{y}{x}\right).
-\end{aligned}
+#### yes, even hidden code blocks!
+
+```julia
+println("hello world!")
+```
+```@raw html
+</details>
 ```
 
 
+# More notes
 
 
 ## Spherical harmonics
