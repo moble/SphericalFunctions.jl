@@ -7,11 +7,12 @@ each step is on firm footing.
 ## Three-dimensional space
 
 The space we are working in is naturally three-dimensional Euclidean
-space, so we start with Cartesian coordinates ``(x, y, z)``.  These
-also give us the unit basis vectors ``(𝐱, 𝐲, 𝐳)``.  Note that these
-basis vectors are assumed to have unit norm, but we omit the hats just
-to keep the notation simple.  Any vector in this space can be written
-as
+space, so we start with a
+[right-handed](https://en.wikipedia.org/wiki/Right-hand_rule)
+Cartesian coordinate system ``(x, y, z)``.  These also give us the
+unit basis vectors ``(𝐱, 𝐲, 𝐳)``.  Note that these basis vectors
+are assumed to have unit norm, but we omit the hats just to keep the
+notation simple.  Any vector in this space can be written as
 ```math
 \mathbf{v} = v_x \mathbf{𝐱} + v_y \mathbf{𝐲} + v_z \mathbf{𝐳},
 ```
@@ -147,9 +148,27 @@ serve as the [Hodge
 dual](https://en.wikipedia.org/wiki/Hodge_star_operator).  (Note that
 quaternions will only be spanned by elements made from an even number
 of the basis vectors.  It turns out that those with an odd number will
-inherently produce reflections, rather than rotations.  For details
-see any geometric algebra text, like [Doran and Lasenby](@cite
+produce reflections, rather than rotations, when acting on a vector —
+as discussed below.  This explains why quaternions are restricted to
+just those elements with an even number to represent rotations.  For
+details see any geometric algebra text, like [Doran and Lasenby](@cite
 DoranLasenby_2010).)
+
+The key expressions that help to determine the arbitrary choices we
+have made thus far are the multiplications
+```math
+\begin{aligned}
+𝐢 𝐣 &= 𝐤, \\
+𝐣 𝐤 &= 𝐢, \\
+𝐤 𝐢 &= 𝐣.
+\end{aligned}
+```
+Everyone agrees that ``𝐢² = 𝐣² = 𝐤² = -1``, so we can also use the
+rules above to determine ``𝐢𝐣𝐤 = -𝟏``.  Different conventions are
+sometimes used (almost exclusively in aerospace) so that this last
+equation and the three displayed above have a flipped sign.  See
+[Sommer et al.](@cite SommerEtAl_2018) for a discussion of the
+different conventions.
 
 We use coordinates ``(W, X, Y, Z)`` on the space of quaternions, so
 that such a quaternion would be written as
