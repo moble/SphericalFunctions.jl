@@ -1,4 +1,4 @@
-"""
+raw"""
 
 We can find conventions at [this
 page](https://reference.wolfram.com/language/ref/WignerD.html).
@@ -14,4 +14,3 @@ page](https://reference.wolfram.com/language/ref/WignerD.html).
 > `WignerD[{j, m1, m2},ψ, θ, ϕ]] == (-1)^(m1 - m2) Conjugate[WignerD[{j, -m1, -m2}, ψ, θ, ϕ]]`
 
 """
-𝐑
