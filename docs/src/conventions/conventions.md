@@ -91,14 +91,130 @@ the determinant of the metric, so we have
 ```math
 \int f\, d^3\mathbf{r} = \int_0^\infty \int_0^\pi \int_0^{2\pi} f\, r^2 \sin\theta\, dr\, d\theta\, d\phi.
 ```
-If we restrict to just the unit sphere, we can simplify this to
+Restricting to the unit sphere, and normalizing so that the integral
+of 1 over the sphere is 1, we can simplify this to
 ```math
-\int f\, d^2\Omega = \int_0^\pi \int_0^{2\pi} f\, \sin\theta\, d\theta\, d\phi.
+\int f\, d^2\Omega = \frac{1}{4\pi} \int_0^\pi \int_0^{2\pi} f\, \sin\theta\, d\theta\, d\phi.
 ```
 
 
 ## Four-dimensional space: Quaternions and rotations
 
+Given the basis vectors ``(𝐱, 𝐲, 𝐳)`` and the Euclidean norm, we
+can define the [geometric
+algebra](https://en.wikipedia.org/wiki/Geometric_algebra).  The key
+feature is the geometric product, which is defined for any pair of
+vectors as ``𝐯`` and ``𝐰`` as
+```math
+𝐯 𝐰 = 𝐯 ⋅ 𝐰 + 𝐯 ∧ 𝐰,
+```
+where the dot product is the usual scalar product and the wedge
+product is the antisymmetric part of the tensor product — acting just
+like the standard [exterior
+product](https://en.wikipedia.org/wiki/Exterior_algebra) from the
+algebra of [differential
+forms](https://en.wikipedia.org/wiki/Differential_form).  The
+geometric product is associative, distributive, and has the property
+that
+```math
+𝐯𝐯 = \| 𝐯 \|^2.
+```
+The basis for this entire space is then the set
+```math
+\begin{gather}
+𝟏, \\
+𝐱, 𝐲, 𝐳,\\
+𝐱𝐲, 𝐱𝐳, 𝐲𝐳, \\
+𝐱𝐲𝐳.
+\end{gather}
+```
+It's useful to note that the first four of these square to 1, while
+the last four square to -1 — meaning that they could serve as a unit
+imaginary to generate the complex numbers.  The more standard symbols
+— and the ones we will use — are
+```math
+\begin{gather}
+𝟏, \\
+𝐱, 𝐲, 𝐳,\\
+𝐢, 𝐣, 𝐤, \\
+𝐈.
+\end{gather}
+```
+The interpretation of these is that ``𝟏`` represents the scalars;
+``𝐱, 𝐲, 𝐳`` span the vectors; ``𝐢, 𝐣, 𝐤`` are the standard
+quaternion components; and ``𝐈`` is the pseudoscalar, which can also
+serve as the [Hodge
+dual](https://en.wikipedia.org/wiki/Hodge_star_operator).  (Note that
+quaternions will only be spanned by elements made from an even number
+of the basis vectors.  It turns out that those with an odd number will
+inherently produce reflections, rather than rotations.  For details
+see any geometric algebra text, like [Doran and Lasenby](@cite
+DoranLasenby_2010).)
+
+We use coordinates ``(W, X, Y, Z)`` on the space of quaternions, so
+that such a quaternion would be written as
+```math
+W𝟏 + X𝐢 + Y𝐣 + Z𝐤,
+```
+though we usually omit the ``𝟏``.  As with standard three-dimensional
+space, we could introduce spherical coordinates, though we use a
+slight variant: extended Euler coordinates.  In our conventions, we
+have
+```math
+\begin{aligned}
+R &= \sqrt{W^2 + X^2 + Y^2 + Z^2} &&\in [0, \infty), \\
+\alpha &= \arctan\frac{Z}{W} + \arctan\frac{-X}{Y} &&\in [0, 2\pi], \\
+\beta &= 2\arccos\sqrt{\frac{W^2+Z^2}{W^2+X^2+Y^2+Z^2}} &&\in [0, 2\pi), \\
+\gamma &= \arctan\frac{Z}{W} - \arctan\frac{-X}{Y} &&\in [0, 2\pi],
+\end{aligned}
+```
+where we again assume the ``\arctan`` in the expressions for
+``\alpha`` and ``\gamma`` is really the two-argument form that gives
+the correct quadrant.  Note that here, ``\beta`` ranges up to ``2\pi``
+rather than just ``\pi``, as in the standard Euler angles.  This is
+because we are describing the space of quaternions, rather than just
+the space of rotations.  If we restrict to ``R=1``, we have exactly
+the group of unit quaternions ``\mathrm{Spin}(3)=\mathrm{SU}(2)``,
+which is a double cover of the rotation group ``\mathrm{SO}(3)``.
+This extended range for ``\beta`` is necessary to cover the entire
+space of quaternions; if we further restrict to ``[0, \pi)``, we would
+cover the space of rotations.  This and the inclusion of ``R``
+identify precisely how this coordinate system extends the standard
+Euler angles.
+
+The inverse transformation is given by
+```math
+\begin{aligned}
+  W &= R\, \cos\frac{β}{2} \cos\frac{α+γ}{2}, \\
+  X &= -R\, \sin\frac{β}{2} \sin\frac{α-γ}{2}, \\
+  Y &= R\, \sin\frac{β}{2} \cos\frac{α-γ}{2}, \\
+  Z &= R\, \cos\frac{β}{2} \sin\frac{α+γ}{2}.
+\end{aligned}
+```
+As with the spherical coordinates, we can use this to find the
+components of the metric in our extended Euler coordinates:
+```math
+g_{i'j'}
+= \sum_{i,j} \frac{\partial X^i}{\partial X^{i'}} \frac{\partial X^j}{\partial X^{j'}} g_{ij}
+= \left( \begin{array}{cccc}
+  1 & 0 & 0 & 0 \\
+  0 & \frac{R^2}{4} & 0 & \frac{R^2 \cos\beta}{4} \\
+  0 & 0 & \frac{R^2}{4} & 0 \\
+  0 & \frac{R^2 \cos\beta}{4} & 0 & \frac{R^2}{4}
+\end{array} \right)_{i'j'}.
+```
+Again, integration involves a square-root of the determinant of the
+metric, which reduces to ``R^3 |\sin\beta| / 8``.
+```math
+\int f\, d^4𝐑
+= \int_{-\infty}^\infty \int_{-\infty}^\infty \int_{-\infty}^\infty \int_{-\infty}^\infty f\, dW\, dX\, dY\, dZ
+= \int_0^\infty \int_0^{2\pi} \int_0^{2\pi} \int_0^{2\pi} f\, \frac{R^3}{8} |\sin β|\, dR\, dα\, dβ\, dγ.
+```
+Restricting to the unit sphere, and normalizing so that the integral
+of 1 over the sphere is 1, we can simplify this to
+```math
+\int f\, d^3\Omega = \frac{1}{16\pi^2} \int_0^{2\pi} \int_0^{2\pi} \int_0^{2\pi} f\, |\sin β|\, dα\, dβ\, dγ.
+```
 
 ## Rotations
 
