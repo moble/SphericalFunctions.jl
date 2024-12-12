@@ -133,9 +133,10 @@ end  # @testmodule Edmonds
         for ϕ ∈ αrange(T, 3)
             # Test Edmonds' Eq. (2.5.5)
             let Y = Edmonds.Y
-            for ℓ in 0:ℓₘₐₓ
-                for m in -ℓ:0
-                    @test Y(ℓ, -m, θ, ϕ) ≈ (-1)^-m * conj(Y(ℓ, m, θ, ϕ)) atol=ϵₐ rtol=ϵᵣ
+                for ℓ in 0:ℓₘₐₓ
+                    for m in -ℓ:0
+                        @test Y(ℓ, -m, θ, ϕ) ≈ (-1)^-m * conj(Y(ℓ, m, θ, ϕ)) atol=ϵₐ rtol=ϵᵣ
+                    end
                 end
             end
 
@@ -151,7 +152,7 @@ end  # @testmodule Edmonds
                 end
             end
         end
-     end
+    end
 
     # Tests for 𝒟(j, m′, m, α, β, γ)
     let ϵₐ=√ϵᵣ, ϵᵣ=√ϵᵣ, 𝒟=Edmonds.𝒟
