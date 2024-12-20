@@ -401,3 +401,45 @@ d_{m',m}^{j}(2\pi+\beta) &= (-1)^{2j}    d_{m',m}^{j}(\beta)\\[6pt]
 d_{m',m}^{j}(-\beta)     &= d_{m,m'}^{j}(\beta) = (-1)^{m'-m} d_{m',m}^{j}(\beta)
 \end{aligned}
 ```
+
+
+
+
+
+
+
+```math
+\begin{gather}
+R = \cos\epsilon + \sin\epsilon\, \hat{\mathfrak{r}} \\
+R𝐯 = \cos\epsilon 𝐯 + \sin\epsilon\, \hat{\mathfrak{r}}𝐯 \\
+R𝐯R^{-1} = (𝐯\cos\epsilon + \sin\epsilon\, \hat{\mathfrak{r}}𝐯)(\cos\epsilon - \sin\epsilon\, \hat{\mathfrak{r}}) \\
+R𝐯R^{-1} = 𝐯\cos^2\epsilon + \sin^2\epsilon\, \hat{\mathfrak{r}}𝐯\hat{\mathfrak{r}}^{-1} + \sin\epsilon \cos\epsilon\, (\hat{\mathfrak{r}}𝐯 - 𝐯\hat{\mathfrak{r}}) \\
+R𝐯R^{-1} = \begin{cases}
+𝐯 & 𝐯 \hat{\mathfrak{r}} = \hat{\mathfrak{r}}𝐯 \\
+𝐯(\cos^2\epsilon - \sin^2\epsilon) + 2 \sin\epsilon \cos\epsilon\, \frac{[\hat{\mathfrak{r}}, 𝐯]}{2} & 𝐯 \hat{\mathfrak{r}} = -\hat{\mathfrak{r}}𝐯 \\
+\end{cases} \\
+R𝐯R^{-1} = \begin{cases}
+𝐯 & 𝐯 \hat{\mathfrak{r}} = \hat{\mathfrak{r}}𝐯 \\
+\cos2\epsilon 𝐯 + \sin2\epsilon \frac{[\hat{\mathfrak{r}}, 𝐯]}{2} & 𝐯 \hat{\mathfrak{r}} = -\hat{\mathfrak{r}}𝐯 \\
+\end{cases} \\
+\end{gather}
+```
+
+
+
+
+Using techniques from geometric algebra, we can easily prove that the
+result is another vector, so we can measure its (squared) norm just by
+multiplying it by itself:
+```math
+\begin{aligned}
+\| 𝐑\, 𝐯\, 𝐑^{-1} \|^2
+&= 𝐑\, 𝐯\, 𝐑^{-1}\, 𝐑\, 𝐯\, 𝐑^{-1} \\
+&= 𝐑\, 𝐯\, 𝐯\, 𝐑^{-1} \\
+&= \|𝐯\|^2\, 𝐑\, 𝐑^{-1} \\
+&= \|𝐯\|^2
+\end{aligned}
+```
+That is, ``𝐯' = 𝐑\, 𝐯\, 𝐑^{-1}`` has the same norm as ``𝐯``,
+which means that ``𝐯'`` is a rotation of ``𝐯``.  Given the constraint
+on the norm of ``𝐑``, we can rewrite it as
