@@ -1,8 +1,77 @@
 # Conventions
 
-Here, we work through all the conventions used in this package,
-starting from first principles to motivate the choices and ensure that
-each step is on firm footing.
+In the following subsections, we work through all the conventions used
+in this package, starting from first principles to motivate the
+choices and ensure that each step is on firm footing.  First, we can
+just list the most important conventions.  Note that we will use Euler
+angles and spherical coordinates here.  It is almost always a bad idea
+to use Euler angles in *computing*; quaternions are clearly the
+preferred representation for numerous reasons.  However, Euler angles
+are important for (a) comparing to other sources, and (b) performing
+*analytic* integrations.  These are the only two uses we will make of
+Euler angles.
+
+1. Right-handed Cartesian coordinates ``(x, y, z)`` and unit basis
+   vectors ``(𝐱, 𝐲, 𝐳)``.
+2. Spherical coordinates ``(r, \theta, \phi)`` and unit basis vectors
+   ``(𝐫, \boldsymbol{\theta}, \boldsymbol{\phi})``.  The "polar
+   angle" ``\theta \in [0, \pi]`` measures the angle between the
+   specified direction and the positive ``𝐳`` axis.  The "azimuthal
+   angle" ``\phi \in [0, 2\pi)`` measures the angle between the
+   projection of the specified direction onto the ``𝐱``-``𝐲`` plane
+   and the positive ``𝐱`` axis, with the positive ``𝐲`` axis
+   corresponding to the positive angle ``\phi = \pi/2``.
+3. Quaternions ``𝐐 = W + X𝐢 + Y𝐣 + Z𝐤``, where ``𝐢𝐣𝐤 = -1``.
+   In software, this quaternion is represented by ``(W, X, Y, Z)``.
+   We will depict a three-dimensional vector ``𝐯 = v_x 𝐱 + v_y 𝐲 +
+   v_z 𝐳`` interchangeably as a quaternion ``v_x 𝐢 + v_y 𝐣 + v_z
+   𝐤``.
+4. A rotation represented by the unit quaternion ``𝐑`` acts on a
+   vector ``𝐯`` as ``𝐑\, 𝐯\, 𝐑^{-1}``.
+5. Where relevant, rotations will be assumed to be right-handed, so
+   that a quaternion characterizing the rotation through an angle
+   ``\vartheta`` about a unit vector ``𝐮`` can be expressed as ``𝐑 =
+   \exp(\vartheta 𝐮/2)``.  Note that ``-𝐑`` would deliver the same
+   rotation, which is why the group of unit quaternions
+   ``\mathrm{Spin}(3) = \mathrm{SU}(2)`` is a *double cover* of the
+   group of rotations ``\mathrm{SO}(3)``.
+6. Euler angles parametrize a unit quaternion as ``𝐑 = \exp(\alpha
+   𝐤/2)\, \exp(\beta 𝐣/2)\, \exp(\gamma 𝐤/2)``.  The angles
+   ``\alpha`` and ``\beta`` take values in ``[0, 2\pi)``.  The angle
+   ``\beta`` takes values in ``[0, 2\pi]`` to parametrize the group of
+   unit quaternions ``\mathrm{Spin}(3) = \mathrm{SU}(2)``, or in ``[0,
+   \pi]`` to parametrize the group of rotations ``\mathrm{SO}(3)``.
+7. A point on the unit sphere with spherical coordinates ``(\theta,
+   \phi)`` can be represented by Euler angles ``(\alpha, \beta,
+   \gamma) = (\phi, \theta, 0)``.  The rotation with these Euler
+   angles takes the positive ``𝐳`` axis to the specified direction.
+   In particular, any function of spherical coordinates can be
+   promoted to a function on Euler angles using this identification.
+8. For a complex-valued function ``f(𝐑)``, we define two operators,
+   the left and right Lie derivatives:
+   ```math
+   L_𝐮 f(𝐑) = \left.-i \frac{d}{d\epsilon}\right|_{\epsilon=0}
+   f\left(e^{\epsilon 𝐮/2}\, 𝐑\right)
+   \qquad \text{and} \qquad
+   R_𝐮 f(𝐑) = \left.-i \frac{d}{d\epsilon}\right|_{\epsilon=0}
+   f\left(𝐑\, e^{\epsilon 𝐮/2}\right),
+   ```
+   where ``𝐮`` can be any pure-vector quaternion.  In particular,
+   ``L`` represents the standard angular-momentum operators, and we
+   can compute the expressions in Euler angles for the basis vectors:
+   ```math
+   \begin{aligned}
+   L_x = L_𝐢 &= -i \left( \sin\alpha \frac{\partial}{\partial\beta} + \cos\alpha \cot\beta \frac{\partial}{\partial\alpha} \right), \\
+   L_y = L_𝐣 &= -i \left( \cos\alpha \frac{\partial}{\partial\beta} - \sin\alpha \cot\beta \frac{\partial}{\partial\alpha} \right), \\
+   L_z = L_𝐤 &= -i \frac{\partial}{\partial\alpha}.
+   \end{aligned}
+   ```
+   Angular-momentum operators defined in Lie terms, translated to
+   Euler angles and spherical coordinates.
+9. Spherical harmonics
+10. Wigner D-matrices
+11. Spin-weighted spherical harmonics
+
 
 ## Three-dimensional space
 
@@ -85,21 +154,23 @@ spin-weighted functions.
 
 Integration in Cartesian coordinates is, of course, trivial as
 ```math
-\int f\, d^3\mathbf{r} = \int_{-\infty}^{\infty} \int_{-\infty}^{\infty} \int_{-\infty}^{\infty} f\, dx\, dy\, dz.
+\int_{\mathbb{R}^3} f\, d^3\mathbf{r} = \int_{-\infty}^{\infty} \int_{-\infty}^{\infty} \int_{-\infty}^{\infty} f\, dx\, dy\, dz.
 ```
 In spherical coordinates, the integrand involves the square-root of
 the determinant of the metric, so we have
 ```math
-\int f\, d^3\mathbf{r} = \int_0^\infty \int_0^\pi \int_0^{2\pi} f\, r^2 \sin\theta\, dr\, d\theta\, d\phi.
+\int_{\mathbb{R}^3} f\, d^3\mathbf{r} = \int_0^\infty \int_0^\pi \int_0^{2\pi} f\, r^2 \sin\theta\, dr\, d\theta\, d\phi.
 ```
 Restricting to the unit sphere, and normalizing so that the integral
 of 1 over the sphere is 1, we can simplify this to
 ```math
-\int f\, d^2\Omega = \frac{1}{4\pi} \int_0^\pi \int_0^{2\pi} f\, \sin\theta\, d\theta\, d\phi.
+\int_{S^2} f\, d^2\Omega = \frac{1}{4\pi} \int_0^\pi \int_0^{2\pi} f\, \sin\theta\, d\theta\, d\phi.
 ```
 
 
 ## Four-dimensional space: Quaternions and rotations
+
+### Geometric algebra
 
 Given the basis vectors ``(𝐱, 𝐲, 𝐳)`` and the Euclidean norm, we
 can define the [geometric
@@ -115,11 +186,16 @@ like the standard [exterior
 product](https://en.wikipedia.org/wiki/Exterior_algebra) from the
 algebra of [differential
 forms](https://en.wikipedia.org/wiki/Differential_form).  The
-geometric product is associative, distributive, and has the property
-that
+geometric product is linear, associative, distributive, and has the
+property that
 ```math
 𝐯𝐯 = \| 𝐯 \|^2.
 ```
+The most useful properties of the geometric product are that parallel
+vectors commute with each other, while orthogonal vectors anticommute.
+Since the geometric product is linear, the product of any two vectors
+can be decomposed into parallel and orthogonal parts.
+
 The basis for this entire space is then the set
 ```math
 \begin{gather}
@@ -129,33 +205,70 @@ The basis for this entire space is then the set
 𝐱𝐲𝐳.
 \end{gather}
 ```
-It's useful to note that the first four of these square to 1, while
-the last four square to -1 — meaning that they could serve as a unit
-imaginary to generate the complex numbers.  The more standard symbols
-— and the ones we will use — are
+The standard presentation of quaternions (including the confused
+historical development) uses different symbols for these last four
+basis elements:
 ```math
 \begin{gather}
-𝟏, \\
-𝐱, 𝐲, 𝐳,\\
-𝐢, 𝐣, 𝐤, \\
-𝐈.
+𝐢 = 𝐳𝐲 = -𝐲𝐳, \\
+𝐣 = 𝐱𝐳 = -𝐳𝐱, \\
+𝐤 = 𝐲𝐱 = -𝐱𝐲, \\
+𝐈 = 𝐱𝐲𝐳.
 \end{gather}
 ```
-The interpretation of these is that ``𝟏`` represents the scalars;
-``𝐱, 𝐲, 𝐳`` span the vectors; ``𝐢, 𝐣, 𝐤`` are the standard
-quaternion components; and ``𝐈`` is the pseudoscalar, which can also
-serve as the [Hodge
-dual](https://en.wikipedia.org/wiki/Hodge_star_operator).  (Note that
-quaternions will only be spanned by elements made from an even number
-of the basis vectors.  It turns out that those with an odd number will
-produce reflections, rather than rotations, when acting on a vector —
-as discussed below.  This explains why quaternions are restricted to
-just those elements with an even number to represent rotations.  For
-details see any geometric algebra text, like [Doran and Lasenby](@cite
-DoranLasenby_2010).)
+Note that each of these squares to -1.  For example, recalling that
+orthogonal vectors anticommute, the product is associative, and the
+product of a vector with itself is just its squared norm, we have
+```math
+𝐱𝐲𝐱𝐲 = -𝐱𝐲𝐲𝐱 = -𝐱(𝐲𝐲)𝐱 = -𝐱𝐱 = -1.
+```
+Any of these could act like the unit imaginary; ``𝐱𝐲`` is probably
+the canonical choice.
 
-The key expressions that help to determine the arbitrary choices we
-have made thus far are the multiplications
+``𝐈`` is sometimes called the pseudoscalar.  Its inverse is ``𝐈^{-1}
+= 𝐳𝐲𝐱 = -𝐱𝐲𝐳``, which can also serve as something very much like
+the [Hodge star
+operator](https://en.wikipedia.org/wiki/Hodge_star_operator),[^1]
+mapping elements to their "dual" elements.  In particular, we have
+```math
+\begin{aligned}
+𝐢 &= 𝐈^{-1}𝐱, \\
+𝐣 &= 𝐈^{-1}𝐲, \\
+𝐤 &= 𝐈^{-1}𝐳.
+\end{aligned}
+```
+We will see that ``𝐢`` generates right-handed rotations in the
+positive sense about ``𝐱``, ``𝐣`` about ``𝐲``, and ``𝐤`` about
+``𝐳``.  Moreover, this mapping between ``(𝐱, 𝐲, 𝐳)`` and ``(𝐢,
+𝐣, 𝐤)`` is a vector-space isomorphism.  In fact, the reader who is
+not familiar with geometric algebra but is familiar with quaternions
+may be able to read an expression like ``𝐣 𝐱 𝐣⁻¹`` as if it is just
+an abuse of notation, and mentally replace ``𝐱`` with ``𝐢`` to read
+those symbols as a valid quaternion expression; both viewpoints are
+equally correct by the isomorphism.
+
+[^1]: Note that quaternions will only be spanned by elements made from
+      an even number of the basis vectors.  It turns out that those
+      with an odd number will produce reflections, rather than
+      rotations, when acting on a vector — as discussed below.  This
+      explains why quaternions are restricted to just those elements
+      with an even number to represent rotations.  For details see any
+      geometric algebra text, like [Doran and Lasenby](@cite
+      DoranLasenby_2010).
+
+### Quaternions and Euler angles
+
+Note that there are different conventions for the signs of the ``(𝐢,
+𝐣, 𝐤)`` basis.  Everyone agrees that ``𝐢² = 𝐣² = 𝐤² = -1``, but
+we could easily flip the sign of any basis element, and these would
+still be satisfied.  The identifications we chose above are made to
+ensure that ``𝐢`` generates rotations about ``𝐱``, and so on, but
+even that depends on how we define quaternions as acting on vectors
+(to be discussed below).  A different choice of the latter would
+result in all flipping the sign of all three basis elements, which is
+a convention that is commonly used — though almost exclusively in
+aerospace.  The key expressions that eliminate ambiguity are the
+multiplications
 ```math
 \begin{aligned}
 𝐢 𝐣 &= 𝐤, \\
@@ -163,28 +276,59 @@ have made thus far are the multiplications
 𝐤 𝐢 &= 𝐣.
 \end{aligned}
 ```
-Everyone agrees that ``𝐢² = 𝐣² = 𝐤² = -1``, so we can also use the
-rules above to determine ``𝐢𝐣𝐤 = -𝟏``.  Different conventions are
-sometimes used (almost exclusively in aerospace) so that this last
-equation and the three displayed above have a flipped sign.  See
+We can also use these rules above to determine ``𝐢𝐣𝐤 = -𝟏``.  All
+four of these equations have flipped signs in other conventions.  See
 [Sommer et al.](@cite SommerEtAl_2018) for a discussion of the
 different conventions.
 
 We use coordinates ``(W, X, Y, Z)`` on the space of quaternions, so
-that such a quaternion would be written as
+that a quaternion would be written as
 ```math
-W𝟏 + X𝐢 + Y𝐣 + Z𝐤,
+𝐐 = W𝟏 + X𝐢 + Y𝐣 + Z𝐤,
 ```
-though we usually omit the ``𝟏``.  As with standard three-dimensional
-space, we could introduce spherical coordinates, though we use a
-slight variant: extended Euler coordinates.  In our conventions, we
-have
+though we usually omit the ``𝟏``.  The space of all quaternions is
+thus four dimensional.  The norm is just the standard Euclidean norm,
+so that the norm of a quaternion is
+```math
+\| 𝐐 \| = \sqrt{W^2 + X^2 + Y^2 + Z^2}.
+```
+An important operation is the conjugate, which is defined as
+```math
+\overline{𝐐} = W - X𝐢 - Y𝐣 - Z𝐤.
+```
+Note that the squared norm can be written as the quaternion times its
+conjugate.  The inverse of a quaternion is thus just the conjugate
+divided by the squared norm:
+```math
+𝐐^{-1} = \frac{\overline{𝐐}}{𝐐\overline{𝐐}} = \frac{\overline{𝐐}}{\| 𝐐 \|^2}.
+```
+The other important operation is exponentiation.  Since a scalar
+commutes with any quaternion, including a nonzero scalar component in
+the quaternion will simply multiply the result by the exponential of
+that scalar component.  Moreover, we will not have any use for such an
+exponential, so we assume that the argument to the exponential
+function is a "pure" quaternion — that is, one with zero scalar
+component.  Moreover, we write it as a unit quaternion ``𝐮`` times
+some real number ``\sigma``.  In particular, note that ``𝐮^2 = -1``,
+so that it acts like the imaginary unit, which means we already know
+how to exponentiate it:
+```math
+\exp(𝐮\, \sigma) = \cos\sigma + 𝐮\, \sin\sigma.
+```
+Note that the inverse of the result can be obtained simply by negating
+the argument, as usual.
+
+Much as with standard three-dimensional space, we could introduce a
+generalization of spherical coordinates, though we use a slight
+variant: extended Euler coordinates.  We will see below how to
+interpret these as a series of rotations.  For now, we simply state
+the relation:
 ```math
 \begin{aligned}
 R &= \sqrt{W^2 + X^2 + Y^2 + Z^2} &&\in [0, \infty), \\
-\alpha &= \arctan\frac{Z}{W} + \arctan\frac{-X}{Y} &&\in [0, 2\pi], \\
-\beta &= 2\arccos\sqrt{\frac{W^2+Z^2}{W^2+X^2+Y^2+Z^2}} &&\in [0, 2\pi), \\
-\gamma &= \arctan\frac{Z}{W} - \arctan\frac{-X}{Y} &&\in [0, 2\pi],
+\alpha &= \arctan\frac{Z}{W} + \arctan\frac{-X}{Y} &&\in [0, 2\pi), \\
+\beta &= 2\arccos\sqrt{\frac{W^2+Z^2}{W^2+X^2+Y^2+Z^2}} &&\in [0, 2\pi], \\
+\gamma &= \arctan\frac{Z}{W} - \arctan\frac{-X}{Y} &&\in [0, 2\pi),
 \end{aligned}
 ```
 where we again assume the ``\arctan`` in the expressions for
@@ -197,7 +341,7 @@ the group of unit quaternions ``\mathrm{Spin}(3)=\mathrm{SU}(2)``,
 which is a double cover of the rotation group ``\mathrm{SO}(3)``.
 This extended range for ``\beta`` is necessary to cover the entire
 space of quaternions; if we further restrict to ``[0, \pi)``, we would
-cover the space of rotations.  This and the inclusion of ``R``
+only cover the space of rotations.  This and the inclusion of ``R``
 identify precisely how this coordinate system extends the standard
 Euler angles.
 
@@ -223,21 +367,93 @@ g_{i'j'}
 \end{array} \right)_{i'j'}.
 ```
 Again, integration involves a square-root of the determinant of the
-metric, which reduces to ``R^3 |\sin\beta| / 8``.
+metric, which reduces to ``R^3 |\sin\beta| / 8``.  Note that — unlike
+with standard spherical coordinates — the absolute value is necessary
+because ``\beta`` ranges over the entire interval ``[0, 2\pi]``.  The
+integral over the entire space of quaternions is then
 ```math
-\int f\, d^4𝐑
+\int_{\mathbb{R}^4} f\, d^4𝐐
 = \int_{-\infty}^\infty \int_{-\infty}^\infty \int_{-\infty}^\infty \int_{-\infty}^\infty f\, dW\, dX\, dY\, dZ
 = \int_0^\infty \int_0^{2\pi} \int_0^{2\pi} \int_0^{2\pi} f\, \frac{R^3}{8} |\sin β|\, dR\, dα\, dβ\, dγ.
 ```
 Restricting to the unit sphere, and normalizing so that the integral
 of 1 over the sphere is 1, we can simplify this to
 ```math
-\int f\, d^3\Omega = \frac{1}{16\pi^2} \int_0^{2\pi} \int_0^{2\pi} \int_0^{2\pi} f\, |\sin β|\, dα\, dβ\, dγ.
+\int_{\mathrm{Spin}(3)} f\, d^3\Omega
+= \frac{1}{16\pi^2} \int_0^{2\pi} \int_0^{2\pi} \int_0^{2\pi} f\, |\sin β|\, dα\, dβ\, dγ.
+```
+Finally, restricting to the space of rotations, we can further
+simplify this to
+```math
+\int_{\mathrm{SO}(3)} f\, d^3\Omega
+= \frac{1}{8\pi^2} \int_0^{2\pi} \int_0^{\pi} \int_0^{2\pi} f\, \sin β\, dα\, dβ\, dγ.
 ```
 
 ## Rotations
 
+We restrict to a unit quaternion ``𝐑``, for which ``W^2 + X^2 + Y^2 +
+Z^2 = 1``.  Given this constraint we can, without loss of generality,
+write the quaternion as
+```math
+𝐑
+= \exp\left(\frac{\rho}{2} \hat{\mathfrak{r}}\right)
+= \cos\frac{\rho}{2} + \sin\frac{\rho}{2}\, \hat{\mathfrak{r}},
+```
+where ``\rho`` is an angle of rotation and ``\hat{\mathfrak{r}}`` is a
+unit "pure-vector" quaternion.  We can multiply a vector ``𝐯`` as
+```math
+𝐑\, 𝐯\, 𝐑^{-1}.
+```
+Splitting ``𝐯 = 𝐯_⟂ + 𝐯_∥`` into components perpendicular and
+parallel to ``\hat{\mathfrak{r}}``, we see that ``𝐯_∥`` commutes with
+``𝐑`` and ``𝐑^{-1}``, while ``𝐯_⟂`` anticommutes with
+``\hat{\mathfrak{r}}``.  To find the full rotation, we expand the
+product:
+```math
+\begin{aligned}
+𝐑\, 𝐯\, 𝐑^{-1}
+&= 𝐯_∥
+   + \left(\cos\frac{\rho}{2} + \sin\frac{\rho}{2}\, \hat{\mathfrak{r}}\right)
+     𝐯_⟂
+     \left(\cos\frac{\rho}{2} - \sin\frac{\rho}{2}\, \hat{\mathfrak{r}}\right) \\
+&= 𝐯_∥
+   + \left(\cos\frac{\rho}{2}\, 𝐯_⟂ + \sin\frac{\rho}{2}\, \hat{\mathfrak{r}}\, 𝐯_⟂\right)
+     \left(\cos\frac{\rho}{2} - \sin\frac{\rho}{2}\, \hat{\mathfrak{r}}\right) \\
+&= 𝐯_∥
+   + \cos^2\frac{\rho}{2}\, 𝐯_⟂ + \sin\frac{\rho}{2}\, \cos\frac{\rho}{2}\, \hat{\mathfrak{r}}\, 𝐯_⟂
+   - \sin\frac{\rho}{2}\, \cos\frac{\rho}{2}\, 𝐯_⟂ \, \hat{\mathfrak{r}} - \sin^2\frac{\rho}{2}\, \hat{\mathfrak{r}}\, 𝐯_⟂\, \hat{\mathfrak{r}} \\
+&= 𝐯_∥
+   + \cos^2\frac{\rho}{2}\, 𝐯_⟂ + \sin\frac{\rho}{2}\, \cos\frac{\rho}{2}\, [\hat{\mathfrak{r}}, 𝐯_⟂] - \sin^2\frac{\rho}{2}\, 𝐯_⟂ \\
+&= 𝐯_∥
+   + \cos\rho\, 𝐯_⟂ + \sin\rho\, \hat{\mathfrak{r}}\times 𝐯_⟂
+\end{aligned}
+```
+The final expression shows that this is precisely what we expect when
+rotating ``𝐯`` through an angle ``\rho`` (in a positive, right-handed
+sense) about the axis ``\hat{\mathfrak{r}}``.
 
-## Euler angles and spherical coordinates
+Note that the presence of two factors of ``𝐑`` in the expression for
+rotating a vector explains two things.  First, it explains why the
+angle of rotation is twice the angle of the quaternion: one factor of
+``𝐑`` either commutes and cancels or anti-commutes and combines with
+the the other factor.  Second, it explains why the quaternion group is
+a double cover of the rotation group: negating ``𝐑`` results in the
+same rotation.  Thus, for any rotation, there are two (precisely
+opposite) quaternions that represent it.
 
+### Euler angles and spherical coordinates
+
+Now that we understand how rotations work, we can provide geometric
+intuition for the expressions given above for Euler angles.  The Euler
+angles *in our convention* represent an initial rotation through
+``\gamma`` about the ``𝐳`` axis, followed by a rotation through
+``\beta`` about the ``𝐲`` axis, and finally a rotation through
+``\alpha`` about the ``𝐳`` axis.  Note that the axes are fixed, and
+not subject to any preceding rotations.  More precisely, we can write
+the unit quaternion as
+```math
+𝐑 = \exp\left(\frac{\alpha}{2} 𝐤\right)
+    \exp\left(\frac{\beta}{2} 𝐣\right)
+    \exp\left(\frac{\gamma}{2} 𝐤\right).
+```
 
