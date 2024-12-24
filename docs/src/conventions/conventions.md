@@ -61,13 +61,52 @@ Euler angles.
    can compute the expressions in Euler angles for the basis vectors:
    ```math
    \begin{aligned}
-   L_x = L_𝐢 &= -i \left( \sin\alpha \frac{\partial}{\partial\beta} + \cos\alpha \cot\beta \frac{\partial}{\partial\alpha} \right), \\
-   L_y = L_𝐣 &= -i \left( \cos\alpha \frac{\partial}{\partial\beta} - \sin\alpha \cot\beta \frac{\partial}{\partial\alpha} \right), \\
-   L_z = L_𝐤 &= -i \frac{\partial}{\partial\alpha}.
+    L_x = L_𝐢 &= -i \left\{
+        -\frac{\cos\alpha}{\tan\beta} \frac{\partial} {\partial \alpha}
+        - \sin\alpha \frac{\partial} {\partial \beta}
+        +\frac{\cos\alpha}{\sin\beta} \frac{\partial} {\partial \gamma}
+    \right\} \\
+    L_y = L_𝐣 &= -i \left\{
+        -\frac{\sin\alpha}{\tan\beta} \frac{\partial} {\partial \alpha}
+        + \cos\alpha \frac{\partial} {\partial \beta}
+        +\frac{\sin\alpha}{\sin\beta} \frac{\partial} {\partial \gamma}
+    \right\} \\
+    L_z = L_𝐤 &= -i \frac{\partial} {\partial \alpha} \\
+    K_x = K_𝐢 &= -i \left\{
+        -\frac{\cos\gamma}{\sin\beta} \frac{\partial} {\partial \alpha}
+        +\sin\gamma \frac{\partial} {\partial \beta}
+        +\frac{\cos\gamma}{\tan\beta} \frac{\partial} {\partial \gamma}
+    \right\} \\
+    K_y = K_𝐣 &= -i \left\{
+        \frac{\sin\gamma}{\sin\beta} \frac{\partial} {\partial \alpha}
+        +\cos\gamma \frac{\partial} {\partial \beta}
+        -\frac{\sin\gamma}{\tan\beta} \frac{\partial} {\partial \gamma}
+    \right\} \\
+    K_z = K_𝐤 &= -i \frac{\partial} {\partial \gamma}
    \end{aligned}
    ```
-   Angular-momentum operators defined in Lie terms, translated to
-   Euler angles and spherical coordinates.
+   We can lift any function on ``S^2`` to a function on ``S^3`` — or
+   more precisely any function on spherical coordinates to a function
+   on the space of Euler angles — by the correspondence ``(\theta,
+   \phi) \mapsto (\alpha, \beta, \gamma) = (\phi, \theta, 0)``.  We
+   can then express the angular-momentum operators in their more
+   common form, in terms of spherical coordinates:
+
+   ```math
+   \begin{aligned}
+    L_x &= -i \left\{
+        -\frac{\cos\phi}{\tan\theta} \frac{\partial} {\partial \phi}
+        - \sin\phi \frac{\partial} {\partial \theta}
+    \right\} \\
+    L_y &= -i \left\{
+        -\frac{\sin\phi}{\tan\theta} \frac{\partial} {\partial \phi}
+        + \cos\phi \frac{\partial} {\partial \theta}
+    \right\} \\
+    L_z &= -i \frac{\partial} {\partial \phi}
+   \end{aligned}
+   ```
+   (The ``R`` operators make less sense for a function of spherical
+   coordinates.)
 9. Spherical harmonics
 10. Wigner D-matrices
 11. Spin-weighted spherical harmonics
@@ -456,4 +495,77 @@ the unit quaternion as
     \exp\left(\frac{\beta}{2} 𝐣\right)
     \exp\left(\frac{\gamma}{2} 𝐤\right).
 ```
+One of the more important interpretations of a rotor is considering
+what it does to the basis triad ``(𝐱, 𝐲, 𝐳)``.  In particular, the
+vector ``𝐳`` is rotated onto the point given by spherical coordinates
+``(\theta, \phi) = (\beta, \alpha)``, while ``𝐱`` and ``𝐲`` are
+rotated into the plane spanned by the unit basis vectors
+``\boldsymbol{\theta}`` and ``\boldsymbol{\phi}`` corresponding to
+that point.  If ``\gamma = 0`` the rotation is precise, meaning that
+``𝐱`` is rotated onto ``\boldsymbol{\theta}`` and ``𝐲`` onto
+``\boldsymbol{\phi}``; if ``\gamma ≠ 0`` then they are rotated within
+that plane by the angle ``\gamma`` about the ``\mathbf{r}`` axis.
+Thus, we identify the spherical coordinates ``(\theta, \phi)`` with
+the Euler angles ``(\alpha, \beta, \gamma) = (\phi, \theta, 0)``.
 
+
+## Rotation and angular-momentum operators
+
+We have defined the spaces ``\mathrm{Spin}(3) = \mathrm{SU}(2)``
+(topologically ``S^3``), ``\mathrm{SO}(3)`` (topologically
+``\mathbb{RP}^3``), and ``S^2``.  Specifically, we have *constructed*
+each of those spaces starting with Cartesian coordinates and the
+Euclidean norm on ``\mathbb{R}^3``, which naturally supplies
+coordinates on each of those spaces.  We will define functions from
+these spaces (and their corresponding coordinates) to the complex
+numbers.  However, to construct and classify those functions, we will
+need to define operators on them.  We will start with operators
+transforming them by finite rotations, then differentiate those
+operators to get the angular-momentum operators.
+
+
+
+  - Start with finite rotations — both left and right translations
+    - note the signs; these give us the signs
+  - Then, we differentiate those finite rotations, generating rotation
+    of a function by exponentiating a generator giving finite
+    rotation; this lets us set some signs
+  - Express angular momentum operators in terms of quaternion components
+    - Basic Lie definition
+    - Properties: form a Lie algebra with the commutator as the Lie bracket
+    - 
+  - Express angular momentum operators in terms of Euler angles
+    - We just rewrite the ``R`` in the Lie definitions in terms of
+      Euler angles, multiply by ``\exp(\theta/2)``, rederive the new
+      Euler angles from that result, and use the chain rule
+  - Show for both the three- and two-spheres
+  - Show how they act on functions on the three-sphere
+
+
+### Angular-momentum operators in Euler angles
+
+The idea here is to express, e.g., $e^{\theta \mathbf{e}_i /
+2}\mathbf{R}_{\alpha, \beta, \gamma}$ in quaternion components, then
+solve for the new Euler angles $\mathbf{R}_{\alpha', \beta', \gamma'}$
+in terms of the quaternion components, where these new angles all
+depend on $\theta$.  We then use the chain rule to express
+$\partial_\theta$ in terms of $\partial_{\alpha'}$, etc., which become
+$\partial_\alpha$, etc., when $\theta=0$.
+
+```math
+
+\begin{align}
+  L_i f(\mathbf{R})
+  &=
+  \left. -\mathbf{z} \frac{\partial} {\partial \theta} f \left( e^{\theta \mathbf{e}_i / 2} \mathbf{R}_{\alpha, \beta, \gamma} \right) \right|_{\theta=0} \\
+  &=
+  \left. -\mathbf{z} \frac{\partial} {\partial \theta} f \left( \mathbf{R}_{\alpha', \beta', \gamma'} \right) \right|_{\theta=0} \\
+  &=
+  \left. -\mathbf{z} \left[ \frac{\partial \alpha'} {\partial \theta}\frac{\partial} {\partial \alpha'} + \frac{\partial \beta'} {\partial \theta}\frac{\partial} {\partial \beta'} + \frac{\partial \gamma'} {\partial \theta}\frac{\partial} {\partial \gamma'} \right] f \left( \mathbf{R}_{\alpha', \beta', \gamma'} \right) \right|_{\theta=0} \\
+  &=
+  -\mathbf{z} \left[ \frac{\partial \alpha'} {\partial \theta}\frac{\partial} {\partial \alpha} + \frac{\partial \beta'} {\partial \theta}\frac{\partial} {\partial \beta} + \frac{\partial \gamma'} {\partial \theta}\frac{\partial} {\partial \gamma} \right]_{\theta=0} f \left( \mathbf{R}_{\alpha, \beta, \gamma} \right) \\
+  K_i f(\mathbf{R})
+  &=
+  -\mathbf{z} \left[ \frac{\partial \alpha''} {\partial \theta}\frac{\partial} {\partial \alpha} + \frac{\partial \beta''} {\partial \theta}\frac{\partial} {\partial \beta} + \frac{\partial \gamma''} {\partial \theta}\frac{\partial} {\partial \gamma} \right]_{\theta=0} f \left( \mathbf{R}_{\alpha, \beta, \gamma} \right),
+\end{align}
+```
