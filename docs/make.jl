@@ -1,6 +1,6 @@
 # Run with
-#   time julia --project=. make.jl && julia --project=. -e 'using LiveServer; serve(dir="build")'
-# assuming you are in this `docs` directory (otherwise point the project argument here)
+#   julia -t 4 --project=. scripts/docs.jl
+# assuming you are in this top-level directory
 
 using SphericalFunctions
 using Documenter
