@@ -51,4 +51,23 @@ d_{m&#39;,m}^{j}(\pi-\beta)  &amp;= (-1)^{j+m&#39;}  d_{m&#39;,-m}^{j}(\beta)\\[
 d_{m&#39;,m}^{j}(\pi+\beta)  &amp;= (-1)^{j-m}  d_{m&#39;,-m}^{j}(\beta)\\[6pt]
 d_{m&#39;,m}^{j}(2\pi+\beta) &amp;= (-1)^{2j}    d_{m&#39;,m}^{j}(\beta)\\[6pt]
 d_{m&#39;,m}^{j}(-\beta)     &amp;= d_{m,m&#39;}^{j}(\beta) = (-1)^{m&#39;-m} d_{m&#39;,m}^{j}(\beta)
-\end{aligned}\]</p></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.8.0 on <span class="colophon-date" title="Thursday 12 December 2024 17:00">Thursday 12 December 2024</span>. Using Julia version 1.11.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+\end{aligned}\]</p><p class="math-container">\[\begin{gather}
+R = \cos\epsilon + \sin\epsilon\, \hat{\mathfrak{r}} \\
+R𝐯 = \cos\epsilon 𝐯 + \sin\epsilon\, \hat{\mathfrak{r}}𝐯 \\
+R𝐯R^{-1} = (𝐯\cos\epsilon + \sin\epsilon\, \hat{\mathfrak{r}}𝐯)(\cos\epsilon - \sin\epsilon\, \hat{\mathfrak{r}}) \\
+R𝐯R^{-1} = 𝐯\cos^2\epsilon + \sin^2\epsilon\, \hat{\mathfrak{r}}𝐯\hat{\mathfrak{r}}^{-1} + \sin\epsilon \cos\epsilon\, (\hat{\mathfrak{r}}𝐯 - 𝐯\hat{\mathfrak{r}}) \\
+R𝐯R^{-1} = \begin{cases}
+𝐯 &amp; 𝐯 \hat{\mathfrak{r}} = \hat{\mathfrak{r}}𝐯 \\
+𝐯(\cos^2\epsilon - \sin^2\epsilon) + 2 \sin\epsilon \cos\epsilon\, \frac{[\hat{\mathfrak{r}}, 𝐯]}{2} &amp; 𝐯 \hat{\mathfrak{r}} = -\hat{\mathfrak{r}}𝐯 \\
+\end{cases} \\
+R𝐯R^{-1} = \begin{cases}
+𝐯 &amp; 𝐯 \hat{\mathfrak{r}} = \hat{\mathfrak{r}}𝐯 \\
+\cos2\epsilon 𝐯 + \sin2\epsilon \frac{[\hat{\mathfrak{r}}, 𝐯]}{2} &amp; 𝐯 \hat{\mathfrak{r}} = -\hat{\mathfrak{r}}𝐯 \\
+\end{cases} \\
+\end{gather}\]</p><p>Using techniques from geometric algebra, we can easily prove that the result is another vector, so we can measure its (squared) norm just by multiplying it by itself:</p><p class="math-container">\[\begin{aligned}
+\| 𝐑\, 𝐯\, 𝐑^{-1} \|^2
+&amp;= 𝐑\, 𝐯\, 𝐑^{-1}\, 𝐑\, 𝐯\, 𝐑^{-1} \\
+&amp;= 𝐑\, 𝐯\, 𝐯\, 𝐑^{-1} \\
+&amp;= \|𝐯\|^2\, 𝐑\, 𝐑^{-1} \\
+&amp;= \|𝐯\|^2
+\end{aligned}\]</p><p>That is, <span>$𝐯&#39; = 𝐑\, 𝐯\, 𝐑^{-1}$</span> has the same norm as <span>$𝐯$</span>, which means that <span>$𝐯&#39;$</span> is a rotation of <span>$𝐯$</span>.  Given the constraint on the norm of <span>$𝐑$</span>, we can rewrite it as</p></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.8.0 on <span class="colophon-date" title="Tuesday 24 December 2024 05:47">Tuesday 24 December 2024</span>. Using Julia version 1.11.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
