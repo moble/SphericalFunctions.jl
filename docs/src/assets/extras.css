@@ -1,0 +1,19 @@
+.display-light-only {
+    display: block;
+    text-align: center;
+    margin: 0 auto;
+}
+
+.display-dark-only {
+    display: none;
+}
+
+.theme--documenter-dark .display-light-only {
+    display: none;
+}
+
+.theme--documenter-dark .display-dark-only {
+    display: block;
+    text-align: center;
+    margin: 0 auto;
+}
