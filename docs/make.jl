@@ -21,7 +21,7 @@ makedocs(
         prettyurls = !("local" in ARGS),  # Use clean URLs, unless built as a "local" build
         edit_link = "main",  # Link out to "main" branch on github
         canonical = "https://moble.github.io/SphericalFunctions.jl/stable/",
-        assets = String["assets/citations.css"],
+        assets = String["assets/citations.css", "assets/extras.css"],
     ),
     pages = [
         "index.md",
