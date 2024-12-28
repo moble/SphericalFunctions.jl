@@ -336,8 +336,8 @@ An important operation is the conjugate, which is defined as
 \overline{𝐐} = W - X𝐢 - Y𝐣 - Z𝐤.
 ```
 Note that the squared norm can be written as the quaternion times its
-conjugate.  The inverse of a quaternion is thus just the conjugate
-divided by the squared norm:
+conjugate.  Any nonzero quaternion has an inverse, which is just the
+conjugate divided by the squared norm:
 ```math
 𝐐^{-1} = \frac{\overline{𝐐}}{𝐐\overline{𝐐}} = \frac{\overline{𝐐}}{\| 𝐐 \|^2}.
 ```
@@ -511,18 +511,57 @@ the Euler angles ``(\alpha, \beta, \gamma) = (\phi, \theta, 0)``.
 
 ## Rotation and angular-momentum operators
 
-We have defined the spaces ``\mathrm{Spin}(3) = \mathrm{SU}(2)``
-(topologically ``S^3``), ``\mathrm{SO}(3)`` (topologically
-``\mathbb{RP}^3``), and ``S^2``.  Specifically, we have *constructed*
-each of those spaces starting with Cartesian coordinates and the
-Euclidean norm on ``\mathbb{R}^3``, which naturally supplies
-coordinates on each of those spaces.  We will define functions from
-these spaces (and their corresponding coordinates) to the complex
-numbers.  However, to construct and classify those functions, we will
-need to define operators on them.  We will start with operators
-transforming them by finite rotations, then differentiate those
-operators to get the angular-momentum operators.
+## Complex-valued functions
 
+Starting with Cartesian coordinates and the Euclidean norm on
+``\mathbb{R}^3``, we have *constructed* the geometric algebra over
+that space, as well as the spaces ``\mathrm{Spin}(3) =
+\mathrm{SU}(2)`` (topologically ``S^3``), ``\mathrm{SO}(3)``
+(topologically ``\mathbb{RP}^3``), and ``S^2``.  We will be defining
+complex-valued functions on these spaces, and defining operators to
+construct and classify them.  In particular, because we have
+constructed the spaces, they are naturally supplied with coordinates
+that are effectively inherited from the original Cartesian system.  We
+will be using these coordinate systems to construct both the operators
+and functions.  However, it is important to note that the coordinate
+systems may have singularities, which means that the spaces of
+coordinates may have different topologies than the spaces they
+represent.  For example, Euler angles have topology ``S^1 \times I
+\times S^1`` instead of the ``S^3`` and ``\mathbb{RP}^3`` topologies
+of the spaces they represent; spherical coordinates have topology
+``S^1 \times I`` instead of ``S^2``.
+
+Defining functions on the coordinate system of a space is subtly
+different from defining functions on the space itself.  For example,
+spin-weighted functions are generally written as functions of
+(``S^2``) spherical coordinates.  However, they *cannot* be defined as
+functions on ``S^2`` itself; some notion of a reference tangent
+direction is needed at each point.  The difference is that spherical
+*coordinates* supply a natural choice for the reference tangent
+direction: the unit vector in the ``\boldsymbol{\theta}`` direction.
+This supplies just enough information to define the spin-weighted
+functions — though this ends up not being a useful form when more
+general transformations or deeper understanding are needed.
+
+An important concept is that of a
+["lift"](https://en.wikipedia.org/wiki/Lift_(mathematics)).  Given
+``f`` and ``g`` in the diagram below, a lift of ``f`` is a function
+``h`` such that ``f = g \circ h``.
+```@raw html
+  <img class="display-light-only" src="../../assets/composition_diagram_light.svg"
+    alt="Lifting diagram showing relationships between spaces" width="40%"/>
+  <img class="display-dark-only" src="../../assets/composition_diagram_dark.svg"
+    alt="Lifting diagram showing relationships between spaces" width="40%"/>
+```
+Here, there are several relevant cases.  Functions on ``S^2`` can be
+lifted to ``S^3``; functions on either of those spaces can be lifted
+to their coordinate spaces; etc.
+
+
+
+!!! note "Lifts a a a a a a a a a a a a a a a a a a a a a a a a a a a"
+    Because of lifts or pushbacks, we have some freedom to define
+    functions on the "largest" space available.
 
 
   - Start with finite rotations — both left and right translations
