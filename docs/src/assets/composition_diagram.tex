@@ -4,6 +4,7 @@
 \usepackage{amssymb}
 \usepackage{amsfonts}
 \usepackage{xcolor}
+%\usepackage{fontspec} % For custom fonts
 
 % Run with `pdflatex "\def\invertcolors{} \input{$(TEX)}"` to invert colors
 \ifdefined\invertcolors
@@ -14,7 +15,7 @@
 
 \begin{document}
 % https://q.uiver.app/#q=WzAsMyxbMCwwLCJBIl0sWzIsMywiXFxtYXRoYmJ7Q30iXSxbNCwwLCJCIl0sWzAsMSwiZiIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImRhc2hlZCJ9fX1dLFswLDIsIm0iXSxbMiwxLCJGIl1d
-\begin{tikzcd}
+\begin{tikzcd}[every label/.append style = {font = \normalsize}]
 	A &&&& B \\
 	\\
 	\\
