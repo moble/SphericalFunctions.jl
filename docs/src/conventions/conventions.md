@@ -511,7 +511,7 @@ the Euler angles ``(\alpha, \beta, \gamma) = (\phi, \theta, 0)``.
 
 ## Rotation and angular-momentum operators
 
-## Complex-valued functions
+### Complex-valued functions
 
 Starting with Cartesian coordinates and the Euclidean norm on
 ``\mathbb{R}^3``, we have *constructed* the geometric algebra over
@@ -543,15 +543,11 @@ This supplies just enough information to define the spin-weighted
 functions — though this ends up not being a useful form when more
 general transformations or deeper understanding are needed.
 
-An important concept is that of a
-["lift"](https://en.wikipedia.org/wiki/Lift_(mathematics)).  Given
-``F`` and ``m`` in the diagram below, a lift of ``f`` is a function
-``F`` such that ``f = F \circ m``.
-
-Here, there are several relevant cases.  Functions on ``S^2`` can be
-lifted to ``S^3``; functions on either of those spaces can be lifted
-to their coordinate spaces; etc.  
-
+Because of this variety of spaces, we will need to use function
+composition in several ways; functions defined on one space can be
+"lifted" or "lowered" to another via maps between the spaces.  In the
+diagram below, the function ``F`` can be used to define the function
+``f`` via the mapping ``m`` as ``f = m \circ F``.
 ```@raw html
 <div class="composition-diagram">
 <?xml version='1.0' encoding='UTF-8'?>
@@ -574,15 +570,126 @@ to their coordinate spaces; etc.
 </svg>
 </div>
 ```
+For example, ``A`` could be the space of spherical coordinates, ``B``
+could be ``\mathrm{Spin}(3)``, and ``F`` could be a spin-weighted
+function.  There are many maps from spherical coordinates into
+``\mathrm{Spin}(3)``; we expect that all such maps will be related by
+rotations from ``\mathrm{SO}(3)``, and in some sense equivalent via
+some universality relation.  However, for singular maps — such as
+coordinate singularities where multiple coordinate values correspond
+to a single "physical" point — we find exceptions to the universality.
+These compositions will be useful, in that we can define functions on
+the "largest" available space, and extend them to any space that maps
+into the first.
 
+In principle, our functions should be defined on ``\mathrm{Spin}(3)``
+or even the quaternions in general, though in practice we will define
+them on the space of coordinates on those spaces.  In any case, we
+will classify the functions by their behavior with respect to actions
+of ``\mathrm{Spin}(3)`` on the argument to the function.  Therefore,
+we need to consider the general behavior of functions under such
+actions.
 
-!!! note "Lifts a a a a a a a a a a a a a a a a a a a a a a a a a a a"
-    Because of lifts or pushbacks, we have some freedom to define
-    functions on the "largest" space available.
+### Finite rotations
 
+We work with functions ``f: A \to \mathbb{C}``, where ``A`` is either
+the group of unit quaternions, or the full algebra of quaternions.
+Any non-zero quaternion can be expressed as ``e^q`` for some finite
+quaternion ``q``, which is referred to as the "generator" of the
+action of ``e^q``.  This can act on a function ``f`` by multiplying
+the argument by ``e^q``.  However, there is an ambiguity: we could
+multiply either on the left or the right:[^2]
+```math
+f\left(\mathbf{Q}\right) \mapsto f\left(e^q \mathbf{Q}\right)
+\qquad \text{or} \qquad
+f\left(\mathbf{Q}\right) \mapsto f\left(\mathbf{Q} e^q\right).
+```
+There is an additional ambiguity, in that this action rotates the
+*argument* of the function, whereas we will often prefer to think in
+terms of rotating the *function* itself.  For example, our function
+may describe the measurement of some field in a particular coordinate
+system.  Here, the argument ``\mathbf{Q}`` describes a particular
+value of the coordinates, and ``e^q`` changes the point under
+consideration.  If, on the other hand ``e^q`` describes how the field
+itself is rotated, then we can write the rotated field as a function
+``f'`` which is related to the original function ``f`` by
+```math
+f'\left(\mathbf{Q}\right) = f\left(e^{-q} \mathbf{Q}\right)
+\qquad \text{or} \qquad
+f'\left(\mathbf{Q}\right) = f\left(\mathbf{Q} e^{-q}\right).
+```
+Note that the exponent is negated, because the action of ``e^q`` on
+the argument is the inverse of the action of ``e^{-q}`` on the
+function.  This is a general property of the action of a group on a
+space, and is a consequence of the group action being a homomorphism.
 
-  - Start with finite rotations — both left and right translations
-    - note the signs; these give us the signs
+[^2]: In group theory, this type of transformation is often referred
+      to as a "translation", even when — as in this case — we would
+      usually describe these as rotations.
+
+To validate the signs here, it may be helpful to work through a simple
+example involving the sphere ``S^2``.  We define a function on
+spherical coordinates as
+```math
+f(\theta, \phi) = \sin\theta \sin\phi.
+```
+Recall that we can map the spherical coordinates into the Euler
+angles, and the Euler angles into the quaternion
+```math
+(\theta, \phi) \mapsto (\phi, \theta, 0) \mapsto \mathbf{Q}
+=
+\exp\left(\frac{\phi}{2} \mathbf{k}\right)
+\exp\left(\frac{\theta}{2} \mathbf{j}\right).
+```
+It is straightforward to see that we can write ``f`` as a function of
+``\mathbf{Q}`` as
+```math
+f(\mathbf{Q}) = \left\langle \mathbf{Q}\, \mathbf{k}\, \mathbf{Q}^{-1} \right\rangle_{\mathbf{j}},
+```
+where the angle brackets and subscript indicate that we are taking the
+``\mathbf{j}`` component.  That is, ``f`` is the ``y`` component of
+the vector ``\mathbf{z}`` rotated by ``\mathbf{Q}``. 
+
+Now, we imagine rotating the field by an angle ``\alpha`` in the
+positive sense about the ``z`` axis.  Visualizing the situation, we
+can see that the rotated field should be represented by
+```math
+f'(\theta, \phi) = \sin\theta \sin(\phi - \alpha).
+```
+For example, the rotated field evaluated at the point ``(\theta, \phi)
+= (\pi/2, 0)`` along the positive ``x`` axis should correspond to the
+original field evaluated at the point ``(\theta, \phi) = (\pi/2,
+-\alpha)``.  This rotation is generated by ``q = \alpha \mathbf{k} /
+2``, which allows us to immediately calculate
+```math
+\begin{aligned}
+f(e^q \mathbf{Q}) &= \sin\theta \sin(\phi + \alpha) &
+f(\mathbf{Q} e^q) &= \sin\theta \sin\phi \\
+f(e^{-q} \mathbf{Q}) &= \sin\theta \sin(\phi - \alpha) &
+f(\mathbf{Q} e^{-q}) &= \sin\theta \sin\phi.
+\end{aligned}
+```
+Thus, we see that left-multiplication by ``e^{-q}`` corresponds to
+rotation of the field while leaving the coordinates fixed;
+left-multiplication by ``e^q`` corresponds to rotation of the
+coordinates while leaving the field fixed; and right-multiplication by
+either doesn't affect this function at all.  (Of course,
+right-multiplication using other choices for ``q`` could certainly
+have some effect on this function, and this choice of ``q`` could have
+an effect on other functions.)
+
+### Differential rotations
+
+We now define a pair of operators the differentiate the value of a
+function with respect to infinitesimal rotations we apply to the
+functions themselves:
+```math
+\begin{aligned}
+L_{\mathrm{g}} f(\mathbf{Q}) &= \lambda \left. \frac{\partial} {\partial \theta} f \left( e^{-\theta \mathrm{g} / 2} \mathbf{Q} \right) \right|_{\theta=0}, \\
+R_{\mathrm{g}} f(\mathbf{Q}) &= \rho \left. \frac{\partial} {\partial \theta} f \left( \mathbf{Q} e^{\theta \mathrm{g} / 2} \right) \right|_{\theta=0}.
+\end{aligned}
+```
+
   - Then, we differentiate those finite rotations, generating rotation
     of a function by exponentiating a generator giving finite
     rotation; this lets us set some signs
