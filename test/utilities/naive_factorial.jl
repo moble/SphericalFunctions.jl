@@ -14,5 +14,12 @@ Use this snippet by including the following in your test file:
 module NaiveFactorials
     struct Factorial end
     Base.:*(n::Integer, ::Factorial) = factorial(big(n))
+    function Base.:*(n::Rational, ::Factorial) where {Rational}
+        if denominator(n) == 1
+            return factorial(big(numerator(n)))
+        else
+            throw(ArgumentError("Cannot compute factorial of a non-integer rational"))
+        end
+    end
     const ❗ = Factorial()
 end
