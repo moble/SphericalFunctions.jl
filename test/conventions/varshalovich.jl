@@ -3,8 +3,8 @@ Formulas and conventions from [Varshalovich's "Quantum Theory of Angular Momentu
 Varshalovich_1988).
 
 Note that Varshalovich labels his indices with `M` and `M′`, respectively, but if we just
-plug in `m′` and `m` (note the order), we get the expected result — his formulas are the
-same as this package's, except with a conjugate.
+plug in `m′` and `m` (note the order), we get the expected result; his formulas are the same
+as this package's, except with a conjugate.
 
 Varshalovich defines his Euler angles (scheme B, page 22) in the same way we do, except that
 he specifies that this describes the rotation *of the coordinate system*.
@@ -92,6 +92,180 @@ function d(J::I, M::I, M′::I, β::T) where {I, T}
     )
 end
 
+"""
+    d_½_explicit(J, M, M′, β)
+
+Explicit values for the half-integer Wigner d-function, as given in Tables 4.3—4.12 of
+[Varshalovich](@cite Varshalovich_1988).  Only values with J ∈ [1/2, 9/2] are supported.
+"""
+function d_½_explicit(J::Rational{Int}, M::Rational{Int}, M′::Rational{Int}, β::T) where T
+    if denominator(J) != 2 || denominator(M) != 2 || denominator(M′) != 2
+        error("Only half-integer J, M, M′ are supported")
+    end
+    if J < 1//2 || J > 9//2
+        error("Only J = 1/2, 3/2, 5/2, 7/2, 9/2 are supported")
+    end
+    if abs(M) > J || abs(M′) > J
+        error("abs(M) and abs(M′) must be ≤ J")
+    end
+    if M < 0
+        (-1)^(M-M′) * d_½_explicit(J, -M, -M′, β)
+    else
+        let √ = (x -> √T(x))
+            if (J, M, M′) == (1//2, 1//2,-1//2)
+                -sin(β/2)
+            elseif (J, M, M′) == (1//2, 1//2, 1//2)
+                cos(β/2)
+
+            elseif (J, M, M′) == (3//2, 1//2,-3//2)
+                √3 * sin(β/2)^2 * cos(β/2)
+            elseif (J, M, M′) == (3//2, 1//2,-1//2)
+                sin(β/2) * (3 * sin(β/2)^2 - 2)
+            elseif (J, M, M′) == (3//2, 1//2, 1//2)
+                cos(β/2) * (3 * cos(β/2)^2 - 2)
+            elseif (J, M, M′) == (3//2, 1//2, 3//2)
+                √3 * sin(β/2) * cos(β/2)^2
+            elseif (J, M, M′) == (3//2, 3//2,-3//2)
+                -sin(β/2)^3
+            elseif (J, M, M′) == (3//2, 3//2,-1//2)
+                √3 * sin(β/2)^2 * cos(β/2)
+            elseif (J, M, M′) == (3//2, 3//2, 1//2)
+                -√3 * sin(β/2) * cos(β/2)^2
+            elseif (J, M, M′) == (3//2, 3//2, 3//2)
+                cos(β/2)^3
+
+            elseif (J, M, M′) == (5//2, 5//2, 5//2)
+                cos(β/2)^5
+            elseif (J, M, M′) == (5//2, 5//2, 3//2)
+                -√5 * sin(β/2) * cos(β/2)^4
+            elseif (J, M, M′) == (5//2, 5//2, 1//2)
+                √10 * sin(β/2)^2 * cos(β/2)^3
+            elseif (J, M, M′) == (5//2, 5//2,-1//2)
+                -√10 * sin(β/2)^3 * cos(β/2)^2
+            elseif (J, M, M′) == (5//2, 5//2,-3//2)
+                √5 * sin(β/2)^4 * cos(β/2)
+            elseif (J, M, M′) == (5//2, 5//2,-5//2)
+                -sin(β/2)^5
+            elseif (J, M, M′) == (5//2, 3//2, 3//2)
+                cos(β/2)^3 * (1 - 5 * sin(β/2)^2)
+            elseif (J, M, M′) == (5//2, 3//2, 1//2)
+                -√2 * sin(β/2) * cos(β/2)^2 * (2 - 5 * sin(β/2)^2)
+            elseif (J, M, M′) == (5//2, 3//2,-1//2)
+                -√2 * sin(β/2)^2 * cos(β/2) * (2 - 5 * cos(β/2)^2)
+            elseif (J, M, M′) == (5//2, 3//2,-3//2)
+                sin(β/2)^3 * (1 - 5 * cos(β/2)^2)
+            elseif (J, M, M′) == (5//2, 1//2, 1//2)
+                cos(β/2) * (3 - 12 * cos(β/2)^2 + 10 * cos(β/2)^4)
+            elseif (J, M, M′) == (5//2, 1//2,-1//2)
+                -sin(β/2) * (3 - 12 * sin(β/2)^2 + 10 * sin(β/2)^4)
+
+            elseif (J, M, M′) == (7//2, 7//2, 7//2)
+                cos(β/2)^7
+            elseif (J, M, M′) == (7//2, 7//2, 5//2)
+                -√7 * cos(β/2)^6 * sin(β/2)
+            elseif (J, M, M′) == (7//2, 7//2, 3//2)
+                √21 * cos(β/2)^5 * sin(β/2)^2
+            elseif (J, M, M′) == (7//2, 7//2, 1//2)
+                -√35 * cos(β/2)^4 * sin(β/2)^3
+            elseif (J, M, M′) == (7//2, 7//2,-1//2)
+                √35 * cos(β/2)^3 * sin(β/2)^4
+            elseif (J, M, M′) == (7//2, 7//2,-3//2)
+                -√21 * cos(β/2)^2 * sin(β/2)^5
+            elseif (J, M, M′) == (7//2, 7//2,-5//2)
+                √7 * cos(β/2) * sin(β/2)^6
+            elseif (J, M, M′) == (7//2, 7//2,-7//2)
+                -sin(β/2)^7
+            elseif (J, M, M′) == (7//2, 5//2, 5//2)
+                cos(β/2)^5 * (1 - 7 * sin(β/2)^2)
+            elseif (J, M, M′) == (7//2, 5//2, 3//2)
+                -√3 * cos(β/2)^4 * sin(β/2) * (2 - 7 * sin(β/2)^2)
+            elseif (J, M, M′) == (7//2, 5//2, 1//2)
+                √5 * cos(β/2)^3 * sin(β/2)^2 * (3 - 7 * sin(β/2)^2)
+            elseif (J, M, M′) == (7//2, 5//2,-1//2)
+                √5 * cos(β/2)^2 * sin(β/2)^3 * (3 - 7 * cos(β/2)^2)
+            elseif (J, M, M′) == (7//2, 5//2,-3//2)
+                -√3 * cos(β/2) * sin(β/2)^4 * (2 - 7 * cos(β/2)^2)
+            elseif (J, M, M′) == (7//2, 5//2,-5//2)
+                sin(β/2)^5 * (1 - 7 * cos(β/2)^2)
+            elseif (J, M, M′) == (7//2, 3//2, 3//2)
+                cos(β/2)^3 * (10 - 30 * cos(β/2)^2 + 21 * cos(β/2)^4)
+            elseif (J, M, M′) == (7//2, 3//2, 1//2)
+                -√15 * cos(β/2)^2 * sin(β/2) * (2 - 8 * cos(β/2)^2 + 7 * cos(β/2)^4)
+            elseif (J, M, M′) == (7//2, 3//2,-1//2)
+                √15 * cos(β/2) * sin(β/2)^2 * (2 - 8 * sin(β/2)^2 + 7 * sin(β/2)^4)
+            elseif (J, M, M′) == (7//2, 3//2,-3//2)
+                -sin(β/2)^3 * (10 - 30 * sin(β/2)^2 + 21 * sin(β/2)^4)
+            elseif (J, M, M′) == (7//2, 1//2, 1//2)
+                -cos(β/2) * (4 - 30 * cos(β/2)^2 + 60 * cos(β/2)^4 - 35 * cos(β/2)^6)
+            elseif (J, M, M′) == (7//2, 1//2,-1//2)
+                -sin(β/2) * (4 - 30 * sin(β/2)^2 + 60 * sin(β/2)^4 - 35 * sin(β/2)^6)
+
+            elseif (J, M, M′) == (9//2, 9//2, 9//2)
+                cos(β/2)^9
+            elseif (J, M, M′) == (9//2, 9//2, 7//2)
+                -3 * cos(β/2)^8 * sin(β/2)
+            elseif (J, M, M′) == (9//2, 9//2, 5//2)
+                6 * cos(β/2)^7 * sin(β/2)^2
+            elseif (J, M, M′) == (9//2, 9//2, 3//2)
+                -2 * √21 * cos(β/2)^6 * sin(β/2)^3
+            elseif (J, M, M′) == (9//2, 9//2, 1//2)
+                3 * √14 * cos(β/2)^5 * sin(β/2)^4
+            elseif (J, M, M′) == (9//2, 9//2,-1//2)
+                -3 * √14 * cos(β/2)^4 * sin(β/2)^5
+            elseif (J, M, M′) == (9//2, 9//2,-3//2)
+                2 * √21 * cos(β/2)^3 * sin(β/2)^6
+            elseif (J, M, M′) == (9//2, 9//2,-5//2)
+                -6 * cos(β/2)^2 * sin(β/2)^7
+            elseif (J, M, M′) == (9//2, 9//2,-7//2)
+                3 * cos(β/2) * sin(β/2)^8
+            elseif (J, M, M′) == (9//2, 9//2,-9//2)
+                -sin(β/2)^9
+            elseif (J, M, M′) == (9//2, 7//2, 7//2)
+                cos(β/2)^7 * (1 - 9 * sin(β/2)^2)
+            elseif (J, M, M′) == (9//2, 7//2, 5//2)
+                -2 * cos(β/2)^6 * sin(β/2) * (2 - 9 * sin(β/2)^2)
+            elseif (J, M, M′) == (9//2, 7//2, 3//2)
+                2 * √21 * cos(β/2)^5 * sin(β/2)^2 * (1 - 3 * sin(β/2)^2)
+            elseif (J, M, M′) == (9//2, 7//2, 1//2)
+                -√14 * cos(β/2)^4 * sin(β/2)^3 * (4 - 9 * sin(β/2)^2)
+            elseif (J, M, M′) == (9//2, 7//2,-1//2)
+                -√14 * cos(β/2)^3 * sin(β/2)^4 * (4 - 9 * cos(β/2)^2)
+            elseif (J, M, M′) == (9//2, 7//2,-3//2)
+                2 * √21 * cos(β/2)^2 * sin(β/2)^5 * (1 - 3 * cos(β/2)^2)
+            elseif (J, M, M′) == (9//2, 7//2,-5//2)
+                -2 * cos(β/2) * sin(β/2)^6 * (2 - 9 * cos(β/2)^2)
+            elseif (J, M, M′) == (9//2, 7//2,-7//2)
+                sin(β/2)^7 * (1 - 9 * cos(β/2)^2)
+            elseif (J, M, M′) == (9//2, 5//2, 5//2)
+                cos(β/2)^5 * (21 - 56 * cos(β/2)^2 + 36 * cos(β/2)^4)
+            elseif (J, M, M′) == (9//2, 5//2, 3//2)
+                -√21 * cos(β/2)^4 * sin(β/2) * (5 - 16 * cos(β/2)^2 + 12 * cos(β/2)^4)
+            elseif (J, M, M′) == (9//2, 5//2, 1//2)
+                √14 * cos(β/2)^3 * sin(β/2)^2 * (5 - 20 * cos(β/2)^2 + 18 * cos(β/2)^4)
+            elseif (J, M, M′) == (9//2, 5//2,-1//2)
+                -√14 * cos(β/2)^2 * sin(β/2)^3 * (5 - 20 * sin(β/2)^2 + 18 * sin(β/2)^4)
+            elseif (J, M, M′) == (9//2, 5//2,-3//2)
+                √21 * cos(β/2) * sin(β/2)^4 * (5 - 16 * sin(β/2)^2 + 12 * sin(β/2)^4)
+            elseif (J, M, M′) == (9//2, 5//2,-5//2)
+                -sin(β/2)^5 * (21 - 56 * sin(β/2)^2 + 36 * sin(β/2)^4)
+            elseif (J, M, M′) == (9//2, 3//2, 3//2)
+                -cos(β/2)^3 * (20 - 105 * cos(β/2)^2 + 168 * cos(β/2)^4 - 84 * cos(β/2)^6)
+            elseif (J, M, M′) == (9//2, 3//2, 1//2)
+                √6 * cos(β/2)^2 * sin(β/2) * (5 - 35 * cos(β/2)^2 + 70 * cos(β/2)^4 - 42 * cos(β/2)^6)
+            elseif (J, M, M′) == (9//2, 3//2,-1//2)
+                √6 * cos(β/2) * sin(β/2)^2 * (5 - 35 * sin(β/2)^2 + 70 * sin(β/2)^4 - 42 * sin(β/2)^6)
+            elseif (J, M, M′) == (9//2, 3//2,-3//2)
+                -sin(β/2)^3 * (20 - 105 * sin(β/2)^2 + 168 * sin(β/2)^4 - 84 * sin(β/2)^6)
+            elseif (J, M, M′) == (9//2, 1//2, 1//2)
+                cos(β/2) * (5 - 60 * cos(β/2)^2 + 210 * cos(β/2)^4 - 280 * cos(β/2)^6 + 126 * cos(β/2)^8)
+            elseif (J, M, M′) == (9//2, 1//2,-1//2)
+                -sin(β/2) * (5 - 60 * sin(β/2)^2 + 210 * sin(β/2)^4 - 280 * sin(β/2)^6 + 126 * sin(β/2)^8)
+            end
+        end
+    end
+end
+
+
 end  # @testmodule Varshalovich
 
 
@@ -153,9 +327,24 @@ end  # @testmodule Varshalovich
                             end
                         end
                     end
+
                 end
             end
         end
+
+        for β ∈ βrange(T, n)
+            # Test the explicit half-integer d-functions
+            for J ∈ 1//2:3//2
+                for M ∈ -J:J
+                    for M′ ∈ -J:J
+                        d1 = Varshalovich.d(J, M, M′, β)
+                        d2 = Varshalovich.d_½_explicit(J, M, M′, β)
+                        @test d1 ≈ d2 atol=ϵₐ rtol=ϵᵣ
+                    end
+                end
+            end
+        end
+
     end
 
 end
