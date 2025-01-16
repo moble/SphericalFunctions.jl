@@ -181,7 +181,17 @@ The unit coordinate vectors in spherical coordinates are then
 \end{aligned}
 ```
 where, again, we omit the hats on the unit vectors to keep the
-notation simple.
+notation simple.  Conversely, we can express the Cartesian basis
+vectors in terms of the spherical basis vectors as
+```math
+\begin{aligned}
+\mathbf{𝐱} &= \sin\theta \cos\phi \mathbf{𝐫} + \cos\theta \cos\phi \boldsymbol{\theta} - \sin\phi \boldsymbol{\phi}, 
+\\
+\mathbf{𝐲} &= \sin\theta \sin\phi \mathbf{𝐫} + \cos\theta \sin\phi \boldsymbol{\theta} + \cos\phi \boldsymbol{\phi},
+\\
+\mathbf{𝐳} &= \cos\theta \mathbf{𝐫} - \sin\theta \boldsymbol{\theta}.
+\end{aligned}
+```
 
 One seemingly obvious — but extremely important — fact is that the
 unit basis frame ``(𝐱, 𝐲, 𝐳)`` can be rotated onto
@@ -405,6 +415,37 @@ g_{i'j'}
   0 & \frac{R^2 \cos\beta}{4} & 0 & \frac{R^2}{4}
 \end{array} \right)_{i'j'}.
 ```
+The unit basis vectors in extended Euler coordinates in terms of the
+unit basis vectors in quaternion coordinates are
+```math
+\begin{aligned}
+\mathbf{𝐑} &= \frac{1}{R} \left(
+  \cos \frac{\beta}{2} \cos \frac{\alpha+\gamma}{2} 𝟏
+  - \sin \frac{\beta}{2} \sin \frac{\alpha-\gamma}{2} 𝐢
+  + \sin \frac{\beta}{2} \cos \frac{\alpha-\gamma}{2} 𝐣
+  + \cos \frac{\beta}{2} \sin \frac{\alpha+\gamma}{2} 𝐤
+\right), \\
+\boldsymbol{\alpha} &= \frac{R}{2} \left(
+  -\cos \frac{\beta}{2} \sin \frac{\alpha+\gamma}{2} 𝟏
+  - \sin \frac{\beta}{2} \cos \frac{\alpha-\gamma}{2} 𝐢
+  - \sin \frac{\beta}{2} \sin \frac{\alpha-\gamma}{2} 𝐣
+  + \cos \frac{\beta}{2} \cos \frac{\alpha+\gamma}{2} 𝐤
+\right), \\
+\boldsymbol{\beta} &= \frac{R}{2} \left(
+  -\sin \frac{\beta}{2} \cos \frac{\alpha+\gamma}{2} 𝟏
+  - \cos \frac{\beta}{2} \sin \frac{\alpha-\gamma}{2} 𝐢
+  + \cos \frac{\beta}{2} \cos \frac{\alpha-\gamma}{2} 𝐣
+  - \sin \frac{\beta}{2} \sin \frac{\alpha+\gamma}{2} 𝐤
+\right), \\
+\boldsymbol{\gamma} &= \frac{R}{2} \left(
+  -\cos \frac{\beta}{2} \sin \frac{\alpha+\gamma}{2} 𝟏
+  + \sin \frac{\beta}{2} \cos \frac{\alpha-\gamma}{2} 𝐢
+  - \sin \frac{\beta}{2} \cos \frac{\alpha-\gamma}{2} 𝐣
+  - \cos \frac{\beta}{2} \sin \frac{\alpha+\gamma}{2} 𝐤
+\right).
+\end{aligned}
+```
+
 Again, integration involves a square-root of the determinant of the
 metric, which reduces to ``R^3 |\sin\beta| / 8``.  Note that — unlike
 with standard spherical coordinates — the absolute value is necessary
@@ -802,6 +843,8 @@ R_\pm &= R_\mathbf{x} \pm i R_\mathbf{y}.
 \end{aligned}
 ```
 
+[Show how this happens:]
+
 Using these relations, we can actually solve for the constants
 ``\lambda`` and ``\rho`` up to a sign.  We find that
 ```math
@@ -845,3 +888,149 @@ $\partial_\alpha$, etc., when $\theta=0$.
   -\mathbf{z} \left[ \frac{\partial \alpha''} {\partial \theta}\frac{\partial} {\partial \alpha} + \frac{\partial \beta''} {\partial \theta}\frac{\partial} {\partial \beta} + \frac{\partial \gamma''} {\partial \theta}\frac{\partial} {\partial \gamma} \right]_{\theta=0} f \left( \mathbf{R}_{\alpha, \beta, \gamma} \right),
 \end{align}
 ```
+
+### Laplacians
+
+[Bander_1966](@citet) show that Wigner's D matrices (extended to the
+full space of quaternions with arbitrary norm) are harmonic with
+respect to the Laplacian of the full 4-D space.  We also know that
+```math
+\Delta_{S^{n-1}} f(x) = \Delta_{\mathbb{R}^n} f(x/|x|),
+```
+and
+```math
+\Delta_{\mathbb{R}^n} f(x)
+=
+\frac{1}{r^{n-1}} \frac{\partial}{\partial r} \left( r^{n-1} \frac{\partial f}{\partial r} \right)
++
+\frac{1}{r^2} \Delta_{S^{n-1}} f.
+```
+These imply that the restriction to the space of unit quaternions is
+not harmonic with respect to the Laplacian on the 3-sphere, but is an
+eigenfunction with eigenvalue ``-\ell(\ell+2)``.
+
+```math
+\frac{1}{r^{n-1}} \frac{\partial}{\partial r} \left( r^{n-1} \frac{\partial f}{\partial r} \right)
+=
+\frac{1}{r^{n-1}} \left( r^{n-1} \frac{\partial}{\partial r} \frac{\partial f}{\partial r} \right)
++
+\frac{1}{r^{n-1}} \frac{\partial}{\partial r} \left( r^{n-1} \right) \frac{\partial f}{\partial r}
+=
+\frac{\partial^2 f}{\partial r^2}
++
+\frac{n-1}{r^{n-1}} r^{n-2} \frac{\partial f}{\partial r}
+=
+\frac{\partial^2 f}{\partial r^2}
++
+\frac{n-1}{r} \frac{\partial f}{\partial r}
+```
+
+```math
+\frac{\partial^2 f}{\partial r^2}
++
+\frac{n-1}{r} \frac{\partial f}{\partial r}
+=
+\frac{f}{r^\ell} \frac{\partial^2 r^\ell}{\partial r^2}
++
+\frac{f}{r^\ell} \frac{n-1}{r} \frac{\partial r^\ell}{\partial r}
+=
+\ell(\ell-1) \frac{f}{r^\ell} r^{\ell-2}
++
+\ell \frac{f}{r^\ell} \frac{n-1}{r} r^{\ell-1}
+=
+\ell(\ell-1) \frac{f}{r^2}
++
+\ell (n-1) \frac{f}{r^2}
+\to
+\ell(\ell+2) \frac{f}{r^2}
+```
+
+Note that [Lee_2012](@citet) points out that there is a sign ambiguity
+in the Laplacian.  As I see it, the geometry community skews toward
+including a negative sign (which means that all eigenvalues are
+non-negative), while the physics community skews toward excluding it
+(which means that all eigenvalues are non-positive).  It's also easy
+to prove that on a closed and connected manifold, eigenfunctions with
+distinct eigenvalues are orthogonal, since
+```math
+(\lambda_u - \lambda_v) \int f_u f_v
+= \int (\lambda_u f_u) f_v - \int f_u (\lambda_v f_v)
+= \int (\Delta f_u) f_v - \int f_u (\Delta f_v) = 0
+```
+(the last equality by Green's theorem).  Since the eigenvalues are
+distinct, this can only be true if ``\int f_u f_v=0``.
+
+
+##  Representation theory / harmonic analysis
+  - Representations show up in Fourier analysis on groups
+  - Peter-Weyl theorem
+    - Generalizes Fourier analysis to compact groups
+    - Has three parts, [as given by Wikipedia](https://en.wikipedia.org/wiki/Peter%E2%80%93Weyl_theorem):
+      1. "The matrix coefficients of irreducible representations of
+         ``G`` are dense in the space ``C(G)`` of continuous
+         complex-valued functions on ``G``, and thus also in the space
+         ``L^2(G)`` of square-integrable functions."
+      2. Unitary representations of ``G`` are completely reducible.
+      3. "The regular representation of ``G`` on ``L^2(G)`` decomposes
+         as the direct sum of all irreducible unitary representations.
+         Moreover, the matrix coefficients of the irreducible unitary
+         representations form an orthonormal basis of ``L^2(G)``."
+  - Representation theory of ``\mathbf{Spin}(3)``
+    - Show how the Lie algebra is represented by the angular-momentum operators
+    - Show how the Lie group is represented by the Wigner D-matrices
+    - Demonstrate that ``\mathfrak{D}`` is a representation
+    - Demonstrate its behavior under left and right rotation
+    - Demonstrate orthonormality
+  - Representation theory of ``\mathbf{SO}(3)``
+    - There are several places in [Folland](@cite Folland_2016) (e.g.,
+      above corollary 5.48) where he mentions that representations of
+      a quotient group are just representations that are trivial
+      (evidently meaning mapping everything to the identity matrix) on
+      the factor.  I can't find anywhere that he explains this
+      explicitly, but it seems easy enough to show.  He might do it
+      using characters.
+    - For ``\mathbf{Spin}(3)`` and ``\mathbf{SO}(3)``, the factor
+      group is just ``\{1, -1\}``.  Presumably, every representation
+      acting on ``1`` will give the identity matrix, so that's
+      trivial.  So we just need a criterion for when a representation
+      is trivial on ``-1``.  Noting that ``\exp(\pi \vec{v}) = -1``
+      for any ``\vec{v}``, I think we can show that this requires
+      ``m \in \mathbb{Z}``.
+    - Basically, the point is that the representations of
+      ``\mathbf{SO}(3)`` are just the integer representations of
+      ``\mathbf{Spin}(3)``.
+  - Restrict to homogeneous space (S³ -> S²)
+    - The circle group is a closed (normal?) subgroup of
+      ``\mathbf{Spin}(3)``, which we might implement as initial
+      multiplication about a particular axis.
+    - In Eq. (2.47) [Folland (2016)](@cite Folland_2016) defines a
+      functional taking a function on the group to a function on the
+      homogeneous space by integrating over the factor (the circle
+      group).  This gives you the spherical harmonics, but *not* the
+      spin-weighted spherical harmonics — because the spin-weighted
+      spherical harmonics cannot be defined on the 2-sphere.
+    - Spin weight comes from Fourier analysis on the subgroup.
+    - Representation matrices transfer to the homogeneous space, with
+      sparsity patterns
+
+## Recursion relations
+
+[Gumerov and Duraiswami (2001)](@cite Gumerov_2001) derive their
+recursion relations by differentiating solutions of the Helmholtz
+equation ``\nabla^2 \psi + k^2 \psi = 0`` as ``\tfrac{1}{k} \nabla
+\psi``.  More precisely, they differentiate both sides of the equation
+relating one solution to its rotated form — which naturally involves
+Wigner's ``\mathfrak{D}`` matrix.  Using orthogonal basis functions
+for the solution, this allows them to equate terms on the two sides
+proportional to a given basis function, which leaves them with
+expressions involving sums of only the ``\mathfrak{D}`` matrices and
+some coefficients depending on the indices of the basis functions (and
+hence of ``\mathfrak{D}``) on both sides of the equation.  Since
+``\nabla`` is a 3-vector operator, this gives them three relations.
+
+This, of course, is happening in 3-D space, since ``\psi`` is a
+function of location in the Helmholtz equation.  It seems likely to
+me, however, that we could use the 4-D (quaternionic) version of the
+functions 
+
+The SWSHs/``\mathfrak{D}`` functions can be promoted to 
