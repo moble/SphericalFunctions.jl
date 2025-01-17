@@ -10,7 +10,6 @@ using Quaternionic: Quaternionic, Rotor, from_spherical_coordinates,
 using StaticArrays: @SVector
 using SpecialFunctions, DoubleFloats
 using LoopVectorization: @turbo
-using Hwloc: num_physical_cores
 using Base.Threads: @threads, nthreads
 using TestItems: @testitem
 
