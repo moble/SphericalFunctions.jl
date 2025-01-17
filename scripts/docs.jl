@@ -16,4 +16,11 @@ cd((@__DIR__) * "/..")
 Pkg.activate("docs")
 
 using LiveServer
-servedocs(launch_browser=true)
+literate_input = joinpath(pwd(), "docs", "literate_input")
+literate_output = joinpath(pwd(), "docs", "src", "literate_output")
+@info "Using input for Literate.jl from $literate_input"
+servedocs(
+    literate_dir = literate_input,
+    skip_dir = literate_output,
+    launch_browser=true
+)
