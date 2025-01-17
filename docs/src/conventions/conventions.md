@@ -744,11 +744,6 @@ course, we will see below that changing by a phase proportional to
 
 ### Differential rotations
 
-  - Express angular momentum operators in terms of quaternion components
-    - Basic Lie definition
-    - Properties: form a Lie algebra with the commutator as the Lie bracket
-
-
 We now define a pair of operators that differentiate a function with
 respect to infinitesimal rotations we apply to the functions
 themselves:
@@ -872,9 +867,10 @@ depend on $\theta$.  We then use the chain rule to express
 $\partial_\theta$ in terms of $\partial_{\alpha'}$, etc., which become
 $\partial_\alpha$, etc., when $\theta=0$.
 
+
 ```math
 \begin{align}
-  L_i f(\mathbf{R})
+  L_i f(\mathbf{R}_{\alpha, \beta, \gamma})
   &=
   \left. -\mathbf{z} \frac{\partial} {\partial \theta} f \left( e^{\theta \mathbf{e}_i / 2} \mathbf{R}_{\alpha, \beta, \gamma} \right) \right|_{\theta=0} \\
   &=
@@ -883,11 +879,46 @@ $\partial_\alpha$, etc., when $\theta=0$.
   \left. -\mathbf{z} \left[ \frac{\partial \alpha'} {\partial \theta}\frac{\partial} {\partial \alpha'} + \frac{\partial \beta'} {\partial \theta}\frac{\partial} {\partial \beta'} + \frac{\partial \gamma'} {\partial \theta}\frac{\partial} {\partial \gamma'} \right] f \left( \mathbf{R}_{\alpha', \beta', \gamma'} \right) \right|_{\theta=0} \\
   &=
   -\mathbf{z} \left[ \frac{\partial \alpha'} {\partial \theta}\frac{\partial} {\partial \alpha} + \frac{\partial \beta'} {\partial \theta}\frac{\partial} {\partial \beta} + \frac{\partial \gamma'} {\partial \theta}\frac{\partial} {\partial \gamma} \right]_{\theta=0} f \left( \mathbf{R}_{\alpha, \beta, \gamma} \right) \\
-  K_i f(\mathbf{R})
+  K_i f(\mathbf{R}_{\alpha, \beta, \gamma})
   &=
   -\mathbf{z} \left[ \frac{\partial \alpha''} {\partial \theta}\frac{\partial} {\partial \alpha} + \frac{\partial \beta''} {\partial \theta}\frac{\partial} {\partial \beta} + \frac{\partial \gamma''} {\partial \theta}\frac{\partial} {\partial \gamma} \right]_{\theta=0} f \left( \mathbf{R}_{\alpha, \beta, \gamma} \right),
 \end{align}
 ```
+
+```math
+\begin{aligned}
+\mathbf{R}_{\alpha, \beta, \gamma}
+&=
+  R\, \cos\frac{β}{2} \cos\frac{α+γ}{2}
+  -R\, \sin\frac{β}{2} \sin\frac{α-γ}{2} \mathbf{i}
+  + R\, \sin\frac{β}{2} \cos\frac{α-γ}{2} \mathbf{j}
+  + R\, \cos\frac{β}{2} \sin\frac{α+γ}{2} \mathbf{k}.
+\\
+e^{\theta \mathbf{u} / 2} \mathbf{R}_{\alpha, \beta, \gamma}
+&= \left(\cos\frac{\theta}{2} + \mathbf{u} \sin\frac{\theta}{2}\right) \mathbf{R}_{\alpha, \beta, \gamma}
+\\
+&=
+  R\, \cos\frac{\theta}{2} \cos\frac{β}{2} \cos\frac{α+γ}{2}
+  -R\, \cos\frac{\theta}{2} \sin\frac{β}{2} \sin\frac{α-γ}{2} \mathbf{i}
+  + R\, \cos\frac{\theta}{2} \sin\frac{β}{2} \cos\frac{α-γ}{2} \mathbf{j}
+  + R\, \cos\frac{\theta}{2} \cos\frac{β}{2} \sin\frac{α+γ}{2} \mathbf{k}
+\\
+&\quad +
+  R\, \sin\frac{\theta}{2}\cos\frac{β}{2} \cos\frac{α+γ}{2} \mathbf{u}
+  -R\, \sin\frac{\theta}{2}\sin\frac{β}{2} \sin\frac{α-γ}{2} \mathbf{u}\mathbf{i}
+  + R\, \sin\frac{\theta}{2}\sin\frac{β}{2} \cos\frac{α-γ}{2} \mathbf{u}\mathbf{j}
+  + R\, \sin\frac{\theta}{2}\cos\frac{β}{2} \sin\frac{α+γ}{2} \mathbf{u}\mathbf{k}
+\end{aligned}
+```
+
+```math
+\begin{aligned}
+\alpha &= \arctan\frac{Z}{W} + \arctan\frac{-X}{Y} &&\in [0, 2\pi), \\
+\beta &= 2\arccos\sqrt{\frac{W^2+Z^2}{W^2+X^2+Y^2+Z^2}} &&\in [0, 2\pi], \\
+\gamma &= \arctan\frac{Z}{W} - \arctan\frac{-X}{Y} &&\in [0, 2\pi),
+\end{aligned}
+```
+
 
 ### Laplacians
 
@@ -941,6 +972,8 @@ eigenfunction with eigenvalue ``-\ell(\ell+2)``.
 \ell(\ell-1) \frac{f}{r^2}
 +
 \ell (n-1) \frac{f}{r^2}
+=
+\ell(\ell+n-2) \frac{f}{r^2}
 \to
 \ell(\ell+2) \frac{f}{r^2}
 ```
@@ -959,6 +992,8 @@ distinct eigenvalues are orthogonal, since
 ```
 (the last equality by Green's theorem).  Since the eigenvalues are
 distinct, this can only be true if ``\int f_u f_v=0``.
+
+[Show the relationship between the spherical Laplacian and the angular momentum operator.]
 
 
 ##  Representation theory / harmonic analysis
@@ -1031,6 +1066,15 @@ hence of ``\mathfrak{D}``) on both sides of the equation.  Since
 This, of course, is happening in 3-D space, since ``\psi`` is a
 function of location in the Helmholtz equation.  It seems likely to
 me, however, that we could use the 4-D (quaternionic) version of the
-functions 
+functions.  Note that G&D use ``\partial_z`` and ``\partial_x \pm i
+\partial_y`` as their operators to differentiate the functions — that
+is, the derivatives are with respect to Cartesian coordinates, which
+may be more similar to the right-derivative defined above.  However, I
+don't know that we'll necessarily be able to achieve the same results
+with just angular-momentum operators, since their operators do involve
+moving off of the sphere.  Maybe we'd need to move off of the sphere
+in 4-D space to get comparable results.
 
-The SWSHs/``\mathfrak{D}`` functions can be promoted to 
+The SWSHs/``\mathfrak{D}`` functions can be naturally promoted to
+functions not just on the 3-sphere, but also in 4-D space just by
+allowing the quaternions to be non-unit quaternions.
