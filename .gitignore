@@ -37,3 +37,5 @@ conventions.slides.json
 
 rotate.jl
 
+docs/.CondaPkg
+docs/src/literate_output

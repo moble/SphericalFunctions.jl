@@ -2,15 +2,34 @@
 #   julia -t 4 --project=. scripts/docs.jl
 # assuming you are in this top-level directory
 
-using SphericalFunctions
 using Documenter
+using Literate
+
+docs_src_dir = joinpath(@__DIR__, "src")
+
+# See LiveServer.jl docs for this: https://juliadocs.org/LiveServer.jl/dev/man/ls+lit/
+literate_input = joinpath(@__DIR__, "literate_input")
+literate_output = joinpath(docs_src_dir, "literate_output")
+for (root, _, files) ∈ walkdir(literate_input), file ∈ files
+    # ignore non julia files
+    splitext(file)[2] == ".jl" || continue
+    # full path to a literate script
+    input_path = joinpath(root, file)
+    # generated output path
+    output_path = splitdir(replace(input_path, literate_input=>literate_output))[1]
+    # generate the markdown file calling Literate
+    Literate.markdown(input_path, output_path)
+end
+relative_literate_output = relpath(literate_output, docs_src_dir)
+
 using DocumenterCitations
 
 bib = CitationBibliography(
-    joinpath(@__DIR__, "src", "references.bib");
+    joinpath(docs_src_dir, "references.bib");
     #style=:authoryear,
 )
 
+using SphericalFunctions
 DocMeta.setdocmeta!(SphericalFunctions, :DocTestSetup, :(using SphericalFunctions); recursive=true)
 
 makedocs(
@@ -37,10 +56,11 @@ makedocs(
         "Conventions" => [
             "conventions/conventions.md",
             "conventions/comparisons.md",
+            joinpath(relative_literate_output, "euler_angular_momentum.md"),
         ],
         "Notes" => map(
             s -> "notes/$(s)",
-            sort(readdir(joinpath(@__DIR__, "src/notes")))
+            sort(readdir(joinpath(docs_src_dir, "notes")))
         ),
         "References" => "references.md",
     ],
