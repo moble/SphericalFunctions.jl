@@ -50,11 +50,11 @@ Euler angles.
 8. For a complex-valued function ``f(𝐑)``, we define two operators,
    the left and right Lie derivatives:
    ```math
-   L_𝐮 f(𝐑) = \left.-i \frac{d}{d\epsilon}\right|_{\epsilon=0}
-   f\left(e^{\epsilon 𝐮/2}\, 𝐑\right)
+   L_𝐮 f(𝐑) = \left.i \frac{d}{d\epsilon}\right|_{\epsilon=0}
+   f\left(e^{-\epsilon 𝐮/2}\, 𝐑\right)
    \qquad \text{and} \qquad
-   R_𝐮 f(𝐑) = \left.-i \frac{d}{d\epsilon}\right|_{\epsilon=0}
-   f\left(𝐑\, e^{\epsilon 𝐮/2}\right),
+   R_𝐮 f(𝐑) = \left.i \frac{d}{d\epsilon}\right|_{\epsilon=0}
+   f\left(𝐑\, e^{-\epsilon 𝐮/2}\right),
    ```
    where ``𝐮`` can be any pure-vector quaternion.  In particular,
    ``L`` represents the standard angular-momentum operators, and we
@@ -72,17 +72,17 @@ Euler angles.
         +\frac{\sin\alpha}{\sin\beta} \frac{\partial} {\partial \gamma}
     \right\} \\
     L_z = L_𝐤 &= -i \frac{\partial} {\partial \alpha} \\
-    K_x = K_𝐢 &= -i \left\{
+    R_x = R_𝐢 &= -i \left\{
         -\frac{\cos\gamma}{\sin\beta} \frac{\partial} {\partial \alpha}
         +\sin\gamma \frac{\partial} {\partial \beta}
         +\frac{\cos\gamma}{\tan\beta} \frac{\partial} {\partial \gamma}
     \right\} \\
-    K_y = K_𝐣 &= -i \left\{
+    R_y = R_𝐣 &= -i \left\{
         \frac{\sin\gamma}{\sin\beta} \frac{\partial} {\partial \alpha}
         +\cos\gamma \frac{\partial} {\partial \beta}
         -\frac{\sin\gamma}{\tan\beta} \frac{\partial} {\partial \gamma}
     \right\} \\
-    K_z = K_𝐤 &= -i \frac{\partial} {\partial \gamma}
+    R_z = R_𝐤 &= -i \frac{\partial} {\partial \gamma}
    \end{aligned}
    ```
    We can lift any function on ``S^2`` to a function on ``S^3`` — or
@@ -105,8 +105,8 @@ Euler angles.
     L_z &= -i \frac{\partial} {\partial \phi}
    \end{aligned}
    ```
-   (The ``R`` operators make less sense for a function of spherical
-   coordinates.)
+   The ``R`` operators make less sense for a function of spherical
+   coordinates.
 9. Spherical harmonics
 10. Wigner D-matrices
 11. Spin-weighted spherical harmonics
