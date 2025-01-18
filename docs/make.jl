@@ -2,6 +2,12 @@
 #   julia -t 4 --project=. scripts/docs.jl
 # assuming you are in this top-level directory
 
+# Pretty-print the current time
+using Dates
+@info """Building docs starting at $(Dates.format(Dates.now(), "HH:MM:SS"))."""
+
+start = time()  # We'll display the total after everything has finished
+
 using Documenter
 using Literate
 
@@ -18,7 +24,7 @@ for (root, _, files) ∈ walkdir(literate_input), file ∈ files
     # generated output path
     output_path = splitdir(replace(input_path, literate_input=>literate_output))[1]
     # generate the markdown file calling Literate
-    Literate.markdown(input_path, output_path)
+    Literate.markdown(input_path, output_path, documenter=true, mdstrings=true)
 end
 relative_literate_output = relpath(literate_output, docs_src_dir)
 
@@ -73,3 +79,5 @@ deploydocs(
     devbranch="main",
     push_preview=true
 )
+
+println("Docs built in ", time() - start, " seconds.")
