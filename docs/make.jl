@@ -62,7 +62,9 @@ makedocs(
         "Conventions" => [
             "conventions/conventions.md",
             "conventions/comparisons.md",
-            joinpath(relative_literate_output, "euler_angular_momentum.md"),
+            "Calculations" => [
+                joinpath(relative_literate_output, "euler_angular_momentum.md"),
+            ],
         ],
         "Notes" => map(
             s -> "notes/$(s)",
