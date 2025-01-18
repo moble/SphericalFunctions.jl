@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>L_j in Euler angles · SphericalFunctions.jl</title><meta name="title" content="L_j in Euler angles · SphericalFunctions.jl"/><meta property="og:title" content="L_j in Euler angles · SphericalFunctions.jl"/><meta property="twitter:title" content="L_j in Euler angles · SphericalFunctions.jl"/><meta name="description" content="Documentation for SphericalFunctions.jl."/><meta property="og:description" content="Documentation for SphericalFunctions.jl."/><meta property="twitter:description" content="Documentation for SphericalFunctions.jl."/><meta property="og:url" content="https://moble.github.io/SphericalFunctions.jl/stable/literate_output/euler_angular_momentum/"/><meta property="twitter:url" content="https://moble.github.io/SphericalFunctions.jl/stable/literate_output/euler_angular_momentum/"/><link rel="canonical" href="https://moble.github.io/SphericalFunctions.jl/stable/literate_output/euler_angular_momentum/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/citations.css" rel="stylesheet" type="text/css"/><link href="../../assets/extras.css" rel="stylesheet" type="text/css"/></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">SphericalFunctions.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Introduction</a></li><li><a class="tocitem" href="../../transformations/"><span>$s$</span>-SHT Transformations</a></li><li><a class="tocitem" href="../../wigner_matrices/">Wigner&#39;s <span>$𝔇$</span> and <span>$d$</span> matrices</a></li><li><a class="tocitem" href="../../sYlm/"><span>${}_{s}Y_{\ell,m}$</span> functions</a></li><li><a class="tocitem" href="../../operators/">Differential operators</a></li><li><a class="tocitem" href="../../utilities/">Utilities</a></li><li><span class="tocitem">API</span><ul><li><a class="tocitem" href="../../internal/">Internal functions</a></li><li><a class="tocitem" href="../../functions/">Complete function list</a></li></ul></li><li><span class="tocitem">Conventions</span><ul><li><a class="tocitem" href="../../conventions/conventions/">Conventions</a></li><li><a class="tocitem" href="../../conventions/comparisons/">Comparisons</a></li><li class="is-active"><a class="tocitem" href><span>$L_j$</span> in Euler angles</a></li></ul></li><li><span class="tocitem">Notes</span><ul><li><a class="tocitem" href="../../notes/H_recursions/">Algorithm for computing <span>$H$</span></a></li><li><a class="tocitem" href="../../notes/sampling_theorems/">Sampling theorems and transformations of spin-weighted spherical harmonics</a></li></ul></li><li><a class="tocitem" href="../../references/">References</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Conventions</a></li><li class="is-active"><a href><span>$L_j$</span> in Euler angles</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href><span>$L_j$</span> in Euler angles</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/moble/SphericalFunctions.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/moble/SphericalFunctions.jl/blob/main/docs/literate_input/euler_angular_momentum.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="L_j-in-Euler-angles"><a class="docs-heading-anchor" href="#L_j-in-Euler-angles"><span>$L_j$</span> in Euler angles</a><a id="L_j-in-Euler-angles-1"></a><a class="docs-heading-anchor-permalink" href="#L_j-in-Euler-angles" title="Permalink"></a></h1><p>Here, we will use SymPy to just grind through the algebra of expressing the angular-momentum operators in terms of Euler angles.</p><p>The plan starts by defining a new set of Euler angles according to</p><p class="math-container">\[\mathbf{R}_{\alpha&#39;, \beta&#39;, \gamma&#39;}
+= e^{-\theta \mathbf{u} / 2} \mathbf{R}_{\alpha, \beta, \gamma}
+\qquad \text{or} \qquad
+\mathbf{R}_{\alpha&#39;, \beta&#39;, \gamma&#39;}
+= \mathbf{R}_{\alpha, \beta, \gamma} e^{-\theta \mathbf{u} / 2}\]</p><p>where <span>$\mathbf{u}$</span> will be each of the basis quaternions, and each of <span>$\alpha&#39;$</span>, <span>$\beta&#39;$</span>, and <span>$\gamma&#39;$</span> is a function of <span>$\alpha$</span>, <span>$\beta$</span>, <span>$\gamma$</span>, and <span>$\theta$</span>.  Then, we note that the chain rule tells us that</p><p class="math-container">\[\frac{\partial}{\partial \theta}
+=
+\frac{\partial \alpha&#39;}{\partial \theta} \frac{\partial}{\partial \alpha&#39;}
++ \frac{\partial \beta&#39;}{\partial \theta} \frac{\partial}{\partial \beta&#39;}
++ \frac{\partial \gamma&#39;}{\partial \theta} \frac{\partial}{\partial \gamma&#39;},\]</p><p>which we will use to convert the general expression for the angular-momentum operators in terms of <span>$\partial_\theta$</span> into an expression in terms of derivatives with respect to these new Euler angles.</p><p class="math-container">\[\begin{align}
+  L_j f(\mathbf{R}_{\alpha, \beta, \gamma})
+  &amp;=
+  \left. i \frac{\partial} {\partial \theta} f \left( e^{-\theta \mathbf{e}_j / 2}
+  \mathbf{R}_{\alpha, \beta, \gamma} \right) \right|_{\theta=0}
+  \\
+  &amp;=
+  i \left[ \left(
+      \frac{\partial \alpha&#39;}{\partial \theta} \frac{\partial}{\partial \alpha&#39;}
+      + \frac{\partial \beta&#39;}{\partial \theta} \frac{\partial}{\partial \beta&#39;}
+      + \frac{\partial \gamma&#39;}{\partial \theta} \frac{\partial}{\partial \gamma&#39;}
+  \right) f \left(\alpha&#39;, \beta&#39;, \gamma&#39;\right) \right]_{\theta=0}
+  \\
+  &amp;=
+  i \left[ \left(
+      \frac{\partial \alpha&#39;}{\partial \theta} \frac{\partial}{\partial \alpha}
+      + \frac{\partial \beta&#39;}{\partial \theta} \frac{\partial}{\partial \beta}
+      + \frac{\partial \gamma&#39;}{\partial \theta} \frac{\partial}{\partial \gamma}
+  \right) f \left(\alpha, \beta, \gamma\right) \right]_{\theta=0},
+\end{align}\]</p><p>and similarly for <span>$R_j$</span>.</p><p>So the objective is to find the new Euler angles, differentiate with respect to <span>$\theta$</span>, and then evaluate at <span>$\theta = 0$</span>.  We do this by first expressing <span>$\mathbf{R}_{\alpha, \beta, \gamma}$</span> in terms of its quaternion components, then multiplying by <span>$e^{-\theta \mathbf{u} / 2}$</span> and expanding.  We then find the new Euler angles in terms of the components of the resulting quaternion according to the usual expression.</p><p>We&#39;ll use SymPy (via Julia) since <code>Symbolics.jl</code> isn&#39;t very good at trig yet.</p><pre><code class="language-julia hljs">using LaTeXStrings
+import SymPyPythonCall
+import SymPyPythonCall: sympy, symbols, sqrt, sin, cos, tan, acos, atan, latex
+const expand_trig = sympy.expand_trig
+const Derivative = sympy.Derivative
+const Quaternion =  sympy.Quaternion
+const π = sympy.pi</code></pre><p>Define coordinates we will use</p><pre><code class="language-julia hljs">α, β, γ, θ = symbols(&quot;α β γ θ&quot;, real=true, positive=true)
+uw, ux, uy, uz = symbols(&quot;u_w u_x u_y u_z&quot;, real=true)</code></pre><p>Define the basis quaternions</p><pre><code class="language-julia hljs">i = Quaternion(0, 1, 0, 0)
+j = Quaternion(0, 0, 1, 0)
+k = Quaternion(0, 0, 0, 1)</code></pre><p>Check that multiplication agrees with our conventions</p><pre><code class="language-julia hljs">@assert i*j == k
+@assert j*k == i
+@assert k*i == j
+@assert i*j*k == Quaternion(-1, 0, 0, 0)</code></pre><p>Next, we define functions to compute the Euler components of the left and right operators</p><pre><code class="language-julia hljs">function 𝒪(u, side)
+    subs = Dict(  # Substitutions that sympy doesn&#39;t make but we want
+        cos(β)/sin(β) =&gt; 1/tan(β),
+        sqrt(1 - cos(β))*sqrt(cos(β) + 1) =&gt; sin(β)
+    )
+    e = cos(θ/2) + u * sin(-θ/2)
+    R₀ = ((cos(α/2) + k * sin(α/2)) * (cos(β/2) + j * sin(β/2)) * (cos(γ/2) + k * sin(γ/2))).expand().simplify()
+    w, x, y, z = (
+        side == :left ? e * R₀ : R₀ * e
+    ).expand().simplify().to_Matrix().transpose().tolist()[1]
+    α′ = (atan(z/w) + atan(-x/y)).expand().simplify()
+    β′ = (2*acos(sqrt(w^2 + z^2) / sqrt(w^2 + x^2 + y^2 + z^2))).expand().simplify()
+    γ′ = (atan(z/w) - atan(-x/y)).expand().simplify()
+    ∂α′∂θ = expand_trig(Derivative(α′, θ).doit().subs(θ, 0).expand().simplify().subs(subs))
+    ∂β′∂θ = expand_trig(Derivative(β′, θ).doit().subs(θ, 0).expand().simplify().subs(subs))
+    ∂γ′∂θ = expand_trig(Derivative(γ′, θ).doit().subs(θ, 0).expand().simplify().subs(subs))
+    return ∂α′∂θ, ∂β′∂θ, ∂γ′∂θ
+end
+
+L(u) = 𝒪(u, :left)
+R(u) = 𝒪(u, :right)</code></pre><p>Now we can compute the Euler components of the angular momentum operators for the three generators and both choices of left and right operators.</p><pre><code class="language-julia hljs">L_x = L(i)
+L&quot;&quot;&quot;
+L_x = i\left[
+    %$(latex(L_x[1])) \frac{\partial}{\partial \alpha}
+    + %$(latex(L_x[2])) \frac{\partial}{\partial \beta}
+    + %$(latex(L_x[3])) \frac{\partial}{\partial \gamma}
+\right]
+&quot;&quot;&quot;</code></pre><p class="math-container">\[L_x = i\left[
+    \frac{\cos{\left(α \right)} \cos{\left(β \right)}}{\sin{\left(β \right)}} \frac{\partial}{\partial \alpha}
+    + \sin{\left(α \right)} \frac{\partial}{\partial \beta}
+    + - \frac{\cos{\left(α \right)}}{\sin{\left(β \right)}} \frac{\partial}{\partial \gamma}
+\right]
+\]</p><pre><code class="language-julia hljs">L_y = L(j)
+L&quot;&quot;&quot;
+L_y = i\left[
+    %$(latex(L_y[1])) \frac{\partial}{\partial \alpha}
+    + %$(latex(L_y[2])) \frac{\partial}{\partial \beta}
+    + %$(latex(L_y[3])) \frac{\partial}{\partial \gamma}
+\right]
+&quot;&quot;&quot;</code></pre><p class="math-container">\[L_y = i\left[
+    \frac{\sin{\left(α \right)} \cos{\left(β \right)}}{\sin{\left(β \right)}} \frac{\partial}{\partial \alpha}
+    + - \cos{\left(α \right)} \frac{\partial}{\partial \beta}
+    + - \frac{\sin{\left(α \right)}}{\sin{\left(β \right)}} \frac{\partial}{\partial \gamma}
+\right]
+\]</p><pre><code class="language-julia hljs">L_z = L(k)
+L&quot;&quot;&quot;
+L_z = i\left[
+    %$(latex(L_z[1])) \frac{\partial}{\partial \alpha}
+    + %$(latex(L_z[2])) \frac{\partial}{\partial \beta}
+    + %$(latex(L_z[3])) \frac{\partial}{\partial \gamma}
+\right]
+&quot;&quot;&quot;</code></pre><p class="math-container">\[L_z = i\left[
+    -1 \frac{\partial}{\partial \alpha}
+    + 0 \frac{\partial}{\partial \beta}
+    + 0 \frac{\partial}{\partial \gamma}
+\right]
+\]</p><pre><code class="language-julia hljs">R_x = R(i)
+L&quot;&quot;&quot;
+R_x = i\left[
+    %$(latex(R_x[1])) \frac{\partial}{\partial \alpha}
+    + %$(latex(R_x[2])) \frac{\partial}{\partial \beta}
+    + %$(latex(R_x[3])) \frac{\partial}{\partial \gamma}
+\right]
+&quot;&quot;&quot;</code></pre><p class="math-container">\[R_x = i\left[
+    \frac{\cos{\left(γ \right)}}{\sin{\left(β \right)}} \frac{\partial}{\partial \alpha}
+    + - \sin{\left(γ \right)} \frac{\partial}{\partial \beta}
+    + - \frac{\cos{\left(β \right)} \cos{\left(γ \right)}}{\sin{\left(β \right)}} \frac{\partial}{\partial \gamma}
+\right]
+\]</p><pre><code class="language-julia hljs">R_y = R(j)
+L&quot;&quot;&quot;
+R_y = i\left[
+    %$(latex(R_y[1])) \frac{\partial}{\partial \alpha}
+    + %$(latex(R_y[2])) \frac{\partial}{\partial \beta}
+    + %$(latex(R_y[3])) \frac{\partial}{\partial \gamma}
+\right]
+&quot;&quot;&quot;</code></pre><p class="math-container">\[R_y = i\left[
+    - \frac{\sin{\left(γ \right)}}{\sin{\left(β \right)}} \frac{\partial}{\partial \alpha}
+    + - \cos{\left(γ \right)} \frac{\partial}{\partial \beta}
+    + \frac{\sin{\left(γ \right)} \cos{\left(β \right)}}{\sin{\left(β \right)}} \frac{\partial}{\partial \gamma}
+\right]
+\]</p><pre><code class="language-julia hljs">R_z = R(k)
+L&quot;&quot;&quot;
+R_z = i\left[
+    %$(latex(R_z[1])) \frac{\partial}{\partial \alpha}
+    + %$(latex(R_z[2])) \frac{\partial}{\partial \beta}
+    + %$(latex(R_z[3])) \frac{\partial}{\partial \gamma}
+\right]
+&quot;&quot;&quot;</code></pre><p class="math-container">\[R_z = i\left[
+    0 \frac{\partial}{\partial \alpha}
+    + 0 \frac{\partial}{\partial \beta}
+    + -1 \frac{\partial}{\partial \gamma}
+\right]
+\]</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../conventions/comparisons/">« Comparisons</a><a class="docs-footer-nextpage" href="../../notes/H_recursions/">Algorithm for computing <span>$H$</span> »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.8.0 on <span class="colophon-date" title="Saturday 18 January 2025 16:56">Saturday 18 January 2025</span>. Using Julia version 1.11.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
