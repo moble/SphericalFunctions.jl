@@ -115,34 +115,6 @@ end
 L(u) = 𝒪(u, :left)
 R(u) = 𝒪(u, :right)
 
-# function L(u)
-#     e = cos(θ/2) + u * sin(-θ/2)
-#     R₀ = ((cos(α/2) + k * sin(α/2)) * (cos(β/2) + j * sin(β/2)) * (cos(γ/2) + k * sin(γ/2))).expand().simplify()
-#     eR = (e * R₀).expand().simplify()
-#     w, x, y, z = eR.to_Matrix().transpose().tolist()[1]
-#     α′ = (atan(z/w) + atan(-x/y)).expand().simplify()
-#     β′ = (2*acos(sqrt(w^2 + z^2) / sqrt(w^2 + x^2 + y^2 + z^2))).expand().simplify()
-#     γ′ = (atan(z/w) - atan(-x/y)).expand().simplify()
-#     ∂α′∂θ = expand_trig(Derivative(α′, θ).doit().subs(θ, 0).expand().simplify().subs(subs))
-#     ∂β′∂θ = expand_trig(Derivative(β′, θ).doit().subs(θ, 0).expand().simplify().subs(subs))
-#     ∂γ′∂θ = expand_trig(Derivative(γ′, θ).doit().subs(θ, 0).expand().simplify().subs(subs))
-#     return ∂α′∂θ, ∂β′∂θ, ∂γ′∂θ
-# end
-
-# function R(u)
-#     e = cos(θ/2) + u * sin(-θ/2)
-#     R1 = ((cos(α/2) + k * sin(α/2)) * (cos(β/2) + j * sin(β/2)) * (cos(γ/2) + k * sin(γ/2))).expand().simplify()
-#     Re = (R1 * e).expand().simplify()
-#     w, x, y, z = Re.to_Matrix().transpose().tolist()[1]
-#     α′ = (atan(z/w) + atan(-x/y)).expand().simplify()
-#     β′ = (2*acos(sqrt(w^2 + z^2) / sqrt(w^2 + x^2 + y^2 + z^2))).expand().simplify()
-#     γ′ = (atan(z/w) - atan(-x/y)).expand().simplify()
-#     ∂α′∂θ = expand_trig(Derivative(α′, θ).doit().subs(θ, 0).expand().simplify().subs(subs))
-#     ∂β′∂θ = expand_trig(Derivative(β′, θ).doit().subs(θ, 0).expand().simplify().subs(subs))
-#     ∂γ′∂θ = expand_trig(Derivative(γ′, θ).doit().subs(θ, 0).expand().simplify().subs(subs))
-#     return ∂α′∂θ, ∂β′∂θ, ∂γ′∂θ
-# end
-
 nothing  #hide
 
 
