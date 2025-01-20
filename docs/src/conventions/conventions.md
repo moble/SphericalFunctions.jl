@@ -1,4 +1,4 @@
-# Conventions
+# Development
 
 In the following subsections, we work through all the conventions used
 in this package, starting from first principles to motivate the
