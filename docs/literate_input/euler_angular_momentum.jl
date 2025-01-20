@@ -1,10 +1,10 @@
 md"""
-# ``L_j`` and ``R_j`` in Euler angles
+# ``L_j`` and ``R_j`` with Euler angles
 ## Analytical groundwork
 Here, we will use SymPy to just grind through the algebra of expressing the angular-momentum
 operators in terms of Euler angles.
 
-The plan starts by defining a new set of Euler angles according to
+We start by defining a new set of Euler angles according to
 ```math
 \mathbf{R}_{\alpha', \beta', \gamma'}
 = e^{-\theta \mathbf{u} / 2} \mathbf{R}_{\alpha, \beta, \gamma}
@@ -24,8 +24,7 @@ where ``\mathbf{u}`` will be each of the basis quaternions, and each of ``\alpha
 ```
 which we will use to convert the general expression for the angular-momentum operators in
 terms of ``\partial_\theta`` into an expression in terms of derivatives with respect to
-these new Euler angles.
-
+these new Euler angles:
 ```math
 \begin{align}
   L_j f(\mathbf{R}_{\alpha, \beta, \gamma})
@@ -63,7 +62,7 @@ terms of those components according to the usual expression.
 # import SymPyPythonCall
 # ````
 
-# ## Computing infrastructure
+# ## Computational infrastructure
 # We'll use SymPy (via Julia) since `Symbolics.jl` isn't very good at trig yet.
 import LaTeXStrings: @L_str, LaTeXString
 import Quaternionic: Quaternionic, Quaternion, components
