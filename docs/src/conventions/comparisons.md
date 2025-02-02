@@ -202,8 +202,52 @@ Unfortunately, while ``\hat{J}'^{x} = R_x`` and ``\hat{J}'^{z} =
 R_z``, we have ``\hat{J}'^{y} = -R_y`` with an unexplained relative
 minus sign.
 
+```math
+\begin{align}
+  \hat{J}'_{x}
+  &= -i \left(
+      \frac{\cos\gamma}{\tan\beta} \frac{\partial}{\partial \gamma}
+      + \sin\gamma \frac{\partial}{\partial \beta}
+      - \frac{\cos\gamma}{\sin\beta} \frac{\partial}{\partial \alpha}
+  \right) \\
+  \hat{J}'_{y}
+  &= -i \left(
+      \frac{\sin\gamma}{\tan\beta} \frac{\partial}{\partial \gamma}
+      - \cos\gamma \frac{\partial}{\partial \beta}
+      - \frac{\sin\gamma}{\sin\beta} \frac{\partial}{\partial \alpha}
+  \right)
+\end{align}
+```
+We can write out these two operators acting on a function `f` in SymPy:
+```python
+from sympy import symbols, sin, cos, tan, diff, I
+α, β, γ = symbols("α, β, γ", real=True)
+f = symbols("f", cls=Function)
+
+def Jx(f, α, β, γ):
+  return -I * (
+      cos(γ) / tan(β) * diff(f(α, β, γ), γ)
+      + sin(γ) * diff(f(α, β, γ), β)
+      - cos(γ) / sin(β) * diff(f(α, β, γ), α)
+  )
+def Jy(f, α, β, γ):
+  return -I * (
+    sin(γ) / tan(β) * diff(f(α, β, γ), γ)
+    - cos(γ) * diff(f(α, β, γ), β)
+    - sin(γ) / sin(β) * diff(f(α, β, γ), α)
+  )
+(
+    Jx(lambda α, β, γ: Jy(f, α, β, γ), α, β, γ)
+    - Jy(lambda α, β, γ: Jx(f, α, β, γ), α, β, γ)
+).expand().simplify()
+```
+
 Just to check that we have the right expression, let's check
-``[\hat{J}'_{x}, \hat{J}'_{y}] = i \hat{J}'_{z}`` (Eq. 12):
+``[\hat{J}'_{x}, \hat{J}'_{y}] = i \hat{J}'_{z}`` (Eq. 12).  We can
+skip any contributions where a derivative on the left will act on a
+derivative on the right, and ``\partial_\alpha`` on the left will have
+no other effect, so we just have six terms subtracted from six terms.
+
 ```math
 \begin{align}
   [\hat{J}'_{x}, \hat{J}'_{y}]
@@ -275,21 +319,33 @@ Just to check that we have the right expression, let's check
       - \frac{\cos\gamma}{\sin\beta} \frac{\partial}{\partial \alpha}
     \right)
     + \sin\gamma \left(
-      \frac{\partial}{\partial \beta} \frac{\sin\gamma}{\tan\beta} \frac{\partial}{\partial \gamma}
-      - \frac{\partial}{\partial \beta} \frac{\sin\gamma}{\sin\beta} \frac{\partial}{\partial \alpha}
+      \frac{\sin\gamma}{-\sin^2\beta} \frac{\partial}{\partial \gamma}
+      - \frac{\sin\gamma\cos\beta}{-\sin^2\beta} \frac{\partial}{\partial \alpha}
     \right)
     -
     \frac{\sin\gamma}{\tan\beta} \left(
-      \frac{\partial}{\partial \gamma} \frac{\cos\gamma}{\tan\beta} \frac{\partial}{\partial \gamma}
-      + \frac{\partial}{\partial \gamma} \sin\gamma \frac{\partial}{\partial \beta}
-      - \frac{\partial}{\partial \gamma} \frac{\cos\gamma}{\sin\beta} \frac{\partial}{\partial \alpha}
+      \frac{-\sin\gamma}{\tan\beta} \frac{\partial}{\partial \gamma}
+      + \cos\gamma \frac{\partial}{\partial \beta}
+      - \frac{-\sin\gamma}{\sin\beta} \frac{\partial}{\partial \alpha}
     \right)
     + \cos\gamma \left(
-       \frac{\partial}{\partial \beta}\frac{\cos\gamma}{\tan\beta} \frac{\partial}{\partial \gamma}
+       \frac{\cos\gamma}{-\sin^2\beta} \frac{\partial}{\partial \gamma}
       + \sin\gamma \frac{\partial}{\partial \beta}
-      -  \frac{\partial}{\partial \beta} \frac{\cos\gamma}{\sin\beta} \frac{\partial}{\partial \alpha}
+      -  \frac{\cos\gamma\cos\beta}{-\sin^2\beta} \frac{\partial}{\partial \alpha}
     \right)
   \right] \\
+  &= -\left[
+    \left(
+      + \sin\gamma\cos\gamma \frac{\partial}{\partial \beta}
+      - \frac{\cos^2\gamma\cos\beta}{\sin^2\beta} \frac{\partial}{\partial \alpha}
+      + \frac{-\sin^2\gamma\cos\beta}{\sin^2\beta} \frac{\partial}{\partial \alpha}
+      +  \frac{\cos\beta}{\sin^2\beta} \frac{\partial}{\partial \alpha}
+      + \frac{\cos^2\gamma}{\tan^2\beta} \frac{\partial}{\partial \gamma}
+      + \frac{\sin^2\gamma}{-\sin^2\beta} \frac{\partial}{\partial \gamma}
+      - \frac{-\sin^2\gamma}{\tan^2\beta} \frac{\partial}{\partial \gamma}
+      + \frac{\cos^2\gamma}{-\sin^2\beta} \frac{\partial}{\partial \gamma}
+    \right)
+  \right]
 \end{align}
 ```
 
