@@ -205,7 +205,7 @@ that requires the coefficients in
 L_{\pm} |\ell,m\rangle = \alpha^{\pm}_{\ell,m} |\ell, m \pm 1\rangle
 ```
 to be real and positive.  The reasoning behind this choice is
-explained more clearly in Section 2 of [Ufford and Shortley
+explained more fully in Section 2 of [Ufford and Shortley
 (1932)](@cite UffordShortley_1932).  As a more practical matter, the
 Condon-Shortley phase describes signs chosen in the expression for
 spherical harmonics.  The key expression is Eq. (15) of section 4³

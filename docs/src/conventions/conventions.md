@@ -754,10 +754,10 @@ R_{\mathfrak{g}} f(\mathbf{Q}) &= \rho \left. \frac{\partial} {\partial \theta} 
 \end{aligned}
 ```
 Here, we have introduced the constants ``\lambda`` and ``\rho``
-because we will actually be able to derive their — up to signs — based
-on the requirement that raising and lowering operators exist for each.
-Finally, we will choose the signs based on demands that these
-operators correspond as naturally as possible to the standard
+because we will actually be able to derive their values — up to signs
+— based on the requirement that raising and lowering operators exist
+for each.  Finally, we will choose the signs based on demands that
+these operators correspond as naturally as possible to the standard
 canonical angular-momentum operators.
 
 Note that when composing operators, it is critical to keep track of
@@ -838,7 +838,9 @@ R_\pm &= R_\mathbf{x} \pm i R_\mathbf{y}.
 \end{aligned}
 ```
 
-[Show how this happens:]
+* TODO: Impose ``R_z = s``
+* TODO: Impose Condon-Shortley condition (positive, real eigenvalues of ``R_\pm``)
+* TODO: Show how the following happens
 
 Using these relations, we can actually solve for the constants
 ``\lambda`` and ``\rho`` up to a sign.  We find that
@@ -993,7 +995,10 @@ distinct eigenvalues are orthogonal, since
 (the last equality by Green's theorem).  Since the eigenvalues are
 distinct, this can only be true if ``\int f_u f_v=0``.
 
-[Show the relationship between the spherical Laplacian and the angular momentum operator.]
+* TODO: Show the relationship between the spherical Laplacian and the
+  angular momentum operator.
+* TODO: Show how ``D`` matrices are harmonic with respect to the
+  Laplacian on the 3-sphere.
 
 
 ##  Representation theory / harmonic analysis
