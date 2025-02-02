@@ -71,6 +71,7 @@ import SymPyPythonCall: sympy, symbols, sqrt, sin, cos, tan, acos, atan, latex
 const expand_trig = sympy.expand_trig
 const Derivative = sympy.Derivative
 const π = sympy.pi
+const I = sympy.I
 nothing  #hide
 
 # Define coordinates we will use
@@ -183,6 +184,57 @@ nothing  #hide
 # In their description of the Wigner 𝔇 functions as wave functions of a rigid symmetric
 # top, [Varshalovich_1988](@citet) provide equivalent expressions in Eqs. (6) and (7) of
 # their Sec. 4.2.
+
+# ### Commutators
+
+# We can also compute the commutators of the angular momentum operators, as derived above.
+
+f = symbols("f", cls=SymPyPythonCall.sympy.o.Function)
+function Lx(f, α, β, γ)
+    let L = L(𝐢)
+        I * (
+            L[1] * f(α, β, γ).diff(α)
+            + L[2] * f(α, β, γ).diff(β)
+            + L[3] * f(α, β, γ).diff(γ)
+        )
+    end
+end
+function Ly(f, α, β, γ)
+    let L = L(𝐣)
+        I * (
+            L[1] * f(α, β, γ).diff(α)
+            + L[2] * f(α, β, γ).diff(β)
+            + L[3] * f(α, β, γ).diff(γ)
+        )
+    end
+end
+(
+    Lx((α, β, γ)->Ly(f, α, β, γ), α, β, γ)
+    - Ly((α, β, γ)->Lx(f, α, β, γ), α, β, γ)
+).expand().simplify()
+#-
+function Rx(f, α, β, γ)
+    let L = R(𝐢)
+        I * (
+            L[1] * f(α, β, γ).diff(α)
+            + L[2] * f(α, β, γ).diff(β)
+            + L[3] * f(α, β, γ).diff(γ)
+        )
+    end
+end
+function Ry(f, α, β, γ)
+    let L = R(𝐣)
+        I * (
+            L[1] * f(α, β, γ).diff(α)
+            + L[2] * f(α, β, γ).diff(β)
+            + L[3] * f(α, β, γ).diff(γ)
+        )
+    end
+end
+commutator = (
+    Rx((α, β, γ)->Ry(f, α, β, γ), α, β, γ)
+    - Ry((α, β, γ)->Rx(f, α, β, γ), α, β, γ)
+).expand().simplify()
 
 
 # ## Standard expressions on ``S^2``
