@@ -34,6 +34,34 @@ the same exact expression for the (scalar) spherical harmonics.
 
 ## Newman-Penrose
 
+In their 1966 paper, [Newman_1966](@citet), Newman and Penrose first
+introduced the spin-weighted spherical harmonics, ``{}_sY_{\ell m}``.
+They use the standard (physicists') convention for spherical
+coordinates and introduce the stereographic coordinate ``\zeta =
+e^{i\phi} \cot\frac{\theta}{2}``.  They define the spin-raising
+operator ``\eth`` acting on a function of spin weight ``s`` as
+```math
+\eth \eta
+=
+-\left(\sin\theta\right)^s
+\left\{
+    \frac{\partial}{\partial\theta}
+    + \frac{i}{\sin\theta} \frac{\partial}{\partial\phi}
+\right\} \left\{\left(\sin\theta\right)^{-s} \eta\right\},
+```
+They then compute
+```math
+{}_sY_{\ell, m}
+\propto
+\frac{1}{\left[(\ell-s)! (\ell+s)!\right]^{1/2}}
+\left(1 + \zeta \bar{\zeta}\right)^{-\ell}
+\sum_p \zeta^p (-\bar{\zeta})^{p+s-m}
+\binom{\ell-s}{p} \binom{\ell+s}{p+s-m},
+```
+where the sum is over all integers ``p`` such that the factorials are
+nonzero.
+
+
 ## Goldberg
 
 ## Wikipedia
@@ -49,6 +77,43 @@ the same exact expression for the (scalar) spherical harmonics.
 ## Torres del Castillo
 
 ## NINJA
+
+Combining Eqs. (II.7) and (II.8) of [Ajith_2007](@citet), we have
+```math
+\begin{align}
+  {}_{-s}Y_{lm}
+  &=
+  (-1)^s\sqrt{\frac{2\ell+1}{4\pi}} e^{im\phi}
+  \sum_{k = k_1}^{k_2}
+  \frac{(-1)^k[(\ell+m)!(\ell-m)!(\ell+s)!(\ell-s)!]^{1/2}}
+  {(\ell+m-k)!(\ell-s-k)!k!(k+s-m)!}
+  \\ &\qquad \times
+  \left(\cos\left(\frac{\iota}{2}\right)\right)^{2\ell+m-s-2k}
+  \left(\sin\left(\frac{\iota}{2}\right)\right)^{2k+s-m}
+\end{align}
+```
+with ``k_1 = \textrm{max}(0, m-s)`` and ``k_2=\textrm{min}(\ell+m,
+\ell-s)``.  Note that most of the above was copied directly from the
+TeX source of the paper, but the two equations were trivially combined
+into one.  Also note the annoying negative sign on the left-hand side.
+That's so annoying that I'm going to duplicate the expression just to
+get rid of it:
+```math
+\begin{align}
+  {}_{s}Y_{lm}
+  &=
+  (-1)^s\sqrt{\frac{2\ell+1}{4\pi}} e^{im\phi}
+  \sum_{k = k_1}^{k_2}
+  \frac{(-1)^k[(\ell+m)!(\ell-m)!(\ell-s)!(\ell+s)!]^{1/2}}
+  {(\ell+m-k)!(\ell+s-k)!k!(k-s-m)!}
+  \\ &\qquad \times
+  \left(\cos\left(\frac{\iota}{2}\right)\right)^{2\ell+m+s-2k}
+  \left(\sin\left(\frac{\iota}{2}\right)\right)^{2k-s-m}
+\end{align}
+```
+where ``k_1 = \textrm{max}(0, m+s)`` and ``k_2=\textrm{min}(\ell+m,
+\ell+s)``.
+
 
 ## LALSuite
 
