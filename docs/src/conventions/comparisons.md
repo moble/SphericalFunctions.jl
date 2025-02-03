@@ -284,17 +284,16 @@ Next, the contravariant components:
   &= -i \frac{\partial}{\partial \gamma}
 \end{align}
 ```
-Unfortunately, while ``\hat{J}'^{x} = R_x`` and ``\hat{J}'^{z} =
-R_z``, we have ``\hat{J}'^{y} = -R_y`` with an unexplained relative
-minus sign.
+Unfortunately, while we have agreement on ``\hat{J}'^{y} = R_y``, we
+also have disagreement on ``\hat{J}'^{x} = -R_x`` and ``\hat{J}'^{z} =
+-R_z``, as they have relative minus signs.
 
 It's very easy to check, for example, that ``[\hat{J}'^{z},
 \hat{J}'^{x}] = i \hat{J}'^{y}``, as expected from the general
 expression in their Eq. (12).  So these expressions are — at least —
-consistent with the claims of Varshalovich et al.  But my conclusion
-based on defining the operators generally and respecting the order of
-operations is that the expressions for the commutators of ``R`` and
-``L`` really must have opposite signs, regardless of any overall
-constants chosen in the definitions of the operators.  So I conclude
-that there must be some more fundamental difference between what I
-have done and what Varshalovich et al. have done.
+consistent with the claims of Varshalovich et al.  I wonder if there
+is some subtlety involving the order of operations and passing to the
+"body-fixed" frame.  I'm confident that my definitions are internally
+consistent, and fit in nicely with the spin-weighted function
+literature; maybe Varshalovich et al. are just doing something
+different.
