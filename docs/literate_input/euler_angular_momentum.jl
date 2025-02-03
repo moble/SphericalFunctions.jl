@@ -1,8 +1,40 @@
 md"""
 # ``L_j`` and ``R_j`` with Euler angles
-## Analytical groundwork
+
+This package defines the angular-momentum operators ``L_j`` and ``R_j`` in terms of elements
+of the Lie group and algebra:
+```math
+L_𝐮 f(𝐑) = \left. i \frac{d}{d\epsilon}\right|_{\epsilon=0}
+f\left(e^{-\epsilon 𝐮/2}\, 𝐑\right)
+\qquad \text{and} \qquad
+R_𝐮 f(𝐑) = -\left. i \frac{d}{d\epsilon}\right|_{\epsilon=0}
+f\left(𝐑\, e^{-\epsilon 𝐮/2}\right),
+```
+This is certainly the natural realm for these operators, but it is not the common one.  In
+particular, virtually all textbooks and papers on the subject define these operators in
+terms of the standard spherical coordinates on the 2-sphere, rather than quaternions or even
+Euler angles.  In particular, the standard forms are essentially always given in terms of
+the Cartesian basis, as in ``L_x``, ``L_y``, and ``L_z`` — though some times the first two
+are expressed as ``L_{\pm} = L_x \pm i L_y``.
+
 Here, we will use SymPy to just grind through the algebra of expressing the angular-momentum
-operators in terms of Euler angles.
+operators in terms of Euler angles, including evaluating the commutators in that form, and
+further reduce them to operators in terms of spherical coordinates.  We will find a couple
+important results that help make contact with more standard expressions:
+
+  1. Our results for ``L_x``, ``L_x``, and ``L_z`` in spherical coordinates agree with
+     standard expressions.
+  2. The commutators obey ``[L_x, L_y] = i L_z`` and cyclic permutations, in agreement with
+     the standard expressions.
+  3. We also find ``[R_x, R_y] = i R_z`` and cyclic permutations.
+  4. We can explicitly compute ``[L_i, R_j] = 0``, as expected.
+  5. Using the natural extension of Goldberg et al.'s SWSHs to include ``\gamma``, we can
+     see that the natural spin-weight operator is ``R_z = i \partial_\gamma``.  Thus, we
+     define ``R_z = s`` for a function with spin weight ``s``.
+  6. The spin-raising operator for ``R_z`` is ``\eth = R_x + i R_y``; the spin-lowering
+     operator is ``\bar{\eth} = R_x - i R_y``.
+
+## Analytical groundwork
 
 We start by defining a new set of Euler angles according to
 ```math
@@ -117,23 +149,45 @@ function 𝒪(u, side)
     return ∂α′∂θ, ∂β′∂θ, ∂γ′∂θ
 end
 
+## Note that we are not including the factor of ``i`` here; for simplicity, we will insert
+## it manually when displaying the results below, and when applying these operators to
+## functions (`Lx` and related definitions below).
 L(u) = 𝒪(u, :left)
 R(u) = 𝒪(u, :right)
 nothing  #hide
 
 
-# We need a quick helper macro to format the results.
+# We need a couple quick helper macros to display the results.
+#md # The details are boring, but you can expand the source code to see them.
+#md # ```@raw html
+#md # <details>
+#md # <summary>
+#md # Click here to expand the source code for display macros
+#md # </summary>
+#md # ```
 macro display(expr)
     op = string(expr.args[1])
     arg = Dict(:𝐢 => "x", :𝐣 => "y", :𝐤 => "z")[expr.args[2]]
-    quote
-        ∂α′∂θ, ∂β′∂θ, ∂γ′∂θ = latex.($expr)  # Call expr; format results as LaTeX
-        expr = $op * "_" * $arg  # Standard form of the operator
-        L"""%$expr = i\left[
-            %$(∂α′∂θ) \frac{\partial}{\partial \alpha}
-            + %$(∂β′∂θ) \frac{\partial}{\partial \beta}
-            + %$(∂γ′∂θ) \frac{\partial}{\partial \gamma}
-        \right]"""  # Display the result in LaTeX form
+    if op == "L"
+        quote
+            ∂α′∂θ, ∂β′∂θ, ∂γ′∂θ = latex.($expr)  # Call expr; format results as LaTeX
+            expr = $op * "_" * $arg  # Standard form of the operator
+            L"""%$expr = i\left[
+                %$(∂α′∂θ) \frac{\partial}{\partial \alpha}
+                + %$(∂β′∂θ) \frac{\partial}{\partial \beta}
+                + %$(∂γ′∂θ) \frac{\partial}{\partial \gamma}
+            \right]"""  # Display the result in LaTeX form
+        end
+    else
+        quote
+            ∂α′∂θ, ∂β′∂θ, ∂γ′∂θ = latex.($expr)  # Call expr; format results as LaTeX
+            expr = $op * "_" * $arg  # Standard form of the operator
+            L"""%$expr = -i\left[
+                %$(∂α′∂θ) \frac{\partial}{\partial \alpha}
+                + %$(∂β′∂θ) \frac{\partial}{\partial \beta}
+                + %$(∂γ′∂θ) \frac{\partial}{\partial \gamma}
+            \right]"""  # Display the result in LaTeX form
+        end
     end
 end
 nothing  #hide
@@ -156,7 +210,7 @@ macro display2(expr)
         quote
             ∂φ′∂θ, ∂ϑ′∂θ, ∂γ′∂θ = $conversion.($expr)  # Call expr; format results as LaTeX
             expr = $op * "_" * $arg  # Standard form of the operator
-            L"""%$expr = i\left[
+            L"""%$expr = -i\left[
                 %$(∂ϑ′∂θ) \frac{\partial}{\partial \theta}
                 + %$(∂φ′∂θ) \frac{\partial}{\partial \phi}
                 + %$(∂γ′∂θ) \frac{\partial}{\partial \gamma}
@@ -166,6 +220,9 @@ macro display2(expr)
 end
 nothing  #hide
 
+#md # ```@raw html
+#md # </details>
+#md # ```
 
 # ## Full expressions on ``S^3``
 # Finally, we can actually compute the Euler components of the angular momentum operators.
@@ -188,53 +245,71 @@ nothing  #hide
 # ### Commutators
 
 # We can also compute the commutators of the angular momentum operators, as derived above.
-
+# First, we define the operators acting on functions of the Euler angles.
 f = symbols("f", cls=SymPyPythonCall.sympy.o.Function)
-function Lx(f, α, β, γ)
-    let L = L(𝐢)
-        I * (
-            L[1] * f(α, β, γ).diff(α)
-            + L[2] * f(α, β, γ).diff(β)
-            + L[3] * f(α, β, γ).diff(γ)
+function 𝒪(u, side, f, α, β, γ)
+    let O = 𝒪(u, side)
+        (side==:left ? I : -I) * (
+            O[1] * f(α, β, γ).diff(α)
+            + O[2] * f(α, β, γ).diff(β)
+            + O[3] * f(α, β, γ).diff(γ)
         )
     end
 end
-function Ly(f, α, β, γ)
-    let L = L(𝐣)
-        I * (
-            L[1] * f(α, β, γ).diff(α)
-            + L[2] * f(α, β, γ).diff(β)
-            + L[3] * f(α, β, γ).diff(γ)
-        )
-    end
+
+Lx(f, α, β, γ) = 𝒪(𝐢, :left, f, α, β, γ)
+Ly(f, α, β, γ) = 𝒪(𝐣, :left, f, α, β, γ)
+Lz(f, α, β, γ) = 𝒪(𝐤, :left, f, α, β, γ)
+
+Rx(f, α, β, γ) = 𝒪(𝐢, :right, f, α, β, γ)
+Ry(f, α, β, γ) = 𝒪(𝐣, :right, f, α, β, γ)
+Rz(f, α, β, γ) = 𝒪(𝐤, :right, f, α, β, γ)
+
+nothing  #hide
+
+# Now we define their commutator ``[O₁, O₂] = O₁O₂ - O₂O₁``:
+function commutator(O₁, O₂)
+    (
+        O₁((α, β, γ)->O₂(f, α, β, γ), α, β, γ)
+        - O₂((α, β, γ)->O₁(f, α, β, γ), α, β, γ)
+    ).expand().simplify()
 end
-(
-    Lx((α, β, γ)->Ly(f, α, β, γ), α, β, γ)
-    - Ly((α, β, γ)->Lx(f, α, β, γ), α, β, γ)
-).expand().simplify()
+
+nothing  #hide
+
+# And finally, evaluate each in turn.  We expect ``[L_x, L_y] = i L_z`` and cyclic
+# permutations:
+commutator(Lx, Ly)
 #-
-function Rx(f, α, β, γ)
-    let L = R(𝐢)
-        I * (
-            L[1] * f(α, β, γ).diff(α)
-            + L[2] * f(α, β, γ).diff(β)
-            + L[3] * f(α, β, γ).diff(γ)
-        )
-    end
-end
-function Ry(f, α, β, γ)
-    let L = R(𝐣)
-        I * (
-            L[1] * f(α, β, γ).diff(α)
-            + L[2] * f(α, β, γ).diff(β)
-            + L[3] * f(α, β, γ).diff(γ)
-        )
-    end
-end
-commutator = (
-    Rx((α, β, γ)->Ry(f, α, β, γ), α, β, γ)
-    - Ry((α, β, γ)->Rx(f, α, β, γ), α, β, γ)
-).expand().simplify()
+commutator(Ly, Lz)
+#-
+commutator(Lz, Lx)
+# Similarly, we expect ``[R_x, R_y] = i R_z`` and cyclic permutations:
+commutator(Rx, Ry)
+#-
+commutator(Ry, Rz)
+#-
+commutator(Rz, Rx)
+
+# Just for completeness, let's evaluate the commutators of the left and right operators,
+# which should all be zero.
+commutator(Lx, Rx)
+#-
+commutator(Lx, Ry)
+#-
+commutator(Lx, Rz)
+#-
+commutator(Ly, Rx)
+#-
+commutator(Ly, Ry)
+#-
+commutator(Ly, Rz)
+#-
+commutator(Lz, Rx)
+#-
+commutator(Lz, Ry)
+#-
+commutator(Lz, Rz)
 
 
 # ## Standard expressions on ``S^2``
@@ -250,15 +325,9 @@ commutator = (
 # 2-sphere, so we can declare success!
 #
 # Now, note that including ``\partial_\gamma`` for an expression on the 2-sphere doesn't
-# actually make any sense.  However, for historical reasons, we include it here when showing
-# the results of the ``R`` operator in Euler angles.  These operators are really only
-# relevant for spin-weighted spherical harmonics.  This nonsensicality signals the fact that
-# it doesn't actually make sense to define spin-weighted spherical functions on the
-# 2-sphere; they really only make sense on the 3-sphere.  Nonetheless, if we stipulate that
-# the function in question has a specific spin weight, that means that it is an
-# eigenfunction of ``-i\partial_\gamma`` on the 3-sphere, so we could just substitute the
-# eigenvalue ``s`` for that derivative in the expression below, and recover the standard
-# spin-weight operators.
+# actually make any sense: ``\gamma`` isn't even a coordinate for the 2-sphere!  However,
+# for historical reasons, we include it here when showing the results of the ``R`` operator
+# in Euler angles.
 
 @display2 R(𝐢)
 #-
@@ -266,15 +335,36 @@ commutator = (
 #-
 @display2 R(𝐤)
 
-# This last operator shows us just how little sense it makes to try to define spin-weighted
-# spherical functions on the 2-sphere.  The spin eigenvalue ``s`` has to come out of
-# nowhere, like some sort of deus ex machina.  Nonetheless, we can see that if we substitute
-# the eigenvalue, we get
+# We get nonzero components of ``\partial_\gamma``, showing that these operators really *do
+# not* make sense for the 2-sphere, and therefore that it doesn't actually make sense to
+# define spin-weighted spherical functions on the 2-sphere; they really only make sense on
+# the 3-sphere.  Nonetheless, if we stipulate that the function ``\eta`` has a specific spin
+# weight, that means that *on the 3-sphere* it is an eigenfunction with ``R_z\eta =
+# i\partial_\gamma \eta = s\eta``.  So we could just substitute ``-i s`` for
+# ``\partial_\gamma`` in the expressions above, and recover the standard spin-weight
+# operators.  We get
 # ```math
-# R_x \eta
-# = i\left[ \frac{\partial}{\partial \phi} - \frac{s}{\tan \theta} \right] \eta
-# = -(\sin \theta)^s \left\{\frac{\partial}{\partial \theta} \right\}
+# \left[R_x + i R_y\right] \eta
+# = \left[
+#     -i \frac{1}{\sin\theta} \frac{\partial}{\partial \phi}
+#     + \frac{s}{\tan \theta}
+#     - \frac{\partial}{\partial \theta}
+#   \right] \eta
+# = -(\sin \theta)^s \left\{
+#     \frac{\partial}{\partial \theta}
+#     +i \frac{1}{\sin\theta} \frac{\partial}{\partial \phi}
+#   \right\}
 #   \left\{ (\sin \theta)^{-s} \eta \right\}.
 # ```
-# And in the latter form, we can see that ``R_x - i R_y`` is exactly the spin-raising
-# operator ``\eth`` as originally defined by [Newman_1966](@citet) in their Eq. (3.8).
+# And in the latter form, we can see that ``R_x + i R_y`` is exactly the spin-raising
+# operator ``\eth`` as originally defined by [Newman_1966](@citet) in their Eq. (3.8).  The
+# complex-conjugate of this operator is the spin-lowering operator ``\bar{\eth}`` for
+# ``R_z``.  *By definition* of raising and lowering operators, this means that
+# ``[R_z, \eth] = \eth`` and ``[R_z, \bar{\eth}] = -\bar{\eth}``.  We can verify these
+# results by computing the commutators directly from the expressions above:
+# ```math
+# \begin{aligned}
+# [R_z, \eth] &= [R_z, R_x] + i [R_z, R_y] = i R_y - i i R_x = R_x + i R_y = \eth, \\
+# [R_z, \bar{\eth}] &= [R_z, R_x] - i [R_z, R_y] = i R_y + i i R_x = -R_x + i R_y = -\bar{\eth}.
+# \end{aligned}
+# ```
