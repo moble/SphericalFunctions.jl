@@ -359,12 +359,27 @@ commutator(Lz, Rz)
 # And in the latter form, we can see that ``R_x + i R_y`` is exactly the spin-raising
 # operator ``\eth`` as originally defined by [Newman_1966](@citet) in their Eq. (3.8).  The
 # complex-conjugate of this operator is the spin-lowering operator ``\bar{\eth}`` for
-# ``R_z``.  *By definition* of raising and lowering operators, this means that
-# ``[R_z, \eth] = \eth`` and ``[R_z, \bar{\eth}] = -\bar{\eth}``.  We can verify these
-# results by computing the commutators directly from the expressions above:
+# ``R_z``.  *By definition* of raising and lowering operators, this means that ``[R_z, \eth]
+# = \eth`` and ``[R_z, \bar{\eth}] = -\bar{\eth}``.  We can verify these results by
+# computing the commutators directly from the expressions above:
 # ```math
 # \begin{aligned}
-# [R_z, \eth] &= [R_z, R_x] + i [R_z, R_y] = i R_y - i i R_x = R_x + i R_y = \eth, \\
-# [R_z, \bar{\eth}] &= [R_z, R_x] - i [R_z, R_y] = i R_y + i i R_x = -R_x + i R_y = -\bar{\eth}.
+# [R_z, \eth]
+#   &= [R_z, R_x] + i [R_z, R_y] = i R_y - i i R_x = R_x + i R_y = \eth,
+# \\
+# [R_z, \bar{\eth}]
+#   &= [R_z, R_x] - i [R_z, R_y] = i R_y + i i R_x = -R_x + i R_y = -\bar{\eth}.
 # \end{aligned}
 # ```
+#
+# So we see that we've reproduced precisely the standard expressions for the spin-weighted
+# spherical functions (depicted as functions on the 2-sphere) from the expressions for the
+# angular-momentum operators acting on general functions on the 3-sphere.  The standard
+# expressions appear arbitrarily, and are not even well defined as functions on the 2-sphere
+# because they also need input from tangent space of the sphere — which is not part of the
+# 2-sphere proper.  On the other hand, the expressions from the 3-sphere are mathematically
+# and physically well defined and intuitive.  Note that the latter is complete in itself; it
+# can stand alone without reference to the 2-sphere.  Rather, what we have done here is just
+# shown the connection to the inadequate standard presentation.  But it is important to
+# recognize that our complete treatment on ``\mathrm{Spin}(3)`` is the more fundamental one,
+# and can be used without reference to the older treatment.
