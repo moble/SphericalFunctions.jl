@@ -240,7 +240,33 @@ nothing  #hide
 
 # In their description of the Wigner 𝔇 functions as wave functions of a rigid symmetric
 # top, [Varshalovich_1988](@citet) provide equivalent expressions in Eqs. (6) and (7) of
-# their Sec. 4.2.
+# their Sec. 4.2 — except that ``R_x`` and ``R_z`` have the wrong signs.
+# [Wikipedia](https://en.wikipedia.org/wiki/Wigner_D-matrix#Properties_of_the_Wigner_D-matrix),
+# meanwhile, provides equivalent expressions, except that their ``\hat{\mathcal{P}}`` has
+# (consistently) the opposite sign to ``R`` defined here.
+
+# Note that the Wikipedia convention is actually entirely sensible — maybe more sensible
+# than the one we use.  In that convention ``\hat{J}`` is in the inertial frame, whereas
+# ``\hat{P}`` is exactly that operator in the body-fixed frame.  In our notation, we have
+# ```math
+# \begin{align}
+# R_𝐮 f(𝐑)
+# &=
+# -\left. i \frac{d}{d\epsilon}\right|_{\epsilon=0} f\left(𝐑\, e^{-\epsilon 𝐮/2}\right) \\
+# &=
+# -\left. i \frac{d}{d\epsilon}\right|_{\epsilon=0}
+#   f\left(𝐑\, e^{-\epsilon 𝐮/2}\, 𝐑^{-1}\, 𝐑\right) \\
+# &=
+# -\left. i \frac{d}{d\epsilon}\right|_{\epsilon=0}
+#   f\left(e^{-\epsilon 𝐑\, 𝐮\, 𝐑^{-1}/2}\, 𝐑\right) \\
+# &=
+# -L_{𝐑\, 𝐮\, 𝐑^{-1}} f(𝐑),
+# \end{align}
+# ```
+# which says that ``R`` is just the *negative of* the ``L`` operator transformed to the
+# body-fixed frame.  That negative sign is slightly unnatural, but the reason we choose to
+# define ``R`` in this way is for its more natural connection to the literature on
+# spin-weighted spherical functions.
 
 # ### Commutators
 
