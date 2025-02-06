@@ -126,23 +126,10 @@ Euler angles.
    ```
    The ``R`` operators make less sense for a function of spherical
    coordinates, because of their inherent dependence on ``\gamma``.
-   Nonetheless, we can relate them to the standard spin-raising and
-   -lowering operators for a function of spin weight ``s``:
-   ```math
-   \begin{aligned}
-   R_z &= s, \\
-   R_x + i R_y &= \eth, \\
-   R_x - i R_y &= \bar{\eth},
-   \end{aligned}
-   ```
-   where ``\eth \eta = -\sin^s \theta (\partial_\theta + i
-    \csc\theta\, \partial_\phi) (\eta \sin^{-s} \theta)`` is
-   the spin-raising operator introduced by [Newman_1966](@citet).  In
-   the expressions for ``R``, any derivative with respect to
-   ``\gamma`` is simply replaced by a factor of ``-i s``, allowing us
-   to interpret them as operators on the 2-sphere, even though this is
-   mathematically ill-defined and spin-weighted functions really
-   should be defined on the 3-sphere.
+   We will come back to them, however, when we consider spin-weighted
+   functions — which are inherently ill-defined on the 2-sphere, but
+   can be interpreted as restrictions of functions on the 3-sphere
+   with this special "weight" property.
 9. There is essentially no disagreement in the literature about the
    definitions of the spherical harmonics, so we adopt the standard
    expressions.  Explicitly, in terms of spherical coordinates,
@@ -160,8 +147,65 @@ Euler angles.
    that the generalized definition reduces to this expression for spin
    weight ``s=0``, and transforming the spherical coordinates as
    ``(\theta, \phi) \mapsto \exp(\phi 𝐤/2)\, \exp(\theta 𝐣/2).``
-10. Wigner D-matrices
-11. Spin-weighted spherical harmonics
+10. Following [Newman_1966](@citet), we find that they define the
+    spherical tangent basis vectors as
+    ```math
+    m^\mu = \frac{1}{\sqrt{2}} \left(
+        \boldsymbol{\theta} + i \boldsymbol{\phi}
+    \right)
+    ```
+    and discuss spin weight in terms of the rotation
+    ```math
+    (m^\mu)' = e^{i\psi} m^\nu,
+    ```
+    where the tangent basis rotates but we are "keeping the
+    coordinates fixed".   We find that we can emulate this using Euler
+    angles ``(\phi, \theta, -\psi)``.  Note the negative sign in the
+    last angle.  As usual, this rotates the positive ``𝐳`` axis to
+    the point ``(\theta, \phi)``, and rotates ``(𝐱 + i 𝐲) /
+    \sqrt{2}`` onto ``(m^\mu)'``.  They then define a function to have
+    spin weight ``s`` if it transforms as
+    ```math
+    \eta' = e^{is\psi} \eta.
+    ```
+    In our notation, we can realize this function as a function of
+    Euler angles, and that equation becomes
+    ```math
+    \eta(\phi, \theta, -\psi) = e^{is\psi} \eta(\phi, \theta, 0),
+    ```
+    or
+    ```math
+    \eta(\alpha, \beta, \gamma) = e^{-is\gamma} \eta(\alpha, \beta, 0).
+    ```
+    This is the crucial definition giving us the behavior of
+    spin-weighted functions: they are eigenfunctions of the operator
+    ``R_z = i \partial_\gamma`` with eigenvalue ``s``.  We can also
+    immediately find the spin-raising and -lowering operators —
+    canonically denoted ``\eth`` and ``\bar{\eth}`` — from the
+    commutator relations for ``R``:
+    ```math
+    \begin{aligned}
+    \eth \eta &= \left(R_x + i R_y\right)\eta
+        = -\sin^s \theta \left\{
+            \frac{\partial}{\partial \theta}
+            + \frac{i}{\sin\theta} \frac{\partial}{\partial \phi}
+        \right\} \left(\eta \sin^{-s} \theta\right), \\
+    \bar{\eth} \eta &= \left(R_x - i R_y\right)\eta
+        = -\sin^s \theta \left\{
+            \frac{\partial}{\partial \theta}
+            - \frac{i}{\sin\theta} \frac{\partial}{\partial \phi}
+        \right\} \left(\eta \sin^{-s} \theta\right). \\
+    \end{aligned}
+    ```
+    Here, we have used the full expressions for ``R_x`` and ``R_y``
+    given above in terms of Euler angles, replacing the derivatives
+    with respect to ``\gamma`` by a factor of ``-i s``, and converting
+    the remaining Euler angles to spherical coordinates.  This allows
+    us to write them as if they were operators on the 2-sphere, even
+    though this is mathematically ill-defined and spin-weighted
+    functions really must be defined on the 3-sphere.
+11. Wigner D-matrices
+12. Spin-weighted spherical harmonics
 
 
 ## Three-dimensional space
