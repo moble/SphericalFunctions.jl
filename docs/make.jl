@@ -60,7 +60,8 @@ makedocs(
             "functions.md",
         ],
         "Conventions" => [
-            "conventions/conventions.md",
+            "conventions/summary.md",
+            "conventions/details.md",
             "conventions/comparisons.md",
             "Calculations" => [
                 joinpath(relative_literate_output, "euler_angular_momentum.md"),
