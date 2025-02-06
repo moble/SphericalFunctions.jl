@@ -61,6 +61,57 @@ They then compute
 where the sum is over all integers ``p`` such that the factorials are
 nonzero.
 
+They are a little ambiguous about the relationship of the complex
+basis vector ``m^\mu`` to the coordinates.  
+
+> The vectors ``\Re(m^\mu)`` and ``\Im(m^\mu)`` may be regarded as
+> orthogonal tangent vectors (of length ``2^{-1/2}``) at each point of
+> the surface. [...] If spherical polar coordinates are used, a
+> natural choice for ``m^\mu`` is to make ``\Re(m^\mu)`` and
+> ``\Im(m^\mu)`` tangential, respectively, to the curves ``\phi =
+> \mathrm{const}`` and ``\theta = \mathrm{const}.``
+
+The ambiguity is in the sign implied by "tangential", but the natural
+choice is to assume they mean that the components are *positive*
+multiples of ``\partial_\theta`` and ``\partial_\phi`` respectively,
+in which case we have
+```math
+m^\mu = \frac{1}{\sqrt{2}}
+\left[ \partial_\theta + i \csc\theta \partial_\phi \right].
+```
+They define the spin weight in terms of behavior of a quantity under
+rotation of ``m^\mu`` in its own plane as
+```math
+(m^\mu)'
+=
+e^{i\psi} m^\mu
+=
+\frac{1}{\sqrt{2}}
+\left[ 
+  \left(\cos\psi\partial_\theta - \sin\psi\csc\theta \partial_\phi\right)
+  + i \left(\cos\psi\csc\theta \partial_\phi + \sin\psi\partial_\theta\right)
+\right].
+```
+Raising the spherical coordinates ``(\theta, \phi)`` to Euler angles
+``(\phi, \theta, -\psi)``, we see that the rotor ``R_{\phi, \theta,
+-\psi}`` rotates the ``𝐳`` basis vector to the point ``(\theta,
+\phi)``, and it rotates ``(𝐱 + i 𝐲) / \sqrt{2}`` onto ``(m^\mu)'``.
+Under this rotation, a quantity ``\eta`` has spin weight ``s`` if it
+transforms as
+```math
+\eta' = e^{i s \psi} \eta.
+```
+Now, supposing that these quantities are functions of Euler angles, we
+can write
+```math
+\eta(\phi, \theta, -\psi) = e^{i s \psi} \eta(\phi, \theta, 0),
+```
+or
+```math
+\eta(\phi, \theta, \gamma) = e^{-i s \gamma} \eta(\phi, \theta, 0).
+```
+Thus, the operator with eigenvalue ``s`` is ``i \partial_\gamma``.
+
 
 ## Goldberg
 
