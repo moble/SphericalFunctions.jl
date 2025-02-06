@@ -1,9 +1,9 @@
-# Summary of conventions
+# Summary
 
 This page lists the most important conventions used in this package.
-The [following page](@ref "Details of conventions") derives all of
-these conventions from the very basics (i.e., starting from Cartesian
-coordinates of 3-dimensional space).
+The [following page](@ref "Details") derives all of these conventions
+from the very basics (i.e., starting from Cartesian coordinates of
+3-dimensional space).
 
 Note that we will use Euler angles and spherical coordinates here, but
 *they are not used internally in this package* — though conversion
@@ -41,17 +41,18 @@ A rotation represented by the unit quaternion ``𝐑`` acts on a vector
 assumed to be right-handed, so that a quaternion characterizing the
 rotation through an angle ``\vartheta`` about a unit vector ``𝐮`` can
 be expressed as ``𝐑 = \exp(\vartheta 𝐮/2)``.  Note that ``-𝐑``
-would deliver the same rotation, which is why the group of unit
+would deliver the same *rotation*, which makes the group of unit
 quaternions ``\mathrm{Spin}(3) = \mathrm{SU}(2)`` is a *double cover*
-of the group of rotations ``\mathrm{SO}(3)``.
+of the group of rotations ``\mathrm{SO}(3)``.  Nonetheless, ``𝐑`` and
+``-𝐑`` are distinct quaternions, and represent distinct "spinors".
 
 ## Euler angles
 Euler angles parametrize a unit quaternion as ``𝐑 = \exp(\alpha
 𝐤/2)\, \exp(\beta 𝐣/2)\, \exp(\gamma 𝐤/2)``.  The angles ``\alpha``
-and ``\beta`` take values in ``[0, 2\pi)``.  The angle ``\beta`` takes
-values in ``[0, 2\pi]`` to parametrize the group of unit quaternions
-``\mathrm{Spin}(3) = \mathrm{SU}(2)``, or in ``[0, \pi]`` to
-parametrize the group of rotations ``\mathrm{SO}(3)``.
+and ``\gamma`` take values in ``[0, 2\pi)``.  The angle ``\beta``
+takes values in ``[0, 2\pi]`` to parametrize the group of unit
+quaternions ``\mathrm{Spin}(3) = \mathrm{SU}(2)``, or in ``[0, \pi]``
+to parametrize the group of rotations ``\mathrm{SO}(3)``.
 
 ## Spherical coordinates as Euler angles
 A point on the unit sphere with spherical coordinates ``(\theta,
