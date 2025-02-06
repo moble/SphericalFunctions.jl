@@ -150,8 +150,8 @@ Euler angles.
    that the generalized definition reduces to this expression for spin
    weight ``s=0``, and transforming the spherical coordinates as
    ``(\theta, \phi) \mapsto \exp(\phi 𝐤/2)\, \exp(\theta 𝐣/2).``
-10. Following [Newman_1966](@citet), we find that they define the
-   spherical tangent basis vectors as
+10. [Newman_1966](@citet) define the spherical tangent basis vectors
+   as
    ```math
    m^\mu = \frac{1}{\sqrt{2}} \left(
        \boldsymbol{\theta} + i \boldsymbol{\phi}
@@ -197,7 +197,7 @@ Euler angles.
        = -\sin^s \theta \left\{
            \frac{\partial}{\partial \theta}
            - \frac{i}{\sin\theta} \frac{\partial}{\partial \phi}
-       \right\} \left(\eta \sin^{-s} \theta\right). \\
+       \right\} \left(\eta \sin^{-s} \theta\right).
    \end{aligned}
    ```
    Here, we have used the full expressions for ``R_x`` and ``R_y``
