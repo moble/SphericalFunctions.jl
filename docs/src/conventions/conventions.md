@@ -53,61 +53,113 @@ Euler angles.
    L_𝐮 f(𝐑) = \left.i \frac{d}{d\epsilon}\right|_{\epsilon=0}
    f\left(e^{-\epsilon 𝐮/2}\, 𝐑\right)
    \qquad \text{and} \qquad
-   R_𝐮 f(𝐑) = \left.i \frac{d}{d\epsilon}\right|_{\epsilon=0}
+   R_𝐮 f(𝐑) = -\left.i \frac{d}{d\epsilon}\right|_{\epsilon=0}
    f\left(𝐑\, e^{-\epsilon 𝐮/2}\right),
    ```
-   where ``𝐮`` can be any pure-vector quaternion.  In particular,
-   ``L`` represents the standard angular-momentum operators, and we
-   can compute the expressions in Euler angles for the basis vectors:
+   where ``𝐮`` can be any quaternion, though unit pure-vector
+   quaternions are the most common.  In particular, ``L`` represents
+   the standard angular-momentum operators, and we can compute the
+   expressions in Euler angles for the basis vectors:
    ```math
    \begin{aligned}
-    L_x = L_𝐢 &= -i \left\{
-        -\frac{\cos\alpha}{\tan\beta} \frac{\partial} {\partial \alpha}
-        - \sin\alpha \frac{\partial} {\partial \beta}
-        +\frac{\cos\alpha}{\sin\beta} \frac{\partial} {\partial \gamma}
-    \right\} \\
-    L_y = L_𝐣 &= -i \left\{
-        -\frac{\sin\alpha}{\tan\beta} \frac{\partial} {\partial \alpha}
-        + \cos\alpha \frac{\partial} {\partial \beta}
-        +\frac{\sin\alpha}{\sin\beta} \frac{\partial} {\partial \gamma}
-    \right\} \\
-    L_z = L_𝐤 &= -i \frac{\partial} {\partial \alpha} \\
-    R_x = R_𝐢 &= -i \left\{
+    L_𝐢 &= i \left\{
+        \frac{\cos\alpha}{\tan\beta} \frac{\partial} {\partial \alpha}
+        + \sin\alpha \frac{\partial} {\partial \beta}
+        - \frac{\cos\alpha}{\sin\beta} \frac{\partial} {\partial \gamma}
+    \right\},
+    &
+    R_𝐢 &= i \left\{
         -\frac{\cos\gamma}{\sin\beta} \frac{\partial} {\partial \alpha}
         +\sin\gamma \frac{\partial} {\partial \beta}
         +\frac{\cos\gamma}{\tan\beta} \frac{\partial} {\partial \gamma}
-    \right\} \\
-    R_y = R_𝐣 &= -i \left\{
+    \right\},
+    \\
+    L_𝐣 &= i \left\{
+        \frac{\sin\alpha}{\tan\beta} \frac{\partial} {\partial \alpha}
+        - \cos\alpha \frac{\partial} {\partial \beta}
+        -\frac{\sin\alpha}{\sin\beta} \frac{\partial} {\partial \gamma}
+    \right\},
+    &
+    R_𝐣 &= i \left\{
         \frac{\sin\gamma}{\sin\beta} \frac{\partial} {\partial \alpha}
         +\cos\gamma \frac{\partial} {\partial \beta}
         -\frac{\sin\gamma}{\tan\beta} \frac{\partial} {\partial \gamma}
-    \right\} \\
-    R_z = R_𝐤 &= -i \frac{\partial} {\partial \gamma}
+    \right\},
+    \\
+    L_𝐤 &= -i \frac{\partial} {\partial \alpha},
+    &
+    R_𝐤 &= i \frac{\partial} {\partial \gamma}.
    \end{aligned}
    ```
-   We can lift any function on ``S^2`` to a function on ``S^3`` — or
-   more precisely any function on spherical coordinates to a function
-   on the space of Euler angles — by the correspondence ``(\theta,
-   \phi) \mapsto (\alpha, \beta, \gamma) = (\phi, \theta, 0)``.  We
-   can then express the angular-momentum operators in their more
-   common form, in terms of spherical coordinates:
-
+   These correspond precisely to the standard expressions for the
+   angular-momentum operators, with ``𝐢 \leftrightarrow 𝐱``, etc.
+   We also obtain a generalization of the usual commutator relations
+   and find that
    ```math
-   \begin{aligned}
-    L_x &= -i \left\{
-        -\frac{\cos\phi}{\tan\theta} \frac{\partial} {\partial \phi}
-        - \sin\phi \frac{\partial} {\partial \theta}
-    \right\} \\
-    L_y &= -i \left\{
-        -\frac{\sin\phi}{\tan\theta} \frac{\partial} {\partial \phi}
-        + \cos\phi \frac{\partial} {\partial \theta}
-    \right\} \\
-    L_z &= -i \frac{\partial} {\partial \phi}
-   \end{aligned}
+   [L_𝐮, L_𝐯] = \frac{i}{2} L_{[𝐮,𝐯]}
+   \qquad
+   [R_𝐮, R_𝐯] = \frac{i}{2} R_{[𝐮,𝐯]}
+   \qquad
+   [L_𝐮, R_𝐯] = 0.
+   ```
+   Restricting to just the basis vectors, indexed as ``a,b,c``, the
+   first of these reduces to ``[L_a, L_b] = i \epsilon_{abc} L_c``,
+   which is precisely the standard result.  We can also lift any
+   function on ``S^2`` to a function on ``S^3`` — or more precisely
+   any function on spherical coordinates to a function on the space of
+   Euler angles — by the correspondence ``(\theta, \phi) \mapsto
+   (\alpha, \beta, \gamma) = (\phi, \theta, 0)``.  We can then express
+   the angular-momentum operators in their more common form, in terms
+   of spherical coordinates:
+   ```math
+    L_x = i \left\{
+        \frac{\cos\phi}{\tan\theta} \frac{\partial} {\partial \phi}
+        + \sin\phi \frac{\partial} {\partial \theta}
+    \right\}
+    \qquad
+    L_y = i \left\{
+        \frac{\sin\phi}{\tan\theta} \frac{\partial} {\partial \phi}
+        - \cos\phi \frac{\partial} {\partial \theta}
+    \right\}
+    \qquad
+    L_z = -i \frac{\partial} {\partial \phi}
    ```
    The ``R`` operators make less sense for a function of spherical
-   coordinates.
-9. Spherical harmonics
+   coordinates, because of their inherent dependence on ``\gamma``.
+   Nonetheless, we can relate them to the standard spin-raising and
+   -lowering operators for a function of spin weight ``s``:
+   ```math
+   \begin{aligned}
+   R_z &= s, \\
+   R_x + i R_y &= \eth, \\
+   R_x - i R_y &= \bar{\eth},
+   \end{aligned}
+   ```
+   where ``\eth \eta = -\sin^s \theta (\partial_\theta + i
+    \csc\theta\, \partial_\phi) (\eta \sin^{-s} \theta)`` is
+   the spin-raising operator introduced by [Newman_1966](@citet).  In
+   the expressions for ``R``, any derivative with respect to
+   ``\gamma`` is simply replaced by a factor of ``-i s``, allowing us
+   to interpret them as operators on the 2-sphere, even though this is
+   mathematically ill-defined and spin-weighted functions really
+   should be defined on the 3-sphere.
+9. There is essentially no disagreement in the literature about the
+   definitions of the spherical harmonics, so we adopt the standard
+   expressions.  Explicitly, in terms of spherical coordinates,
+   ```math
+   Y_{\ell, m}(\theta, \phi)
+   =
+   \sqrt{\frac{2\ell+1}{4\pi} \frac{(\ell-m)!}{(\ell+m)!}}
+   e^{im\phi}
+   (-1)^{\ell+m} \frac{(1-\cos^2\theta)^{m/2}} {2^\ell \ell!}
+   \frac{d^{\ell+m}}{d\cos\theta^{\ell+m}} (1-\cos^2\theta)^\ell.
+   ```
+   This package does not actually use this form; we generalize it to
+   spin-weighted spherical harmonics, and express those as functions
+   of a quaternion.  Nonetheless, we choose our conventions to ensure
+   that the generalized definition reduces to this expression for spin
+   weight ``s=0``, and transforming the spherical coordinates as
+   ``(\theta, \phi) \mapsto \exp(\phi 𝐤/2)\, \exp(\theta 𝐣/2).``
 10. Wigner D-matrices
 11. Spin-weighted spherical harmonics
 
@@ -806,8 +858,12 @@ Moreover, we can show that these operators form a Lie algebra with the
 commutator as the Lie bracket.  That is, we have
 ```math
 \begin{aligned}
-[L_{\mathfrak{g}}, L_{\mathfrak{h}}] &= -\lambda L_{[\mathfrak{g}, \mathfrak{h}]}, \\
-[R_{\mathfrak{g}}, R_{\mathfrak{h}}] &= \rho R_{[\mathfrak{g}, \mathfrak{h}]}, \\
+[L_{\mathfrak{g}}, L_{\mathfrak{h}}]
+    &= \frac{\lambda}{2} L_{[\mathfrak{g}, \mathfrak{h}]},
+\\
+[R_{\mathfrak{g}}, R_{\mathfrak{h}}]
+    &= -\frac{\rho}{2} R_{[\mathfrak{g}, \mathfrak{h}]},
+\\
 [L_{\mathfrak{g}}, R_{\mathfrak{h}}] &= 0.
 \end{aligned}
 ```
@@ -846,8 +902,8 @@ Using these relations, we can actually solve for the constants
 ``\lambda`` and ``\rho`` up to a sign.  We find that
 ```math
 \begin{aligned}
-\lambda &= -i, \\
-\rho &= i.
+\lambda &= i, \\
+\rho &= -i.
 \end{aligned}
 ```
 
@@ -1053,6 +1109,20 @@ distinct, this can only be true if ``\int f_u f_v=0``.
     - Representation matrices transfer to the homogeneous space, with
       sparsity patterns
 
+Theorem 2.16 of [Hanson-Yakovlev](@cite HansonYakovlev_2002) says that
+an orthonormal basis of a product of ``L^2`` spaces is given by the
+product of the orthonormal bases of the individual spaces.
+Furthermore, on page 354, they point out that ``\{(1/\sqrt{2\pi})
+e^{im\phi}\}`` is an orthonormal basis of ``L^2(0,2\pi)``, while the
+set ``\{1/c_{n,m} P_n^m(\cos\theta)`` is an orthonormal basis of
+``L^2(0, \pi)`` in the ``\theta`` coordinate.  Therefore, the product
+of these two sets is an orthonormal basis of the product space
+``L^2\left((0,2\pi) \times (0, \pi)\right)``, which forms a coordinate
+space for ``S^2``.  I would probably modify this to point out that
+``(0,2\pi)`` is really ``S^1``, and then we could extend it to point
+out that you can throw on another factor of ``S^1`` to cover ``S^3``,
+which happens to give us the Wigner D-matrices.
+
 ## Recursion relations
 
 [Gumerov and Duraiswami (2001)](@cite Gumerov_2001) derive their
@@ -1078,7 +1148,8 @@ may be more similar to the right-derivative defined above.  However, I
 don't know that we'll necessarily be able to achieve the same results
 with just angular-momentum operators, since their operators do involve
 moving off of the sphere.  Maybe we'd need to move off of the sphere
-in 4-D space to get comparable results.
+in 4-D space to get comparable results.  Or maybe just use something
+like ``𝐫 ∧ L``, which should also have 3 degrees of freedom.
 
 The SWSHs/``\mathfrak{D}`` functions can be naturally promoted to
 functions not just on the 3-sphere, but also in 4-D space just by
