@@ -1,9 +1,9 @@
-# Details of conventions
+# Details
 
 This page carefully works through all the conventions used in this
 package, starting from first principles to motivate the choices and
 ensure that each step is on firm footing.  The [previous page](@ref
-"Summary of conventions") collects the results in a more concise form.
+"Summary") collects the results in a more concise form.
 
 Note that we will use Euler angles and spherical coordinates here, but
 *they are not used internally in this package* — though conversion
