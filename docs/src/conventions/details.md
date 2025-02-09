@@ -946,7 +946,34 @@ This final expression is precisely equivalent to Sakurai's Eq. (3.1.15):
 1 - i \left( \mathbf{J} \cdot \hat{\mathbf{n}} \right) d\phi.
 ```
 
-
+Now, we can write the eigenkets of ``L^2`` and ``L_z`` as ``|\ell,
+m\rangle``, where the eigenvalues are ``\ell(\ell+1)`` and ``m``,
+respectively.  Finally, define the 𝔇 matrix as (Eq. 3.5.42)
+```math
+𝔇^{(\ell)}_{m',m}(R)
+=
+\langle \ell, m' | 𝔇(R) | \ell, m \rangle.
+```
+Sakurai notes the important result that (Eq. 3.5.46)
+```math
+𝔇^{(\ell)}_{m'',m}(R_1\, R_2)
+=
+\sum_{m'} 𝔇^{(\ell)}_{m'',m'}(R_1) 𝔇^{(\ell)}_{m',m}(R_2),
+```
+and we can readily find the essential behavior with respect to the
+first and last Euler angles (Eq. 3.5.50):
+```math
+\begin{aligned}
+𝔇^{(\ell)}_{m',m}(\alpha, \beta, \gamma)
+&=
+\langle \ell, m' |
+    \exp[-iL_z \alpha]\exp[-iL_y \beta]\exp[-iL_z \gamma]
+| \ell, m \rangle \\
+&=
+\exp[-i(m' \alpha+m\gamma)]
+\langle \ell, m' | \exp[-iL_y \beta] | \ell, m \rangle.
+\end{aligned}
+```
 
 
 ##  Representation theory / harmonic analysis
