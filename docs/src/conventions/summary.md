@@ -141,7 +141,7 @@ L_y = i \left\{
 L_z = -i \frac{\partial} {\partial \phi}
 ```
 The ``R`` operators make less sense for a function of spherical
-coordinates, because of their inherent dependence on ``\gamma``.  We
+coordinates, because of their inherent dependence on ``\gamma.``  We
 will come back to them, however, when we consider spin-weighted
 functions — which are inherently ill-defined on the 2-sphere, but can
 be interpreted as restrictions of functions on the 3-sphere with this
@@ -149,22 +149,34 @@ special "weight" property.
 
 ## Spherical harmonics
 There is essentially no disagreement in the literature about the
-definitions of the spherical harmonics, so we adopt the standard
-expressions.  Explicitly, in terms of spherical coordinates,
+definitions of the spherical harmonics, so we adopt a function that is
+consistent with the standard expressions.  More specifically, this
+package defines the spherical harmonics in terms of Wigner's 𝔇
+matrices, by way of the spin-weighted spherical harmonics, as a
+function of a quaternion.
+
+For concreteness, however, we can write the standard expression in
+terms of spherical coordinates.  This is what our definition will
+reduce to for spin weight ``s=0``, and transforming the spherical
+coordinates into a quaternion in the way given above.  Explicitly, in
+terms of spherical coordinates, that expression is
 ```math
-Y_{\ell, m}(\theta, \phi)
-=
-\sqrt{\frac{2\ell+1}{4\pi} \frac{(\ell-m)!}{(\ell+m)!}}
-e^{im\phi}
-(-1)^{\ell+m} \frac{(1-\cos^2\theta)^{m/2}} {2^\ell \ell!}
-\frac{d^{\ell+m}}{d\cos\theta^{\ell+m}} (1-\cos^2\theta)^\ell.
+\begin{align}
+  Y_{l,m}
+  &=
+  \sqrt{\frac{2\ell+1}{4\pi}} e^{im\phi}
+  \sum_{k = k_1}^{k_2}
+  \frac{(-1)^k \ell! [(\ell+m)!(\ell-m)!]^{1/2}}
+  {(\ell+m-k)!(\ell-k)!k!(k-m)!}
+  \\ &\qquad \times
+  \left(\cos\left(\frac{\iota}{2}\right)\right)^{2\ell+m-2k}
+  \left(\sin\left(\frac{\iota}{2}\right)\right)^{2k-m}
+\end{align}
 ```
-This package does not actually use this form; we generalize it to
-spin-weighted spherical harmonics, and express those as functions of a
-quaternion.  Nonetheless, we choose our conventions to ensure that the
-generalized definition reduces to this expression for spin weight
-``s=0``, and transforming the spherical coordinates as ``(\theta,
-\phi) \mapsto \exp(\phi 𝐤/2)\, \exp(\theta 𝐣/2).``
+where ``k_1 = \textrm{max}(0, m)`` and ``k_2=\textrm{min}(\ell+m,
+\ell)``.  Again, we must emphasize that this package does not actually
+use this form; it is just shown here to make it easier to compare to
+other sources.
 
 ## Spin-weighted functions
 [Newman_1966](@citet) define the spherical tangent basis vectors
@@ -199,9 +211,19 @@ or
 ```
 This is the crucial definition giving us the behavior of
 spin-weighted functions: they are eigenfunctions of the operator
-``R_z = i \partial_\gamma`` with eigenvalue ``s``.  We can also
-immediately find the spin-raising and -lowering operators —
-canonically denoted ``\eth`` and ``\bar{\eth}`` — from the
+``R_z = i \partial_\gamma`` with eigenvalue ``s``.
+
+We can make this a little less dependent on the choice of Euler
+angles by writing ``\eta`` not as a function of Euler angles, but as
+a function of a quaternion.  We then have
+```math
+\eta(\mathbf{Q}\, e^{\gamma 𝐤/2}) = e^{-is\gamma} \eta(\mathbf{Q}),
+```
+which means that spin-weighted functions are eigenfunctions of the
+operator ``R_𝐤`` with eigenvalue ``s``.
+
+We can also immediately find the spin-raising and -lowering operators
+— canonically denoted ``\eth`` and ``\bar{\eth}`` — from the
 commutator relations for ``R``:
 ```math
 \begin{aligned}
@@ -225,9 +247,31 @@ us to write them as if they were operators on the 2-sphere, even
 though this is mathematically ill-defined and spin-weighted
 functions really must be defined on the 3-sphere.
 
-## Wigner D-matrices
-
-
 ## Spin-weighted spherical harmonics
 
+Given the (scalar) spherical harmonics, and the spin-raising and
+-lowering operators, we can now define the spin-weighted spherical
+harmonics.  These are obtained by applying the relevant operator to
+the scalar spherical harmonics the specified number of times, and
+normalizing.  Again, this results in a function of a quaternion, but
+we can write it in terms of spherical coordinates purely for the sake
+of comparison with other sources.  The expression is
+```math
+\begin{align}
+  {}_{s}Y_{l,m}
+  &=
+  (-1)^s\sqrt{\frac{2\ell+1}{4\pi}} e^{im\phi}
+  \sum_{k = k_1}^{k_2}
+  \frac{(-1)^k[(\ell+m)!(\ell-m)!(\ell-s)!(\ell+s)!]^{1/2}}
+  {(\ell+m-k)!(\ell+s-k)!k!(k-s-m)!}
+  \\ &\qquad \times
+  \left(\cos\left(\frac{\iota}{2}\right)\right)^{2\ell+m+s-2k}
+  \left(\sin\left(\frac{\iota}{2}\right)\right)^{2k-s-m}
+\end{align}
+```
+where ``k_1 = \textrm{max}(0, m+s)`` and ``k_2=\textrm{min}(\ell+m,
+\ell+s)``.
+
+
+## Wigner D-matrices
 
