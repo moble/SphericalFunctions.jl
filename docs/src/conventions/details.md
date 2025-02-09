@@ -908,6 +908,47 @@ distinct, this can only be true if ``\int f_u f_v=0``.
   Laplacian on the 3-sphere.
 
 
+## Wigner's 𝔇 matrices
+
+[Sakurai_1994](@citet) says that
+
+> [...] rotations affect physical systems, the state ket corresponding
+> to a rotated system is expected to look different from the state ket
+> corresponding to the original unrotated system. Given a rotation
+> operation ``R``, characterized by a ``3\times 3`` orthogonal matrix
+> ``R``, we associate an operator ``\mathscr{D}(R)`` in the
+> appropriate ket space such that
+> ```math
+> |\alpha\rangle_R = \mathscr{D}(R) |\alpha\rangle,
+> ```
+> ``|\alpha\rangle_R`` and ``|\alpha\rangle`` stand for the kets of
+> the rotated and original system, respectively.
+
+If the field is represented as a function ``f(𝐑)``, then rotating the
+field by ``e^{\epsilon 𝐮/2}`` is equivalent to rotating the argument
+of the function by ``e^{-\epsilon 𝐮/2}``:
+```math
+\begin{aligned}
+f\left(𝐑\right)
+&\to
+f\left(e^{-\epsilon 𝐮/2}𝐑\right) \\
+&\approx
+f\left(𝐑\right) + \epsilon \left. \frac{d}{d\epsilon} \right|_{\epsilon=0}
+f\left(e^{-\epsilon 𝐮/2}𝐑\right) \\
+&=
+f\left(𝐑\right) - i \epsilon L_𝐮 f\left(𝐑\right).
+\end{aligned}
+```
+This final expression is precisely equivalent to Sakurai's Eq. (3.1.15):
+```math
+\mathscr{D}\left(\hat{\mathbf{n}}, d\phi \right)
+=
+1 - i \left( \mathbf{J} \cdot \hat{\mathbf{n}} \right) d\phi.
+```
+
+
+
+
 ##  Representation theory / harmonic analysis
   - Representations show up in Fourier analysis on groups
   - Peter-Weyl theorem
