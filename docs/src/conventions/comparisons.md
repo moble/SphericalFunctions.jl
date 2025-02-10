@@ -30,7 +30,112 @@ the same exact expression for the (scalar) spherical harmonics.
 
 ## Condon-Shortley
 
-## Wigner
+## Edmonds
+
+[Edmonds_2016](@citet) is a standard reference for the theory of
+angular momentum.
+
+In Sec. 1.3 he actually does a fair job of defining the Euler angles.
+The upshot is that his definition agrees with ours, though he uses the
+"active" definition style.  That is, the rotations are to be performed
+successively in order:
+
+> 1. A rotation ``\alpha(0 \leq \alpha < 2\pi)`` about the ``z``-axis,
+>    bringing the frame of axes from the initial position ``S`` into
+>    the position ``S'``.  The axis of this rotation is commonly
+>    called the *vertical*.
+>
+> 2. A rotation ``\beta(0 \leq \beta < \pi)`` about the ``y``-axis of
+>    the frame ``S'``, called the *line of nodes*.  Note that its
+>    position is in general different from the initial position of the
+>    ``y``-axis of the frame ``S``. The resulting position of the
+>    frame of axes is symbolized by ``S''``.
+>
+> 3. A rotation ``\gamma(0 \leq \gamma < 2\pi)`` about the ``z``-axis
+>    of the frame of axes ``S''``, called the *figure axis*; the
+>    position of this axis depends on the previous rotations
+>    ``\alpha`` and ``\beta``.  The final position of the frame is
+>    symbolized by ``S'''``.
+
+I would simply write the "``y``-axis of the frame ``S'``" as ``y'``,
+and so on.  In quaternionic language, I would write these rotations as
+``\exp[\gamma 𝐤''/2]\, \exp[\beta 𝐣'/2]\, \exp[\alpha 𝐤/2]``.  But
+we also have
+```math
+\exp[\beta 𝐣'/2] = \exp[\alpha 𝐤/2]\, \exp[\beta 𝐣'/2]\, \exp[-\alpha 𝐤/2]
+```
+and so on for the third rotation, so any easy calculation shows that
+```math
+\exp[\gamma 𝐤''/2]\, \exp[\beta 𝐣'/2]\, \exp[\alpha 𝐤/2]
+=
+\exp[\alpha 𝐤/2]\, \exp[\beta 𝐣/2]\, \exp[\gamma 𝐤/2],
+```
+which is precisely our definition.
+
+The spherical coordinates are implicitly defined by
+
+> It should be noted that the polar coordinates ``\varphi, \theta``
+> with respect to the original frame ``S`` of the ``z``-axis in its
+> final position are identical with the Euler angles ``\alpha, \beta``
+> respectively.
+
+Again, this agrees with our definition.
+
+His expression for the angular-momentum operator in Euler angles — Eq.
+(2.2.2) — agrees with ours:
+```math
+\begin{aligned}
+L_x &= -i \hbar \left\{
+    -\frac{\cos\alpha}{\tan\beta} \frac{\partial} {\partial \alpha}
+    - \sin\alpha \frac{\partial} {\partial \beta}
+    + \frac{\cos\alpha}{\sin\beta} \frac{\partial} {\partial \gamma}
+\right\},
+\\
+L_y &= -i \hbar \left\{
+    -\frac{\sin\alpha}{\tan\beta} \frac{\partial} {\partial \alpha}
+    + \cos\alpha \frac{\partial} {\partial \beta}
+    +\frac{\sin\alpha}{\sin\beta} \frac{\partial} {\partial \gamma}
+\right\},
+\\
+L_z &= -i \hbar \frac{\partial} {\partial \alpha}.
+\end{aligned}
+```
+(The corresponding restriction to spherical coordinates also precisely
+agrees with our results, with the extra factor of ``\hbar``.)
+
+Unfortunately, there is disagreement over the definition of the
+Wigner D-matrices.  In Eq. (4.1.12) he defines
+```math
+\mathcal{D}_{\alpha \beta \gamma} =
+\exp\big( \frac{i\alpha}{\hbar} J_z\big)
+\exp\big( \frac{i\beta}{\hbar} J_y\big)
+\exp\big( \frac{i\gamma}{\hbar} J_z\big),
+```
+which is the *conjugate* of most other definitions.
+
+
+## Goldberg
+
+Eq. (3.11) of [GoldbergEtAl_1967](@citet) naturally extends to
+```math
+  {}_sY_{\ell, m}(\theta, \phi, \gamma)
+  =
+  \left[ \left(2\ell+1\right) / 4\pi \right]^{1/2}
+  D^{\ell}_{-s,m}(\phi, \theta, \gamma),
+```
+where Eq. (3.4) also shows that ``D^{\ell}_{m', m}(\alpha, \beta,
+\gamma) = D^{\ell}_{m', m}(\alpha, \beta, 0) e^{i m' \gamma}``,
+so we have
+```math
+  {}_sY_{\ell, m}(\theta, \phi, \gamma)
+  =
+  {}_sY_{\ell, m}(\theta, \phi)\, e^{-i s \gamma}.
+```
+This is the most natural extension of the standard spin-weighted
+spherical harmonics to ``\mathrm{Spin}(3)``.  In particular, the
+spin-weight operator is ``i \partial_\gamma``, which suggests that it
+will be most natural to choose the sign of ``R_𝐮`` so that ``R_z = i
+\partial_\gamma``.
 
 ## Newman-Penrose
 
@@ -113,40 +218,9 @@ or
 Thus, the operator with eigenvalue ``s`` is ``i \partial_\gamma``.
 
 
-## Goldberg
-
-Eq. (3.11) of [GoldbergEtAl_1967](@citet) naturally extends to
-```math
-  {}_sY_{\ell, m}(\theta, \phi, \gamma)
-  =
-  \left[ \left(2\ell+1\right) / 4\pi \right]^{1/2}
-  D^{\ell}_{-s,m}(\phi, \theta, \gamma),
-```
-where Eq. (3.4) also shows that ``D^{\ell}_{m', m}(\alpha, \beta,
-\gamma) = D^{\ell}_{m', m}(\alpha, \beta, 0) e^{i m' \gamma}``,
-so we have
-```math
-  {}_sY_{\ell, m}(\theta, \phi, \gamma)
-  =
-  {}_sY_{\ell, m}(\theta, \phi)\, e^{-i s \gamma}.
-```
-This is the most natural extension of the standard spin-weighted
-spherical harmonics to ``\mathrm{Spin}(3)``.  In particular, the
-spin-weight operator is ``i \partial_\gamma``, which suggests that it
-will be most natural to choose the sign of ``R_𝐮`` so that ``R_z = i
-\partial_\gamma``.
-
-## Wikipedia
+## LALSuite
 
 ## Mathematica
-
-## SymPy
-
-## Sakurai
-
-## Thorne
-
-## Torres del Castillo
 
 ## NINJA
 
@@ -186,8 +260,24 @@ get rid of it:
 where ``k_1 = \textrm{max}(0, m+s)`` and ``k_2=\textrm{min}(\ell+m,
 \ell+s)``.
 
+## SymPy
 
-## LALSuite
+SymPy gives what I would consider to be the *conjugate* D matrix of
+the *inverse* rotation.  Specifically, the
+[source](https://github.com/sympy/sympy/blob/b4ce69ad5d40e4e545614b6c76ca9b0be0b98f0b/sympy/physics/wigner.py#L1136-L1191)
+cites [Edmonds_2016](@citet) (4.1.12) when defining
+```math
+\mathcal{D}_{\alpha \beta \gamma} =
+\exp\big( \frac{i\alpha}{\hbar} J_z\big)
+\exp\big( \frac{i\beta}{\hbar} J_y\big)
+\exp\big( \frac{i\gamma}{\hbar} J_z\big).
+```
+
+## Sakurai
+
+## Thorne
+
+## Torres del Castillo
 
 ## Varshalovich et al.
 
@@ -348,3 +438,7 @@ is some subtlety involving the order of operations and passing to the
 consistent, and fit in nicely with the spin-weighted function
 literature; maybe Varshalovich et al. are just doing something
 different.
+
+## Wikipedia
+
+## Wigner
