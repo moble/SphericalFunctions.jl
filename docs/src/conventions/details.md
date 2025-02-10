@@ -976,6 +976,51 @@ first and last Euler angles (Eq. 3.5.50):
 ```
 
 
+Using
+```math
+L_y = (L₊ − L₋) / (2i)
+```
+we can expand
+```math
+exp[-iL_y β]
+=
+Σ_k (-iL_y β)^k / k!
+=
+Σ_k (L₋ - L₊)^k (β/2)^k / k!
+```
+
+Now, writing ``d_+(X) = [L_+, X]``, Eq. (9) of https://arxiv.org/pdf/1707.03861 says
+```math
+(L₋ - L₊)^k = \sum_{j=0}^k \binom{k, j} ((L₋ - d_+)^j 1) (-L₊)^{k-j}
+```
+The sum will automatically be zero unless ``m+k-j ≤ ℓ`` — which means ``j ≥ m+k-ℓ``
+```math
+(-L₊)^{k-j}|ℓ,m\rangle = (-1)^{k-j} \sqrt{\frac{(\ell+m+k-j)!}{(\ell+m)!},\frac{(\ell-m)!}{(\ell-m-k+j)!}} |ℓ,m+k-j\rangle
+```
+
+``[L₊, L₋] = 2 L_z``
+
+``[L_z, L_\pm] = \pm L_\pm``
+
+I wonder if there's a nicer approach using the symmetry transformation
+Edmonds notes in Sec. 4.5 (and credits to Wigner) — or the presumably
+equivalent one McEwan and Wieux use (and credit to Risbo):
+```math
+\exp\left[ \beta 𝐣 / 2 \right]
+=
+\exp\left[ \pi 𝐤 / 4 \right]
+\exp\left[ \pi 𝐣 / 4 \right]
+\exp\left[ \beta 𝐤 / 2 \right]
+\exp\left[ -\pi 𝐣 / 4 \right]
+\exp\left[ -\pi 𝐤 / 4 \right]
+```
+The 𝔇 matrices corresponding to the ``𝐤`` rotations are simple
+phases, which converts the problem into one of finding the 𝔇 matrices
+for the ``𝐣`` rotations through angles of ``\pm\pi/2`` — which are
+presumably simpler to compute.  See, e.g., Varshalovich's Eq.
+4.16.(5), where they are given by purely combinatorial terms.
+
+
 ##  Representation theory / harmonic analysis
   - Representations show up in Fourier analysis on groups
   - Peter-Weyl theorem
