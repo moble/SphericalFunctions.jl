@@ -262,16 +262,37 @@ where ``k_1 = \textrm{max}(0, m+s)`` and ``k_2=\textrm{min}(\ell+m,
 
 ## SymPy
 
-SymPy gives what I would consider to be the *conjugate* D matrix of
-the *inverse* rotation.  Specifically, the
+There is no specific Euler angle convention in SymPy, however it is
+informative to see what the `sympy.algebras.Quaternion.from_euler`
+class method does.  You can specify 
+
+SymPy uses what I would consider just a wrong expression for ``D``.
+Specifically, the
 [source](https://github.com/sympy/sympy/blob/b4ce69ad5d40e4e545614b6c76ca9b0be0b98f0b/sympy/physics/wigner.py#L1136-L1191)
-cites [Edmonds_2016](@citet) (4.1.12) when defining
+cites [Edmonds_2016](@citet) when defining
 ```math
 \mathcal{D}_{\alpha \beta \gamma} =
 \exp\big( \frac{i\alpha}{\hbar} J_z\big)
 \exp\big( \frac{i\beta}{\hbar} J_y\big)
 \exp\big( \frac{i\gamma}{\hbar} J_z\big).
 ```
+But that is an incorrect copy of Edmonds' Eq. (4.1.9), in which the
+``\alpha`` and ``\gamma`` on the right-hand side are swapped.  The
+code also implements D in the `wigner_d` function as (essentially)
+```python
+exp(I*mprime*alpha)*d[i, j]*exp(I*m*gamma)
+```
+even though the actual equation Eq. (4.1.12) says
+```math
+\mathscr{D}^{(j)}_{m' m}(\alpha \beta \gamma) =
+\exp i m' \gamma d^{(j)}_{m' m}(\alpha, \beta) \exp(i m \alpha).
+```
+The ``d`` matrix appears to be implemented consistently with Edmonds,
+and thus not affected.
+
+Basically, it appears that SymPy just swapped the order of the Euler
+angles relative to Edmonds, who already introduced a conjugate to the
+definition of the D matrix.
 
 ## Sakurai
 
@@ -280,6 +301,48 @@ cites [Edmonds_2016](@citet) (4.1.12) when defining
 ## Torres del Castillo
 
 ## Varshalovich et al.
+
+[Varshalovich_1988](@citet) has a fairly decent comparison of
+definitions related to the rotation matrix by previous authors.  
+
+Eq. 1.4.(31) defines the operator
+```math
+\hat{D}(\alpha, \beta, \gamma)
+=
+e^{-i\alpha \hat{J}_z}
+e^{-i\beta \hat{J}_y}
+e^{-i\gamma \hat{J}_z},
+```
+where the ``\hat{J}`` operators are defined in 
+
+> In quantum mechanics the total angular momentum operator ``\hat{J}``
+> is defined as an operator which generates transformations of wave
+> functions (state vectors) and quantum operators under infinitesimal
+> rotations of the coordinate system (see Eqs. 2.1.(1) and 2.1.(2)).
+> 
+> A transformation of an arbitrary wave function ``\Psi`` under
+> rotation of the coordinate system through an infinitesimal angle
+> ``\delta \omega`` about an axis ``\mathbf{n}`` may be written as
+> ```math
+> \Psi \to \Psi' = \left(1 - i \delta \omega \mathbf{n} \cdot \hat{J} \right)\Psi,
+> ```
+> where ``\hat{J}`` is the total angular momentum operator.
+
+Eq. 4.1.(1) defines the Wigner D-functions according to
+```math
+\langle J M | \hat{D}(\alpha, \beta, \gamma) | J' M' \rangle
+=
+\delta_{J J'} D^J_{M M'}(\alpha, \beta, \gamma).
+```
+Eq. 4.3.(1) states
+```math
+D^J_{M M'}(\alpha, \beta, \gamma)
+=
+e^{-i M \alpha}
+d^J_{M M'}(\beta)
+e^{-i M' \gamma}
+```
+
 
 Page 155 has a table of values for ``\ell \leq 5``
 
