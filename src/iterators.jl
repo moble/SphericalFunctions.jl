@@ -5,7 +5,9 @@ As a result, a warning is issued every time this function is called.  Rather tha
 *fixing* this bug in this minor/patch version — which would be a breaking change — this is a
 final release in this major version of the package to notify users of this function that
 there is a problem.  The next major version of the package will likely change the actual
-behavior to the one implied by the documentation.  To quiet these warnings, you can use
+behavior to the one implied by the documentation.  To quiet these warnings, you can
+temporarily pass the keyword argument `warn=false`, though this will probably be removed in
+the next major version.  Alternatively, use something like
 
     import Logging: with_logger, NullLogger
     Dit = with_logger(NullLogger()) do D_iterator(...) end
@@ -26,8 +28,10 @@ is 0.
     breaking change — this is a final release in this major version of the package to notify
     users of this function (and `d_iterator`) that there is a problem.  The next major
     version of the package will likely change the actual behavior to the one implied by this
-    docstring.  To quiet these warnings, you can use `Dit = with_logger(NullLogger()) do
-    D_iterator(...) end`.
+    docstring.  To quiet these warnings, you can temporarily pass the keyword argument
+    `warn=false`, though this will probably be removed in the next major version.
+    Alternatively, use `Dit = with_logger(NullLogger()) do D_iterator(...) end` to catch any
+    warnings.
 
 Note that the returned objects are *views* into the original `D` data — meaning that you may
 alter their values.
@@ -53,13 +57,15 @@ struct D_iterator{VT<:Vector}
     D::VT
     ℓₘₐₓ::Int
     ℓₘᵢₙ::Int
-    function D_iterator{VT}(D, ℓₘₐₓ, ℓₘᵢₙ=0) where VT
+    function D_iterator{VT}(D, ℓₘₐₓ, ℓₘᵢₙ=0; warn=true) where VT
         #@assert ℓₘₐₓ ≥ ℓₘᵢₙ ≥ 0
-        @warn iterator_warning
+        if warn
+            @warn iterator_warning
+        end
         new{VT}(D, ℓₘₐₓ, ℓₘᵢₙ)
     end
 end
-D_iterator(D::VT, ℓₘₐₓ, ℓₘᵢₙ=0) where VT = D_iterator{VT}(D, ℓₘₐₓ, ℓₘᵢₙ)
+D_iterator(D::VT, ℓₘₐₓ, ℓₘᵢₙ=0; warn=true) where VT = D_iterator{VT}(D, ℓₘₐₓ, ℓₘᵢₙ; warn)
 const Diterator = D_iterator
 
 function Base.iterate(
@@ -98,8 +104,10 @@ is 0.
     breaking change — this is a final release in this major version of the package to notify
     users of this function (and `D_iterator`) that there is a problem.  The next major
     version of the package will likely change the actual behavior to the one implied by this
-    docstring.  To quiet these warnings, you can use `Dit = with_logger(NullLogger()) do
-    D_iterator(...) end`.
+    docstring.  To quiet these warnings, you can temporarily pass the keyword argument
+    `warn=false`, though this will probably be removed in the next major version.
+    Alternatively, use `Dit = with_logger(NullLogger()) do D_iterator(...) end` to catch any
+    warnings.
 
 Note that the returned objects are *views* into the original `d` data — meaning that you may
 alter their values.
@@ -125,13 +133,15 @@ struct d_iterator{VT<:Vector}
     d::VT
     ℓₘₐₓ::Int
     ℓₘᵢₙ::Int
-    function d_iterator{VT}(d, ℓₘₐₓ, ℓₘᵢₙ=0) where VT
+    function d_iterator{VT}(d, ℓₘₐₓ, ℓₘᵢₙ=0; warn=true) where VT
         #@assert ℓₘₐₓ ≥ ℓₘᵢₙ ≥ 0
-        @warn iterator_warning
+        if warn
+            @warn iterator_warning
+        end
         new{VT}(d, ℓₘₐₓ, ℓₘᵢₙ)
     end
 end
-d_iterator(d::VT, ℓₘₐₓ, ℓₘᵢₙ=0) where VT = d_iterator{VT}(d, ℓₘₐₓ, ℓₘᵢₙ)
+d_iterator(d::VT, ℓₘₐₓ, ℓₘᵢₙ=0; warn=true) where VT = d_iterator{VT}(d, ℓₘₐₓ, ℓₘᵢₙ; warn)
 const diterator = d_iterator
 
 function Base.iterate(
