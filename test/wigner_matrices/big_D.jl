@@ -68,7 +68,7 @@ end
         Random.seed!(123)
         ℓₘₐₓ = T===BigFloat ? 4 : 8
         D_storage = D_prep(ℓₘₐₓ, T)
-        @showprogress "Compare 𝔇 to formulaic 𝔇 ($T)" for α in αrange(T, 5)
+        @showprogress desc="Compare 𝔇 to formulaic 𝔇 ($T)" for α in αrange(T, 5)
             for β in βrange(T, 5)
                 for γ in γrange(T, 5)
                     R = from_euler_angles(α, β, γ)
@@ -103,7 +103,7 @@ end
         ℓₘₐₓ = T===BigFloat ? 10 : 20
         D_storage = D_prep(ℓₘₐₓ, T)
         d_storage = d_prep(ℓₘₐₓ, T)
-        @showprogress "Group characters $T" for β in βrange(T)
+        @showprogress desc="Group characters $T" for β in βrange(T)
             expiβ = cis(β)
             d = d_matrices!(d_storage, expiβ)
             for j in 0:ℓₘₐₓ
@@ -142,7 +142,7 @@ end
         D₂_storage = (𝔇₂, D₁_storage[2:end]...)
         𝔇₁₂ = similar(𝔇₁)
         D₁₂_storage = (𝔇₁₂, D₁_storage[2:end]...)
-        @showprogress "Representation property ($T)" for R₁ in Rrange(T)
+        @showprogress desc="Representation property ($T)" for R₁ in Rrange(T)
             for R₂ in Rrange(T)
                 D_matrices!(D₁_storage, R₁)
                 D_matrices!(D₂_storage, R₂)

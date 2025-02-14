@@ -8,7 +8,7 @@ end
         ## This is just to test my implementation of the equations give in the paper.
         ## Note that this is a test of the testing code itself, not of the main code.
         tol = 2eps(T)
-        @showprogress "Test NINJA expressions ($T)" for ι in βrange(T)
+        @showprogress desc="Test NINJA expressions ($T)" for ι in βrange(T)
             for ϕ in αrange(T)
                 @test NINJA.sYlm(-2, 2, 2, ι, ϕ) ≈ NINJA.m2Y22(ι, ϕ) atol=tol rtol=tol
                 @test NINJA.sYlm(-2, 2, 1, ι, ϕ) ≈ NINJA.m2Y21(ι, ϕ) atol=tol rtol=tol
@@ -35,7 +35,7 @@ end
             @test_throws ErrorException sYlm_values!(sYlm_storage, R, -sₘₐₓ-1)
         end
 
-        @showprogress "Compare to NINJA expressions ($T)" for spin in -sₘₐₓ:sₘₐₓ
+        @showprogress desc="Compare to NINJA expressions ($T)" for spin in -sₘₐₓ:sₘₐₓ
             for ι in βrange(T)
                 for ϕ in αrange(T)
                     R = from_spherical_coordinates(ι, ϕ)
@@ -79,7 +79,7 @@ end
         ℓₘᵢₙ = 0
         tol = 4ℓₘₐₓ * eps(T)
         sYlm_storage = sYlm_prep(ℓₘₐₓ, sₘₐₓ, T)
-        @showprogress "Spin property ($T)" for spin in -sₘₐₓ:sₘₐₓ
+        @showprogress desc="Spin property ($T)" for spin in -sₘₐₓ:sₘₐₓ
             for ι in βrange(T)
                 for ϕ in αrange(T)
                     for γ in γrange(T)
@@ -106,7 +106,7 @@ end
         tol = 4ℓₘₐₓ * eps(T)
         D_storage = D_prep(ℓₘₐₓ, T)
         sYlm_storage = sYlm_prep(ℓₘₐₓ, sₘₐₓ, T)
-        @showprogress "sYlm vs WignerD ($T)" for s in -sₘₐₓ:sₘₐₓ
+        @showprogress desc="sYlm vs WignerD ($T)" for s in -sₘₐₓ:sₘₐₓ
             for ι in βrange(T)
                 for ϕ in αrange(T)
                     R = from_spherical_coordinates(ι, ϕ)
@@ -148,7 +148,7 @@ end
         ℓₘᵢₙ = 0
         tol = 4ℓₘₐₓ * eps(T)
         sYlm_storage = sYlm_prep(ℓₘₐₓ, sₘₐₓ, T)
-        @showprogress "sYlm conjugation ($T)" for ι in βrange(T)
+        @showprogress desc="sYlm conjugation ($T)" for ι in βrange(T)
             for ϕ in αrange(T)
                 for γ in γrange(T)
                     for s in -sₘₐₓ:sₘₐₓ
