@@ -69,9 +69,13 @@ and so on.  In quaternionic language, I would write these rotations as
 ``\exp[\gamma 𝐤''/2]\, \exp[\beta 𝐣'/2]\, \exp[\alpha 𝐤/2]``.  But
 we also have
 ```math
-\exp[\beta 𝐣'/2] = \exp[\alpha 𝐤/2]\, \exp[\beta 𝐣'/2]\, \exp[-\alpha 𝐤/2]
+\exp[\beta 𝐣'/2] = \exp[\alpha 𝐤/2]\, \exp[\beta 𝐣/2]\, \exp[-\alpha 𝐤/2]
 ```
-and so on for the third rotation, so any easy calculation shows that
+so we can just swap the ``\alpha`` rotation with the ``\beta``
+rotation while dropping the prime from ``𝐣'``.  We can do a similar
+trick swapping the ``\alpha`` and ``\beta`` rotations with the
+``\gamma`` rotation while dropping the double prime from ``𝐤''``.
+That is, an easy calculation shows that
 ```math
 \exp[\gamma 𝐤''/2]\, \exp[\beta 𝐣'/2]\, \exp[\alpha 𝐤/2]
 =
