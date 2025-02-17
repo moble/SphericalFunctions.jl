@@ -260,6 +260,69 @@ get rid of it:
 where ``k_1 = \textrm{max}(0, m+s)`` and ``k_2=\textrm{min}(\ell+m,
 \ell+s)``.
 
+
+## Sakurai
+
+
+## Scipy
+
+
+[`scipy.special.sph_harm_y`](https://docs.scipy.org/doc/scipy/reference/generated/scipy.special.sph_harm_y.html)
+
+
+## Shankar
+
+
+Eq. (12.5.35) writes the spherical harmonics as
+```math
+Y_{\ell}^{m}(\theta, \phi)
+=
+(-1)^\ell
+\left[ \frac{(2\ell+1)!}{4\pi} \right]^{1/2}
+\frac{1}{2^\ell \ell!}
+\left[ \frac{(\ell+m)!}{(2\ell)!(\ell-m)!} \right]^{1/2}
+e^{i m \phi}
+(\sin \theta)^{-m}
+\frac{d^{\ell-m}}{d(\cos\theta)^{\ell-m}}
+(\sin\theta)^{2\ell}
+```
+for ``m \geq 0``, with (12.5.40) giving the expression
+```math
+Y_{\ell}^{-m}(\theta, \phi)
+=
+(-1)^m \left( Y_{\ell}^{m}(\theta, \phi) \right)^\ast.
+```
+The angular-momentum operators are given below (12.5.27) as
+```math
+\begin{aligned}
+L_x &= i \hbar \left(
+    \sin\phi \frac{\partial} {\partial \theta}
+    + \cos\phi \cot\theta \frac{\partial} {\partial \phi}
+\right),
+\\
+L_y &= i \hbar \left(
+    -\cos\phi \frac{\partial} {\partial \theta}
+    + \sin\phi \cot\theta \frac{\partial} {\partial \phi}
+\right),
+\\
+L_z &= -i \hbar \frac{\partial} {\partial \phi}.
+\end{aligned}
+```
+In Exercise 12.5.7, the rotation operator is defined by
+```math
+U\left[ R(\alpha, \beta, \gamma) \right]
+=
+e^{-i \alpha J_z/\hbar}
+e^{-i \beta J_y/\hbar}
+e^{-i \gamma J_z/\hbar},
+```
+That ``U`` becomes a ``D^{(j)}`` when the operator is acting on the
+states ``|j, m\rangle`` for a given ``j``.  Thus, while Shankar never
+actually uses notation like ``D^{(j)}_{m', m}``, he does talk about
+``\langle j, m' | D^{(j)}\left[ R(\alpha, \beta, \gamma) \right] | j,
+m \rangle``.
+
+
 ## SymPy
 
 There is no specific Euler angle convention in SymPy, however it is
