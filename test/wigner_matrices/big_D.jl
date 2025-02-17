@@ -49,7 +49,7 @@ end
                                 n, m′, m, expiα, expiβ, expiγ
                             )
                             𝔇_recurrence = 𝔇[WignerDindex(n, m′, m)]
-                            @test 𝔇_formula ≈ 𝔇_recurrence atol=200eps(T) rtol=200eps(T)
+                            @test conj(𝔇_formula) ≈ 𝔇_recurrence atol=200eps(T) rtol=200eps(T)
                         end
                     end
                 end
@@ -81,7 +81,7 @@ end
                                     n, m′, m, expiα, expiβ, expiγ
                                 )
                                 𝔇_recurrence = 𝔇[WignerDindex(n, m′, m)]
-                                @test 𝔇_formula ≈ 𝔇_recurrence atol=400eps(T) rtol=400eps(T)
+                                @test conj(𝔇_formula) ≈ 𝔇_recurrence atol=400eps(T) rtol=400eps(T)
                             end
                         end
                     end
