@@ -35,6 +35,25 @@ actually used by any of these sources:
 One major result of this is that almost everyone since 1935 has used
 the same exact expression for the (scalar) spherical harmonics.
 
+When choosing my conventions, I intend to prioritize consistency (to
+the extent that any of these references actually have anything to say
+about the above items) with the following sources, in order:
+
+1. LALSuite
+2. NINJA
+3. Thorne / MTW
+4. Goldberg
+5. Newman-Penrose
+6. Wikipedia
+7. Sakurai
+8. Shankar
+9. Zettili
+
+I think that should be sufficient to find a consensus on conventions
+for each of the above — with the possible exception of quaternions,
+for which I have my own strong opinions.
+
+
 ## Condon-Shortley
 
 ## Edmonds
@@ -638,3 +657,93 @@ D^j_{m'm}(\alpha,\beta,\gamma) \equiv \langle jm' | \mathcal{R}(\alpha,\beta,\ga
 
 
 ## Wigner
+
+
+
+
+## Zettili
+
+[Zettili_2009](@citet) denotes by ``\hat{R}_z(\delta \phi)`` the
+
+> rotation of the coordinates of a *spinless* particle over an
+> *infinitesimal* angle ``\delta \phi`` about the ``z``-axis
+
+and shows its action [Eq. (7.16)]
+```math
+\hat{R}_z (\delta \phi) \psi(r, \theta, \phi)
+=
+\psi(r, \theta, \phi - \delta \phi).
+```
+
+> We may generalize this relation to a rotation of angle ``\delta
+> \phi`` about an arbitrary axis whose direction is given by the unit
+> vector ``\vec{n}``:
+
+```math
+\hat{R}(\delta \phi)
+=
+1 - \frac{i}{\hbar} \delta \phi \vec{n} \cdot \hat{\vec{L}}.
+```
+This extends to finite rotation by defining the operator [Eq. (7.48)]
+```math
+\hat{R}(\alpha, \beta, \gamma)
+=
+e^{-i\alpha J_z / \hbar} e^{-i\beta J_y / \hbar} e^{-i\gamma J_z / \hbar}.
+```
+Equation (7.52) then defines
+```math
+D^{(j)}_{m', m}(\alpha, \beta, \gamma)
+=
+\langle j, m' | \hat{R}(\alpha, \beta, \gamma) | j, m \rangle,
+```
+So that [Eq. (7.54)]
+```math
+D^{(j)}_{m', m}(\alpha, \beta, \gamma)
+=
+e^{-i (m' \alpha + m \gamma)} d^{(j)}_{m', m}(\beta),
+```
+where [Eq. (7.55)]
+```math
+d^{(j)}_{m', m}(\beta)
+=
+\langle j, m' | e^{-i\beta J_y / \hbar} | j, m \rangle.
+```
+The explicit expression for ``d`` is [Eq. (7.56)]
+```math
+d^{(j)}_{m', m}(\beta)
+=
+\sum_k (-1)^{k+m'-m}
+\frac{\sqrt{(j+m)!(j-m)!(j+m')!(j-m')!}}
+{(j-m'-k)!(j+m-k)!(k+m'-m)!k!}
+\left(\cos\frac{\beta}{2}\right)^{2j+m-m'-2k}
+\left(\sin\frac{\beta}{2}\right)^{m'-m+2k}.
+```
+In Sec. 7.2.6, we find that if the operator ``\hat{R}(\alpha, \beta,
+\gamma)`` rotates a vector pointing in the ``(\theta, \phi)`` to a
+vector pointing in the ``(\theta', \phi')`` direction, then the
+spherical harmonics transform as [Eq. (7.70)]
+```math
+Y_{\ell, m}^\ast (\theta', \phi')
+=
+\sum_{m'} D^{(\ell)}_{m, m'}(\alpha, \beta, \gamma) Y_{\ell, m'}^\ast (\theta, \phi).
+```
+
+In Appendix B.1, we find that the spherical coordinates are related to
+Cartesian coordinates in the usual (physicist's) way, and Eqs.
+(B.25)—(B.27) give the components of the angular-momentum operator in
+spherical coordinates as
+```math
+\begin{aligned}
+L_x &= i \hbar \left(
+    \sin\phi \frac{\partial}{\partial \theta}
+    + \cot\theta \cos\phi \frac{\partial}{\partial \phi}
+\right),
+\\
+L_y &= i \hbar \left(
+    -\cos\phi \frac{\partial}{\partial \theta}
+    + \cot\theta \sin\phi \frac{\partial}{\partial \phi}
+\right),
+\\
+L_z &= -i \hbar \frac{\partial}{\partial \phi}.
+\end{aligned}
+```
