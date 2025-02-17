@@ -10,16 +10,23 @@ Among the items that would be good to compare are the following, when
 actually used by any of these sources:
 * Quaternions
   - Order of components
-  - Basis
+  - Basis and multiplication table
   - Operation as rotations
 * Euler angles
 * Spherical coordinates
+* Angular momentum operators
+  - Fundamental definitions
+  - Expression in terms of spherical coordinates
+  - Expression in terms of Euler angles
+  - Right-derivative form
 * Spherical harmonics
   - Condon-Shortley phase
   - Formula
 * Spin-weighted spherical harmonics
   - Behavior under rotation
 * Wigner D-matrices
+  - Representation à la $\langle \ell, m' | e^{-i \alpha J_z} e^{-i \beta J_y} e^{-i \gamma J_z} | \ell, m \rangle$
+  - Rotation of spherical harmonics
   - Order of indices
   - Conjugation
   - Function of rotation or inverse rotation
@@ -137,6 +144,61 @@ spin-weight operator is ``i \partial_\gamma``, which suggests that it
 will be most natural to choose the sign of ``R_𝐮`` so that ``R_z = i
 \partial_\gamma``.
 
+
+## LALSuite
+
+
+## Mathematica
+
+The Euler angles are defined generally such that
+
+> `EulerMatrix[{α,β,γ},{a,b,c}]` is equivalent to ``R_{α,a} R_{β,b} R_{γ,c}``, where
+> ``R_{α,a}``=`RotationMatrix[α,UnitVector[3,a]]`, etc.
+
+and
+
+> `EulerMatrix[{α,β,γ}]` is equivalent to `EulerMatrix[{α,β,γ},{3,2,3}]`
+
+(representing the ``z-y-z`` convention).
+
+Finally, we find that they say that `EulerMatrix`` corresponds to three rotations:
+
+```mathematica
+rα = RotationMatrix[α, {0, 0, 1}];
+rβ = RotationMatrix[β, {0, 1, 0}];
+rγ = RotationMatrix[γ, {0, 0, 1}];
+
+Simplify[rα . rβ . rγ == EulerMatrix[{α, β, γ}]]
+```
+
+This agrees with the conventions used in this package, so we can directly compare
+expressions in terms of Euler angles.
+
+
+We can find conventions at [this
+page](https://reference.wolfram.com/language/ref/WignerD.html).
+
+> The Wolfram Language uses phase conventions where ``D^j_{m_1, m_2}(\psi, \theta, \phi) = \exp(i m_1 \psi + i m_2 \phi) D^j_{m_1, m_2}(0, \theta, 0)``.
+
+> `WignerD[{1, 0, 1}, ψ, θ, ϕ]` = ``-\sqrt{2} e^{i \phi} \cos\frac{\theta}{2}
+> \sin\frac{\theta}{2}``
+
+> `WignerD[{𝓁, 0, m}, θ, ϕ] == Sqrt[(4 π)/(2 𝓁 + 1)] SphericalHarmonicY[𝓁, m, θ, ϕ]`
+
+> `WignerD[{j, m1, m2},ψ, θ, ϕ] == (-1)^(m1 - m2) Conjugate[WignerD[{j, -m1, -m2}, ψ, θ,
+> ϕ]]`
+
+
+> For ``\ell \geq 0``, ``Y_\ell^m = \sqrt{(2\ell+1)/(4\pi)} \sqrt{(\ell-m)! / (\ell+m)!}  P_\ell^m(\cos \theta) e^{im\phi}`` where ``P_\ell^m`` is the associated Legendre function.
+
+> The associated Legendre polynomials are defined by ``P_n^m(x) = (-1)^m (1-x^2)^{m/2}(d^m/dx^m)P_n(x)`` where ``P_n(x)`` is the Legendre polynomial.
+
+[NIST (14.7.13)](https://dlmf.nist.gov/14.7#E13) gives the Legendre polynomial for nonnegative integer ``n`` as
+```math
+P_n(x) = \frac{1}{2^n n!} \frac{d^n}{dx^n} (x^2 - 1)^n.
+```
+
+
 ## Newman-Penrose
 
 In their 1966 paper, [Newman_1966](@citet), Newman and Penrose first
@@ -217,10 +279,6 @@ or
 ```
 Thus, the operator with eigenvalue ``s`` is ``i \partial_\gamma``.
 
-
-## LALSuite
-
-## Mathematica
 
 ## NINJA
 
@@ -356,8 +414,6 @@ and thus not affected.
 Basically, it appears that SymPy just swapped the order of the Euler
 angles relative to Edmonds, who already introduced a conjugate to the
 definition of the D matrix.
-
-## Sakurai
 
 ## Thorne
 
@@ -566,5 +622,15 @@ literature; maybe Varshalovich et al. are just doing something
 different.
 
 ## Wikipedia
+
+Defining the operator
+```math
+\mathcal{R}(\alpha,\beta,\gamma) = e^{-i\alpha J_z}e^{-i\beta J_y}e^{-i\gamma J_z},
+```
+[Wikipedia defines the Wigner D-matrix](https://en.wikipedia.org/wiki/Wigner_D-matrix#Definition_of_the_Wigner_D-matrix) as
+```math
+D^j_{m'm}(\alpha,\beta,\gamma) \equiv \langle jm' | \mathcal{R}(\alpha,\beta,\gamma)| jm \rangle =e^{-im'\alpha } d^j_{m'm}(\beta)e^{-i m\gamma}.
+```
+
 
 ## Wigner
