@@ -53,6 +53,71 @@ I think that should be sufficient to find a consensus on conventions
 for each of the above — with the possible exception of quaternions,
 for which I have my own strong opinions.
 
+## Le Bellac
+
+[LeBellac_2006](@citet) (with Foreword by Cohen-Tannoudji) takes an
+odd approach, defining [Eq. (10.32)]
+```math
+D^{(j)}_{m', m} \left[  \right]
+=
+\langle j, m' | e^{-i\phi J_z} e^{-i\theta J_y} | j, m \rangle,
+```
+but later allowing that ``e^{-i \psi J_z}`` usually goes on the
+right-hand side of the others, in which case ``D^{(j)}(\theta, \phi)
+\to D^{(j)}(\phi, \theta, \psi)``.  Figure 10.1 shows that the
+spherical coordinates are standard (physicist's) coordinates.
+
+Equation (10.65) shows the rotation law:
+```math
+Y_{\ell}^{m}\left( \mathcal{R}^{-1} \hat{r} \right)
+=
+\sum_{m'} D^{(\ell)}_{m', m}(\mathcal{R}) Y_{\ell}^{m'}(\hat{r}),
+```
+and Eq. (10.66) relates the spherical harmonics to the Wigner
+D-matrices:
+```math
+D^{(\ell)}_{m, 0}(\theta, \phi)
+=
+\sqrt{\frac{4\pi}{2\ell+1}} \left[Y_{\ell}^{m}(\theta, \phi)\right]^\ast.
+```
+
+
+## Cohen-Tannoudji
+
+[CohenTannoudji_1991](@citet) derives the spherical harmonics in two
+ways and gets two different, but equivalent, expressions in Complement
+``\mathrm{A}_{\mathrm{VI}}``.  The first is Eq. (26)
+```math
+Y_{l}^{m}(\theta, \phi)
+=
+\frac{(-1)^l}{2^l l!} \sqrt{\frac{(2l+1)}{4\pi} \frac{(l+m)!}{(l-m)!}}
+e^{i m \phi} (\sin \theta)^m
+\frac{d^{l-m}}{d(\cos \theta)^{l-m}} (\sin \theta)^{2l},
+```
+while the second is Eq. (30)
+```math
+Y_{l}^{m}(\theta, \phi)
+=
+\frac{(-1)^{l+m}}{2^l l!} \sqrt{\frac{(2l+1)}{4\pi} \frac{(l-m)!}{(l+m)!}}
+e^{i m \phi} (\sin \theta)^m
+\frac{d^{l+m}}{d(\cos \theta)^{l+m}} (\sin \theta)^{2l}.
+```
+
+In Complement ``\mathrm{B}_{\mathrm{VI}}`` he defines a rotation
+operator ``R`` as acting on a state such that [Eq. (21)]
+```math
+\langle \mathbf{r} | R | \psi \rangle
+=
+\langle \mathscr{R}^{-1} \mathbf{r} | \psi \rangle.
+```
+For an infinitesimal rotation through angle ``d\alpha`` about the axis
+``\mathbf{u}``, he shows [Eq. (49)]
+```math
+R_{\mathbf{u}}(d\alpha) = 1 - \frac{i}{\hbar} d\alpha \mathbf{L}.\mathbf{u}.
+```
+
+Cohen-Tannoudji does not appear to define the Wigner D-matrices.
+
 
 ## Condon-Shortley
 
