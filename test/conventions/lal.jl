@@ -1,10 +1,11 @@
 @testmodule LAL begin
+    # The code in this section is translated from C code in LALSuite:
+    #
+    #   https://git.ligo.org/lscsoft/lalsuite/-/blob/6e653c91b6e8a6728c4475729c4f967c9e09f020/lal/lib/utilities/SphericalHarmonics.c
+    #
+    # That code is licensed under GPLv2.  See the link for details.
 
-    """
-    Reproduces the XLALSpinWeightedSphericalHarmonic function from the LALSuite C library:
-        https://lscsoft.docs.ligo.org/lalsuite/lal/_spherical_harmonics_8c_source.html#l00042
-    """
-    function LALSpinWeightedSphericalHarmonic(
+    function XLALSpinWeightedSphericalHarmonic(
         theta::Float64,  # polar angle (rad)
         phi::Float64,    # azimuthal angle (rad)
         s::Int,   # spin weight
@@ -200,6 +201,71 @@
         else
             ans = fac
         end
+    end
+
+    function XLALJacobiPolynomial(
+        n::Int,    # degree
+        alpha::Int,  # alpha parameter
+        beta::Int,   # beta parameter
+        x::Float64  # argument
+    )
+        f1 = (x-1.0)/2.0
+        f2 = (x+1.0)/2.0
+        sum = 0.0
+        if n == 0
+            return 1.0
+        end
+        for s = 0:n
+            val = 1.0
+            val *= binomial(n+alpha, s)
+            val *= binomial(n+beta, n-s)
+            if n-s != 0
+                val *= f1^(n-s)
+            end
+            if s != 0
+                val *= f2^s
+            end
+            sum += val
+        end
+        return sum
+    end
+
+    function XLALWignerdMatrix(
+        l::Int,        # mode number l
+        mp::Int,       # mode number m'
+        m::Int,        # mode number m
+        beta::Float64  # euler angle (rad)
+    )
+        k = min(l+m, min(l-m, min(l+mp, l-mp)))
+        a = 0
+        lam = 0
+        if k == l+m
+            a = mp-m
+            lam = mp-m
+        elseif k == l-m
+            a = m-mp
+            lam = 0
+        elseif k == l+mp
+            a = m-mp
+            lam = 0
+        elseif k == l-mp
+            a = mp-m
+            lam = mp-m
+        end
+        b = 2*l-2*k-a
+        pref = (-1)^lam * sqrt(binomial(2*l-k, k+a)) / sqrt(binomial(k+b, b))
+        return pref * sin(beta/2.0)^a * cos(beta/2.0)^b * XLALJacobiPolynomial(k, a, b, cos(beta))
+    end
+
+    function XLALWignerDMatrix(
+        l::Int,          # mode number l
+        mp::Int,         # mode number m'
+        m::Int,          # mode number m
+        alpha::Float64,  # euler angle (rad)
+        beta::Float64,   # euler angle (rad)
+        gam::Float64     # euler angle (rad)
+    )
+        return cis(-1im*mp*alpha) * XLALWignerdMatrix(l, mp, m, beta) * cis(-1im*m*gam)
     end
 
 end  # module LAL
