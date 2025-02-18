@@ -207,7 +207,7 @@ will be most natural to choose the sign of ``R_𝐮`` so that ``R_z = i
 
 ## LALSuite
 
-[LALSuite (LSC Algorithm Library Suite)](@citet LALSuite_2018) is a
+[LALSuite (LSC Algorithm Library Suite)](@cite LALSuite_2018) is a
 collection of software routines, comprising the primary official
 software used by the LIGO-Virgo-KAGRA Collaboration to detect and
 characterize gravitational waves.  As far as I can tell, the ultimate
