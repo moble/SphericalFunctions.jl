@@ -56,14 +56,34 @@ for which I have my own strong opinions.
 
 ## Cohen-Tannoudji (1991)
 
-[CohenTannoudji_1991](@citet) derives the spherical harmonics in two
+[CohenTannoudji_1991](@citet) defines spherical coordinates in the
+usual (physicist's) way in Chapter VI.  He then computes the
+angular-momentum operators as [Eqs. (D-5)]
+```math
+\begin{aligned}
+L_x &= i \hbar \left(
+    \sin\phi \frac{\partial} {\partial \theta}
+    + \frac{\cos\phi}{\tan\theta} \frac{\partial} {\partial \phi}
+\right),
+\\
+L_y &= i \hbar \left(
+    -\cos\phi \frac{\partial} {\partial \theta}
+    + \frac{\sin\phi}{\tan\theta} \frac{\partial} {\partial \phi}
+\right),
+\\
+L_z &= \frac{\hbar}{i} \frac{\partial} {\partial \phi}.
+\end{aligned}
+```
+
+
+He derives the spherical harmonics in two
 ways and gets two different, but equivalent, expressions in Complement
 ``\mathrm{A}_{\mathrm{VI}}``.  The first is Eq. (26)
 ```math
 Y_{l}^{m}(\theta, \phi)
 =
 \frac{(-1)^l}{2^l l!} \sqrt{\frac{(2l+1)}{4\pi} \frac{(l+m)!}{(l-m)!}}
-e^{i m \phi} (\sin \theta)^m
+e^{i m \phi} (\sin \theta)^{-m}
 \frac{d^{l-m}}{d(\cos \theta)^{l-m}} (\sin \theta)^{2l},
 ```
 while the second is Eq. (30)
@@ -183,7 +203,39 @@ which is the *conjugate* of most other definitions.
 
 ## Goldberg et al. (1967)
 
-Eq. (3.11) of [GoldbergEtAl_1967](@citet) naturally extends to
+[GoldbergEtAl_1967](@citet) presented the first paper specifically
+about spin-weighted spherical harmonics (after [Newman_1966](@citet)
+introduced them), and the first to relate them to the Wigner
+D-matrices.
+
+If we relate two vectors by a rotation matrix as ``x'^k = R^{kl}
+x^l``, then Goldberg et al. define ``D`` by its action on spherical
+harmonics [Eq. (3.3)]:
+```math
+Y_{ell,m}(x') = \sum_{m'} Y_{ell,m'}(x) D^{ell}_{m',m}\left( R^{-1} \right).
+```
+They then define the Euler angles as we do, and write [Eq. (3.4)]
+```math
+D^{\ell}_{m', m}(\alpha, \beta, \gamma)
+\equiv
+D^{\ell}_{m', m}\left( R(\alpha \beta \gamma)^{-1} \right)
+=
+e^{i m' \gamma} d^{\ell}_{m', m}(\beta) e^{i m \alpha}.
+```
+Finally, they derive [Eq. (3.9)]
+```math
+D^{j}_{m', m}(\alpha, \beta, \gamma)
+=
+\left[\frac{(j+m)!(j-m)!}{(j+m')!(j-m')!}\right]^{1/2}
+(\sin \frac{1}{2}\beta)^{2j}
+\sum_r \binom{j+m'}{r} \binom{j-m'}{r-m-m'}
+(-1)^{j+m'-r}
+e^{im\alpha}
+(\cot \tfrac{1}{2}\beta)^{2r-m-m'}
+e^{im'\gamma}.
+```
+
+Equation (3.11) naturally extends to
 ```math
   {}_sY_{\ell, m}(\theta, \phi, \gamma)
   =
@@ -203,6 +255,66 @@ spherical harmonics to ``\mathrm{Spin}(3)``.  In particular, the
 spin-weight operator is ``i \partial_\gamma``, which suggests that it
 will be most natural to choose the sign of ``R_𝐮`` so that ``R_z = i
 \partial_\gamma``.
+
+
+## Griffiths (1995)
+
+Griffiths' ["Introduction to Quantum Mechanics"](@cite Griffiths_1995)
+is probably the most common introductory text used in undergraduate
+physics programs, so it would be useful to compare.
+
+Equation (4.27) gives the associated Legendre function as
+```math
+P_{\ell}^{m}(x)
+=
+(1-x^2)^{|m|/2} \left(\frac{d}{dx}\right)^{|m|} P_{\ell}(x),
+```
+and (4.28) gives the Legendre polynomial as
+```math
+P_{\ell}(x)
+=
+\frac{1}{2^\ell \ell!} \left(\frac{d}{dx}\right)^\ell (x^2-1)^\ell.
+```
+Then, (4.32) gives the spherical harmonics as
+```math
+Y_{\ell}^{m}(\theta, \phi)
+=
+\epsilon
+\sqrt{\frac{2\ell+1}{4\pi} \frac{(\ell-|m|)!}{(\ell+|m|)!}}
+e^{im\phi} P_{\ell}^{m}(\cos\theta),
+```
+where ``\epsilon = (-1)^m`` for ``m\geq 0`` and ``\epsilon = 1`` for
+``m\leq 0``.  In Table 4.2, he explicitly lists the first few
+spherical harmonics:
+```math
+\begin{aligned}
+  Y_{0}^{0} &= \left(\frac{1}{4\pi}\right)^{1/2},\\
+  Y_{1}^{0} &= \left(\frac{3}{4\pi}\right)^{1/2} \cos\theta,\\
+  Y_{1}^{\pm 1} &= \mp \left(\frac{3}{8\pi}\right)^{1/2} \sin\theta e^{\pm i\phi},\\
+  Y_{2}^{0} &= \left(\frac{5}{16\pi}\right)^{1/2} \left(3\cos^2\theta - 1\right),\\
+  Y_{2}^{\pm 1} &= \mp \left(\frac{15}{8\pi}\right)^{1/2} \sin\theta \cos\theta e^{\pm i\phi},\\
+  Y_{2}^{\pm 2} &= \left(\frac{15}{32\pi}\right)^{1/2} \sin^2\theta e^{\pm 2i\phi}.
+  Y_{3}^{0} &= \left(\frac{7}{16\pi}\right)^{1/2} \left(5\cos^3\theta - 3\cos\theta\right),\\
+  Y_{3}^{\pm 1} &= \mp \left(\frac{21}{64\pi}\right)^{1/2} \sin\theta \left(5\cos^2\theta - 1\right) e^{\pm i\phi},\\
+  Y_{3}^{\pm 2} &= \left(\frac{105}{32\pi}\right)^{1/2} \sin^2\theta \cos\theta e^{\pm 2i\phi},\\
+  Y_{3}^{\pm 3} &= \mp \left(\frac{35}{64\pi}\right)^{1/2} \sin^3\theta e^{\pm 3i\phi}.
+\end{aligned}
+```
+In Eqs. (4.127)—(4.129), he gives the angular-momentum operators in
+terms of spherical coordinates:
+```math
+\begin{aligned}
+L_x &= \frac{\hbar}{i} \left(
+    -\sin\phi \frac{\partial} {\partial \theta}
+    - \cos\phi \cot\theta \frac{\partial} {\partial \phi}
+\right), \\
+L_y &= \frac{\hbar}{i} \left(
+    \cos\phi \frac{\partial} {\partial \theta}
+    - \sin\phi \cot\theta \frac{\partial} {\partial \phi}
+\right), \\
+L_z &= -i \hbar \frac{\partial} {\partial \phi}.
+\end{aligned}
+```
 
 
 ## LALSuite
@@ -411,14 +523,14 @@ with ``k_1 = \textrm{max}(0, m-s)`` and ``k_2=\textrm{min}(\ell+m,
 \ell-s)``. For reference, they provide several values [Eqs.
 (II.9)--(II.13)]:
 ```math
-\begin{align}
+\begin{aligned}
   {}^{-2}Y_{2,2} &= \sqrt{\frac{5}{64\pi}}(1+\cos\iota)^2e^{2i\phi},\\
   {}^{-2}Y_{2,1} &= \sqrt{\frac{5}{16\pi}}  \sin\iota( 1 + \cos\iota )e^{i\phi},\\
   {}^{-2}Y_{2,0} &= \sqrt{\frac{15}{32\pi}} \sin^2\iota,\\
   {}^{-2}Y_{2,-1} &= \sqrt{\frac{5}{16\pi}}  \sin\iota( 1 - \cos\iota
   )e^{-i\phi},\\
   {}^{-2}Y_{2,-2} &=& \sqrt{\frac{5}{64\pi}}(1-\cos\iota)^2e^{-2i\phi}.
-\end{align}
+\end{aligned}
 ```
 Note that most of the above was copied directly from the TeX source of
 the paper.  Also note the annoying negative sign on the left-hand side
@@ -426,7 +538,7 @@ of the first expression.  Getting rid of it and combining the first
 two expressions, we have the full formula for the spin-weighted
 spherical harmonics in this convention:
 ```math
-\begin{align}
+\begin{aligned}
   {}_{s}Y_{lm}
   &=
   (-1)^s\sqrt{\frac{2\ell+1}{4\pi}} e^{im\phi}
@@ -436,7 +548,7 @@ spherical harmonics in this convention:
   \\ &\qquad \times
   \left(\cos\left(\frac{\iota}{2}\right)\right)^{2\ell+m+s-2k}
   \left(\sin\left(\frac{\iota}{2}\right)\right)^{2k-s-m}
-\end{align}
+\end{aligned}
 ```
 where ``k_1 = \textrm{max}(0, m+s)`` and ``k_2=\textrm{min}(\ell+m,
 \ell+s)``.
@@ -649,7 +761,7 @@ Page 155 has a table of values for ``\ell \leq 5``
 *covariant* and *contravariant* spherical coordinates and the
 corresponding basis vectors, which they define as
 ```math
-\begin{align}
+\begin{aligned}
   \mathbf{e}_{+1} &= - \frac{1}{\sqrt{2}} \left( \mathbf{e}_x + i \mathbf{e}_y\right)
   &&&
   \mathbf{e}^{+1} &= - \frac{1}{\sqrt{2}} \left( \mathbf{e}_x - i \mathbf{e}_y\right) \\
@@ -657,7 +769,7 @@ corresponding basis vectors, which they define as
   \mathbf{e}_{-1} &= \frac{1}{\sqrt{2}} \left( \mathbf{e}_x - i \mathbf{e}_y\right)
   &&&
   \mathbf{e}^{-1} &= \frac{1}{\sqrt{2}} \left( \mathbf{e}_x + i \mathbf{e}_y\right).
-\end{align}
+\end{aligned}
 ```
 Then, in Sec. 4.2 they define ``\hat{\mathbf{J}}`` as the operator of
 angular momentum of the rigid symmetric top.  They then give in Eq.
@@ -689,7 +801,7 @@ and "contravariant components of ``\hat{\mathbf{J}}`` in the rotating
 Cartesian components to compare to our expressions.  First the
 covariant components:
 ```math
-\begin{align}
+\begin{aligned}
   \hat{J}_{x}
   &= -\frac{1}{\sqrt{2}} \left( \hat{J}_{+1} - \hat{J}_{-1} \right) \\
   % &= -\frac{1}{\sqrt{2}} \left( 
@@ -733,7 +845,7 @@ covariant components:
   \hat{J}_{z}
   &= \hat{J}_{0} \\
   &= -i \frac{\partial}{\partial \alpha}
-\end{align}
+\end{aligned}
 ```
 We can compare these to the [Full expressions on ``S^3``](@ref), and find
 that they are precisely equivalent to expressions for ``L_j`` computed in
@@ -741,7 +853,7 @@ this package's conventions.
 
 Next, the contravariant components:
 ```math
-\begin{align}
+\begin{aligned}
   \hat{J}'_{x}
   &= -\frac{1}{\sqrt{2}} \left( \hat{J}'^{+1} - \hat{J}'^{-1} \right) \\
   % &= -\frac{1}{\sqrt{2}} \left(
@@ -785,7 +897,7 @@ Next, the contravariant components:
   \hat{J}'_{z}
   &= \hat{J}'^{0} \\
   &= -i \frac{\partial}{\partial \gamma}
-\end{align}
+\end{aligned}
 ```
 Unfortunately, while we have agreement on ``\hat{J}'^{y} = R_y``, we
 also have disagreement on ``\hat{J}'^{x} = -R_x`` and ``\hat{J}'^{z} =

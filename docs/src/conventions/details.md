@@ -666,14 +666,14 @@ canonical angular-momentum operators.
 Note that when composing operators, it is critical to keep track of
 the order of operations, which may look slightly unnatural:
 ```math
-\begin{align}
+\begin{aligned}
   L_\mathfrak{g} L_\mathfrak{h} f(\mathbf{Q})
   % &= \left. \lambda \frac{\partial} {\partial \gamma} f'\left(e^{-\gamma \mathfrak{g} / 2} \mathbf{Q} \right) \right|_{\gamma=0}, \\
   &= \left. \lambda^2 \frac{\partial} {\partial \gamma} \frac{\partial} {\partial \eta} f\left(e^{-\eta \mathfrak{h} / 2} e^{-\gamma \mathfrak{g} / 2} \mathbf{Q} \right) \right|_{\gamma=\eta=0}, \\
   R_\mathfrak{g} R_\mathfrak{h} f(\mathbf{Q})
   % &= \rho \left. \frac{\partial} {\partial \gamma} f' \left( \mathbf{Q} e^{-\gamma \mathfrak{g} / 2} \right) \right|_{\gamma=0} \\
   &= \left. \rho^2 \frac{\partial} {\partial \gamma} \frac{\partial} {\partial \eta} f\left( \mathbf{Q} e^{-\gamma \mathfrak{g} / 2} e^{-\eta \mathfrak{h} / 2} \right) \right|_{\gamma=\eta=0}.
-\end{align}
+\end{aligned}
 ```
 We can prove the first of these, for example, by defining
 ``f'(\mathbf{Q}) = L_\mathfrak{h} f(\mathbf{Q})``, then applying the
@@ -778,7 +778,7 @@ $\partial_\alpha$, etc., when $\theta=0$.
 
 
 ```math
-\begin{align}
+\begin{aligned}
   L_i f(\mathbf{R}_{\alpha, \beta, \gamma})
   &=
   \left. -\mathbf{z} \frac{\partial} {\partial \theta} f \left( e^{\theta \mathbf{e}_i / 2} \mathbf{R}_{\alpha, \beta, \gamma} \right) \right|_{\theta=0} \\
@@ -791,7 +791,7 @@ $\partial_\alpha$, etc., when $\theta=0$.
   K_i f(\mathbf{R}_{\alpha, \beta, \gamma})
   &=
   -\mathbf{z} \left[ \frac{\partial \alpha''} {\partial \theta}\frac{\partial} {\partial \alpha} + \frac{\partial \beta''} {\partial \theta}\frac{\partial} {\partial \beta} + \frac{\partial \gamma''} {\partial \theta}\frac{\partial} {\partial \gamma} \right]_{\theta=0} f \left( \mathbf{R}_{\alpha, \beta, \gamma} \right),
-\end{align}
+\end{aligned}
 ```
 
 ```math
