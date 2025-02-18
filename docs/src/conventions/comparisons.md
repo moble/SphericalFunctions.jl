@@ -58,7 +58,7 @@ for which I have my own strong opinions.
 [LeBellac_2006](@citet) (with Foreword by Cohen-Tannoudji) takes an
 odd approach, defining [Eq. (10.32)]
 ```math
-D^{(j)}_{m', m} \left[  \right]
+D^{(j)}_{m', m} \left[ \mathcal{R}(\theta, \phi) \right]
 =
 \langle j, m' | e^{-i\phi J_z} e^{-i\theta J_y} | j, m \rangle,
 ```
