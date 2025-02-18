@@ -53,36 +53,8 @@ I think that should be sufficient to find a consensus on conventions
 for each of the above — with the possible exception of quaternions,
 for which I have my own strong opinions.
 
-## Le Bellac
 
-[LeBellac_2006](@citet) (with Foreword by Cohen-Tannoudji) takes an
-odd approach, defining [Eq. (10.32)]
-```math
-D^{(j)}_{m', m} \left[ \mathcal{R}(\theta, \phi) \right]
-=
-\langle j, m' | e^{-i\phi J_z} e^{-i\theta J_y} | j, m \rangle,
-```
-but later allowing that ``e^{-i \psi J_z}`` usually goes on the
-right-hand side of the others, in which case ``D^{(j)}(\theta, \phi)
-\to D^{(j)}(\phi, \theta, \psi)``.  Figure 10.1 shows that the
-spherical coordinates are standard (physicist's) coordinates.
-
-Equation (10.65) shows the rotation law:
-```math
-Y_{\ell}^{m}\left( \mathcal{R}^{-1} \hat{r} \right)
-=
-\sum_{m'} D^{(\ell)}_{m', m}(\mathcal{R}) Y_{\ell}^{m'}(\hat{r}),
-```
-and Eq. (10.66) relates the spherical harmonics to the Wigner
-D-matrices:
-```math
-D^{(\ell)}_{m, 0}(\theta, \phi)
-=
-\sqrt{\frac{4\pi}{2\ell+1}} \left[Y_{\ell}^{m}(\theta, \phi)\right]^\ast.
-```
-
-
-## Cohen-Tannoudji
+## Cohen-Tannoudji (1991)
 
 [CohenTannoudji_1991](@citet) derives the spherical harmonics in two
 ways and gets two different, but equivalent, expressions in Complement
@@ -121,7 +93,7 @@ Cohen-Tannoudji does not appear to define the Wigner D-matrices.
 
 ## Condon-Shortley
 
-## Edmonds
+## Edmonds (1960)
 
 [Edmonds_2016](@citet) is a standard reference for the theory of
 angular momentum.
@@ -209,7 +181,7 @@ Wigner D-matrices.  In Eq. (4.1.12) he defines
 which is the *conjugate* of most other definitions.
 
 
-## Goldberg
+## Goldberg et al. (1967)
 
 Eq. (3.11) of [GoldbergEtAl_1967](@citet) naturally extends to
 ```math
@@ -234,6 +206,50 @@ will be most natural to choose the sign of ``R_𝐮`` so that ``R_z = i
 
 
 ## LALSuite
+
+[LALSuite (LSC Algorithm Library Suite)](@citet LALSuite_2018) is a
+collection of software routines, comprising the primary official
+software used by the LIGO-Virgo-KAGRA Collaboration to detect and
+characterize gravitational waves.  As far as I can tell, the ultimate
+source for all spin-weighted spherical harmonic values used in
+LALSuite is the function
+[`XLALSpinWeightedSphericalHarmonic`](https://git.ligo.org/lscsoft/lalsuite/-/blob/6e653c91b6e8a6728c4475729c4f967c9e09f020/lal/lib/utilities/SphericalHarmonics.c),
+which cites the NINJA paper [Ajith_2007](@citet) as its source.
+Unfortunately, it cites version *1*, which contained a serious error,
+using ``\tfrac{\cos\iota}{2}`` instead of ``\cos \tfrac{\iota}{2}``
+and similarly for ``\sin``.  This error was corrected in version 2,
+but the citation was not updated.  I will test to 
+
+TODO: Check the actual values of the spin-weighted spherical harmonics
+
+
+## Le Bellac (2006)
+
+[LeBellac_2006](@citet) (with Foreword by Cohen-Tannoudji) takes an
+odd approach, defining [Eq. (10.32)]
+```math
+D^{(j)}_{m', m} \left[ \mathcal{R}(\theta, \phi) \right]
+=
+\langle j, m' | e^{-i\phi J_z} e^{-i\theta J_y} | j, m \rangle,
+```
+but later allowing that ``e^{-i \psi J_z}`` usually goes on the
+right-hand side of the others, in which case ``D^{(j)}(\theta, \phi)
+\to D^{(j)}(\phi, \theta, \psi)``.  Figure 10.1 shows that the
+spherical coordinates are standard (physicist's) coordinates.
+
+Equation (10.65) shows the rotation law:
+```math
+Y_{\ell}^{m}\left( \mathcal{R}^{-1} \hat{r} \right)
+=
+\sum_{m'} D^{(\ell)}_{m', m}(\mathcal{R}) Y_{\ell}^{m'}(\hat{r}),
+```
+and Eq. (10.66) relates the spherical harmonics to the Wigner
+D-matrices:
+```math
+D^{(\ell)}_{m, 0}(\theta, \phi)
+=
+\sqrt{\frac{4\pi}{2\ell+1}} \left[Y_{\ell}^{m}(\theta, \phi)\right]^\ast.
+```
 
 
 ## Mathematica
@@ -370,26 +386,44 @@ Thus, the operator with eigenvalue ``s`` is ``i \partial_\gamma``.
 
 ## NINJA
 
-Combining Eqs. (II.7) and (II.8) of [Ajith_2007](@citet), we have
+[Ajith_2007](@citet) was prepared by a broad cross-section of
+researchers (including the author of this package) involved in
+modeling gravitational waves with the intent of providing a shared set
+of conventions.  The spherical coordinates are standard physicist's
+coordinates, except that the polar angle is denoted ``\iota``.
+Equation (II.7) is
 ```math
-\begin{align}
-  {}_{-s}Y_{lm}
-  &=
-  (-1)^s\sqrt{\frac{2\ell+1}{4\pi}} e^{im\phi}
+  {}^{-s}Y_{l,m} = (-1)^s\sqrt{\frac{2\ell+1}{4\pi}}
+  d^{\ell}_{m,s}(\iota)e^{im\phi},
+```
+where
+```math
+  d^{\ell}_{m,s}(\iota)
+  =
   \sum_{k = k_1}^{k_2}
   \frac{(-1)^k[(\ell+m)!(\ell-m)!(\ell+s)!(\ell-s)!]^{1/2}}
   {(\ell+m-k)!(\ell-s-k)!k!(k+s-m)!}
-  \\ &\qquad \times
   \left(\cos\left(\frac{\iota}{2}\right)\right)^{2\ell+m-s-2k}
   \left(\sin\left(\frac{\iota}{2}\right)\right)^{2k+s-m}
-\end{align}
 ```
 with ``k_1 = \textrm{max}(0, m-s)`` and ``k_2=\textrm{min}(\ell+m,
-\ell-s)``.  Note that most of the above was copied directly from the
-TeX source of the paper, but the two equations were trivially combined
-into one.  Also note the annoying negative sign on the left-hand side.
-That's so annoying that I'm going to duplicate the expression just to
-get rid of it:
+\ell-s)``. For reference, they provide several values [Eqs.
+(II.9)--(II.13)]:
+```math
+\begin{align}
+  {}^{-2}Y_{2,2} &= \sqrt{\frac{5}{64\pi}}(1+\cos\iota)^2e^{2i\phi},\\
+  {}^{-2}Y_{2,1} &= \sqrt{\frac{5}{16\pi}}  \sin\iota( 1 + \cos\iota )e^{i\phi},\\
+  {}^{-2}Y_{2,0} &= \sqrt{\frac{15}{32\pi}} \sin^2\iota,\\
+  {}^{-2}Y_{2,-1} &= \sqrt{\frac{5}{16\pi}}  \sin\iota( 1 - \cos\iota
+  )e^{-i\phi},\\
+  {}^{-2}Y_{2,-2} &=& \sqrt{\frac{5}{64\pi}}(1-\cos\iota)^2e^{-2i\phi}.
+\end{align}
+```
+Note that most of the above was copied directly from the TeX source of
+the paper.  Also note the annoying negative sign on the left-hand side
+of the first expression.  Getting rid of it and combining the first
+two expressions, we have the full formula for the spin-weighted
+spherical harmonics in this convention:
 ```math
 \begin{align}
   {}_{s}Y_{lm}
@@ -407,7 +441,9 @@ where ``k_1 = \textrm{max}(0, m+s)`` and ``k_2=\textrm{min}(\ell+m,
 \ell+s)``.
 
 
-## Sakurai
+## Sakurai (1994)
+
+
 
 
 ## Scipy
@@ -416,10 +452,10 @@ where ``k_1 = \textrm{max}(0, m+s)`` and ``k_2=\textrm{min}(\ell+m,
 [`scipy.special.sph_harm_y`](https://docs.scipy.org/doc/scipy/reference/generated/scipy.special.sph_harm_y.html)
 
 
-## Shankar
+## Shankar (1994)
 
-
-Eq. (12.5.35) writes the spherical harmonics as
+[Shankar_1994](@citet) writes in Eq. (12.5.35) the spherical harmonics
+as
 ```math
 Y_{\ell}^{m}(\theta, \phi)
 =
@@ -505,9 +541,64 @@ definition of the D matrix.
 
 ## Thorne
 
-## Torres del Castillo
+## Torres del Castillo (2003)
 
-## Varshalovich et al.
+[TorresDelCastillo_2003](@citet) starts by defining a rotation
+``\mathcal{R}`` as transforming a point ``x_i`` into another point
+with coordinates ``x_i' = a_{ij}x_j``.  Under that rotation, any
+scalar function ``f`` transforms into another function ``f' =
+\mathcal{R} f`` defined by [Eq. (2.43)]
+```math
+f'\big(x_i\big) = f\big( a^{-1}_{ij} x_j \big).
+```
+In particular, ``f'(x'_i) = f(x_i)``.  He then defines Wigner's
+D-matrix to satisfy [Eq. (2.45)]
+```math
+\mathcal{R} Y_{l,m} = \sum_{m} D^l_{m',m}(\mathcal{R}) Y_{l,m'}.
+```
+Including the arguments to the spherical harmonics, this becomes
+```math
+Y_{l,m}\big(\mathcal{R}^{-1} R_{\theta, \phi}\big)
+=
+\sum_{m} D^l_{m',m}(\mathcal{R}) Y_{l,m'}\big(R_{\theta, \phi}\big).
+```
+In this form, we have [Eq. (2.46)]
+```math
+D^l_{m'',m}(\mathcal{R}_1 \mathcal{R}_2)
+=
+\sum_{m'} D^l_{m'',m'}(\mathcal{R}_1) D^l_{m',m}(\mathcal{R}_2).
+```
+He computes [Eq. (2.53)]
+```math
+D^l_{m',m}(\phi, \theta, \chi)
+=
+e^{-i m' \phi} d^l_{m',m}(\theta) e^{-i m \chi},
+```
+where the ``d`` matrix is given by
+```math
+d^l_{m',m}(\theta)
+=
+\sqrt{(l+m)!(l-m)!(l+m')!(l-m')!}
+\sum_{k} \frac{
+  (-1)^k
+  (\sin \tfrac{1}{2} \theta)^{m-m'+2k}
+  (\cos \tfrac{1}{2} \theta)^{2l-m+m'-2k}
+} {
+  k!(l+m'-k)!(l-m-k)!(m-m'+k)!
+},
+```
+and the spin-weighted spherical harmonic is related to ``D`` by
+```math
+{}_{s}Y_{j,m}(\theta, \phi)
+=
+(-1)^m
+\sqrt{\frac{2j+1}{4\pi}}
+d^j_{-m,s}(\theta)
+e^{i m \phi}.
+```
+
+
+## Varshalovich et al. (1988)
 
 [Varshalovich_1988](@citet) has a fairly decent comparison of
 definitions related to the rotation matrix by previous authors.  
@@ -726,7 +817,7 @@ D^j_{m'm}(\alpha,\beta,\gamma) \equiv \langle jm' | \mathcal{R}(\alpha,\beta,\ga
 
 
 
-## Zettili
+## Zettili (2009)
 
 [Zettili_2009](@citet) denotes by ``\hat{R}_z(\delta \phi)`` the
 
