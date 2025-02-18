@@ -218,10 +218,11 @@ which cites the NINJA paper [Ajith_2007](@citet) as its source.
 Unfortunately, it cites version *1*, which contained a serious error,
 using ``\tfrac{\cos\iota}{2}`` instead of ``\cos \tfrac{\iota}{2}``
 and similarly for ``\sin``.  This error was corrected in version 2,
-but the citation was not updated.  I will test to 
-
-TODO: Check the actual values of the spin-weighted spherical harmonics
-
+but the citation was not updated.  Nonetheless, it appears that the
+actual code is consistent with the corrected versions of the NINJA
+paper; the equivalence is
+[tested](https://github.com/moble/SphericalFunctions.jl/blob/0f57c77e65da85e4996f0969fe0a931b460135ac/test/wigner_matrices/sYlm.jl#L59)
+in this package's test suite.
 
 ## Le Bellac (2006)
 
