@@ -4,7 +4,7 @@
     import .NaiveFactorials: ❗
 
     function Wigner_d(ι::T, ℓ, m, s) where {T<:Real}
-        # Eq. II.8 of Ajith et al. (2007) 'Data formats...'
+        # Eq. II.8 of v3 of Ajith et al. (2007) 'Data formats...'
         k_min = max(0, m - s)
         k_max = min(ℓ + m, ℓ - s)
         sum(
@@ -21,7 +21,7 @@
 
     raw"""
 
-    Eq. II.7 of Ajith et al. (2007) 'Data formats...' says
+    Eq. II.7 of v3 of Ajith et al. (2007) 'Data formats...' says
     ```math
     {}_sY_{\ell,m} = (-1)^s \sqrt{\frac{2\ell+1}{4\pi}} d^\ell_{m,-s}(\iota) e^{im\phi}
     ```
@@ -44,11 +44,10 @@
     The last line assumes that `j`, `m`, and `s` are integers.  But in that case, the NINJA
     expression agrees with the Torres del Castillo expression.
 
-
     """
 
     function sYlm(s, ell, m, ι::T, ϕ::T) where {T<:Real}
-        # Eq. II.7 of Ajith et al. (2007) 'Data formats...'
+        # Eq. II.7 of v3 of Ajith et al. (2007) 'Data formats...'
         # Note the weird definition w.r.t. `-s`
         if abs(s) > ell || abs(m) > ell
             return zero(complex(T))
