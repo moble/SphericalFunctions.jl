@@ -4,40 +4,40 @@ f\left(e^{-\epsilon 𝐮/2}\, 𝐑\right)
 \qquad \text{and} \qquad
 R_𝐮 f(𝐑) = -\left. i \frac{d}{d\epsilon}\right|_{\epsilon=0}
 f\left(𝐑\, e^{-\epsilon 𝐮/2}\right),\]</p><p>This is certainly the natural realm for these operators, but it is not the common one.  In particular, virtually all textbooks and papers on the subject define these operators in terms of the standard spherical coordinates on the 2-sphere, rather than quaternions or even Euler angles.  In particular, the standard forms are essentially always given in terms of the Cartesian basis, as in <span>$L_x$</span>, <span>$L_y$</span>, and <span>$L_z$</span> — though some times the first two are expressed as <span>$L_{\pm} = L_x \pm i L_y$</span>.</p><p>Here, we will use SymPy to just grind through the algebra of expressing the angular-momentum operators in terms of Euler angles, including evaluating the commutators in that form, and further reduce them to operators in terms of spherical coordinates.  We will find a couple important results that help make contact with more standard expressions:</p><ol><li>Our results for <span>$L_x$</span>, <span>$L_x$</span>, and <span>$L_z$</span> in spherical coordinates agree with standard expressions.</li><li>The commutators obey <span>$[L_x, L_y] = i L_z$</span> and cyclic permutations, in agreement with the standard expressions.</li><li>We also find <span>$[R_x, R_y] = i R_z$</span> and cyclic permutations.</li><li>We can explicitly compute <span>$[L_i, R_j] = 0$</span>, as expected.</li><li>Using the natural extension of Goldberg et al.&#39;s SWSHs to include <span>$\gamma$</span>, we can see that the natural spin-weight operator is <span>$R_z = i \partial_\gamma$</span>.  Thus, we define <span>$R_z = s$</span> for a function with spin weight <span>$s$</span>.</li><li>The spin-raising operator for <span>$R_z$</span> is <span>$\eth = R_x + i R_y$</span>; the spin-lowering operator is <span>$\bar{\eth} = R_x - i R_y$</span>.</li></ol><h2 id="Analytical-groundwork"><a class="docs-heading-anchor" href="#Analytical-groundwork">Analytical groundwork</a><a id="Analytical-groundwork-1"></a><a class="docs-heading-anchor-permalink" href="#Analytical-groundwork" title="Permalink"></a></h2><p>We start by defining a new set of Euler angles according to</p><p class="math-container">\[\mathbf{R}_{\alpha&#39;, \beta&#39;, \gamma&#39;}
-= e^{-\theta \mathbf{u} / 2} \mathbf{R}_{\alpha, \beta, \gamma}
+= e^{-\epsilon \mathbf{u} / 2} \mathbf{R}_{\alpha, \beta, \gamma}
 \qquad \text{or} \qquad
 \mathbf{R}_{\alpha&#39;, \beta&#39;, \gamma&#39;}
-= \mathbf{R}_{\alpha, \beta, \gamma} e^{-\theta \mathbf{u} / 2}\]</p><p>where <span>$\mathbf{u}$</span> will be each of the basis quaternions, and each of <span>$\alpha&#39;$</span>, <span>$\beta&#39;$</span>, and <span>$\gamma&#39;$</span> is a function of <span>$\alpha$</span>, <span>$\beta$</span>, <span>$\gamma$</span>, and <span>$\theta$</span>.  Then, we note that the chain rule tells us that</p><p class="math-container">\[\frac{\partial}{\partial \theta}
+= \mathbf{R}_{\alpha, \beta, \gamma} e^{-\epsilon \mathbf{u} / 2}\]</p><p>where <span>$\mathbf{u}$</span> will be each of the basis quaternions, and each of <span>$\alpha&#39;$</span>, <span>$\beta&#39;$</span>, and <span>$\gamma&#39;$</span> is a function of <span>$\alpha$</span>, <span>$\beta$</span>, <span>$\gamma$</span>, and <span>$\epsilon$</span>.  Then, we note that the chain rule tells us that</p><p class="math-container">\[\frac{\partial}{\partial \epsilon}
 =
-\frac{\partial \alpha&#39;}{\partial \theta} \frac{\partial}{\partial \alpha&#39;}
-+ \frac{\partial \beta&#39;}{\partial \theta} \frac{\partial}{\partial \beta&#39;}
-+ \frac{\partial \gamma&#39;}{\partial \theta} \frac{\partial}{\partial \gamma&#39;},\]</p><p>which we will use to convert the general expression for the angular-momentum operators in terms of <span>$\partial_\theta$</span> into an expression in terms of derivatives with respect to these new Euler angles:</p><p class="math-container">\[\begin{align}
+\frac{\partial \alpha&#39;}{\partial \epsilon} \frac{\partial}{\partial \alpha&#39;}
++ \frac{\partial \beta&#39;}{\partial \epsilon} \frac{\partial}{\partial \beta&#39;}
++ \frac{\partial \gamma&#39;}{\partial \epsilon} \frac{\partial}{\partial \gamma&#39;},\]</p><p>which we will use to convert the general expression for the angular-momentum operators in terms of <span>$\partial_\epsilon$</span> into an expression in terms of derivatives with respect to these new Euler angles:</p><p class="math-container">\[\begin{align}
   L_j f(\mathbf{R}_{\alpha, \beta, \gamma})
   &amp;=
-  \left. i \frac{\partial} {\partial \theta} f \left( e^{-\theta \mathbf{e}_j / 2}
-  \mathbf{R}_{\alpha, \beta, \gamma} \right) \right|_{\theta=0}
+  \left. i \frac{\partial} {\partial \epsilon} f \left( e^{-\epsilon \mathbf{e}_j / 2}
+  \mathbf{R}_{\alpha, \beta, \gamma} \right) \right|_{\epsilon=0}
   \\
   &amp;=
   i \left[ \left(
-      \frac{\partial \alpha&#39;}{\partial \theta} \frac{\partial}{\partial \alpha&#39;}
-      + \frac{\partial \beta&#39;}{\partial \theta} \frac{\partial}{\partial \beta&#39;}
-      + \frac{\partial \gamma&#39;}{\partial \theta} \frac{\partial}{\partial \gamma&#39;}
-  \right) f \left(\alpha&#39;, \beta&#39;, \gamma&#39;\right) \right]_{\theta=0}
+      \frac{\partial \alpha&#39;}{\partial \epsilon} \frac{\partial}{\partial \alpha&#39;}
+      + \frac{\partial \beta&#39;}{\partial \epsilon} \frac{\partial}{\partial \beta&#39;}
+      + \frac{\partial \gamma&#39;}{\partial \epsilon} \frac{\partial}{\partial \gamma&#39;}
+  \right) f \left(\alpha&#39;, \beta&#39;, \gamma&#39;\right) \right]_{\epsilon=0}
   \\
   &amp;=
   i \left[ \left(
-      \frac{\partial \alpha&#39;}{\partial \theta} \frac{\partial}{\partial \alpha}
-      + \frac{\partial \beta&#39;}{\partial \theta} \frac{\partial}{\partial \beta}
-      + \frac{\partial \gamma&#39;}{\partial \theta} \frac{\partial}{\partial \gamma}
-  \right) f \left(\alpha, \beta, \gamma\right) \right]_{\theta=0},
-\end{align}\]</p><p>and similarly for <span>$R_j$</span>.</p><p>So the objective is to find the new Euler angles, differentiate with respect to <span>$\theta$</span>, and then evaluate at <span>$\theta = 0$</span>.  We do this by first multiplying <span>$\mathbf{R}_{\alpha, \beta, \gamma}$</span> and <span>$e^{-\theta \mathbf{u} / 2}$</span> in the desired order, then expanding the results in terms of its quaternion components, and then computing the new Euler angles in terms of those components according to the usual expression.</p><h2 id="Computational-infrastructure"><a class="docs-heading-anchor" href="#Computational-infrastructure">Computational infrastructure</a><a id="Computational-infrastructure-1"></a><a class="docs-heading-anchor-permalink" href="#Computational-infrastructure" title="Permalink"></a></h2><p>We&#39;ll use SymPy (via Julia) since <code>Symbolics.jl</code> isn&#39;t very good at trig yet.</p><pre><code class="language-julia hljs">import LaTeXStrings: @L_str, LaTeXString
+      \frac{\partial \alpha&#39;}{\partial \epsilon} \frac{\partial}{\partial \alpha}
+      + \frac{\partial \beta&#39;}{\partial \epsilon} \frac{\partial}{\partial \beta}
+      + \frac{\partial \gamma&#39;}{\partial \epsilon} \frac{\partial}{\partial \gamma}
+  \right) f \left(\alpha, \beta, \gamma\right) \right]_{\epsilon=0},
+\end{align}\]</p><p>and similarly for <span>$R_j$</span>.</p><p>So the objective is to find the new Euler angles, differentiate with respect to <span>$\epsilon$</span>, and then evaluate at <span>$\epsilon = 0$</span>.  We do this by first multiplying <span>$\mathbf{R}_{\alpha, \beta, \gamma}$</span> and <span>$e^{-\epsilon \mathbf{u} / 2}$</span> in the desired order, then expanding the results in terms of its quaternion components, and then computing the new Euler angles in terms of those components according to the usual expression.</p><h2 id="Computational-infrastructure"><a class="docs-heading-anchor" href="#Computational-infrastructure">Computational infrastructure</a><a id="Computational-infrastructure-1"></a><a class="docs-heading-anchor-permalink" href="#Computational-infrastructure" title="Permalink"></a></h2><p>We&#39;ll use SymPy (via Julia) since <code>Symbolics.jl</code> isn&#39;t very good at trig yet.</p><pre><code class="language-julia hljs">import LaTeXStrings: @L_str, LaTeXString
 import Quaternionic: Quaternionic, Quaternion, components
 import SymPyPythonCall
 import SymPyPythonCall: sympy, symbols, sqrt, sin, cos, tan, acos, atan, latex
 const expand_trig = sympy.expand_trig
 const Derivative = sympy.Derivative
 const π = sympy.pi
-const I = sympy.I</code></pre><p>Define coordinates we will use</p><pre><code class="language-julia hljs">α, β, γ, θ, ϕ = symbols(&quot;α β γ θ ϕ&quot;, real=true, positive=true)</code></pre><p>Reinterpret the quaternion basis elements for compatibility with SymPy.  (<code>Quaternionic</code> defines the basis with <code>Bool</code> components, but SymPy can&#39;t handle that.)</p><pre><code class="language-julia hljs">const 𝐢 = Quaternion{Int}(Quaternionic.𝐢)
+const I = sympy.I</code></pre><p>Define coordinates we will use</p><pre><code class="language-julia hljs">α, β, γ, θ, ϕ, ϵ = symbols(&quot;α β γ θ ϕ ϵ&quot;, real=true, positive=true)</code></pre><p>Reinterpret the quaternion basis elements for compatibility with SymPy.  (<code>Quaternionic</code> defines the basis with <code>Bool</code> components, but SymPy can&#39;t handle that.)</p><pre><code class="language-julia hljs">const 𝐢 = Quaternion{Int}(Quaternionic.𝐢)
 const 𝐣 = Quaternion{Int}(Quaternionic.𝐣)
 const 𝐤 = Quaternion{Int}(Quaternionic.𝐤)</code></pre><p>Next, we define functions to compute the Euler components of the left and right operators</p><pre><code class="language-julia hljs">function 𝒪(u, side)
     # Substitutions that sympy doesn&#39;t make but we want
@@ -47,7 +47,7 @@ const 𝐤 = Quaternion{Int}(Quaternionic.𝐤)</code></pre><p>Next, we define f
     )
 
     # Define the essential quaternions
-    e = cos(θ/2) + u * sin(-θ/2)
+    e = cos(ϵ/2) + u * sin(-ϵ/2)
     R₀ = Quaternion(sympy.simplify.(sympy.expand.(components(
         (cos(α/2) + 𝐤 * sin(α/2)) * (cos(β/2) + 𝐣 * sin(β/2)) * (cos(γ/2) + 𝐤 * sin(γ/2))
     ))))
@@ -62,12 +62,12 @@ const 𝐤 = Quaternion{Int}(Quaternionic.𝐤)</code></pre><p>Next, we define f
     β′ = (2*acos(sqrt(w^2 + z^2) / sqrt(w^2 + x^2 + y^2 + z^2))).expand().simplify()
     γ′ = (atan(z/w) - atan(-x/y)).expand().simplify()
 
-    # Differentiate with respect to θ, set θ to 0, and simplify
-    ∂α′∂θ = expand_trig(Derivative(α′, θ).doit().subs(θ, 0).expand().simplify().subs(subs))
-    ∂β′∂θ = expand_trig(Derivative(β′, θ).doit().subs(θ, 0).expand().simplify().subs(subs))
-    ∂γ′∂θ = expand_trig(Derivative(γ′, θ).doit().subs(θ, 0).expand().simplify().subs(subs))
+    # Differentiate with respect to ϵ, set ϵ to 0, and simplify
+    ∂α′∂ϵ = expand_trig(Derivative(α′, ϵ).doit().subs(ϵ, 0).expand().simplify().subs(subs))
+    ∂β′∂ϵ = expand_trig(Derivative(β′, ϵ).doit().subs(ϵ, 0).expand().simplify().subs(subs))
+    ∂γ′∂ϵ = expand_trig(Derivative(γ′, ϵ).doit().subs(ϵ, 0).expand().simplify().subs(subs))
 
-    return ∂α′∂θ, ∂β′∂θ, ∂γ′∂θ
+    return ∂α′∂ϵ, ∂β′∂ϵ, ∂γ′∂ϵ
 end
 
 # Note that we are not including the factor of ``i`` here; for simplicity, we will insert
@@ -82,22 +82,22 @@ Click here to expand the source code for display macros
     arg = Dict(:𝐢 =&gt; &quot;x&quot;, :𝐣 =&gt; &quot;y&quot;, :𝐤 =&gt; &quot;z&quot;)[expr.args[2]]
     if op == &quot;L&quot;
         quote
-            ∂α′∂θ, ∂β′∂θ, ∂γ′∂θ = latex.($expr)  # Call expr; format results as LaTeX
+            ∂α′∂ϵ, ∂β′∂ϵ, ∂γ′∂ϵ = latex.($expr)  # Call expr; format results as LaTeX
             expr = $op * &quot;_&quot; * $arg  # Standard form of the operator
             L&quot;&quot;&quot;%$expr = i\left[
-                %$(∂α′∂θ) \frac{\partial}{\partial \alpha}
-                + %$(∂β′∂θ) \frac{\partial}{\partial \beta}
-                + %$(∂γ′∂θ) \frac{\partial}{\partial \gamma}
+                %$(∂α′∂ϵ) \frac{\partial}{\partial \alpha}
+                + %$(∂β′∂ϵ) \frac{\partial}{\partial \beta}
+                + %$(∂γ′∂ϵ) \frac{\partial}{\partial \gamma}
             \right]&quot;&quot;&quot;  # Display the result in LaTeX form
         end
     else
         quote
-            ∂α′∂θ, ∂β′∂θ, ∂γ′∂θ = latex.($expr)  # Call expr; format results as LaTeX
+            ∂α′∂ϵ, ∂β′∂ϵ, ∂γ′∂ϵ = latex.($expr)  # Call expr; format results as LaTeX
             expr = $op * &quot;_&quot; * $arg  # Standard form of the operator
             L&quot;&quot;&quot;%$expr = -i\left[
-                %$(∂α′∂θ) \frac{\partial}{\partial \alpha}
-                + %$(∂β′∂θ) \frac{\partial}{\partial \beta}
-                + %$(∂γ′∂θ) \frac{\partial}{\partial \gamma}
+                %$(∂α′∂ϵ) \frac{\partial}{\partial \alpha}
+                + %$(∂β′∂ϵ) \frac{\partial}{\partial \beta}
+                + %$(∂γ′∂ϵ) \frac{\partial}{\partial \gamma}
             \right]&quot;&quot;&quot;  # Display the result in LaTeX form
         end
     end
@@ -107,21 +107,21 @@ macro display2(expr)
     arg = Dict(:𝐢 =&gt; &quot;x&quot;, :𝐣 =&gt; &quot;y&quot;, :𝐤 =&gt; &quot;z&quot;)[expr.args[2]]
     if op == &quot;L&quot;
         quote
-            ∂φ′∂θ, ∂ϑ′∂θ, ∂γ′∂θ = $conversion.($expr)  # Call expr; format results as LaTeX
+            ∂φ′∂ϵ, ∂ϑ′∂ϵ, ∂γ′∂ϵ = $conversion.($expr)  # Call expr; format results as LaTeX
             expr = $op * &quot;_&quot; * $arg  # Standard form of the operator
             L&quot;&quot;&quot;%$expr = i\left[
-                %$(∂ϑ′∂θ) \frac{\partial}{\partial \theta}
-                + %$(∂φ′∂θ) \frac{\partial}{\partial \phi}
+                %$(∂ϑ′∂ϵ) \frac{\partial}{\partial \theta}
+                + %$(∂φ′∂ϵ) \frac{\partial}{\partial \phi}
             \right]&quot;&quot;&quot;  # Display the result in LaTeX form
         end
     else
         quote
-            ∂φ′∂θ, ∂ϑ′∂θ, ∂γ′∂θ = $conversion.($expr)  # Call expr; format results as LaTeX
+            ∂φ′∂ϵ, ∂ϑ′∂ϵ, ∂γ′∂ϵ = $conversion.($expr)  # Call expr; format results as LaTeX
             expr = $op * &quot;_&quot; * $arg  # Standard form of the operator
             L&quot;&quot;&quot;%$expr = -i\left[
-                %$(∂ϑ′∂θ) \frac{\partial}{\partial \theta}
-                + %$(∂φ′∂θ) \frac{\partial}{\partial \phi}
-                + %$(∂γ′∂θ) \frac{\partial}{\partial \gamma}
+                %$(∂ϑ′∂ϵ) \frac{\partial}{\partial \theta}
+                + %$(∂φ′∂ϵ) \frac{\partial}{\partial \phi}
+                + %$(∂γ′∂ϵ) \frac{\partial}{\partial \gamma}
             \right]&quot;&quot;&quot;  # Display the result in LaTeX form
         end
     end
@@ -220,4 +220,4 @@ end</code></pre><p>And finally, evaluate each in turn.  We expect <span>$[L_x, L
 \\
 [R_z, \bar{\eth}]
   &amp;= [R_z, R_x] - i [R_z, R_y] = i R_y + i i R_x = -R_x + i R_y = -\bar{\eth}.
-\end{aligned}\]</p><p>So we see that we&#39;ve reproduced precisely the standard expressions for the spin-weighted spherical functions (depicted as functions on the 2-sphere) from the expressions for the angular-momentum operators acting on general functions on the 3-sphere.  The standard expressions appear arbitrarily, and are not even well defined as functions on the 2-sphere because they also need input from tangent space of the sphere — which is not part of the 2-sphere proper.  On the other hand, the expressions from the 3-sphere are mathematically and physically well defined and intuitive.  Note that the latter is complete in itself; it can stand alone without reference to the 2-sphere.  Rather, what we have done here is just shown the connection to the inadequate standard presentation.  But it is important to recognize that our complete treatment on <span>$\mathrm{Spin}(3)$</span> is the more fundamental one, and can be used without reference to the older treatment.</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../conventions/comparisons/">« Comparisons</a><a class="docs-footer-nextpage" href="../../notes/H_recursions/">Algorithm for computing <span>$H$</span> »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.8.1 on <span class="colophon-date" title="Tuesday 25 February 2025 02:56">Tuesday 25 February 2025</span>. Using Julia version 1.11.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+\end{aligned}\]</p><p>So we see that we&#39;ve reproduced precisely the standard expressions for the spin-weighted spherical functions (depicted as functions on the 2-sphere) from the expressions for the angular-momentum operators acting on general functions on the 3-sphere.  The standard expressions appear arbitrarily, and are not even well defined as functions on the 2-sphere because they also need input from tangent space of the sphere — which is not part of the 2-sphere proper.  On the other hand, the expressions from the 3-sphere are mathematically and physically well defined and intuitive.  Note that the latter is complete in itself; it can stand alone without reference to the 2-sphere.  Rather, what we have done here is just shown the connection to the inadequate standard presentation.  But it is important to recognize that our complete treatment on <span>$\mathrm{Spin}(3)$</span> is the more fundamental one, and can be used without reference to the older treatment.</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../conventions/comparisons/">« Comparisons</a><a class="docs-footer-nextpage" href="../../notes/H_recursions/">Algorithm for computing <span>$H$</span> »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.8.1 on <span class="colophon-date" title="Tuesday 25 February 2025 17:36">Tuesday 25 February 2025</span>. Using Julia version 1.11.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
