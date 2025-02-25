@@ -39,53 +39,53 @@ important results that help make contact with more standard expressions:
 We start by defining a new set of Euler angles according to
 ```math
 \mathbf{R}_{\alpha', \beta', \gamma'}
-= e^{-\theta \mathbf{u} / 2} \mathbf{R}_{\alpha, \beta, \gamma}
+= e^{-\epsilon \mathbf{u} / 2} \mathbf{R}_{\alpha, \beta, \gamma}
 \qquad \text{or} \qquad
 \mathbf{R}_{\alpha', \beta', \gamma'}
-= \mathbf{R}_{\alpha, \beta, \gamma} e^{-\theta \mathbf{u} / 2}
+= \mathbf{R}_{\alpha, \beta, \gamma} e^{-\epsilon \mathbf{u} / 2}
 ```
 where ``\mathbf{u}`` will be each of the basis quaternions, and each of ``\alpha'``,
 ``\beta'``, and ``\gamma'`` is a function of ``\alpha``, ``\beta``, ``\gamma``, and
-``\theta``.  Then, we note that the chain rule tells us that
+``\epsilon``.  Then, we note that the chain rule tells us that
 ```math
-\frac{\partial}{\partial \theta}
+\frac{\partial}{\partial \epsilon}
 =
-\frac{\partial \alpha'}{\partial \theta} \frac{\partial}{\partial \alpha'}
-+ \frac{\partial \beta'}{\partial \theta} \frac{\partial}{\partial \beta'}
-+ \frac{\partial \gamma'}{\partial \theta} \frac{\partial}{\partial \gamma'},
+\frac{\partial \alpha'}{\partial \epsilon} \frac{\partial}{\partial \alpha'}
++ \frac{\partial \beta'}{\partial \epsilon} \frac{\partial}{\partial \beta'}
++ \frac{\partial \gamma'}{\partial \epsilon} \frac{\partial}{\partial \gamma'},
 ```
 which we will use to convert the general expression for the angular-momentum operators in
-terms of ``\partial_\theta`` into an expression in terms of derivatives with respect to
+terms of ``\partial_\epsilon`` into an expression in terms of derivatives with respect to
 these new Euler angles:
 ```math
 \begin{align}
   L_j f(\mathbf{R}_{\alpha, \beta, \gamma})
   &=
-  \left. i \frac{\partial} {\partial \theta} f \left( e^{-\theta \mathbf{e}_j / 2}
-  \mathbf{R}_{\alpha, \beta, \gamma} \right) \right|_{\theta=0}
+  \left. i \frac{\partial} {\partial \epsilon} f \left( e^{-\epsilon \mathbf{e}_j / 2}
+  \mathbf{R}_{\alpha, \beta, \gamma} \right) \right|_{\epsilon=0}
   \\
   &=
   i \left[ \left(
-      \frac{\partial \alpha'}{\partial \theta} \frac{\partial}{\partial \alpha'}
-      + \frac{\partial \beta'}{\partial \theta} \frac{\partial}{\partial \beta'}
-      + \frac{\partial \gamma'}{\partial \theta} \frac{\partial}{\partial \gamma'}
-  \right) f \left(\alpha', \beta', \gamma'\right) \right]_{\theta=0}
+      \frac{\partial \alpha'}{\partial \epsilon} \frac{\partial}{\partial \alpha'}
+      + \frac{\partial \beta'}{\partial \epsilon} \frac{\partial}{\partial \beta'}
+      + \frac{\partial \gamma'}{\partial \epsilon} \frac{\partial}{\partial \gamma'}
+  \right) f \left(\alpha', \beta', \gamma'\right) \right]_{\epsilon=0}
   \\
   &=
   i \left[ \left(
-      \frac{\partial \alpha'}{\partial \theta} \frac{\partial}{\partial \alpha}
-      + \frac{\partial \beta'}{\partial \theta} \frac{\partial}{\partial \beta}
-      + \frac{\partial \gamma'}{\partial \theta} \frac{\partial}{\partial \gamma}
-  \right) f \left(\alpha, \beta, \gamma\right) \right]_{\theta=0},
+      \frac{\partial \alpha'}{\partial \epsilon} \frac{\partial}{\partial \alpha}
+      + \frac{\partial \beta'}{\partial \epsilon} \frac{\partial}{\partial \beta}
+      + \frac{\partial \gamma'}{\partial \epsilon} \frac{\partial}{\partial \gamma}
+  \right) f \left(\alpha, \beta, \gamma\right) \right]_{\epsilon=0},
 \end{align}
 ```
 and similarly for ``R_j``.
 
-So the objective is to find the new Euler angles, differentiate with respect to ``\theta``,
-and then evaluate at ``\theta = 0``.  We do this by first multiplying ``\mathbf{R}_{\alpha,
-\beta, \gamma}`` and ``e^{-\theta \mathbf{u} / 2}`` in the desired order, then expanding the
-results in terms of its quaternion components, and then computing the new Euler angles in
-terms of those components according to the usual expression.
+So the objective is to find the new Euler angles, differentiate with respect to
+``\epsilon``, and then evaluate at ``\epsilon = 0``.  We do this by first multiplying
+``\mathbf{R}_{\alpha, \beta, \gamma}`` and ``e^{-\epsilon \mathbf{u} / 2}`` in the desired
+order, then expanding the results in terms of its quaternion components, and then computing
+the new Euler angles in terms of those components according to the usual expression.
 
 """
 
@@ -107,7 +107,7 @@ const I = sympy.I
 nothing  #hide
 
 # Define coordinates we will use
-α, β, γ, θ, ϕ = symbols("α β γ θ ϕ", real=true, positive=true)
+α, β, γ, θ, ϕ, ϵ = symbols("α β γ θ ϕ ϵ", real=true, positive=true)
 nothing  #hide
 
 # Reinterpret the quaternion basis elements for compatibility with SymPy.  (`Quaternionic`
@@ -126,7 +126,7 @@ function 𝒪(u, side)
     )
 
     ## Define the essential quaternions
-    e = cos(θ/2) + u * sin(-θ/2)
+    e = cos(ϵ/2) + u * sin(-ϵ/2)
     R₀ = Quaternion(sympy.simplify.(sympy.expand.(components(
         (cos(α/2) + 𝐤 * sin(α/2)) * (cos(β/2) + 𝐣 * sin(β/2)) * (cos(γ/2) + 𝐤 * sin(γ/2))
     ))))
@@ -141,12 +141,12 @@ function 𝒪(u, side)
     β′ = (2*acos(sqrt(w^2 + z^2) / sqrt(w^2 + x^2 + y^2 + z^2))).expand().simplify()
     γ′ = (atan(z/w) - atan(-x/y)).expand().simplify()
 
-    ## Differentiate with respect to θ, set θ to 0, and simplify
-    ∂α′∂θ = expand_trig(Derivative(α′, θ).doit().subs(θ, 0).expand().simplify().subs(subs))
-    ∂β′∂θ = expand_trig(Derivative(β′, θ).doit().subs(θ, 0).expand().simplify().subs(subs))
-    ∂γ′∂θ = expand_trig(Derivative(γ′, θ).doit().subs(θ, 0).expand().simplify().subs(subs))
+    ## Differentiate with respect to ϵ, set ϵ to 0, and simplify
+    ∂α′∂ϵ = expand_trig(Derivative(α′, ϵ).doit().subs(ϵ, 0).expand().simplify().subs(subs))
+    ∂β′∂ϵ = expand_trig(Derivative(β′, ϵ).doit().subs(ϵ, 0).expand().simplify().subs(subs))
+    ∂γ′∂ϵ = expand_trig(Derivative(γ′, ϵ).doit().subs(ϵ, 0).expand().simplify().subs(subs))
 
-    return ∂α′∂θ, ∂β′∂θ, ∂γ′∂θ
+    return ∂α′∂ϵ, ∂β′∂ϵ, ∂γ′∂ϵ
 end
 
 ## Note that we are not including the factor of ``i`` here; for simplicity, we will insert
@@ -170,22 +170,22 @@ macro display(expr)
     arg = Dict(:𝐢 => "x", :𝐣 => "y", :𝐤 => "z")[expr.args[2]]
     if op == "L"
         quote
-            ∂α′∂θ, ∂β′∂θ, ∂γ′∂θ = latex.($expr)  # Call expr; format results as LaTeX
+            ∂α′∂ϵ, ∂β′∂ϵ, ∂γ′∂ϵ = latex.($expr)  # Call expr; format results as LaTeX
             expr = $op * "_" * $arg  # Standard form of the operator
             L"""%$expr = i\left[
-                %$(∂α′∂θ) \frac{\partial}{\partial \alpha}
-                + %$(∂β′∂θ) \frac{\partial}{\partial \beta}
-                + %$(∂γ′∂θ) \frac{\partial}{\partial \gamma}
+                %$(∂α′∂ϵ) \frac{\partial}{\partial \alpha}
+                + %$(∂β′∂ϵ) \frac{\partial}{\partial \beta}
+                + %$(∂γ′∂ϵ) \frac{\partial}{\partial \gamma}
             \right]"""  # Display the result in LaTeX form
         end
     else
         quote
-            ∂α′∂θ, ∂β′∂θ, ∂γ′∂θ = latex.($expr)  # Call expr; format results as LaTeX
+            ∂α′∂ϵ, ∂β′∂ϵ, ∂γ′∂ϵ = latex.($expr)  # Call expr; format results as LaTeX
             expr = $op * "_" * $arg  # Standard form of the operator
             L"""%$expr = -i\left[
-                %$(∂α′∂θ) \frac{\partial}{\partial \alpha}
-                + %$(∂β′∂θ) \frac{\partial}{\partial \beta}
-                + %$(∂γ′∂θ) \frac{\partial}{\partial \gamma}
+                %$(∂α′∂ϵ) \frac{\partial}{\partial \alpha}
+                + %$(∂β′∂ϵ) \frac{\partial}{\partial \beta}
+                + %$(∂γ′∂ϵ) \frac{\partial}{\partial \gamma}
             \right]"""  # Display the result in LaTeX form
         end
     end
@@ -199,21 +199,21 @@ macro display2(expr)
     arg = Dict(:𝐢 => "x", :𝐣 => "y", :𝐤 => "z")[expr.args[2]]
     if op == "L"
         quote
-            ∂φ′∂θ, ∂ϑ′∂θ, ∂γ′∂θ = $conversion.($expr)  # Call expr; format results as LaTeX
+            ∂φ′∂ϵ, ∂ϑ′∂ϵ, ∂γ′∂ϵ = $conversion.($expr)  # Call expr; format results as LaTeX
             expr = $op * "_" * $arg  # Standard form of the operator
             L"""%$expr = i\left[
-                %$(∂ϑ′∂θ) \frac{\partial}{\partial \theta}
-                + %$(∂φ′∂θ) \frac{\partial}{\partial \phi}
+                %$(∂ϑ′∂ϵ) \frac{\partial}{\partial \theta}
+                + %$(∂φ′∂ϵ) \frac{\partial}{\partial \phi}
             \right]"""  # Display the result in LaTeX form
         end
     else
         quote
-            ∂φ′∂θ, ∂ϑ′∂θ, ∂γ′∂θ = $conversion.($expr)  # Call expr; format results as LaTeX
+            ∂φ′∂ϵ, ∂ϑ′∂ϵ, ∂γ′∂ϵ = $conversion.($expr)  # Call expr; format results as LaTeX
             expr = $op * "_" * $arg  # Standard form of the operator
             L"""%$expr = -i\left[
-                %$(∂ϑ′∂θ) \frac{\partial}{\partial \theta}
-                + %$(∂φ′∂θ) \frac{\partial}{\partial \phi}
-                + %$(∂γ′∂θ) \frac{\partial}{\partial \gamma}
+                %$(∂ϑ′∂ϵ) \frac{\partial}{\partial \theta}
+                + %$(∂φ′∂ϵ) \frac{\partial}{\partial \phi}
+                + %$(∂γ′∂ϵ) \frac{\partial}{\partial \gamma}
             \right]"""  # Display the result in LaTeX form
         end
     end
