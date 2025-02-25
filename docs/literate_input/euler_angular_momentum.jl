@@ -111,6 +111,7 @@ the new Euler angles in terms of those components according to the usual express
 
 # ## Computational infrastructure
 # We'll use SymPy (via Julia) since `Symbolics.jl` isn't very good at trig yet.
+import Memoization: @memoize
 import LaTeXStrings: @L_str, LaTeXString
 import Quaternionic: Quaternionic, Quaternion, components
 import SymPyPythonCall
@@ -133,7 +134,7 @@ const 𝐤 = Quaternion{Int}(Quaternionic.𝐤)
 nothing  #hide
 
 # Next, we define functions to compute the Euler components of the left and right operators
-function 𝒪(u, side)
+@memoize function 𝒪(u, side)
     ## Substitutions that sympy doesn't make but we want
     subs = Dict(
         cos(β)/sin(β) => 1/tan(β),
