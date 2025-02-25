@@ -79,7 +79,22 @@ these new Euler angles:
   \right) f \left(\alpha, \beta, \gamma\right) \right]_{\epsilon=0},
 \end{align}
 ```
-and similarly for ``R_j``.
+or for ``R_j``:
+```math
+\begin{align}
+  R_j f(\mathbf{R}_{\alpha, \beta, \gamma})
+  &=
+  -\left. i \frac{\partial} {\partial \epsilon} f \left( \mathbf{R}_{\alpha, \beta, \gamma}
+  e^{-\epsilon \mathbf{e}_j / 2} \right) \right|_{\epsilon=0}
+  \\
+  &=
+  -i \left[ \left(
+      \frac{\partial \alpha'}{\partial \epsilon} \frac{\partial}{\partial \alpha}
+      + \frac{\partial \beta'}{\partial \epsilon} \frac{\partial}{\partial \beta}
+      + \frac{\partial \gamma'}{\partial \epsilon} \frac{\partial}{\partial \gamma}
+  \right) f \left(\alpha, \beta, \gamma\right) \right]_{\epsilon=0}.
+\end{align}
+```
 
 So the objective is to find the new Euler angles, differentiate with respect to
 ``\epsilon``, and then evaluate at ``\epsilon = 0``.  We do this by first multiplying
