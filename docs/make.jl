@@ -42,8 +42,6 @@ bib = CitationBibliography(
 using SphericalFunctions
 DocMeta.setdocmeta!(SphericalFunctions, :DocTestSetup, :(using SphericalFunctions); recursive=true)
 
-@warn """Re-enable "Calculations" below"""
-
 makedocs(
     plugins=[bib],
     sitename="SphericalFunctions.jl",
