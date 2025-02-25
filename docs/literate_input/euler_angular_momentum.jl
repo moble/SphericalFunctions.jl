@@ -105,9 +105,8 @@ the new Euler angles in terms of those components according to the usual express
 """
 
 #src # Do this first just to hide stdout of the conda installation step
-# ````@setup euler_angular_momentum
-# import SymPyPythonCall
-# ````
+import SymPyPythonCall  #hide
+
 
 # ## Computational infrastructure
 # We'll use SymPy (via Julia) since `Symbolics.jl` isn't very good at trig yet.
