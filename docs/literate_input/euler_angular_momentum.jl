@@ -282,7 +282,9 @@ nothing  #hide
 # which says that ``R`` is just the *negative of* the ``L`` operator transformed to the
 # body-fixed frame.  That negative sign is slightly unnatural, but the reason we choose to
 # define ``R`` in this way is for its more natural connection to the literature on
-# spin-weighted spherical functions.
+# spin-weighted spherical functions.  Also, ``R`` defined here obeys the same commutation
+# relations as the standard angular-momentum operators, whereas the Wikipedia convention
+# leads to "anomalous" commutation relations with an extra minus sign.
 
 # ### Commutators
 
