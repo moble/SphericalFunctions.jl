@@ -10,15 +10,20 @@ start = time()  # We'll display the total after everything has finished
 
 using Documenter
 using Literate
+using DocumenterCitations
+
 
 docs_src_dir = joinpath(@__DIR__, "src")
 
 # See LiveServer.jl docs for this: https://juliadocs.org/LiveServer.jl/dev/man/ls+lit/
 literate_input = joinpath(@__DIR__, "literate_input")
 literate_output = joinpath(docs_src_dir, "literate_output")
+rm(literate_output; force=true, recursive=true)
 for (root, _, files) ∈ walkdir(literate_input), file ∈ files
     # ignore non julia files
     splitext(file)[2] == ".jl" || continue
+    # If the file is "euler_angular_momentum.jl", skip it
+    #file == "euler_angular_momentum.jl" && (@warn "Re-enable euler_angular_momentum.jl"; continue)
     # full path to a literate script
     input_path = joinpath(root, file)
     # generated output path
@@ -27,8 +32,7 @@ for (root, _, files) ∈ walkdir(literate_input), file ∈ files
     Literate.markdown(input_path, output_path, documenter=true, mdstrings=true)
 end
 relative_literate_output = relpath(literate_output, docs_src_dir)
-
-using DocumenterCitations
+relative_convention_comparisons = joinpath(relative_literate_output, "conventions_comparisons")
 
 bib = CitationBibliography(
     joinpath(docs_src_dir, "references.bib");
@@ -37,6 +41,8 @@ bib = CitationBibliography(
 
 using SphericalFunctions
 DocMeta.setdocmeta!(SphericalFunctions, :DocTestSetup, :(using SphericalFunctions); recursive=true)
+
+@warn """Re-enable "Calculations" below"""
 
 makedocs(
     plugins=[bib],
@@ -63,6 +69,9 @@ makedocs(
             "conventions/summary.md",
             "conventions/details.md",
             "conventions/comparisons.md",
+            "Comparisons" => [
+                joinpath(relative_convention_comparisons, "condon_shortley_1935.md"),
+            ],
             "Calculations" => [
                 joinpath(relative_literate_output, "euler_angular_momentum.md"),
             ],
@@ -83,4 +92,4 @@ deploydocs(
     push_preview=true
 )
 
-println("Docs built in ", time() - start, " seconds.")
+println("Docs built in ", time() - start, " seconds.\n\n")
