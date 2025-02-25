@@ -374,6 +374,8 @@ commutator(Rz, Rx)
 #md # ```@raw html
 #md # <a id="LR_commutators_Euler_angles"></a>
 #md # ```
+[commutator(L, R) for L ∈ (Lx, Ly, Lz), R ∈ (Rx, Ry, Rz)]
+# This completes independent commutator results, which are all as we expect them to be.
 
 
 # ## Standard expressions on ``S^2``
