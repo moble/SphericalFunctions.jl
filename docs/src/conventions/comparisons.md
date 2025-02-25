@@ -112,32 +112,6 @@ Cohen-Tannoudji does not appear to define the Wigner D-matrices.
 
 ## Condon-Shortley (1935)
 
-[Condon and Shortley's "The Theory Of Atomic Spectra"](@cite
-CondonShortley_1935) is the standard reference for the
-"Condon-Shortley phase convention" — though no one is ever too clear
-about precisely what that means.  To avoid ambiguity, we can just look
-at the actual spherical harmonics they define.
-
-They are not very explicit about the meaning of the spherical
-coordinates, but they do describe them as "spherical polar coordinates
-``r, \theta, \varphi``" immediately before equation (1) of section 4³
-(page 50),
-```math
-L_z = -i \hbar \frac{\partial}{\partial \varphi},
-```
-followed by equation (8):
-```math
-\begin{aligned}
-L_x + i L_y &= \hbar e^{i\varphi} \left(
-  \frac{\partial}{\partial \theta}
-  + i \cot\theta \frac{\partial}{\partial \varphi}
-\right) \\
-L_x - i L_y &= \hbar e^{-i\varphi} \left(
-  -\frac{\partial}{\partial \theta}
-  + i \cot\theta \frac{\partial}{\partial \varphi}
-\right).
-\end{aligned}
-```
 
 Equation (15) of section 4³ (page 52) gives the ``\theta`` dependence
 of the spherical harmonic as
@@ -910,7 +884,7 @@ covariant components:
   &= -i \frac{\partial}{\partial \alpha}
 \end{aligned}
 ```
-We can compare these to the [Full expressions on ``S^3``](@ref), and find
+We can compare these to the [Full expressions on ``S^3``]() `@ref`, and find
 that they are precisely equivalent to expressions for ``L_j`` computed in
 this package's conventions.
 
