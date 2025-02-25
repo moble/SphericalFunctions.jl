@@ -123,8 +123,9 @@ const π = sympy.pi
 const I = sympy.I
 nothing  #hide
 
-# Define coordinates we will use
+# Define symbols we will use throughout
 α, β, γ, θ, ϕ, ϵ = symbols("α β γ θ ϕ ϵ", real=true, positive=true)
+f = symbols("f", cls=SymPyPythonCall.sympy.o.Function)
 nothing  #hide
 
 # Reinterpret the quaternion basis elements for compatibility with SymPy.  (`Quaternionic`
@@ -315,8 +316,9 @@ nothing  #hide
 # ### Commutators
 
 # We can also compute the commutators of the angular momentum operators, as derived above.
-# First, we define the operators acting on functions of the Euler angles.
-f = symbols("f", cls=SymPyPythonCall.sympy.o.Function)
+# First, we define the operators acting on functions of the Euler angles.  Note that this
+# function differs from the one above because it explicitly takes the function ``f`` and the
+# Euler angles as arguments — which will be necessary to compute the commutators.
 function 𝒪(u, side, f, α, β, γ)
     let O = 𝒪(u, side)
         (side==:left ? I : -I) * (
@@ -354,19 +356,22 @@ nothing  #hide
 #md # <a id="L_commutators_Euler_angles"></a>
 #md # ```
 commutator(Lx, Ly)
-#-
+# which equals ``i L_z``,
 commutator(Ly, Lz)
-#-
+# which equals ``i L_x``, and
 commutator(Lz, Lx)
+# which equals ``i L_y``.  Similarly, we expect ``[R_x, R_y] = i R_z`` and cyclic
+# permutations:
 
 #md # ```@raw html
 #md # <a id="R_commutators_Euler_angles"></a>
 #md # ```
 commutator(Rx, Ry)
-#-
+# which equals ``i R_z``,
 commutator(Ry, Rz)
-#-
+# which equals ``i R_x``, and
 commutator(Rz, Rx)
+# which equals ``i R_y`` — all as expected.
 
 # Just for completeness, let's evaluate the commutators of the left and right operators,
 # which should all be zero.
