@@ -210,13 +210,31 @@ end
 nothing  #hide
 
 # And we'll need another for the angular-momentum operators in standard ``S^2`` form.
-conversion(∂) = latex(∂.subs(Dict(α => ϕ, β => θ, γ => 0)).simplify())
+conversion(∂) = ∂.subs(Dict(α => ϕ, β => θ, γ => 0)).simplify()
 macro display2(expr)
     op = string(expr.args[1])
-    arg = Dict(:𝐢 => "x", :𝐣 => "y", :𝐤 => "z")[expr.args[2]]
-    if op == "L"
+    element = expr.args[2]
+    arg = Dict(:𝐢 => "x", :𝐣 => "y", :𝐤 => "z", :+ => "+", :- => "-")[element]
+    @info element
+    if op == "L" && arg ∈ ("+", "-")
         quote
-            ∂φ′∂ϵ, ∂ϑ′∂ϵ, ∂γ′∂ϵ = $conversion.($expr)  # Call expr; format results as LaTeX
+            ∂φ′∂ϵ, ∂ϑ′∂ϵ, ∂γ′∂ϵ = (
+                (
+                    ($element)(I * $conversion(i), -$conversion(j)).rewrite(exp)
+                    / exp(($element)(I) * ϕ)
+                ).simplify()
+                for (i, j) ∈ zip(L(𝐢), L(𝐣))
+            )
+            expr = $op * "_" * $arg  # Standard form of the operator
+            expsign = ($arg=="+" ? "" : "-")
+            L"""%$expr = e^{%$expsign i \phi} \left[
+                %$(∂ϑ′∂ϵ) \frac{\partial}{\partial \theta}
+                + %$(∂φ′∂ϵ) \frac{\partial}{\partial \phi}
+            \right]"""  # Display the result in LaTeX form
+        end
+    elseif op == "L"
+        quote
+            ∂φ′∂ϵ, ∂ϑ′∂ϵ, ∂γ′∂ϵ = latex.($conversion.($expr))  # Call expr; format as LaTeX
             expr = $op * "_" * $arg  # Standard form of the operator
             L"""%$expr = i\left[
                 %$(∂ϑ′∂ϵ) \frac{\partial}{\partial \theta}
@@ -225,7 +243,7 @@ macro display2(expr)
         end
     else
         quote
-            ∂φ′∂ϵ, ∂ϑ′∂ϵ, ∂γ′∂ϵ = $conversion.($expr)  # Call expr; format results as LaTeX
+            ∂φ′∂ϵ, ∂ϑ′∂ϵ, ∂γ′∂ϵ = latex.($conversion.($expr))  # Call expr; format as LaTeX
             expr = $op * "_" * $arg  # Standard form of the operator
             L"""%$expr = -i\left[
                 %$(∂ϑ′∂ϵ) \frac{\partial}{\partial \theta}
@@ -371,8 +389,19 @@ commutator(Rz, Rx)
 #-
 @display2 L(𝐤)
 
-# Those are indeed the standard expressions for the angular-momentum operators on the
-# 2-sphere, so we can declare success!
+# We can also provide the usual expressions for the raising and lowering operators in terms
+# of spherical coordinates with ``L_{\pm} = L_x \pm i L_y``:
+
+#md # ```@raw html
+#md # <a id="Lpm_operators_spherical_coordinates"></a>
+#md # ```
+@display2 L(+)
+#-
+@display2 L(-)
+
+# These are all indeed the standard expressions for the angular-momentum operators on the
+# 2-sphere, as seen in numerous references, so we can declare compatibility between our
+# unusual definition of ``L`` and more standard definitions.
 #
 # Now, note that including ``\partial_\gamma`` for an expression on the 2-sphere doesn't
 # actually make any sense: ``\gamma`` isn't even a coordinate for the 2-sphere!  However,
