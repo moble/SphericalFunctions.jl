@@ -1,6 +1,10 @@
 md"""
 # Condon-Shortley (1935)
 
+!!! info "Summary"
+    Condon and Shortley's definition of the spherical harmonics agrees with the definition
+    used in the `SphericalFunctions` package.
+
 [Condon and Shortley's "The Theory Of Atomic Spectra"](@cite CondonShortley_1935) is the
 standard reference for the "Condon-Shortley phase convention".  Though some references are
 not very clear about precisely what they mean by that phrase, it seems clear that the
@@ -174,5 +178,9 @@ for (θ, ϕ) ∈ θϕrange(; avoid_poles=ϵₐ/40)
         @test CondonShortley.𝜙(ℓ, m, θ, ϕ) ≈ SphericalFunctions.Y(ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
     end
 end
+#+
+
+# This successful test shows that the function ``\phi`` defined by Condon and Shortley
+# agrees with the spherical harmonics defined by the SphericalFunctions package.
 
 end  #hide
