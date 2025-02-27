@@ -263,18 +263,14 @@ nothing  #hide
 # ## Full expressions on ``S^3``
 # Finally, we can actually compute the Euler components of the angular momentum operators.
 
-#md # ```@raw html
-#md # <a id="L_operators_Euler_angles"></a>
-#md # ```
+#md # ### ``L`` operators in terms of Euler angles
 @display L(𝐢)
 #-
 @display L(𝐣)
 #-
 @display L(𝐤)
 #-
-#md # ```@raw html
-#md # <a id="R_operators_Euler_angles"></a>
-#md # ```
+#md # ### ``R`` operators in terms of Euler angles
 @display R(𝐢)
 #-
 @display R(𝐣)
@@ -313,7 +309,7 @@ nothing  #hide
 # relations as the standard angular-momentum operators, whereas the Wikipedia convention
 # leads to "anomalous" commutation relations with an extra minus sign.
 
-# ### Commutators
+# ## Commutators
 
 # We can also compute the commutators of the angular momentum operators, as derived above.
 # First, we define the operators acting on functions of the Euler angles.  Note that this
@@ -352,9 +348,7 @@ nothing  #hide
 # And finally, evaluate each in turn.  We expect ``[L_x, L_y] = i L_z`` and cyclic
 # permutations:
 
-#md # ```@raw html
-#md # <a id="L_commutators_Euler_angles"></a>
-#md # ```
+#md # ### ``L`` commutators in Euler angles
 commutator(Lx, Ly)
 # which equals ``i L_z``,
 commutator(Ly, Lz)
@@ -363,9 +357,7 @@ commutator(Lz, Lx)
 # which equals ``i L_y``.  Similarly, we expect ``[R_x, R_y] = i R_z`` and cyclic
 # permutations:
 
-#md # ```@raw html
-#md # <a id="R_commutators_Euler_angles"></a>
-#md # ```
+#md # ### ``R`` commutators in Euler angles
 commutator(Rx, Ry)
 # which equals ``i R_z``,
 commutator(Ry, Rz)
@@ -376,9 +368,7 @@ commutator(Rz, Rx)
 # Just for completeness, let's evaluate the commutators of the left and right operators,
 # which should all be zero.
 
-#md # ```@raw html
-#md # <a id="LR_commutators_Euler_angles"></a>
-#md # ```
+#md # ### ``L,R`` commutators in Euler angles
 [commutator(L, R) for L ∈ (Lx, Ly, Lz), R ∈ (Rx, Ry, Rz)]
 # This completes independent commutator results, which are all as we expect them to be.
 
@@ -387,9 +377,7 @@ commutator(Rz, Rx)
 # We can substitute ``(α, β, γ) \to (φ, θ, 0)`` to get the standard expressions for the
 # angular momentum operators on the 2-sphere.
 
-#md # ```@raw html
-#md # <a id="L_operators_spherical_coordinates"></a>
-#md # ```
+#md # ### ``L`` operators in spherical coordinates
 @display2 L(𝐢)
 #-
 @display2 L(𝐣)
@@ -399,9 +387,7 @@ commutator(Rz, Rx)
 # We can also provide the usual expressions for the raising and lowering operators in terms
 # of spherical coordinates with ``L_{\pm} = L_x \pm i L_y``:
 
-#md # ```@raw html
-#md # <a id="Lpm_operators_spherical_coordinates"></a>
-#md # ```
+#md # ### ``L_{\pm}`` operators in spherical coordinates
 @display2 L(+)
 #-
 @display2 L(-)
@@ -415,9 +401,7 @@ commutator(Rz, Rx)
 # for historical reasons, we include it here when showing the results of the ``R`` operator
 # in Euler angles.
 
-#md # ```@raw html
-#md # <a id="R_operators_spherical_coordinates"></a>
-#md # ```
+#md # ### ``R`` operators in spherical coordinates
 @display2 R(𝐢)
 #-
 @display2 R(𝐣)
