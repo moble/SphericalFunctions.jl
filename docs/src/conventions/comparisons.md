@@ -213,7 +213,7 @@ If we relate two vectors by a rotation matrix as ``x'^k = R^{kl}
 x^l``, then Goldberg et al. define ``D`` by its action on spherical
 harmonics [Eq. (3.3)]:
 ```math
-Y_{ell,m}(x') = \sum_{m'} Y_{ell,m'}(x) D^{ell}_{m',m}\left( R^{-1} \right).
+Y_{\ell,m}(x') = \sum_{m'} Y_{\ell,m'}(x) D^{\ell}_{m',m}\left( R^{-1} \right).
 ```
 They then define the Euler angles as we do, and write [Eq. (3.4)]
 ```math
@@ -294,7 +294,7 @@ spherical harmonics:
   Y_{1}^{\pm 1} &= \mp \left(\frac{3}{8\pi}\right)^{1/2} \sin\theta e^{\pm i\phi},\\
   Y_{2}^{0} &= \left(\frac{5}{16\pi}\right)^{1/2} \left(3\cos^2\theta - 1\right),\\
   Y_{2}^{\pm 1} &= \mp \left(\frac{15}{8\pi}\right)^{1/2} \sin\theta \cos\theta e^{\pm i\phi},\\
-  Y_{2}^{\pm 2} &= \left(\frac{15}{32\pi}\right)^{1/2} \sin^2\theta e^{\pm 2i\phi}.
+  Y_{2}^{\pm 2} &= \left(\frac{15}{32\pi}\right)^{1/2} \sin^2\theta e^{\pm 2i\phi},\\
   Y_{3}^{0} &= \left(\frac{7}{16\pi}\right)^{1/2} \left(5\cos^3\theta - 3\cos\theta\right),\\
   Y_{3}^{\pm 1} &= \mp \left(\frac{21}{64\pi}\right)^{1/2} \sin\theta \left(5\cos^2\theta - 1\right) e^{\pm i\phi},\\
   Y_{3}^{\pm 2} &= \left(\frac{105}{32\pi}\right)^{1/2} \sin^2\theta \cos\theta e^{\pm 2i\phi},\\
@@ -933,7 +933,45 @@ D^j_{m'm}(\alpha,\beta,\gamma) \equiv \langle jm' | \mathcal{R}(\alpha,\beta,\ga
 
 ## Zettili (2009)
 
-[Zettili_2009](@citet) denotes by ``\hat{R}_z(\delta \phi)`` the
+[Zettili_2009](@citet) is a relatively recent textbook that seems to
+be gaining popularity.  (Note that there is a 3rd edition from 2022,
+but I do not have access to it; all the references here are to the 2nd
+edition from 2009.)
+
+In Appendix B.1, we find that the spherical coordinates are related to
+Cartesian coordinates in the usual (physicist's) way.  Equation
+(5.132) gives the angular-momentum operator
+```math
+\hat{L}_z = -i \hbar \frac{\partial}{\partial \varphi},
+```
+which agrees with [our expression](@ref "``L`` operators in spherical
+coordinates").  This is followed by equation (5.134):
+```math
+\hat{L}_{\pm}
+=
+\hat{L}_x \pm i \hat{L}_y
+=
+\pm \hbar e^{\pm i\varphi} \left(
+  \frac{\partial}{\partial \theta}
+  \pm i \cot\theta \frac{\partial}{\partial \varphi}
+\right),
+```
+which also agrees with [our results.](@ref "``L_{\pm}`` operators in
+spherical coordinates")
+
+Equation (5.180) gives the spherical harmonics as
+```math
+Y_{l, m}(\theta, \varphi)
+=
+\frac{(-1)^l}{2^l l!}
+\sqrt{\frac{2l+1}{4\pi} \frac{(l+m)!}{(l-m)!}}
+e^{im\varphi}
+\frac{1}{\sin^m \theta}
+\frac{d^{l-m}}{d(\cos\theta)^{l-m}}
+(\sin \theta)^{2l}.
+```
+
+Section 7.2.1 denotes by ``\hat{R}_z(\delta \phi)`` the
 
 > rotation of the coordinates of a *spinless* particle over an
 > *infinitesimal* angle ``\delta \phi`` about the ``z``-axis
@@ -996,24 +1034,4 @@ spherical harmonics transform as [Eq. (7.70)]
 Y_{\ell, m}^\ast (\theta', \phi')
 =
 \sum_{m'} D^{(\ell)}_{m, m'}(\alpha, \beta, \gamma) Y_{\ell, m'}^\ast (\theta, \phi).
-```
-
-In Appendix B.1, we find that the spherical coordinates are related to
-Cartesian coordinates in the usual (physicist's) way, and Eqs.
-(B.25)—(B.27) give the components of the angular-momentum operator in
-spherical coordinates as
-```math
-\begin{aligned}
-L_x &= i \hbar \left(
-    \sin\phi \frac{\partial}{\partial \theta}
-    + \cot\theta \cos\phi \frac{\partial}{\partial \phi}
-\right),
-\\
-L_y &= i \hbar \left(
-    -\cos\phi \frac{\partial}{\partial \theta}
-    + \cot\theta \sin\phi \frac{\partial}{\partial \phi}
-\right),
-\\
-L_z &= -i \hbar \frac{\partial}{\partial \phi}.
-\end{aligned}
 ```
