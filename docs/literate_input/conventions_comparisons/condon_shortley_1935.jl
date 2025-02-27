@@ -167,13 +167,11 @@ end
 # the SphericalHarmonics package.  We will only test up to
 ℓₘₐₓ = 4
 #+
-# because the formulas are very slow, and this will be sufficient to sort out any sign
-# differences, which are the most likely source of error.
-using Quaternionic: from_spherical_coordinates
+# because the formulas are very slow, and this will be sufficient to sort out any sign or
+# normalization differences, which are the most likely source of error.
 for (θ, ϕ) ∈ θϕrange(; avoid_zeros=ϵₐ/40)
-    Y = SphericalFunctions.ₛ𝐘(0, ℓₘₐₓ, typeof(θ), [from_spherical_coordinates(θ, ϕ)])[1,:]
-    for (ℓ, m) ∈ eachrow(SphericalFunctions.Yrange(ℓₘₐₓ))
-        @test CondonShortley.𝜙(ℓ, m, θ, ϕ) ≈ Y[SphericalFunctions.Yindex(ℓ, m)] atol=ϵₐ rtol=ϵᵣ
+    for (ℓ, m) ∈ ℓmrange(ℓₘₐₓ)
+        @test CondonShortley.𝜙(ℓ, m, θ, ϕ) ≈ SphericalFunctions.Y(ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
     end
 end
 
