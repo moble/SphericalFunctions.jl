@@ -113,42 +113,6 @@ Cohen-Tannoudji does not appear to define the Wigner D-matrices.
 ## Condon-Shortley (1935)
 
 
-Equation (15) of section 4³ (page 52) gives the ``\theta`` dependence
-of the spherical harmonic as
-```math
-\Theta(\ell, m)
-=
-(-1)^\ell
-\sqrt{\frac{(2\ell+1)}{2} \frac{(\ell+m)!}{(\ell-m)!}}
-\frac{1}{2^\ell \ell!}
-\frac{1}{\sin^m \theta}
-\frac{d^{\ell-m}}{d(\cos\theta)^{\ell-m}} \sin^{2\ell}\theta.
-```
-The ``\varphi`` part is given by equation (5) of section 4³ (page 50):
-```julia
-1 / √(2T(π)) * exp(𝒾 * mₗ * φ)
-```
-```math
-\Phi(m_\ell)
-=
-\frac{1}{\sqrt{2\pi}} e^{i m_\ell \varphi}.
-```
-Equation (12) of section 4³ (page 51) writes the solution to the
-three-dimensional Laplace equation in spherical coordinates as
-```math
-\psi(\gamma, \ell, m_\ell)
-=
-B(\gamma, \ell) \Theta(\ell, m_\ell) \Phi(m_\ell),
-```
-where ``B`` is independent of ``\theta`` and ``\varphi``, and ``\gamma``
-represents any number of eigenvalues required to specify the state.
-Thus, we take the angular factors, normalized, to define the spherical
-harmonics.  The result is that the original Condon-Shortley spherical
-harmonics agree perfectly with the ones computed by this package.
-
-Condon and Shortley do not give an expression for the Wigner
-D-matrices.
-
 
 ## Edmonds (1960)
 
