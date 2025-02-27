@@ -156,7 +156,7 @@ end  # module CondonShortley
 # again, noting the subtle difference between the characters `Θ` and `ϴ`.  Note that the
 # ``1/\sin\theta`` factor in the general form will cause problems at the poles, so we avoid
 # the poles by using `βrange` with a small offset:
-for θ ∈ θrange(; avoid_zeros=ϵₐ/10)
+for θ ∈ θrange(; avoid_poles=ϵₐ/10)
     for (ℓ, m) ∈ eachrow(SphericalFunctions.Yrange(ℓₘₐₓ))
         @test CondonShortley.ϴ(ℓ, m, θ) ≈ CondonShortley.Θ(ℓ, m, θ) atol=ϵₐ rtol=ϵᵣ
     end
@@ -169,7 +169,7 @@ end
 #+
 # because the formulas are very slow, and this will be sufficient to sort out any sign or
 # normalization differences, which are the most likely source of error.
-for (θ, ϕ) ∈ θϕrange(; avoid_zeros=ϵₐ/40)
+for (θ, ϕ) ∈ θϕrange(; avoid_poles=ϵₐ/40)
     for (ℓ, m) ∈ ℓmrange(ℓₘₐₓ)
         @test CondonShortley.𝜙(ℓ, m, θ, ϕ) ≈ SphericalFunctions.Y(ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
     end

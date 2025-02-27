@@ -6,17 +6,17 @@
     0; nextfloat(T(0)); rand(T(0):eps(T(π)):T(π), n÷2); prevfloat(T(π)); T(π);
     nextfloat(T(π)); rand(T(π):eps(2T(π)):2T(π), n÷2); prevfloat(T(π)); 2T(π)
 ]
-βrange(::Type{T}=Float64, n=15; avoid_zeros=0) where T = T[
-    avoid_zeros; nextfloat(T(avoid_zeros));
+βrange(::Type{T}=Float64, n=15; avoid_poles=0) where T = T[
+    avoid_poles; nextfloat(T(avoid_poles));
     rand(T(0):eps(T(π)):T(π), n);
-    prevfloat(T(π)-avoid_zeros); T(π)-avoid_zeros
+    prevfloat(T(π)-avoid_poles); T(π)-avoid_poles
 ]
 γrange(::Type{T}, n=15) where T = αrange(T, n)
 
 const θrange = βrange
 const φrange = αrange
-θϕrange(::Type{T}=Float64, n=15; avoid_zeros=0) where T = vec(collect(
-    Iterators.product(θrange(T, n; avoid_zeros), φrange(T, n))
+θϕrange(::Type{T}=Float64, n=15; avoid_poles=0) where T = vec(collect(
+    Iterators.product(θrange(T, n; avoid_poles), φrange(T, n))
 ))
 
 v̂range(::Type{T}, n=15) where T = QuatVec{T}[
