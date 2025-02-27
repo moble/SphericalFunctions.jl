@@ -608,3 +608,9 @@ function ₛ𝐘(s, ℓₘₐₓ, ::Type{T}=Float64, Rθϕ=golden_ratio_spiral_r
     end
     ₛ𝐘
 end
+
+# PRIVATE FUNCTION: This function is not intended for use outside of `SphericalFunctions`
+function Y(ℓ, m, θ, ϕ)
+    θ, ϕ = promote(θ, ϕ)
+    ₛ𝐘(0, ℓ, typeof(θ), [Quaternionic.from_spherical_coordinates(θ, ϕ)])[1, Yindex(ℓ, m)]
+end
