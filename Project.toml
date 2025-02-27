@@ -16,7 +16,6 @@ Quaternionic = "0756cd96-85bf-4b6f-a009-b5012ea7a443"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
-TestItems = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
 
 [compat]
 AbstractFFTs = "1"
@@ -40,7 +39,6 @@ SpecialFunctions = "2"
 StaticArrays = "1"
 Test = "1.11"
 TestItemRunner = "1"
-TestItems = "1"
 julia = "1.6"
 
 [extras]
