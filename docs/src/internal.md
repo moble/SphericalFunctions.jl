@@ -43,6 +43,7 @@ interacting with [`SSHT`](@ref).
 
 ```@docs
 ₛ𝐘
+SphericalFunctions.Y
 ```
 
 
