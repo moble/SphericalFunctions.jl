@@ -11,7 +11,6 @@ using StaticArrays: @SVector
 using SpecialFunctions, DoubleFloats
 using LoopVectorization: @turbo
 using Base.Threads: @threads, nthreads
-using TestItems: @testitem
 
 const MachineFloat = Union{Float16, Float32, Float64}
 
