@@ -641,7 +641,7 @@ code also implements D in the `wigner_d` function as (essentially)
 ```python
 exp(I*mprime*alpha)*d[i, j]*exp(I*m*gamma)
 ```
-even though the actual equation Eq. (4.1.12) says
+even though the actual equation Eq. (4.1.12) of Edmonds says
 ```math
 \mathscr{D}^{(j)}_{m' m}(\alpha \beta \gamma) =
 \exp i m' \gamma d^{(j)}_{m' m}(\alpha, \beta) \exp(i m \alpha).
