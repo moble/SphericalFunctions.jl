@@ -41,9 +41,9 @@ about the above items) with the following sources, in order:
 
 1. LALSuite
 2. NINJA
-3. Thorne / MTW
+3. Newman-Penrose
 4. Goldberg
-5. Newman-Penrose
+5. Thorne / MTW
 6. Wikipedia
 7. Sakurai
 8. Shankar
@@ -56,8 +56,8 @@ for which I have my own strong opinions.
 
 ## Cohen-Tannoudji (1991)
 
-[CohenTannoudji_1991](@citet) defines spherical coordinates in the
-usual (physicist's) way in Chapter VI.  He then computes the
+[CohenTannoudji_1991](@citet) define spherical coordinates in the
+usual (physicist's) way in Chapter VI.  They then compute the
 angular-momentum operators as [Eqs. (D-5)]
 ```math
 \begin{aligned}
@@ -75,7 +75,7 @@ L_z &= \frac{\hbar}{i} \frac{\partial} {\partial \phi}.
 \end{aligned}
 ```
 
-He derives the spherical harmonics in two ways and gets two different,
+They derives the spherical harmonics in two ways and gets two different,
 but equivalent, expressions in Complement
 ``\mathrm{A}_{\mathrm{VI}}``.  The first is Eq. (26)
 ```math
@@ -94,7 +94,7 @@ e^{i m \phi} (\sin \theta)^m
 \frac{d^{l+m}}{d(\cos \theta)^{l+m}} (\sin \theta)^{2l}.
 ```
 
-In Complement ``\mathrm{B}_{\mathrm{VI}}`` he defines a rotation
+In Complement ``\mathrm{B}_{\mathrm{VI}}`` they define a rotation
 operator ``R`` as acting on a state such that [Eq. (21)]
 ```math
 \langle \mathbf{r} | R | \psi \rangle
@@ -107,7 +107,7 @@ For an infinitesimal rotation through angle ``d\alpha`` about the axis
 R_{\mathbf{u}}(d\alpha) = 1 - \frac{i}{\hbar} d\alpha \mathbf{L}.\mathbf{u}.
 ```
 
-Cohen-Tannoudji does not appear to define the Wigner D-matrices.
+They do not appear to define the Wigner D-matrices.
 
 
 ## Condon-Shortley (1935)
@@ -379,7 +379,7 @@ and
 
 (representing the ``z-y-z`` convention).
 
-Finally, we find that they say that `EulerMatrix`` corresponds to three rotations:
+Finally, we find that they say that `EulerMatrix` corresponds to three rotations:
 
 ```mathematica
 rα = RotationMatrix[α, {0, 0, 1}];
@@ -530,7 +530,7 @@ with ``k_1 = \textrm{max}(0, m-s)`` and ``k_2=\textrm{min}(\ell+m,
   {}^{-2}Y_{2,0} &= \sqrt{\frac{15}{32\pi}} \sin^2\iota,\\
   {}^{-2}Y_{2,-1} &= \sqrt{\frac{5}{16\pi}}  \sin\iota( 1 - \cos\iota
   )e^{-i\phi},\\
-  {}^{-2}Y_{2,-2} &=& \sqrt{\frac{5}{64\pi}}(1-\cos\iota)^2e^{-2i\phi}.
+  {}^{-2}Y_{2,-2} &= \sqrt{\frac{5}{64\pi}}(1-\cos\iota)^2e^{-2i\phi}.
 \end{aligned}
 ```
 Note that most of the above was copied directly from the TeX source of
