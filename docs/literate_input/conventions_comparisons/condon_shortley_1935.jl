@@ -49,7 +49,7 @@ ones computed by this package.
 #
 # We begin by writing code that implements the formulas from Condon-Shortley.  We
 # encapsulate the formulas in a module so that we can test them against the
-# SphericalHarmonics package.
+# SphericalFunctions package.
 
 using TestItems: @testitem  #hide
 @testitem "Condon-Shortley conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
@@ -141,7 +141,7 @@ end  # module CondonShortley
 
 # ## Tests
 #
-# We can now test the functions against the equivalent functions from the SphericalHarmonics
+# We can now test the functions against the equivalent functions from the SphericalFunctions
 # package.  We will need to test approximate floating-point equality, so we set absolute and
 # relative tolerances (respectively) in terms of the machine epsilon:
 ϵₐ = 100eps()
@@ -164,7 +164,7 @@ end
 #+
 
 # Finally, we can test Condon-Shortley's full expressions for spherical harmonics against
-# the SphericalHarmonics package.  We will only test up to
+# the SphericalFunctions package.  We will only test up to
 ℓₘₐₓ = 4
 #+
 # because the formulas are very slow, and this will be sufficient to sort out any sign or

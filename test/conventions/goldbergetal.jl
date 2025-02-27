@@ -133,7 +133,7 @@ end  # @testmodule GoldbergEtAl
                 end
             end
 
-            # Compare to SphericalHarmonics Y
+            # Compare to SphericalFunctions Y
             for s ∈ -ℓₘₐₓ:ℓₘₐₓ
                 Y₁ = ₛ𝐘(s, ℓₘₐₓ, T, [from_spherical_coordinates(θ, ϕ)])[1,:]
                 Y₂ = [(-1)^m * Y(s, ℓ, m, θ, ϕ) for ℓ ∈ abs(s):ℓₘₐₓ for m ∈ -ℓ:ℓ]
