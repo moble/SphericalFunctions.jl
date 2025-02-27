@@ -45,21 +45,20 @@ ones computed by this package.
 
 """
 
-using TestItems: @testmodule, @testitem  #hide
-
-# ## Function definitions
+# ## Implementing formulas
 #
-# We begin with some basic code
+# We begin by writing code that implements the formulas from Condon-Shortley.  We
+# encapsulate the formulas in a module so that we can test them against the
+# SphericalHarmonics package.
 
-@testmodule CondonShortley1935 begin  #hide
+using TestItems: @testitem  #hide
+@testitem "Condon-Shortley conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
 
-import FastDifferentiation
-const 𝒾 = im
-struct Factorial end
-Base.:*(n::Integer, ::Factorial) = factorial(big(n))
-const ❗ = Factorial()
+module CondonShortley
 
+import ..ConventionsUtilities: 𝒾, ❗, dʲsin²ᵏθdcosθʲ
 #+
+
 # Equation (12) of section 4³ (page 51) writes the solution to the three-dimensional Laplace
 # equation in spherical coordinates as
 # ```math
@@ -75,26 +74,24 @@ const ❗ = Factorial()
 # ```
 # One quirk of their notation is that the dependence on ``\theta`` and ``\varphi`` is
 # implicit in their functions; we make it explicit, as Julia requires:
-function ϕ(ℓ, mₗ, θ, φ)
-    Θ(ℓ, mₗ, θ) * Φ(mₗ, φ)
+function 𝜙(ℓ, mₗ, 𝜃, φ)
+    Θ(ℓ, mₗ, 𝜃) * Φ(mₗ, φ)
 end
-
 #+
+
 # The ``\varphi`` part is given by equation (5) of section 4³ (page 50):
-# ```julia
-# 1 / √(2T(π)) * exp(𝒾 * mₗ * φ)
-# ```
 # ```math
 # \Phi(m_\ell)
 # =
 # \frac{1}{\sqrt{2\pi}} e^{i m_\ell \varphi}.
 # ```
-# The dependence on ``\varphi`` is implicit, but we make it explicit here:
+# Again, we make the dependence on ``\varphi`` explicit, and we capture its type to ensure
+# that we don't lose precision when converting π to a floating-point number.
 function Φ(mₗ, φ::T) where {T}
     1 / √(2T(π)) * exp(𝒾 * mₗ * φ)
 end
-
 #+
+
 # Equation (15) of section 4³ (page 52) gives the ``\theta`` dependence as
 # ```math
 # \Theta(\ell, m)
@@ -105,106 +102,78 @@ end
 # \frac{1}{\sin^m \theta}
 # \frac{d^{\ell-m}}{d(\cos\theta)^{\ell-m}} \sin^{2\ell}\theta.
 # ```
-# Again, the dependence on ``\theta`` is implicit, but we make it explicit here:
-function Θ(ℓ, m, θ::T) where {T}
+# Again, we make the dependence on ``\theta`` explicit, and we capture its type to ensure
+# that we don't lose precision when converting the factorials to a floating-point number.
+function Θ(ℓ, m, 𝜃::T) where {T}
     (-1)^ℓ * T(√(((2ℓ+1) * (ℓ+m)❗) / (2 * (ℓ - m)❗)) * (1 / (2^ℓ * (ℓ)❗))) *
-    (1 / sin(θ)^T(m)) * dʲsin²ᵏθdcosθʲ(ℓ-m, ℓ, θ)
+    (1 / sin(𝜃)^T(m)) * dʲsin²ᵏθdcosθʲ(j=ℓ-m, k=ℓ, θ=𝜃)
 end
-
-#+
-# We can use `FastDifferentiation` to compute the derivative term:
-function dʲsin²ᵏθdcosθʲ(j, k, θ)
-    if j < 0
-        throw(ArgumentError("j=$j must be non-negative"))
-    end
-    if j == 0
-        return sin(θ)^(2k)
-    end
-    x = FastDifferentiation.make_variables(:x)[1]
-    ∂ₓʲfᵏ = FastDifferentiation.derivative((1 - x^2)^k, (x for _ ∈ 1:j)...)
-    return FastDifferentiation.make_function([∂ₓʲfᵏ,], [x,])(cos(θ))[1]
-end
-
 #+
 
 # It may be helpful to check some values against explicit formulas for the first few
 # spherical harmonics as given by Condon-Shortley in the footnote to Eq. (15) of Sec. 4³
-# (page 52):
-ϴ(ℓ, m, θ) = ϴ(Val(ℓ), Val(m), θ)
-ϴ(::Val{0}, ::Val{0}, θ) = √(1/2)
-ϴ(::Val{1}, ::Val{0}, θ) = √(3/2) * cos(θ)
-ϴ(::Val{2}, ::Val{0}, θ) = √(5/8) * (2cos(θ)^2 - sin(θ)^2)
-ϴ(::Val{3}, ::Val{0}, θ) = √(7/8) * (2cos(θ)^3 - 3cos(θ)sin(θ)^2)
-ϴ(::Val{1}, ::Val{+1}, θ) = -√(3/4) * sin(θ)
-ϴ(::Val{1}, ::Val{-1}, θ) = +√(3/4) * sin(θ)
-ϴ(::Val{2}, ::Val{+1}, θ) = -√(15/4) * cos(θ) * sin(θ)
-ϴ(::Val{2}, ::Val{-1}, θ) = +√(15/4) * cos(θ) * sin(θ)
-ϴ(::Val{3}, ::Val{+1}, θ) = -√(21/32) * (4cos(θ)^2*sin(θ) - sin(θ)^3)
-ϴ(::Val{3}, ::Val{-1}, θ) = +√(21/32) * (4cos(θ)^2*sin(θ) - sin(θ)^3)
-ϴ(::Val{2}, ::Val{+2}, θ) = √(15/16) * sin(θ)^2
-ϴ(::Val{2}, ::Val{-2}, θ) = √(15/16) * sin(θ)^2
-ϴ(::Val{3}, ::Val{+2}, θ) = √(105/16) * cos(θ) * sin(θ)^2
-ϴ(::Val{3}, ::Val{-2}, θ) = √(105/16) * cos(θ) * sin(θ)^2
-ϴ(::Val{3}, ::Val{+3}, θ) = -√(35/32) * sin(θ)^3
-ϴ(::Val{3}, ::Val{-3}, θ) = +√(35/32) * sin(θ)^3
-
+# (page 52).  Note the subtle difference between the character `Θ` defining the function above
+# and the character `ϴ` defining the function below.
+ϴ(ℓ, m, 𝜃) = ϴ(Val(ℓ), Val(m), 𝜃)
+ϴ(::Val{0}, ::Val{0}, 𝜃) = √(1/2)
+ϴ(::Val{1}, ::Val{0}, 𝜃) = √(3/2) * cos(𝜃)
+ϴ(::Val{2}, ::Val{0}, 𝜃) = √(5/8) * (2cos(𝜃)^2 - sin(𝜃)^2)
+ϴ(::Val{3}, ::Val{0}, 𝜃) = √(7/8) * (2cos(𝜃)^3 - 3cos(𝜃)sin(𝜃)^2)
+ϴ(::Val{1}, ::Val{+1}, 𝜃) = -√(3/4) * sin(𝜃)
+ϴ(::Val{1}, ::Val{-1}, 𝜃) = +√(3/4) * sin(𝜃)
+ϴ(::Val{2}, ::Val{+1}, 𝜃) = -√(15/4) * cos(𝜃) * sin(𝜃)
+ϴ(::Val{2}, ::Val{-1}, 𝜃) = +√(15/4) * cos(𝜃) * sin(𝜃)
+ϴ(::Val{3}, ::Val{+1}, 𝜃) = -√(21/32) * (4cos(𝜃)^2*sin(𝜃) - sin(𝜃)^3)
+ϴ(::Val{3}, ::Val{-1}, 𝜃) = +√(21/32) * (4cos(𝜃)^2*sin(𝜃) - sin(𝜃)^3)
+ϴ(::Val{2}, ::Val{+2}, 𝜃) = √(15/16) * sin(𝜃)^2
+ϴ(::Val{2}, ::Val{-2}, 𝜃) = √(15/16) * sin(𝜃)^2
+ϴ(::Val{3}, ::Val{+2}, 𝜃) = √(105/16) * cos(𝜃) * sin(𝜃)^2
+ϴ(::Val{3}, ::Val{-2}, 𝜃) = √(105/16) * cos(𝜃) * sin(𝜃)^2
+ϴ(::Val{3}, ::Val{+3}, 𝜃) = -√(35/32) * sin(𝜃)^3
+ϴ(::Val{3}, ::Val{-3}, 𝜃) = +√(35/32) * sin(𝜃)^3
 #+
+
 # Condon and Shortley do not give an expression for the Wigner D-matrices, but the
 # convention for spherical harmonics is what they are known for, so this will suffice.
 
-end  #hide
-
+end  # module CondonShortley
+#+
 
 # ## Tests
+#
+# We can now test the functions against the equivalent functions from the SphericalHarmonics
+# package.  We will need to test approximate floating-point equality, so we set absolute and
+# relative tolerances (respectively) in terms of the machine epsilon:
+ϵₐ = 100eps()
+ϵᵣ = 1000eps()
+#+
 
-@testitem "Condon-Shortley conventions" setup=[Utilities, CondonShortley] begin  #hide
+# The explicit formulas will be a good preliminary test.  In this case, the formulas are
+# only given up to
+ℓₘₐₓ = 3
+#+
+# so we test up to that point, and just compare the general form to the explicit formulas —
+# again, noting the subtle difference between the characters `Θ` and `ϴ`.  Note that the
+# ``1/\sin\theta`` factor in the general form will cause problems at the poles, so we avoid
+# the poles by using `βrange` with a small offset:
+for θ ∈ θrange(; avoid_zeros=ϵₐ/10)
+    for (ℓ, m) ∈ eachrow(SphericalFunctions.Yrange(ℓₘₐₓ))
+        @test CondonShortley.ϴ(ℓ, m, θ) ≈ CondonShortley.Θ(ℓ, m, θ) atol=ϵₐ rtol=ϵᵣ
+    end
+end
+#+
 
-using Random
+# Finally, we can test Condon-Shortley's full expressions for spherical harmonics against
+# the SphericalHarmonics package.  We will only test up to
+ℓₘₐₓ = 4
+#+
+# because the formulas are very slow, and this will be sufficient to sort out any sign
+# differences, which are the most likely source of error.
 using Quaternionic: from_spherical_coordinates
-#const check = NaNChecker.NaNCheck
-
-Random.seed!(1234)
-const T = Float64
-const ℓₘₐₓ = 4
-ϵₐ = 4eps(T)
-ϵᵣ = 1000eps(T)
-
-## Tests for Y(ℓ, m, θ, ϕ)
-let Y=CondonShortley.ϕ, Θ=CondonShortley.Θ, ϴ=CondonShortley.ϴ, ϕ=zero(T)
-    for θ ∈ βrange(T)
-        if abs(sin(θ)) < ϵₐ
-            continue
-        end
-
-        ## # Find where NaNs are coming from
-        ## for ℓ ∈ 0:ℓₘₐₓ
-        ##     for m ∈ -ℓ:ℓ
-        ##         Θ(ℓ,  m, check(θ))
-        ##     end
-        ## end
-
-        ## Test footnote to Eq. (15) of Sec. 4³ of Condon-Shortley
-        let Y = ₛ𝐘(0, 3, T, [from_spherical_coordinates(θ, ϕ)])[1,:]
-            for ℓ ∈ 0:3
-                for m ∈ -ℓ:ℓ
-                    @test ϴ(ℓ, m, θ) / √(2π) ≈ Y[Yindex(ℓ, m)] atol=ϵₐ rtol=ϵᵣ
-                end
-            end
-        end
-
-        ## Test Eq. (18) of Sec. 4³ of Condon-Shortley
-        for ℓ ∈ 0:ℓₘₐₓ
-            for m ∈ -ℓ:ℓ
-                @test Θ(ℓ, m, θ) ≈ (-1)^(m) * Θ(ℓ, -m, θ) atol=ϵₐ rtol=ϵᵣ
-            end
-        end
-
-        ## Compare to SphericalHarmonics Y
-        let s = 0
-            Y₁ = ₛ𝐘(s, ℓₘₐₓ, T, [from_spherical_coordinates(θ, ϕ)])[1,:]
-            Y₂ = [Y(ℓ, m, θ, ϕ) for ℓ ∈ abs(s):ℓₘₐₓ for m ∈ -ℓ:ℓ]
-            @test Y₁ ≈ Y₂ atol=ϵₐ rtol=ϵᵣ
-        end
+for (θ, ϕ) ∈ θϕrange(; avoid_zeros=ϵₐ/40)
+    Y = SphericalFunctions.ₛ𝐘(0, ℓₘₐₓ, typeof(θ), [from_spherical_coordinates(θ, ϕ)])[1,:]
+    for (ℓ, m) ∈ eachrow(SphericalFunctions.Yrange(ℓₘₐₓ))
+        @test CondonShortley.𝜙(ℓ, m, θ, ϕ) ≈ Y[SphericalFunctions.Yindex(ℓ, m)] atol=ϵₐ rtol=ϵᵣ
     end
 end
 
