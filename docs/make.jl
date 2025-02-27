@@ -4,6 +4,7 @@
 
 # Pretty-print the current time
 using Dates
+println("\n")
 @info """Building docs starting at $(Dates.format(Dates.now(), "HH:MM:SS"))."""
 
 start = time()  # We'll display the total after everything has finished
@@ -22,8 +23,9 @@ rm(literate_output; force=true, recursive=true)
 for (root, _, files) ∈ walkdir(literate_input), file ∈ files
     # ignore non julia files
     splitext(file)[2] == ".jl" || continue
-    # If the file is "euler_angular_momentum.jl", skip it
-    #file == "euler_angular_momentum.jl" && (@warn "Re-enable euler_angular_momentum.jl"; continue)
+    # If the file is "ConventionsUtilities.jl" or "ConventionsSetup.jl", skip it
+    file == "ConventionsUtilities.jl" && continue
+    file == "ConventionsSetup.jl" && continue
     # full path to a literate script
     input_path = joinpath(root, file)
     # generated output path
@@ -90,4 +92,4 @@ deploydocs(
     push_preview=true
 )
 
-println("Docs built in ", time() - start, " seconds.\n\n")
+println("Docs built in ", time() - start, " seconds.\n")
