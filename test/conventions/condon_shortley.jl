@@ -160,7 +160,7 @@ end  # @testmodule CondonShortley
                 end
             end
 
-            # Compare to SphericalHarmonics Y
+            # Compare to SphericalFunctions Y
             let s = 0
                 Y₁ = ₛ𝐘(s, ℓₘₐₓ, T, [from_spherical_coordinates(θ, ϕ)])[1,:]
                 Y₂ = [Y(ℓ, m, θ, ϕ) for ℓ ∈ abs(s):ℓₘₐₓ for m ∈ -ℓ:ℓ]
