@@ -55,7 +55,7 @@ end
                             sYlm2 = NINJA.sYlm(spin, ℓ, m, ι, ϕ)
                             @test sYlm1 ≈ sYlm2 atol=tol rtol=tol
                             if spin==-2 && T===Float64
-                                sYlm3 = LAL.LALSpinWeightedSphericalHarmonic(ι, ϕ, spin, ℓ, m)
+                                sYlm3 = LAL.XLALSpinWeightedSphericalHarmonic(ι, ϕ, spin, ℓ, m)
                                 @test sYlm1 ≈ sYlm3 atol=tol rtol=tol
                             end
                             i += 1

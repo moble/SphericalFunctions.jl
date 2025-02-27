@@ -79,18 +79,22 @@ Here, ``k_0=1`` and ``k_m=2`` for ``m>0``, and ``P̄`` is defined as
 ```math
   P̄_{n,|m|} = \sqrt{\frac{k_m(2n+1)(n-m)!}{(n+m)!}} P_{n,|m|}.
 ```
-Note that the factor of ``(-1)^m`` in the first equation above is different from
-the convention used here, and is related to the
-[Condon-Shortley phase](https://en.wikipedia.org/wiki/Spherical_harmonics#Condon%E2%80%93Shortley_phase).
-Note that Gumerov and Duraiswami use the notation ``P^{|m|}_{n}``, whereas we are
-using the notation ``P_{n,|m|}`` — which usually differ by a factor of ``(-1)^m``.
+Note that the factor of ``(-1)^m`` in the first equation above is
+different from the convention used here, and is related to the
+[Condon-Shortley
+phase](https://en.wikipedia.org/wiki/Spherical_harmonics#Condon%E2%80%93Shortley_phase).
+Note that Gumerov and Duraiswami use the notation ``P^{|m|}_{n}``,
+whereas we are using the notation ``P_{n,|m|}`` — which usually differ
+by a factor of ``(-1)^m``.
 
-We use the "fully normalized" associated Legendre functions (fnALF) ``P̄`` because, as explained by
-[Xing_2019](@citet), it is possible to compute these values very efficiently and accurately, while
-also delaying the onset of overflow and underflow.
+We use the "fully normalized" associated Legendre functions (fnALF)
+``P̄`` because, as explained by [Xing_2019](@citet), it is possible to
+compute these values very efficiently and accurately, while also
+delaying the onset of overflow and underflow.
 
-The algorithm Xing et al. describe as the best for computing ``P̄`` is due to
-Belikov (1991), and is given by them as
+The algorithm Xing et al. describe as the best for computing ``P̄`` is
+due to [Strakhov_1980](@citet) via [Belikov_1991](@citet), and is
+given by them as
 ```math
 \begin{aligned}
   P̄_{0,0} &= 1 \\

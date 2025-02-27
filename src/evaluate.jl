@@ -608,3 +608,22 @@ function ₛ𝐘(s, ℓₘₐₓ, ::Type{T}=Float64, Rθϕ=golden_ratio_spiral_r
     end
     ₛ𝐘
 end
+
+
+@doc raw"""
+    Y(ℓ, m, θ, ϕ)
+    Y(s, ℓ, m, θ, ϕ)
+
+NOTE: This function is primarily a test function just to make comparisons between this
+package's spherical harmonics and other references' more clear.  It is inefficient, both in
+terms of memory and computation time, and should generally not be used in production code.
+
+Computes a single (complex) value of the spherical harmonic ``(\ell, m)`` at the given
+spherical coordinate ``(\theta, \phi)``.
+"""
+function Y(s, ℓ, m, θ, ϕ)
+    θ, ϕ = promote(θ, ϕ)
+    Rθϕ = Quaternionic.from_spherical_coordinates(θ, ϕ)
+    ₛ𝐘(s, ℓ, typeof(θ), [Rθϕ])[1, Yindex(ℓ, m, abs(s))]
+end
+Y(ℓ, m, θ, ϕ) = Y(0, ℓ, m, θ, ϕ)

@@ -1,0 +1,46 @@
+.display-light-only {
+    display: block;
+    text-align: center;
+    margin: 0 auto;
+}
+
+.display-dark-only {
+    display: none;
+}
+
+.theme--documenter-dark .display-light-only {
+    display: none;
+}
+
+.theme--documenter-dark .display-dark-only {
+    display: block;
+    text-align: center;
+    margin: 0 auto;
+}
+
+div .composition-diagram {
+    display: block;
+    text-align: center;
+    margin-top: 60px;
+    height: 130px;
+    transform: scale(1.94326);
+    transform-origin: center;
+}
+
+svg text.f0 {
+    fill: currentColor;
+    font-family: 'KaTeX_AMS';
+    font-size: 9.96264px; /* Adjust as needed */
+}
+
+svg text.f1 {
+    fill: currentColor;
+    font-family: 'KaTeX_Math';
+    font-style: italic;
+    font-size: 9.96264px; /* Adjust as needed */
+}
+
+svg path {
+    stroke: currentColor;
+    fill: none;
+}

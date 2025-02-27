@@ -1,16 +1,47 @@
 # Run with
-#   time julia --project=. make.jl && julia --project=. -e 'using LiveServer; serve(dir="build")'
-# assuming you are in this `docs` directory (otherwise point the project argument here)
+#   julia -t 4 --project=. scripts/docs.jl
+# assuming you are in this top-level directory
 
-using SphericalFunctions
+# Pretty-print the current time
+using Dates
+println("\n")
+@info """Building docs starting at $(Dates.format(Dates.now(), "HH:MM:SS"))."""
+
+start = time()  # We'll display the total after everything has finished
+
 using Documenter
+using Literate
 using DocumenterCitations
 
+
+docs_src_dir = joinpath(@__DIR__, "src")
+
+# See LiveServer.jl docs for this: https://juliadocs.org/LiveServer.jl/dev/man/ls+lit/
+literate_input = joinpath(@__DIR__, "literate_input")
+literate_output = joinpath(docs_src_dir, "literate_output")
+rm(literate_output; force=true, recursive=true)
+for (root, _, files) ∈ walkdir(literate_input), file ∈ files
+    # ignore non julia files
+    splitext(file)[2] == ".jl" || continue
+    # If the file is "ConventionsUtilities.jl" or "ConventionsSetup.jl", skip it
+    file == "ConventionsUtilities.jl" && continue
+    file == "ConventionsSetup.jl" && continue
+    # full path to a literate script
+    input_path = joinpath(root, file)
+    # generated output path
+    output_path = splitdir(replace(input_path, literate_input=>literate_output))[1]
+    # generate the markdown file calling Literate
+    Literate.markdown(input_path, output_path, documenter=true, mdstrings=true)
+end
+relative_literate_output = relpath(literate_output, docs_src_dir)
+relative_convention_comparisons = joinpath(relative_literate_output, "conventions_comparisons")
+
 bib = CitationBibliography(
-    joinpath(@__DIR__, "src", "references.bib");
+    joinpath(docs_src_dir, "references.bib");
     #style=:authoryear,
 )
 
+using SphericalFunctions
 DocMeta.setdocmeta!(SphericalFunctions, :DocTestSetup, :(using SphericalFunctions); recursive=true)
 
 makedocs(
@@ -21,7 +52,7 @@ makedocs(
         prettyurls = !("local" in ARGS),  # Use clean URLs, unless built as a "local" build
         edit_link = "main",  # Link out to "main" branch on github
         canonical = "https://moble.github.io/SphericalFunctions.jl/stable/",
-        assets = String["assets/citations.css"],
+        assets = String["assets/citations.css", "assets/extras.css"],
     ),
     pages = [
         "index.md",
@@ -34,9 +65,20 @@ makedocs(
             "internal.md",
             "functions.md",
         ],
+        "Conventions" => [
+            "conventions/summary.md",
+            "conventions/details.md",
+            "conventions/comparisons.md",
+            "Comparisons" => [
+                joinpath(relative_convention_comparisons, "condon_shortley_1935.md"),
+            ],
+            "Calculations" => [
+                joinpath(relative_literate_output, "euler_angular_momentum.md"),
+            ],
+        ],
         "Notes" => map(
             s -> "notes/$(s)",
-            sort(readdir(joinpath(@__DIR__, "src/notes")))
+            sort(readdir(joinpath(docs_src_dir, "notes")))
         ),
         "References" => "references.md",
     ],
@@ -49,3 +91,5 @@ deploydocs(
     devbranch="main",
     push_preview=true
 )
+
+println("Docs built in ", time() - start, " seconds.\n")

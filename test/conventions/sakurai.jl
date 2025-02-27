@@ -17,6 +17,40 @@ The conclusion here is that Sakurai's Yₗᵐ(θ, ϕ) is the same as ours, but h
 - On p. 194 he gives the expression in terms of Euler angles.
 - On p. 223 he gives an explicit formula for ``d``.
 - On p. 203 he relates ``\mathcal{D} to Y_{\ell}^m$ (note the upper index of ``m``).
+
+
+Below (1.6.14), we find the translation operator acts as
+``\mathscr{T}_{dx'} \alpha(x') = \alpha(x' - dx')``.  Then Eq.
+(1.6.32)
+```math
+\mathscr{T}_{dx'} = 1 - i p\, dx',
+```
+for infinitesimal ``dx'``.  Eq. (1.7.17) gives the momentum operator
+as ``p \alpha(x') = -i \partial_{x'} \alpha(x')``.  Combining these,
+we can verify consistency:
+```math
+\mathscr{T}_{dx'} \alpha(x')
+=
+\alpha(x' - dx')
+=
+\alpha(x') - \partial_{x'}\, \alpha(x')\, dx',
+```
+which is exactly what we expect from Taylor expanding ``\alpha(x' -
+dx')``.
+
+
+```math
+\begin{aligned}
+f\left(𝐑\right)
+&\to
+f\left(e^{-\epsilon 𝐮/2}𝐑\right) \\
+&\approx
+f\left(𝐑\right) + \epsilon \left. \frac{d}{d\epsilon} \right|_{\epsilon=0}
+f\left(e^{-\epsilon 𝐮/2}𝐑\right) \\
+&=
+f\left(𝐑\right) - i \epsilon L_𝐮 f\left(𝐑\right)
+```
+
 """
 @testmodule Sakurai begin
 
@@ -44,8 +78,8 @@ end
 @doc raw"""
     d(j, m′, m, β)
 
-Eqs. (3.5.50)-(3.5.51) of [Sakurai](@cite Sakurai_1994), p. 194,
-implementing
+Eqs. (3.5.50)-(3.5.51) of [Sakurai](@cite Sakurai_1994), p. 194
+(or Eq. (3.8.33), p. 223), implementing
 ```math
     d^{(j)}_{m',m}(\beta).
 ```
