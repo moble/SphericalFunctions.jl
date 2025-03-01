@@ -29,7 +29,6 @@ with the result instead.
 """
 d_matrices(β::Real, ℓₘₐₓ) = d_matrices(cis(β), ℓₘₐₓ)
 
-
 @doc raw"""
     d_matrices!(d_storage, β)
     d_matrices!(d_storage, expiβ)
@@ -178,6 +177,22 @@ function dprep(ℓₘₐₓ, ::Type{T}) where {T<:Real}
     d = Vector{T}(undef, WignerDsize(ℓₘₐₓ))
     H_rec_coeffs = H_recursion_coefficients(ℓₘₐₓ, T)
     d, H_rec_coeffs
+end
+
+@doc raw"""
+    d(ℓ, m′, m, β)
+    d(ℓ, m′, m, expiβ)
+
+NOTE: This function is primarily a test function just to make comparisons between this
+package's Wigner ``d`` function and other references' more clear.  It is inefficient, both
+in terms of memory and computation time, and should generally not be used in production
+code.
+
+Computes a single (complex) value of the ``d`` matrix ``(\ell, m', m)`` at the given
+angle ``(\iota)``.
+"""
+function d(ℓ, m′, m, β)
+    d(β, ℓ)[WignerDindex(ℓ, m′, m)]
 end
 
 
@@ -621,9 +636,11 @@ terms of memory and computation time, and should generally not be used in produc
 Computes a single (complex) value of the spherical harmonic ``(\ell, m)`` at the given
 spherical coordinate ``(\theta, \phi)``.
 """
-function Y(s, ℓ, m, θ, ϕ)
+function Y(s::Int, ℓ::Int, m::Int, θ, ϕ)
     θ, ϕ = promote(θ, ϕ)
     Rθϕ = Quaternionic.from_spherical_coordinates(θ, ϕ)
     ₛ𝐘(s, ℓ, typeof(θ), [Rθϕ])[1, Yindex(ℓ, m, abs(s))]
 end
-Y(ℓ, m, θ, ϕ) = Y(0, ℓ, m, θ, ϕ)
+Y(ℓ::Int, m::Int, θ, ϕ) = Y(0, ℓ, m, θ, ϕ)
+Y(s::Int, ℓ::Int, m::Int, θϕ) = Y(s, ℓ, m, θϕ[1], θϕ[2])
+Y(ℓ::Int, m::Int, θϕ) = Y(0, ℓ, m, θϕ[1], θϕ[2])

@@ -112,7 +112,7 @@ They do not appear to define the Wigner D-matrices.
 
 ## Condon-Shortley (1935)
 
-
+(moved)
 
 ## Edmonds (1960)
 
@@ -327,7 +327,7 @@ characterize gravitational waves.  As far as I can tell, the ultimate
 source for all spin-weighted spherical harmonic values used in
 LALSuite is the function
 [`XLALSpinWeightedSphericalHarmonic`](https://git.ligo.org/lscsoft/lalsuite/-/blob/6e653c91b6e8a6728c4475729c4f967c9e09f020/lal/lib/utilities/SphericalHarmonics.c),
-which cites the NINJA paper [Ajith_2007](@citet) as its source.
+which cites the NINJA paper [AjithEtAl_2011](@cite) as its source.
 Unfortunately, it cites version *1*, which contained a serious error,
 using ``\tfrac{\cos\iota}{2}`` instead of ``\cos \tfrac{\iota}{2}``
 and similarly for ``\sin``.  This error was corrected in version 2,
@@ -500,59 +500,7 @@ Thus, the operator with eigenvalue ``s`` is ``i \partial_\gamma``.
 
 ## NINJA
 
-[Ajith_2007](@citet) was prepared by a broad cross-section of
-researchers (including the author of this package) involved in
-modeling gravitational waves with the intent of providing a shared set
-of conventions.  The spherical coordinates are standard physicist's
-coordinates, except that the polar angle is denoted ``\iota``.
-Equation (II.7) is
-```math
-  {}^{-s}Y_{l,m} = (-1)^s\sqrt{\frac{2\ell+1}{4\pi}}
-  d^{\ell}_{m,s}(\iota)e^{im\phi},
-```
-where
-```math
-  d^{\ell}_{m,s}(\iota)
-  =
-  \sum_{k = k_1}^{k_2}
-  \frac{(-1)^k[(\ell+m)!(\ell-m)!(\ell+s)!(\ell-s)!]^{1/2}}
-  {(\ell+m-k)!(\ell-s-k)!k!(k+s-m)!}
-  \left(\cos\left(\frac{\iota}{2}\right)\right)^{2\ell+m-s-2k}
-  \left(\sin\left(\frac{\iota}{2}\right)\right)^{2k+s-m}
-```
-with ``k_1 = \textrm{max}(0, m-s)`` and ``k_2=\textrm{min}(\ell+m,
-\ell-s)``. For reference, they provide several values [Eqs.
-(II.9)--(II.13)]:
-```math
-\begin{aligned}
-  {}^{-2}Y_{2,2} &= \sqrt{\frac{5}{64\pi}}(1+\cos\iota)^2e^{2i\phi},\\
-  {}^{-2}Y_{2,1} &= \sqrt{\frac{5}{16\pi}}  \sin\iota( 1 + \cos\iota )e^{i\phi},\\
-  {}^{-2}Y_{2,0} &= \sqrt{\frac{15}{32\pi}} \sin^2\iota,\\
-  {}^{-2}Y_{2,-1} &= \sqrt{\frac{5}{16\pi}}  \sin\iota( 1 - \cos\iota
-  )e^{-i\phi},\\
-  {}^{-2}Y_{2,-2} &= \sqrt{\frac{5}{64\pi}}(1-\cos\iota)^2e^{-2i\phi}.
-\end{aligned}
-```
-Note that most of the above was copied directly from the TeX source of
-the paper.  Also note the annoying negative sign on the left-hand side
-of the first expression.  Getting rid of it and combining the first
-two expressions, we have the full formula for the spin-weighted
-spherical harmonics in this convention:
-```math
-\begin{aligned}
-  {}_{s}Y_{lm}
-  &=
-  (-1)^s\sqrt{\frac{2\ell+1}{4\pi}} e^{im\phi}
-  \sum_{k = k_1}^{k_2}
-  \frac{(-1)^k[(\ell+m)!(\ell-m)!(\ell-s)!(\ell+s)!]^{1/2}}
-  {(\ell+m-k)!(\ell+s-k)!k!(k-s-m)!}
-  \\ &\qquad \times
-  \left(\cos\left(\frac{\iota}{2}\right)\right)^{2\ell+m+s-2k}
-  \left(\sin\left(\frac{\iota}{2}\right)\right)^{2k-s-m}
-\end{aligned}
-```
-where ``k_1 = \textrm{max}(0, m+s)`` and ``k_2=\textrm{min}(\ell+m,
-\ell+s)``.
+(moved)
 
 
 ## Sakurai (1994)

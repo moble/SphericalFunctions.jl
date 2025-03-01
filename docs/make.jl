@@ -71,6 +71,7 @@ makedocs(
             "conventions/comparisons.md",
             "Comparisons" => [
                 joinpath(relative_convention_comparisons, "condon_shortley_1935.md"),
+                joinpath(relative_convention_comparisons, "ninja_2011.md"),
             ],
             "Calculations" => [
                 joinpath(relative_literate_output, "euler_angular_momentum.md"),
