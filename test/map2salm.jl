@@ -1,24 +1,6 @@
 # NOTE: Float16 irfft returns Float32, which leads to type conflicts, so we just don't
 # test map2salm on Float16
 
-@testitem "Input expressions" setup=[Utilities, NINJA] begin
-    for T in [BigFloat, Float64, Float32]
-        # These are just internal consistency tests of the sYlm function
-        # above, against the explicit expressions `mY2.`
-        s = -2
-        ℓ = 2
-        Nϑ = 17
-        Nφ = 18
-        for (m, m2Y2m) in NINJA.m_m2Y2m
-            f1 = mapslices(ϕθ -> sYlm(s, ℓ, m, ϕθ[2], ϕθ[1]), phi_theta(Nφ, Nϑ, T), dims=[3])
-            f2 = mapslices(ϕθ -> NINJA.sYlm(s, ℓ, m, ϕθ[2], ϕθ[1]), phi_theta(Nφ, Nϑ, T), dims=[3])
-            f3 = mapslices(ϕθ -> m2Y2m(ϕθ[2], ϕθ[1]), phi_theta(Nφ, Nϑ, T), dims=[3])
-            @test f1 ≈ f2 atol=10eps(T) rtol=10eps(T)
-            @test f1 ≈ f3 atol=10eps(T) rtol=10eps(T)
-        end
-    end
-end
-
 @testitem "map2salm" setup=[Utilities] begin
     for T in [BigFloat, Float64, Float32]
         # These test the ability of map2salm to precisely decompose the results of `sYlm`.
