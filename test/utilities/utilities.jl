@@ -1,6 +1,23 @@
 @testsnippet Utilities begin
 
 ℓmrange(ℓₘₐₓ) = eachrow(SphericalFunctions.Yrange(ℓₘₐₓ))
+function sℓmrange(ℓₘₐₓ, sₘₐₓ)
+    sₘₐₓ = min(abs(sₘₐₓ), ℓₘₐₓ)
+    [
+        (s, ℓ, m)
+        for s in -sₘₐₓ:sₘₐₓ
+        for ℓ in abs(s):ℓₘₐₓ
+        for m in -ℓ:ℓ
+    ]
+end
+function ℓm′mrange(ℓₘₐₓ)
+    [
+        (ℓ, m′, m)
+        for ℓ in 0:ℓₘₐₓ
+        for m′ in -ℓ:ℓ
+        for m in -ℓ:ℓ
+    ]
+end
 
 αrange(::Type{T}, n=15) where T = T[
     0; nextfloat(T(0)); rand(T(0):eps(T(π)):T(π), n÷2); prevfloat(T(π)); T(π);
@@ -12,6 +29,9 @@
     prevfloat(T(π)-avoid_poles); T(π)-avoid_poles
 ]
 γrange(::Type{T}, n=15) where T = αrange(T, n)
+αβγrange(::Type{T}=Float64, n=15; avoid_poles=0) where T = vec(collect(
+    Iterators.product(αrange(T, n), βrange(T, n; avoid_poles), γrange(T, n))
+))
 
 const θrange = βrange
 const φrange = αrange
@@ -62,7 +82,7 @@ function array_equal(a1::T1, a2::T2, equal_nan=false) where {T1, T2}
 end
 
 function sYlm(s::Int, ell::Int, m::Int, theta::T, phi::T) where {T<:Real}
-    # Eqs. (II.7) and (II.8) of https://arxiv.org/abs/0709.0093v3 [Ajith_2007](@cite)
+    # Eqs. (II.7) and (II.8) of https://arxiv.org/abs/0709.0093v3 [AjithEtAl_2011](@cite)
     # Note their weird definition w.r.t. `-s`
     k_min = max(0, m + s)
     k_max = min(ell + m, ell + s)

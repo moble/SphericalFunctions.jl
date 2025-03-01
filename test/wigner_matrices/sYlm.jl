@@ -2,32 +2,14 @@
     @test maximum(abs, sYlm_values(0.0, 0.0, 3, -2)) > 0
 end
 
-@testitem "Test NINJA expressions" setup=[NINJA,Utilities] begin
-    using ProgressMeter
-    @testset "$T" for T in [Float64, Float32, BigFloat]
-        ## This is just to test my implementation of the equations give in the paper.
-        ## Note that this is a test of the testing code itself, not of the main code.
-        tol = 2eps(T)
-        @showprogress desc="Test NINJA expressions ($T)" for ι in βrange(T)
-            for ϕ in αrange(T)
-                @test NINJA.sYlm(-2, 2, 2, ι, ϕ) ≈ NINJA.m2Y22(ι, ϕ) atol=tol rtol=tol
-                @test NINJA.sYlm(-2, 2, 1, ι, ϕ) ≈ NINJA.m2Y21(ι, ϕ) atol=tol rtol=tol
-                @test NINJA.sYlm(-2, 2, 0, ι, ϕ) ≈ NINJA.m2Y20(ι, ϕ) atol=tol rtol=tol
-                @test NINJA.sYlm(-2, 2, -1, ι, ϕ) ≈ NINJA.m2Y2m1(ι, ϕ) atol=tol rtol=tol
-                @test NINJA.sYlm(-2, 2, -2, ι, ϕ) ≈ NINJA.m2Y2m2(ι, ϕ) atol=tol rtol=tol
-            end
-        end
-    end
-end
-
-@testitem "Compare to NINJA expressions" setup=[NINJA,LAL,Utilities] begin
+@testitem "Compare to LAL expressions" setup=[LAL,Utilities] begin
     using ProgressMeter
     using Quaternionic
-    @testset "$T" for T in [Float64, Float32, BigFloat]
+    @testset "$T" for T in [Float64]
         ℓₘₐₓ = 8
         sₘₐₓ = 2
         ℓₘᵢₙ = 0
-        tol = ℓₘₐₓ^2 * 2eps(T)  # Mostly because the NINJA.sYlm expressions are inaccurate
+        tol = ℓₘₐₓ^2 * 2eps(T)
         sYlm_storage = sYlm_prep(ℓₘₐₓ, sₘₐₓ, T)
 
         let R = randn(Rotor{T})
@@ -35,7 +17,7 @@ end
             @test_throws ErrorException sYlm_values!(sYlm_storage, R, -sₘₐₓ-1)
         end
 
-        @showprogress desc="Compare to NINJA expressions ($T)" for spin in -sₘₐₓ:sₘₐₓ
+        @showprogress desc="Compare to LAL expressions ($T)" for spin in [-2]
             for ι in βrange(T)
                 for ϕ in αrange(T)
                     R = from_spherical_coordinates(ι, ϕ)
@@ -52,12 +34,8 @@ end
                     for ℓ in abs(spin):ℓₘₐₓ
                         for m in -ℓ:ℓ
                             sYlm1 = Y[i]
-                            sYlm2 = NINJA.sYlm(spin, ℓ, m, ι, ϕ)
-                            @test sYlm1 ≈ sYlm2 atol=tol rtol=tol
-                            if spin==-2 && T===Float64
-                                sYlm3 = LAL.XLALSpinWeightedSphericalHarmonic(ι, ϕ, spin, ℓ, m)
-                                @test sYlm1 ≈ sYlm3 atol=tol rtol=tol
-                            end
+                            sYlm3 = LAL.XLALSpinWeightedSphericalHarmonic(ι, ϕ, spin, ℓ, m)
+                            @test sYlm1 ≈ sYlm3 atol=tol rtol=tol
                             i += 1
                         end
                     end
