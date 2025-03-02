@@ -104,7 +104,7 @@ replacements = (
     r"(?m)  break;\r?\n *default:" => "else",
     r"(?m)switch.*?\r?\n *(\r?\n)( *)case(.*?):" => s"\1\2if m == \3",
     r"\r?\n *break;" => "",
-    r"(?m)(else\r?\n *ans = fac;)(\r?\n)( *return ans;)" => s"\1\2  end\2\3",
+    r"(?m)( *ans = fac;)(\r?\n)" => s"\1\2  end\2",
 
     ## Deal with ugly C declarations
     "f1 = (x-1)/2.0, f2 = (x+1)/2.0" => "f1 = (x-1)/2.0; f2 = (x+1)/2.0",
