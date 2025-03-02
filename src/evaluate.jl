@@ -386,6 +386,28 @@ function Dworkspace(ℓₘₐₓ, ::Type{T}) where {T<:Real}
     eⁱᵐᵞ = Vector{Complex{T}}(undef, ℓₘₐₓ+1)
     H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ
 end
+@doc raw"""
+    D(ℓ, m′, m, β)
+    D(ℓ, m′, m, expiβ)
+
+NOTE: This function is primarily a test function just to make comparisons between this
+package's Wigner ``D`` function and other references' more clear.  It is inefficient, both
+in terms of memory and computation time, and should generally not be used in production
+code.
+
+Computes a single (complex) value of the ``D`` matrix ``(\ell, m', m)`` at the given
+angle ``(\iota)``.
+"""
+function D(ℓ, m′, m, α, β, γ)
+    D(α, β, γ, ℓ)[WignerDindex(ℓ, m′, m)]
+end
+function D(α, β, γ, ℓₘₐₓ)
+    α, β, γ = promote(α, β, γ)
+    D_storage = D_prep(ℓₘₐₓ, typeof(β))
+    D_matrices!(D_storage, α, β, γ)
+    D_storage[1]
+end
+
 
 
 @doc raw"""
