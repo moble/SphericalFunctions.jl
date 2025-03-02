@@ -147,6 +147,6 @@ end
 
 # These successful tests show that both the spin-weighted spherical harmonics and the Wigner
 # ``d`` matrix defined by the NINJA collaboration agree with the corresponding functions
-# defined by the SphericalFunctions package.
+# defined by the `SphericalFunctions` package.
 
 end  #hide
