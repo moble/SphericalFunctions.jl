@@ -45,6 +45,7 @@ interacting with [`SSHT`](@ref).
 ₛ𝐘
 SphericalFunctions.Y
 SphericalFunctions.d
+SphericalFunctions.D
 ```
 
 
