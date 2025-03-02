@@ -137,6 +137,7 @@ replacements = (
 for (pattern, replacement) in replacements
     global lalsource = replace(lalsource, pattern => replacement)
 end
+println.(lalsource); @debug "Remember to remove this line"
 #+
 
 # Finally, we just parse and evaluate the code to turn it into a runnable Julia, and we are
