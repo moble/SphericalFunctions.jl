@@ -320,22 +320,7 @@ L_z &= -i \hbar \frac{\partial} {\partial \phi}.
 
 ## LALSuite
 
-[LALSuite (LSC Algorithm Library Suite)](@cite LALSuite_2018) is a
-collection of software routines, comprising the primary official
-software used by the LIGO-Virgo-KAGRA Collaboration to detect and
-characterize gravitational waves.  As far as I can tell, the ultimate
-source for all spin-weighted spherical harmonic values used in
-LALSuite is the function
-[`XLALSpinWeightedSphericalHarmonic`](https://git.ligo.org/lscsoft/lalsuite/-/blob/6e653c91b6e8a6728c4475729c4f967c9e09f020/lal/lib/utilities/SphericalHarmonics.c),
-which cites the NINJA paper [AjithEtAl_2011](@cite) as its source.
-Unfortunately, it cites version *1*, which contained a serious error,
-using ``\tfrac{\cos\iota}{2}`` instead of ``\cos \tfrac{\iota}{2}``
-and similarly for ``\sin``.  This error was corrected in version 2,
-but the citation was not updated.  Nonetheless, it appears that the
-actual code is consistent with the corrected versions of the NINJA
-paper; the equivalence is
-[tested](https://github.com/moble/SphericalFunctions.jl/blob/0f57c77e65da85e4996f0969fe0a931b460135ac/test/wigner_matrices/sYlm.jl#L59)
-in this package's test suite.
+(moved)
 
 ## Le Bellac (2006)
 
