@@ -902,6 +902,17 @@ distinct eigenvalues are orthogonal, since
 (the last equality by Green's theorem).  Since the eigenvalues are
 distinct, this can only be true if ``\int f_u f_v=0``.
 
+[BoydPetschek_2014](@citet) produced an interesting discussion with
+numerous little insights into the use of special functions on
+different spaces.  In particular, they show why associated Legendre
+functions are preferred to Chebyshev polynomials for the spherical
+harmonics.  They also mention that since the Laplacian measures
+curvature, and spherical harmonics of a given degree have the same
+Laplacian eigenvalue, they all have the same measure of curvature.
+So, for example, the ``\ell = m`` mode varies most rapidly with
+longitude but not at all with latitude, while the ``\ell = 0`` mode
+varies just as rapidly with latitude but not at all with longitude.
+
 * TODO: Show the relationship between the spherical Laplacian and the
   angular momentum operator.
 * TODO: Show how ``D`` matrices are harmonic with respect to the
