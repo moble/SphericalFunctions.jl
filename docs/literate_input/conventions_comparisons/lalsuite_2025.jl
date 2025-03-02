@@ -137,6 +137,7 @@ replacements = (
 for (pattern, replacement) in replacements
     global lalsource = replace(lalsource, pattern => replacement)
 end
+println.(lalsource); @debug "Remember to remove this line"
 #+
 
 # Finally, we just parse and evaluate the code to turn it into a runnable Julia, and we are
@@ -152,7 +153,7 @@ end  # module LALSuite
 # package.  We will need to test approximate floating-point equality, so we set absolute and
 # relative tolerances (respectively) in terms of the machine epsilon:
 ϵₐ = 100eps()
-ϵᵣ = 1000eps()
+ϵᵣ = 100eps()
 #+
 
 # The spin-weighted spherical harmonics are defined explicitly, but only for
