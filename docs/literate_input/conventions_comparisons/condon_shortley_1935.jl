@@ -47,13 +47,11 @@ ones computed by this package.
 
 (Condon and Shortley do not give an expression for the Wigner D-matrices.)
 
-"""
+## Implementing formulas
 
-# ## Implementing formulas
-#
-# We begin by writing code that implements the formulas from Condon-Shortley.  We
-# encapsulate the formulas in a module so that we can test them against the
-# SphericalFunctions package.
+We begin by writing code that implements the formulas from Condon-Shortley.  We encapsulate
+the formulas in a module so that we can test them against the SphericalFunctions package.
+"""
 
 using TestItems: @testitem  #hide
 @testitem "Condon-Shortley conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
@@ -181,6 +179,6 @@ end
 #+
 
 # This successful test shows that the function ``\phi`` defined by Condon and Shortley
-# agrees with the spherical harmonics defined by the SphericalFunctions package.
+# agrees with the spherical harmonics defined by the `SphericalFunctions` package.
 
 end  #hide
