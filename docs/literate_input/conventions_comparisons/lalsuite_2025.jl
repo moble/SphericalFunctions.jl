@@ -66,15 +66,15 @@ lalsource = read(joinpath(@__DIR__, "lalsuite_SphericalHarmonics.c"), String)
 #+
 
 # Now we define a series of replacements to apply to the C code to convert it to Julia code.
-# Note that many of these will be quite specific to this particular file, and may not be
-# generally applicable.
+# Note that some of these will be quite specific to this particular file, and may not be
+# generally applicable.  Also, to work on Windows, we need to use `\r?\n` to match newlines.
 replacements = (
     ## Deal with newlines in the middle of an assignment
-    r"( = .*[^;]\s*)\n" => s"\1",
+    r"( = .*[^;]\s*)\r?\n" => s"\1",
 
     ## Remove a couple old, unused functions
-    r"(?ms)XLALScalarSphericalHarmonic.*?\n}" => "# Removed",
-    r"(?ms)XLALSphHarm.*?\n}" => "# Removed",
+    r"(?ms)XLALScalarSphericalHarmonic.*?\r?\n}" => "# Removed",
+    r"(?ms)XLALSphHarm.*?\r?\n}" => "# Removed",
 
     ## Remove type annotations
     r"COMPLEX16 ?" => "",
@@ -89,7 +89,7 @@ replacements = (
 
     ## Brackets
     r" ?{" => "",
-    r"}.*(\n *else)" => s"\1",
+    r"}.*(\r?\n *else)" => s"\1",
     r"} *else" => "else",
     r"^}" => "",
     "}" => "end",
@@ -98,23 +98,23 @@ replacements = (
     r"( *if.*);"=>s"\1 end\n",  ## one-line `if` statements
     "for( s=0; n-s >= 0; s++ )" => "for s=0:n",
     "else if" => "elseif",
-    r"(?m)  break;\n *\n *case(.*?):" => s"elseif m == \1",
-    r"(?m)  break;\n\s*case(.*?):" => s"elseif m == \1",
-    r"(?m)  break;\n *\n *default:" => "else",
-    r"(?m)  break;\n *default:" => "else",
-    r"(?m)switch.*?\n *\n( *)case(.*?):" => s"\n\1if m == \2",
-    r"\n *break;" => "",
-    r"(?m)(else\n *ans = fac;)(\n *return ans;)" => s"\1\n  end\2",
+    r"(?m)  break;\r?\n *\r?\n *case(.*?):" => s"elseif m == \1",
+    r"(?m)  break;\r?\n\s*case(.*?):" => s"elseif m == \1",
+    r"(?m)  break;\r?\n *\r?\n *default:" => "else",
+    r"(?m)  break;\r?\n *default:" => "else",
+    r"(?m)switch.*?\r?\n *\r?\n( *)case(.*?):" => s"\n\1if m == \2",
+    r"\r?\n *break;" => "",
+    r"(?m)(else\r?\n *ans = fac;)(\r?\n *return ans;)" => s"\1\n  end\2",
 
     ## Deal with ugly C declarations
     "f1 = (x-1)/2.0, f2 = (x+1)/2.0" => "f1 = (x-1)/2.0; f2 = (x+1)/2.0",
     "sum=0, val=0" => "sum=0; val=0",
     "a=0, lam=0" => "a=0; lam=0",
-    r"\n *fac;" => "",
-    r"\n *ans;" => "",
-    r"\n *gslStatus;" => "",
-    r"\n *gsl_sf_result pLm;" => "",
-    r"\n ?XLAL" => "\nfunction XLAL",
+    r"\r?\n *fac;" => "",
+    r"\r?\n *ans;" => "",
+    r"\r?\n *gslStatus;" => "",
+    r"\r?\n *gsl_sf_result pLm;" => "",
+    r"\r?\n ?XLAL" => "\nfunction XLAL",
 
     ## Differences in Julia syntax
     "++" => "+=1",
@@ -137,7 +137,6 @@ replacements = (
 for (pattern, replacement) in replacements
     global lalsource = replace(lalsource, pattern => replacement)
 end
-println.(lalsource); @debug "Remember to remove this line"
 #+
 
 # Finally, we just parse and evaluate the code to turn it into a runnable Julia, and we are
