@@ -95,16 +95,16 @@ replacements = (
     "}" => "end",
 
     ## Flow control
-    r"( *if.*);"=>s"\1 end\n",  ## one-line `if` statements
+    r"( *if.*);(\r?\n)"=>s"\1 end\2",  ## one-line `if` statements
     "for( s=0; n-s >= 0; s++ )" => "for s=0:n",
     "else if" => "elseif",
     r"(?m)  break;\r?\n *\r?\n *case(.*?):" => s"elseif m == \1",
     r"(?m)  break;\r?\n\s*case(.*?):" => s"elseif m == \1",
     r"(?m)  break;\r?\n *\r?\n *default:" => "else",
     r"(?m)  break;\r?\n *default:" => "else",
-    r"(?m)switch.*?\r?\n *\r?\n( *)case(.*?):" => s"\n\1if m == \2",
+    r"(?m)switch.*?\r?\n *(\r?\n)( *)case(.*?):" => s"\1\2if m == \3",
     r"\r?\n *break;" => "",
-    r"(?m)(else\r?\n *ans = fac;)(\r?\n *return ans;)" => s"\1\n  end\2",
+    r"(?m)(else\r?\n *ans = fac;)(\r?\n)( *return ans;)" => s"\1\2  end\2\3",
 
     ## Deal with ugly C declarations
     "f1 = (x-1)/2.0, f2 = (x+1)/2.0" => "f1 = (x-1)/2.0; f2 = (x+1)/2.0",
@@ -114,7 +114,7 @@ replacements = (
     r"\r?\n *ans;" => "",
     r"\r?\n *gslStatus;" => "",
     r"\r?\n *gsl_sf_result pLm;" => "",
-    r"\r?\n ?XLAL" => "\nfunction XLAL",
+    r"(\r?\n) ?XLAL" => s"\1function XLAL",
 
     ## Differences in Julia syntax
     "++" => "+=1",
