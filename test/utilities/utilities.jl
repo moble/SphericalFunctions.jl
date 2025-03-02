@@ -1,6 +1,7 @@
 @testsnippet Utilities begin
 
-ℓmrange(ℓₘₐₓ) = eachrow(SphericalFunctions.Yrange(ℓₘₐₓ))
+ℓmrange(ℓₘᵢₙ, ℓₘₐₓ) = eachrow(SphericalFunctions.Yrange(ℓₘᵢₙ, ℓₘₐₓ))
+ℓmrange(ℓₘₐₓ) = ℓmrange(0, ℓₘₐₓ)
 function sℓmrange(ℓₘₐₓ, sₘₐₓ)
     sₘₐₓ = min(abs(sₘₐₓ), ℓₘₐₓ)
     [
