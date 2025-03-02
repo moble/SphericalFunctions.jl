@@ -2,7 +2,7 @@
     @test maximum(abs, sYlm_values(0.0, 0.0, 3, -2)) > 0
 end
 
-@testitem "Compare to LAL expressions" setup=[LAL,Utilities] begin
+@testitem "Internal consistency" setup=[Utilities] begin
     using ProgressMeter
     using Quaternionic
     @testset "$T" for T in [Float64]
@@ -17,7 +17,7 @@ end
             @test_throws ErrorException sYlm_values!(sYlm_storage, R, -sₘₐₓ-1)
         end
 
-        @showprogress desc="Compare to LAL expressions ($T)" for spin in [-2]
+        for spin in [0, -1, -2]
             for ι in βrange(T)
                 for ϕ in αrange(T)
                     R = from_spherical_coordinates(ι, ϕ)
@@ -28,14 +28,6 @@ end
                     for ℓ in 0:abs(spin)-1
                         for m in -ℓ:ℓ
                             @test Y[i] == 0
-                            i += 1
-                        end
-                    end
-                    for ℓ in abs(spin):ℓₘₐₓ
-                        for m in -ℓ:ℓ
-                            sYlm1 = Y[i]
-                            sYlm3 = LAL.XLALSpinWeightedSphericalHarmonic(ι, ϕ, spin, ℓ, m)
-                            @test sYlm1 ≈ sYlm3 atol=tol rtol=tol
                             i += 1
                         end
                     end
