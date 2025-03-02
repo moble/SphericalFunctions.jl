@@ -33,6 +33,10 @@ for (root, _, files) ∈ walkdir(literate_input), file ∈ files
     # generate the markdown file calling Literate
     Literate.markdown(input_path, output_path, documenter=true, mdstrings=true)
 end
+cp(
+    joinpath(literate_input, "conventions_comparisons", "lalsuite_SphericalHarmonics.c"),
+    joinpath(literate_output, "conventions_comparisons", "lalsuite_SphericalHarmonics.c")
+)
 relative_literate_output = relpath(literate_output, docs_src_dir)
 relative_convention_comparisons = joinpath(relative_literate_output, "conventions_comparisons")
 
@@ -71,6 +75,7 @@ makedocs(
             "conventions/comparisons.md",
             "Comparisons" => [
                 joinpath(relative_convention_comparisons, "condon_shortley_1935.md"),
+                joinpath(relative_convention_comparisons, "lalsuite_2025.md"),
                 joinpath(relative_convention_comparisons, "ninja_2011.md"),
             ],
             "Calculations" => [
