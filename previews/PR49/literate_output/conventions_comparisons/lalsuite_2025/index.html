@@ -45,16 +45,16 @@ end</code></pre><p>Next, we simply read the source file into a string.</p><pre><
     &quot;}&quot; =&gt; &quot;end&quot;,
 
     # Flow control
-    r&quot;( *if.*);&quot;=&gt;s&quot;\1 end\n&quot;,  ## one-line `if` statements
+    r&quot;( *if.*);(\r?\n)&quot;=&gt;s&quot;\1 end\2&quot;,  ## one-line `if` statements
     &quot;for( s=0; n-s &gt;= 0; s++ )&quot; =&gt; &quot;for s=0:n&quot;,
     &quot;else if&quot; =&gt; &quot;elseif&quot;,
     r&quot;(?m)  break;\r?\n *\r?\n *case(.*?):&quot; =&gt; s&quot;elseif m == \1&quot;,
     r&quot;(?m)  break;\r?\n\s*case(.*?):&quot; =&gt; s&quot;elseif m == \1&quot;,
     r&quot;(?m)  break;\r?\n *\r?\n *default:&quot; =&gt; &quot;else&quot;,
     r&quot;(?m)  break;\r?\n *default:&quot; =&gt; &quot;else&quot;,
-    r&quot;(?m)switch.*?\r?\n *\r?\n( *)case(.*?):&quot; =&gt; s&quot;\n\1if m == \2&quot;,
+    r&quot;(?m)switch.*?\r?\n *(\r?\n)( *)case(.*?):&quot; =&gt; s&quot;\1\2if m == \3&quot;,
     r&quot;\r?\n *break;&quot; =&gt; &quot;&quot;,
-    r&quot;(?m)(else\r?\n *ans = fac;)(\r?\n *return ans;)&quot; =&gt; s&quot;\1\n  end\2&quot;,
+    r&quot;(?m)(else\r?\n *ans = fac;)(\r?\n)( *return ans;)&quot; =&gt; s&quot;\1\2  end\2\3&quot;,
 
     # Deal with ugly C declarations
     &quot;f1 = (x-1)/2.0, f2 = (x+1)/2.0&quot; =&gt; &quot;f1 = (x-1)/2.0; f2 = (x+1)/2.0&quot;,
@@ -64,7 +64,7 @@ end</code></pre><p>Next, we simply read the source file into a string.</p><pre><
     r&quot;\r?\n *ans;&quot; =&gt; &quot;&quot;,
     r&quot;\r?\n *gslStatus;&quot; =&gt; &quot;&quot;,
     r&quot;\r?\n *gsl_sf_result pLm;&quot; =&gt; &quot;&quot;,
-    r&quot;\r?\n ?XLAL&quot; =&gt; &quot;\nfunction XLAL&quot;,
+    r&quot;(\r?\n) ?XLAL&quot; =&gt; s&quot;\1function XLAL&quot;,
 
     # Differences in Julia syntax
     &quot;++&quot; =&gt; &quot;+=1&quot;,
@@ -99,4 +99,4 @@ end</code></pre><p>We can see more-or-less by inspection that the code defines t
             conj(SphericalFunctions.D(ℓ, m′, m, α, β, γ)) atol=ϵₐ rtol=ϵᵣ
     end
 end
-@test_broken false  # We haven&#39;t flipped the conjugation of D yet</code></pre><p>These successful tests show that the spin-weighted spherical harmonics and the Wigner <span>$d$</span> and <span>$D$</span> matrices defined in LALSuite agree with the corresponding functions defined by the <code>SphericalFunctions</code> package.</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../condon_shortley_1935/">« Condon-Shortley (1935)</a><a class="docs-footer-nextpage" href="../ninja_2011/">NINJA (2011) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.8.1 on <span class="colophon-date" title="Sunday 2 March 2025 22:08">Sunday 2 March 2025</span>. Using Julia version 1.11.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+@test_broken false  # We haven&#39;t flipped the conjugation of D yet</code></pre><p>These successful tests show that the spin-weighted spherical harmonics and the Wigner <span>$d$</span> and <span>$D$</span> matrices defined in LALSuite agree with the corresponding functions defined by the <code>SphericalFunctions</code> package.</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../condon_shortley_1935/">« Condon-Shortley (1935)</a><a class="docs-footer-nextpage" href="../ninja_2011/">NINJA (2011) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.8.1 on <span class="colophon-date" title="Sunday 2 March 2025 22:41">Sunday 2 March 2025</span>. Using Julia version 1.11.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
