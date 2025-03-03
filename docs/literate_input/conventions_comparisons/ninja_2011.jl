@@ -1,9 +1,9 @@
 md"""
 # NINJA (2011)
 
-!!! info "Summary"
-    The NINJA collaboration's definitions of the spherical harmonics and Wigner's ``d``
-    functions agree with the definitions used in the `SphericalFunctions` package.
+!!! info "Summary" The NINJA collaboration's definitions of the spherical harmonics and
+    Wigner's ``d`` functions agree with the definitions used in the `SphericalFunctions`
+    package.
 
 Motivated by the need for a shared set of conventions in the NINJA project, a broad
 cross-section of researchers involved in modeling gravitational waves (including the author
@@ -22,8 +22,8 @@ is denoted ``\iota``:
 ## Implementing formulas
 
 We begin by writing code that implements the formulas from Ref. [AjithEtAl_2011](@cite).  We
-encapsulate the formulas in a module so that we can test them against the SphericalFunctions
-package.
+encapsulate the formulas in a module so that we can test them against the
+`SphericalFunctions` package.
 
 """
 using TestItems: @testitem  #hide
@@ -104,9 +104,9 @@ end  # module NINJA
 
 # ## Tests
 #
-# We can now test the functions against the equivalent functions from the SphericalFunctions
-# package.  We will need to test approximate floating-point equality, so we set absolute and
-# relative tolerances (respectively) in terms of the machine epsilon:
+# We can now test the functions against the equivalent functions from the
+# `SphericalFunctions` package.  We will need to test approximate floating-point equality,
+# so we set absolute and relative tolerances (respectively) in terms of the machine epsilon:
 ϵₐ = 10eps()
 ϵᵣ = 10eps()
 #+
@@ -121,7 +121,7 @@ for (ι, ϕ) ∈ θϕrange(Float64, 1)
 end
 #+
 
-# Next, we compare the general formulas to the SphericalFunctions package.
+# Next, we compare the general formulas to the `SphericalFunctions` package.
 # We will only test up to
 ℓₘₐₓ = 4
 #+
@@ -137,7 +137,7 @@ for (θ, ϕ) ∈ θϕrange()
 end
 #+
 
-# Finally, we compare the Wigner ``d`` matrix to the SphericalFunctions package.
+# Finally, we compare the Wigner ``d`` matrix to the `SphericalFunctions` package.
 for ι ∈ θrange()
     for (ℓ, m′, m) ∈ ℓm′mrange(ℓₘₐₓ)
         @test NINJA.d(ℓ, m′, m, ι) ≈ SphericalFunctions.d(ℓ, m′, m, ι) atol=ϵₐ rtol=ϵᵣ
