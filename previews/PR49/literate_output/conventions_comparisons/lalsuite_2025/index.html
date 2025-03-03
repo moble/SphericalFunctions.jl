@@ -18,13 +18,13 @@ macro XLALPrError(msg, args...)
     quote
         @error @sprintf($msg, $(args...))
     end
-end</code></pre><p>Next, we simply read the source file into a string.</p><pre><code class="language-julia hljs">lalsource = read(joinpath(@__DIR__, &quot;lalsuite_SphericalHarmonics.c&quot;), String)</code></pre><p>Now we define a series of replacements to apply to the C code to convert it to Julia code. Note that some of these will be quite specific to this particular file, and may not be generally applicable.  Also, to work on Windows, we need to use <code>\r?\n</code> to match newlines.</p><pre><code class="language-julia hljs">replacements = (
+end</code></pre><p>Next, we simply read the source file into a string.</p><pre><code class="language-julia hljs">lalsource = read(joinpath(@__DIR__, &quot;lalsuite_SphericalHarmonics.c&quot;), String)</code></pre><p>Now we define a series of replacements to apply to the C code to convert it to Julia code. Note that some of these will be quite specific to this particular file, and may not be generally applicable.</p><pre><code class="language-julia hljs">replacements = (
     # Deal with newlines in the middle of an assignment
-    r&quot;( = .*[^;]\s*)\r?\n&quot; =&gt; s&quot;\1&quot;,
+    r&quot;( = .*[^;]\s*)\n&quot; =&gt; s&quot;\1&quot;,
 
     # Remove a couple old, unused functions
-    r&quot;(?ms)XLALScalarSphericalHarmonic.*?\r?\n}&quot; =&gt; &quot;# Removed&quot;,
-    r&quot;(?ms)XLALSphHarm.*?\r?\n}&quot; =&gt; &quot;# Removed&quot;,
+    r&quot;(?ms)XLALScalarSphericalHarmonic.*?\n}&quot; =&gt; &quot;# Removed&quot;,
+    r&quot;(?ms)XLALSphHarm.*?\n}&quot; =&gt; &quot;# Removed&quot;,
 
     # Remove type annotations
     r&quot;COMPLEX16 ?&quot; =&gt; &quot;&quot;,
@@ -39,32 +39,32 @@ end</code></pre><p>Next, we simply read the source file into a string.</p><pre><
 
     # Brackets
     r&quot; ?{&quot; =&gt; &quot;&quot;,
-    r&quot;}.*(\r?\n *else)&quot; =&gt; s&quot;\1&quot;,
+    r&quot;}.*(\n *else)&quot; =&gt; s&quot;\1&quot;,
     r&quot;} *else&quot; =&gt; &quot;else&quot;,
     r&quot;^}&quot; =&gt; &quot;&quot;,
     &quot;}&quot; =&gt; &quot;end&quot;,
 
     # Flow control
-    r&quot;( *if.*);(\r?\n)&quot;=&gt;s&quot;\1 end\2&quot;,  ## one-line `if` statements
+    r&quot;( *if.*);&quot;=&gt;s&quot;\1 end&quot;,  ## one-line `if` statements
     &quot;for( s=0; n-s &gt;= 0; s++ )&quot; =&gt; &quot;for s=0:n&quot;,
     &quot;else if&quot; =&gt; &quot;elseif&quot;,
-    r&quot;(?m)  break;\r?\n *\r?\n *case(.*?):&quot; =&gt; s&quot;elseif m == \1&quot;,
-    r&quot;(?m)  break;\r?\n\s*case(.*?):&quot; =&gt; s&quot;elseif m == \1&quot;,
-    r&quot;(?m)  break;\r?\n *\r?\n *default:&quot; =&gt; &quot;else&quot;,
-    r&quot;(?m)  break;\r?\n *default:&quot; =&gt; &quot;else&quot;,
-    r&quot;(?m)switch.*?\r?\n *(\r?\n)( *)case(.*?):&quot; =&gt; s&quot;\1\2if m == \3&quot;,
-    r&quot;\r?\n *break;&quot; =&gt; &quot;&quot;,
-    r&quot;(?m)( *ans = fac;)(\r?\n)&quot; =&gt; s&quot;\1\2  end\2&quot;,
+    r&quot;(?m)  break;\n *\n *case(.*?):&quot; =&gt; s&quot;elseif m == \1&quot;,
+    r&quot;(?m)  break;\n\s*case(.*?):&quot; =&gt; s&quot;elseif m == \1&quot;,
+    r&quot;(?m)  break;\n *\n *default:&quot; =&gt; &quot;else&quot;,
+    r&quot;(?m)  break;\n *default:&quot; =&gt; &quot;else&quot;,
+    r&quot;(?m)switch.*?\n *\n( *)case(.*?):&quot; =&gt; s&quot;\n\1if m == \2&quot;,
+    r&quot;\n *break;&quot; =&gt; &quot;&quot;,
+    r&quot;(?m)( *ans = fac;)\n&quot; =&gt; s&quot;\1\n  end\n&quot;,
 
     # Deal with ugly C declarations
     &quot;f1 = (x-1)/2.0, f2 = (x+1)/2.0&quot; =&gt; &quot;f1 = (x-1)/2.0; f2 = (x+1)/2.0&quot;,
     &quot;sum=0, val=0&quot; =&gt; &quot;sum=0; val=0&quot;,
     &quot;a=0, lam=0&quot; =&gt; &quot;a=0; lam=0&quot;,
-    r&quot;\r?\n *fac;&quot; =&gt; &quot;&quot;,
-    r&quot;\r?\n *ans;&quot; =&gt; &quot;&quot;,
-    r&quot;\r?\n *gslStatus;&quot; =&gt; &quot;&quot;,
-    r&quot;\r?\n *gsl_sf_result pLm;&quot; =&gt; &quot;&quot;,
-    r&quot;(\r?\n) ?XLAL&quot; =&gt; s&quot;\1function XLAL&quot;,
+    r&quot;\n *fac;&quot; =&gt; &quot;&quot;,
+    r&quot;\n *ans;&quot; =&gt; &quot;&quot;,
+    r&quot;\n *gslStatus;&quot; =&gt; &quot;&quot;,
+    r&quot;\n *gsl_sf_result pLm;&quot; =&gt; &quot;&quot;,
+    r&quot;\n ?XLAL&quot; =&gt; &quot;\nfunction XLAL&quot;,
 
     # Differences in Julia syntax
     &quot;++&quot; =&gt; &quot;+=1&quot;,
@@ -80,8 +80,7 @@ end</code></pre><p>Next, we simply read the source file into a string.</p><pre><
     &quot;__func__&quot; =&gt; &quot;\&quot;\&quot;&quot;,
 )</code></pre><p>And we apply the replacements to the source code to convert it to Julia code.  Note that we apply them successively, even though <code>replace</code> can handle multiple &quot;simultaneous&quot; replacements, because the order of replacements is important.</p><pre><code class="language-julia hljs">for (pattern, replacement) in replacements
     global lalsource = replace(lalsource, pattern =&gt; replacement)
-end
-println.(lalsource); @debug &quot;Remember to remove this line&quot;</code></pre><p>Finally, we just parse and evaluate the code to turn it into a runnable Julia, and we are done defining the module</p><pre><code class="language-julia hljs">eval(Meta.parseall(lalsource))
+end</code></pre><p>Finally, we just parse and evaluate the code to turn it into a runnable Julia, and we are done defining the module</p><pre><code class="language-julia hljs">eval(Meta.parseall(lalsource))
 
 end  # module LALSuite</code></pre><h2 id="Tests"><a class="docs-heading-anchor" href="#Tests">Tests</a><a id="Tests-1"></a><a class="docs-heading-anchor-permalink" href="#Tests" title="Permalink"></a></h2><p>We can now test the functions against the equivalent functions from the SphericalFunctions package.  We will need to test approximate floating-point equality, so we set absolute and relative tolerances (respectively) in terms of the machine epsilon:</p><pre><code class="language-julia hljs">ϵₐ = 100eps()
 ϵᵣ = 100eps()</code></pre><p>The spin-weighted spherical harmonics are defined explicitly, but only for</p><pre><code class="language-julia hljs">s = -2</code></pre><p>and only up to</p><pre><code class="language-julia hljs">ℓₘₐₓ = 8</code></pre><p>so we only test up to that point.</p><pre><code class="language-julia hljs">for (θ, ϕ) ∈ θϕrange()
@@ -99,4 +98,4 @@ end</code></pre><p>We can see more-or-less by inspection that the code defines t
             conj(SphericalFunctions.D(ℓ, m′, m, α, β, γ)) atol=ϵₐ rtol=ϵᵣ
     end
 end
-@test_broken false  # We haven&#39;t flipped the conjugation of D yet</code></pre><p>These successful tests show that the spin-weighted spherical harmonics and the Wigner <span>$d$</span> and <span>$D$</span> matrices defined in LALSuite agree with the corresponding functions defined by the <code>SphericalFunctions</code> package.</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../condon_shortley_1935/">« Condon-Shortley (1935)</a><a class="docs-footer-nextpage" href="../ninja_2011/">NINJA (2011) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.8.1 on <span class="colophon-date" title="Monday 3 March 2025 00:16">Monday 3 March 2025</span>. Using Julia version 1.11.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+@test_broken false  # We haven&#39;t flipped the conjugation of D yet</code></pre><p>These successful tests show that the spin-weighted spherical harmonics and the Wigner <span>$d$</span> and <span>$D$</span> matrices defined in LALSuite agree with the corresponding functions defined by the <code>SphericalFunctions</code> package.</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../condon_shortley_1935/">« Condon-Shortley (1935)</a><a class="docs-footer-nextpage" href="../ninja_2011/">NINJA (2011) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.8.1 on <span class="colophon-date" title="Monday 3 March 2025 00:31">Monday 3 March 2025</span>. Using Julia version 1.11.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
