@@ -8,15 +8,27 @@ md"""
 [Condon and Shortley's "The Theory Of Atomic Spectra"](@cite CondonShortley_1935) is the
 standard reference for the "Condon-Shortley phase convention".  Though some references are
 not very clear about precisely what they mean by that phrase, it seems clear that the
-original meaning included the idea that the angular-momentum raising and lowering operators
-have eigenvalues that are *real and positive* when acting on the spherical harmonics.  To
-avoid ambiguity, we can just look at the actual spherical harmonics they define.
+original meaning revolved around the idea that the angular-momentum raising and lowering
+operators have eigenvalues that are *real and positive* when acting on the spherical
+harmonics.  Specifically, they discuss the phase ambiguity of the eigenfunction ``\psi`` —
+which includes spherical harmonics indexed by ``j`` and ``m`` for the angular part — in
+section 3³ (page 48).  This culminates in Eq. (3) of that section, which is as explicit as
+they get:
+```math
+\left( J_x \pm i J_y \right) \psi(\gamma j m)
+=
+\hbar \sqrt{(j \mp m)(j \pm m + 1)} \psi(\gamma j m \pm 1).
+```
+This eliminates any *relative* phase ambiguity between modes with neighboring ``m`` values,
+and specifically determines what factors of ``(-1)^m`` should be included in the definition
+of the spherical harmonics.
 
-The method we use here is as direct and explicit as possible.  In particular, Condon and
-Shortley provide a formula for the φ=0 part in terms of iterated derivatives of a power of
-sin(θ).  Rather than expressing these derivatives in terms of the Legendre polynomials —
-which would subject us to another round of ambiguity — the functions in this module use
-automatic differentiation to compute the derivatives explicitly.
+To avoid re-introducing ambiguity, we can just look at the actual spherical harmonics they
+define.  The method we use here is as direct and explicit as possible.  In particular,
+Condon and Shortley provide a formula for the φ=0 part in terms of iterated derivatives of a
+power of sin(θ).  Rather than expressing these derivatives in terms of the Legendre
+polynomials — which would subject us to another round of ambiguity — the functions in this
+module use automatic differentiation to compute the derivatives explicitly.
 
 Condon and Shortley are not very explicit about the meaning of the spherical coordinates,
 but they do describe them as "spherical polar coordinates ``r, \theta, \varphi``".
@@ -41,9 +53,6 @@ L_x - i L_y &= \hbar e^{-i\varphi} \left(
 ```
 which also agrees with [our results.](@ref "``L_{\pm}`` operators in spherical coordinates")
 We can infer that the definitions of the spherical coordinates are consistent with ours.
-
-The result is that the original Condon-Shortley spherical harmonics agree perfectly with the
-ones computed by this package.
 
 Condon and Shortley do not give an expression for the Wigner D-matrices.
 
@@ -162,7 +171,7 @@ end  # module CondonShortley
 # ``1/\sin\theta`` factor in the general form will cause problems at the poles, so we avoid
 # the poles by using `βrange` with a small offset:
 for θ ∈ θrange(; avoid_poles=ϵₐ/10)
-    for (ℓ, m) ∈ eachrow(SphericalFunctions.Yrange(ℓₘₐₓ))
+    for (ℓ, m) ∈ ℓmrange(ℓₘₐₓ)
         @test CondonShortley.ϴ(ℓ, m, θ) ≈ CondonShortley.Θ(ℓ, m, θ) atol=ϵₐ rtol=ϵᵣ
     end
 end
