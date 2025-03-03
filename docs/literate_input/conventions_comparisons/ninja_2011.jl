@@ -1,9 +1,9 @@
 md"""
 # NINJA (2011)
 
-!!! info "Summary" The NINJA collaboration's definitions of the spherical harmonics and
-    Wigner's ``d`` functions agree with the definitions used in the `SphericalFunctions`
-    package.
+!!! info "Summary"
+    The NINJA collaboration's definitions of the spherical harmonics and Wigner's ``d``
+    functions agree with the definitions used in the `SphericalFunctions` package.
 
 Motivated by the need for a shared set of conventions in the NINJA project, a broad
 cross-section of researchers involved in modeling gravitational waves (including the author
