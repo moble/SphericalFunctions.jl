@@ -798,11 +798,19 @@ different.
 
 ## Wikipedia
 
+Euler angles
+
+Angular-momentum operators
+
+Spherical harmonics
+
+Spin-weighted spherical harmonics
+
 Defining the operator
 ```math
 \mathcal{R}(\alpha,\beta,\gamma) = e^{-i\alpha J_z}e^{-i\beta J_y}e^{-i\gamma J_z},
 ```
-[Wikipedia defines the Wigner D-matrix](https://en.wikipedia.org/wiki/Wigner_D-matrix#Definition_of_the_Wigner_D-matrix) as
+[Wikipedia expresses the Wigner D-matrix](https://en.wikipedia.org/wiki/Wigner_D-matrix#Definition_of_the_Wigner_D-matrix) as
 ```math
 D^j_{m'm}(\alpha,\beta,\gamma) \equiv \langle jm' | \mathcal{R}(\alpha,\beta,\gamma)| jm \rangle =e^{-im'\alpha } d^j_{m'm}(\beta)e^{-i m\gamma}.
 ```
