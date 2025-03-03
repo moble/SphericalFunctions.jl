@@ -56,58 +56,7 @@ for which I have my own strong opinions.
 
 ## Cohen-Tannoudji (1991)
 
-[CohenTannoudji_1991](@citet) define spherical coordinates in the
-usual (physicist's) way in Chapter VI.  They then compute the
-angular-momentum operators as [Eqs. (D-5)]
-```math
-\begin{aligned}
-L_x &= i \hbar \left(
-    \sin\phi \frac{\partial} {\partial \theta}
-    + \frac{\cos\phi}{\tan\theta} \frac{\partial} {\partial \phi}
-\right),
-\\
-L_y &= i \hbar \left(
-    -\cos\phi \frac{\partial} {\partial \theta}
-    + \frac{\sin\phi}{\tan\theta} \frac{\partial} {\partial \phi}
-\right),
-\\
-L_z &= \frac{\hbar}{i} \frac{\partial} {\partial \phi}.
-\end{aligned}
-```
-
-They derives the spherical harmonics in two ways and gets two different,
-but equivalent, expressions in Complement
-``\mathrm{A}_{\mathrm{VI}}``.  The first is Eq. (26)
-```math
-Y_{l}^{m}(\theta, \phi)
-=
-\frac{(-1)^l}{2^l l!} \sqrt{\frac{(2l+1)}{4\pi} \frac{(l+m)!}{(l-m)!}}
-e^{i m \phi} (\sin \theta)^{-m}
-\frac{d^{l-m}}{d(\cos \theta)^{l-m}} (\sin \theta)^{2l},
-```
-while the second is Eq. (30)
-```math
-Y_{l}^{m}(\theta, \phi)
-=
-\frac{(-1)^{l+m}}{2^l l!} \sqrt{\frac{(2l+1)}{4\pi} \frac{(l-m)!}{(l+m)!}}
-e^{i m \phi} (\sin \theta)^m
-\frac{d^{l+m}}{d(\cos \theta)^{l+m}} (\sin \theta)^{2l}.
-```
-
-In Complement ``\mathrm{B}_{\mathrm{VI}}`` they define a rotation
-operator ``R`` as acting on a state such that [Eq. (21)]
-```math
-\langle \mathbf{r} | R | \psi \rangle
-=
-\langle \mathscr{R}^{-1} \mathbf{r} | \psi \rangle.
-```
-For an infinitesimal rotation through angle ``d\alpha`` about the axis
-``\mathbf{u}``, he shows [Eq. (49)]
-```math
-R_{\mathbf{u}}(d\alpha) = 1 - \frac{i}{\hbar} d\alpha \mathbf{L}.\mathbf{u}.
-```
-
-They do not appear to define the Wigner D-matrices.
+(moved)
 
 
 ## Condon-Shortley (1935)
