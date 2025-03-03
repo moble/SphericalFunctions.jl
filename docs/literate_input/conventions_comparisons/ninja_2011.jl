@@ -30,7 +30,9 @@ using TestItems: @testitem  #hide
 @testitem "NINJA conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
 
 module NINJA
+#+
 
+# We'll also use some predefined utilities to make the code look more like the equations.
 import ..ConventionsUtilities: 𝒾, ❗
 #+
 
