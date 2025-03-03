@@ -45,12 +45,13 @@ We can infer that the definitions of the spherical coordinates are consistent wi
 The result is that the original Condon-Shortley spherical harmonics agree perfectly with the
 ones computed by this package.
 
-(Condon and Shortley do not give an expression for the Wigner D-matrices.)
+Condon and Shortley do not give an expression for the Wigner D-matrices.
+
 
 ## Implementing formulas
 
 We begin by writing code that implements the formulas from Condon-Shortley.  We encapsulate
-the formulas in a module so that we can test them against the SphericalFunctions package.
+the formulas in a module so that we can test them against the `SphericalFunctions` package.
 """
 
 using TestItems: @testitem  #hide
@@ -143,9 +144,9 @@ end  # module CondonShortley
 
 # ## Tests
 #
-# We can now test the functions against the equivalent functions from the SphericalFunctions
-# package.  We will need to test approximate floating-point equality, so we set absolute and
-# relative tolerances (respectively) in terms of the machine epsilon:
+# We can now test the functions against the equivalent functions from the
+# `SphericalFunctions` package.  We will need to test approximate floating-point equality,
+# so we set absolute and relative tolerances (respectively) in terms of the machine epsilon:
 ϵₐ = 100eps()
 ϵᵣ = 1000eps()
 #+
@@ -166,7 +167,7 @@ end
 #+
 
 # Finally, we can test Condon-Shortley's full expressions for spherical harmonics against
-# the SphericalFunctions package.  We will only test up to
+# the `SphericalFunctions` package.  We will only test up to
 ℓₘₐₓ = 4
 #+
 # because the formulas are very slow, and this will be sufficient to sort out any sign or
