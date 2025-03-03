@@ -6,9 +6,7 @@ md"""
     in the `SphericalFunctions` package.
 
     TODO: Compare angular-momentum operators and rotation operator.
-"""
 
-md"""
 [CohenTannoudji_1991](@citet), by a Nobel-prize winner and collaborators, is an extensive
 two-volume set on quantum mechanics that is widely used in graduate courses.
 

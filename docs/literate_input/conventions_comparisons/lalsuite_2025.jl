@@ -1,8 +1,9 @@
 md"""
 # LALSuite (2025)
 
-!!! info "Summary" The LALSuite definitions of the spherical harmonics and Wigner's ``d``
-    and ``D`` functions agree with the definitions used in the `SphericalFunctions` package.
+!!! info "Summary"
+    The LALSuite definitions of the spherical harmonics and Wigner's ``d`` and ``D``
+    functions agree with the definitions used in the `SphericalFunctions` package.
 
 [LALSuite (LSC Algorithm Library Suite)](@cite LALSuite_2018) is a collection of software
 routines, comprising the primary official software used by the LIGO-Virgo-KAGRA
