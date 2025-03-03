@@ -1,9 +1,8 @@
 md"""
 # LALSuite (2025)
 
-!!! info "Summary"
-    The LALSuite definitions of the spherical harmonics and Wigner's ``d`` and ``D``
-    functions agree with the definitions used in the `SphericalFunctions` package.
+!!! info "Summary" The LALSuite definitions of the spherical harmonics and Wigner's ``d``
+    and ``D`` functions agree with the definitions used in the `SphericalFunctions` package.
 
 [LALSuite (LSC Algorithm Library Suite)](@cite LALSuite_2018) is a collection of software
 routines, comprising the primary official software used by the LIGO-Virgo-KAGRA
@@ -17,6 +16,13 @@ version *1*, which contained a serious error, using ``\tfrac{\cos\iota}{2}`` ins
 2, but the citation was not updated.  Nonetheless, it appears that the actual code is
 consistent with the *corrected* versions of the NINJA paper.
 
+They also (quite separately) define Wigner's ``D`` matrices in terms of the ``d`` matrices,
+which are — in turn — defined in terms of Jacobi polynomials.  For all of these, they cite
+Wikipedia (despite the fact that the NINJA paper defined the spin-weighted spherical
+harmonics in terms of the ``d`` matrices).  Nonetheless, the definitions in the code are
+consistent with the definitions in the NINJA paper, which are consistent with the
+definitions in the `SphericalFunctions` package.
+
 
 ## Implementing formulas
 
@@ -29,10 +35,10 @@ double XLALWignerdMatrix( int l, int mp, int m, double beta );
 COMPLEX16 XLALWignerDMatrix( int l, int mp, int m, double alpha, double beta, double gam );
 ```
 
-The source code is stored alongside this file, so we will read it in to a `String` and then
-apply a series of regular expressions to convert it to Julia code, parse it and evaluate it
-to turn it into runnable Julia.  We encapsulate the formulas in a module so that we can test
-them against the `SphericalFunctions` package.
+The original source code (as of early 2025) is stored alongside this file, so we will read
+it in to a `String` and then apply a series of regular expressions to convert it to Julia
+code, parse it and evaluate it to turn it into runnable Julia.  We encapsulate the formulas
+in a module so that we can test them against the `SphericalFunctions` package.
 
 We begin by setting up that module, and introducing a set of basic replacements that would
 usually be defined in separate C headers.
@@ -148,9 +154,9 @@ end  # module LALSuite
 
 # ## Tests
 #
-# We can now test the functions against the equivalent functions from the SphericalFunctions
-# package.  We will need to test approximate floating-point equality, so we set absolute and
-# relative tolerances (respectively) in terms of the machine epsilon:
+# We can now test the functions against the equivalent functions from the
+# `SphericalFunctions` package.  We will need to test approximate floating-point equality,
+# so we set absolute and relative tolerances (respectively) in terms of the machine epsilon:
 ϵₐ = 100eps()
 ϵᵣ = 100eps()
 #+
