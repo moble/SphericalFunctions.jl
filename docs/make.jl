@@ -19,13 +19,18 @@ docs_src_dir = joinpath(@__DIR__, "src")
 # See LiveServer.jl docs for this: https://juliadocs.org/LiveServer.jl/dev/man/ls+lit/
 literate_input = joinpath(@__DIR__, "literate_input")
 literate_output = joinpath(docs_src_dir, "literate_output")
+relative_literate_output = relpath(literate_output, docs_src_dir)
+relative_convention_comparisons = joinpath(relative_literate_output, "conventions_comparisons")
 rm(literate_output; force=true, recursive=true)
+skip_files = (  # Non-.jl files will be skipped anyway
+    "ConventionsUtilities.jl",
+    "ConventionsSetup.jl",
+)
 for (root, _, files) ∈ walkdir(literate_input), file ∈ files
-    # ignore non julia files
-    splitext(file)[2] == ".jl" || continue
-    # If the file is "ConventionsUtilities.jl" or "ConventionsSetup.jl", skip it
-    file == "ConventionsUtilities.jl" && continue
-    file == "ConventionsSetup.jl" && continue
+    # Skip some files
+    if splitext(file)[2] != ".jl" || file ∈ skip_files
+        continue
+    end
     # full path to a literate script
     input_path = joinpath(root, file)
     # generated output path
@@ -33,12 +38,23 @@ for (root, _, files) ∈ walkdir(literate_input), file ∈ files
     # generate the markdown file calling Literate
     Literate.markdown(input_path, output_path, documenter=true, mdstrings=true)
 end
-cp(
-    joinpath(literate_input, "conventions_comparisons", "lalsuite_SphericalHarmonics.c"),
-    joinpath(literate_output, "conventions_comparisons", "lalsuite_SphericalHarmonics.c")
-)
-relative_literate_output = relpath(literate_output, docs_src_dir)
-relative_convention_comparisons = joinpath(relative_literate_output, "conventions_comparisons")
+
+# Make "lalsuite_SphericalHarmonics.c" available in the docs
+let
+    lalsource = read(
+        joinpath(literate_input, "conventions_comparisons", "lalsuite_SphericalHarmonics.c"),
+        String
+    )
+    write(
+        joinpath(literate_output, "conventions_comparisons", "lalsuite_SphericalHarmonics.md"),
+        "# LALSuite: Spherical Harmonics original source code\n"
+        * "The official repository is [here]("
+        * "https://git.ligo.org/lscsoft/lalsuite/-/blob/22e4cd8fff0487c7b42a2c26772ae9204c995637/lal/lib/utilities/SphericalHarmonics.c"
+        * ")\n"
+        * "```c\n$lalsource\n```\n"
+    )
+end
+
 
 bib = CitationBibliography(
     joinpath(docs_src_dir, "references.bib");
