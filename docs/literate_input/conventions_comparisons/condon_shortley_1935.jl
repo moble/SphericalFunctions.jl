@@ -5,6 +5,8 @@ md"""
     Condon and Shortley's definition of the spherical harmonics agrees with the definition
     used in the `SphericalFunctions` package.
 
+    TODO: Compare angular-momentum operators.
+
 [Condon and Shortley's "The Theory Of Atomic Spectra"](@cite CondonShortley_1935) is the
 standard reference for the "Condon-Shortley phase convention".  Though some references are
 not very clear about precisely what they mean by that phrase, it seems clear that the
