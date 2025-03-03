@@ -58,7 +58,9 @@ using TestItems: @testitem  #hide
 @testitem "Condon-Shortley conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
 
 module CondonShortley
+#+
 
+# We'll also use some predefined utilities to make the code look more like the equations.
 import ..ConventionsUtilities: 𝒾, ❗, dʲsin²ᵏθdcosθʲ
 #+
 
