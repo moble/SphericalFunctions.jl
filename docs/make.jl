@@ -74,6 +74,7 @@ makedocs(
             "conventions/details.md",
             "conventions/comparisons.md",
             "Comparisons" => [
+                joinpath(relative_convention_comparisons, "cohen_tannoudji_1991.md"),
                 joinpath(relative_convention_comparisons, "condon_shortley_1935.md"),
                 joinpath(relative_convention_comparisons, "lalsuite_2025.md"),
                 joinpath(relative_convention_comparisons, "ninja_2011.md"),

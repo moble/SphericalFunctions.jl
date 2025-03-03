@@ -53,11 +53,13 @@ using TestItems: @testitem  #hide
 @testitem "Cohen-Tannoudji conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
 
 module CohenTannoudji
+#+
 
+# We'll also use some predefined utilities to make the code look more like the equations.
 import ..ConventionsUtilities: 𝒾, ❗, dʲsin²ᵏθdcosθʲ
 #+
 
-# They derive the spherical harmonics in two ways and gets two different, but equivalent,
+# They derive the spherical harmonics in two ways and get two different, but equivalent,
 # expressions in Complement ``\mathrm{A}_{\mathrm{VI}}``.  The first is Eq. (26)
 # ```math
 # Y_{l}^{m}(\theta, \phi)
