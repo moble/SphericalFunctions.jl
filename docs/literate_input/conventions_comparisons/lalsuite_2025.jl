@@ -1,3 +1,5 @@
+# TODO: `python -m pip install --no-deps lalsuite; python -m pip install numpy` to directly compare without translating source code... except that this doesn't work on Windows
+
 md"""
 # LALSuite (2025)
 
