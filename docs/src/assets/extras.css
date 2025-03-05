@@ -27,20 +27,20 @@ div .composition-diagram {
     transform-origin: center;
 }
 
-svg text.f0 {
+.composition-diagram svg text.f0 {
     fill: currentColor;
     font-family: 'KaTeX_AMS';
     font-size: 9.96264px; /* Adjust as needed */
 }
 
-svg text.f1 {
+.composition-diagram svg text.f1 {
     fill: currentColor;
     font-family: 'KaTeX_Math';
     font-style: italic;
     font-size: 9.96264px; /* Adjust as needed */
 }
 
-svg path {
+.composition-diagram svg path {
     stroke: currentColor;
     fill: none;
 }
