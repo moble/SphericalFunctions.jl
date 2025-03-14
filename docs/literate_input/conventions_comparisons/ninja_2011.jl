@@ -114,7 +114,7 @@ end  # module NINJA
 #+
 
 # First, we compare the explicit formulas to the general formulas.
-for (ι, ϕ) ∈ θϕrange(Float64, 1)
+for (ι, ϕ) ∈ θϕrange()
     @test NINJA.ₛYₗₘ(-2, 2, 2, ι, ϕ) ≈ NINJA.₋₂Y₂₂(ι, ϕ) atol=ϵₐ rtol=ϵᵣ
     @test NINJA.ₛYₗₘ(-2, 2, 1, ι, ϕ) ≈ NINJA.₋₂Y₂₁(ι, ϕ) atol=ϵₐ rtol=ϵᵣ
     @test NINJA.ₛYₗₘ(-2, 2, 0, ι, ϕ) ≈ NINJA.₋₂Y₂₀(ι, ϕ) atol=ϵₐ rtol=ϵᵣ
