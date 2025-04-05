@@ -9,11 +9,11 @@ Luc Blanchet is one of the pre-eminent researchers in post-Newtonian approximati
 written a "living" review article on the subject [Blanchet_2024](@cite), which he has kept
 up-to-date with the latest developments.
 
-The spherical coordinates are standard physicists' coordinates, except that the polar angle
-is denoted ``\iota``:
-
-> we define standard spherical coordinates ``(r, ι, φ)`` where ``ι`` is the inclination
-> angle from the z-axis and ``φ`` is the phase angle.
+The spherical coordinates are standard physicists' coordinates, implicitly defined by the
+direction vector below Eq. (188b):
+```math
+  N_i = \left(\sin\theta\cos\phi, \sin\theta\sin\phi, \cos\theta\right).
+```
 
 
 ## Implementing formulas
