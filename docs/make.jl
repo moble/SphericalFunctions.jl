@@ -115,7 +115,8 @@ makedocs(
         "References" => "references.md",
     ],
     #warnonly=true,
-    #doctest = false
+    #doctest = false,
+    #draft=true,  # Skips running code in the docs for speed
 )
 
 deploydocs(
