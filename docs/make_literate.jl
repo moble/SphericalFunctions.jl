@@ -27,6 +27,7 @@ literate_input = joinpath(@__DIR__, "literate_input")
 skip_input_files = (  # Non-.jl files will be skipped anyway
     "ConventionsUtilities.jl",  # Used for TestItemRunners.jl
     "ConventionsSetup.jl",  # Used for TestItemRunners.jl
+    "conventions_install_lalsuite.jl",  # lalsuite_2025.jl
 )
 
 # Ensure a file is listed in the .gitignore file
