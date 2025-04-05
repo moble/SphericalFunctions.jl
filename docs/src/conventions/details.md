@@ -913,6 +913,10 @@ So, for example, the ``\ell = m`` mode varies most rapidly with
 longitude but not at all with latitude, while the ``\ell = 0`` mode
 varies just as rapidly with latitude but not at all with longitude.
 
+[Vasil_2019](@citet) use spin-weighted spherical harmonics to do
+tensor calculus in the 3-ball, and have a lot formulas for
+derivatives, as a result.
+
 * TODO: Show the relationship between the spherical Laplacian and the
   angular momentum operator.
 * TODO: Show how ``D`` matrices are harmonic with respect to the
