@@ -6,21 +6,24 @@
 # will monitor the docs for any changes, then rebuild them and refresh the browser
 # until this script is stopped.
 
-using Revise
+import Revise
+Revise.revise()
 
 import Dates
 println("Building docs starting at ", Dates.format(Dates.now(), "HH:MM:SS"), ".")
 
-using Pkg
+import Pkg
 cd((@__DIR__) * "/..")
 Pkg.activate("docs")
 
-using LiveServer
+import LiveServer: servedocs
 literate_input = joinpath(pwd(), "docs", "literate_input")
 literate_output = joinpath(pwd(), "docs", "src", "literate_output")
 @info "Using input for Literate.jl from $literate_input"
 servedocs(
-    literate_dir = literate_input,
-    skip_dir = literate_output,
-    launch_browser=true
+    include_dirs=["src/"],  # So that docstring changes are picked up
+    include_files=["docs/make_literate.jl"],
+    skip_files=["docs/src/conventions/comparisons/lalsuite_SphericalHarmonics.md"],
+    literate_dir=literate_input,
+    launch_browser=true,
 )
