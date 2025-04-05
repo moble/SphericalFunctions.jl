@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>LALSuite (2025) · SphericalFunctions.jl</title><meta name="title" content="LALSuite (2025) · SphericalFunctions.jl"/><meta property="og:title" content="LALSuite (2025) · SphericalFunctions.jl"/><meta property="twitter:title" content="LALSuite (2025) · SphericalFunctions.jl"/><meta name="description" content="Documentation for SphericalFunctions.jl."/><meta property="og:description" content="Documentation for SphericalFunctions.jl."/><meta property="twitter:description" content="Documentation for SphericalFunctions.jl."/><meta property="og:url" content="https://moble.github.io/SphericalFunctions.jl/stable/conventions/comparisons/lalsuite_2025/"/><meta property="twitter:url" content="https://moble.github.io/SphericalFunctions.jl/stable/conventions/comparisons/lalsuite_2025/"/><link rel="canonical" href="https://moble.github.io/SphericalFunctions.jl/stable/conventions/comparisons/lalsuite_2025/"/><script data-outdated-warner src="../../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../../assets/documenter.js"></script><script src="../../../search_index.js"></script><script src="../../../siteinfo.js"></script><script src="../../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../../assets/themeswap.js"></script><link href="../../../assets/citations.css" rel="stylesheet" type="text/css"/><link href="../../../assets/extras.css" rel="stylesheet" type="text/css"/></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../../">SphericalFunctions.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../../">Introduction</a></li><li><a class="tocitem" href="../../../transformations/"><span>$s$</span>-SHT Transformations</a></li><li><a class="tocitem" href="../../../wigner_matrices/">Wigner&#39;s <span>$𝔇$</span> and <span>$d$</span> matrices</a></li><li><a class="tocitem" href="../../../sYlm/"><span>${}_{s}Y_{\ell,m}$</span> functions</a></li><li><a class="tocitem" href="../../../operators/">Differential operators</a></li><li><a class="tocitem" href="../../../utilities/">Utilities</a></li><li><span class="tocitem">API</span><ul><li><a class="tocitem" href="../../../internal/">Internal functions</a></li><li><a class="tocitem" href="../../../functions/">Complete function list</a></li></ul></li><li><span class="tocitem">Conventions</span><ul><li><a class="tocitem" href="../../summary/">Summary</a></li><li><a class="tocitem" href="../../details/">Details</a></li><li><a class="tocitem" href="../">Comparisons</a></li><li><input class="collapse-toggle" id="menuitem-8-4" type="checkbox" checked/><label class="tocitem" for="menuitem-8-4"><span class="docs-label">Comparisons</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../blanchet_2024/">Blanchet (2024)</a></li><li><a class="tocitem" href="../cohen_tannoudji_1991/">Cohen-Tannoudji (1991)</a></li><li><a class="tocitem" href="../condon_shortley_1935/">Condon-Shortley (1935)</a></li><li class="is-active"><a class="tocitem" href>LALSuite (2025)</a><ul class="internal"><li><a class="tocitem" href="#Implementing-formulas"><span>Implementing formulas</span></a></li><li><a class="tocitem" href="#Tests"><span>Tests</span></a></li></ul></li><li><a class="tocitem" href="../ninja_2011/">NINJA (2011)</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-8-5" type="checkbox"/><label class="tocitem" for="menuitem-8-5"><span class="docs-label">Calculations</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../calculations/euler_angular_momentum/"><span>$L_j$</span> and <span>$R_j$</span> with Euler angles</a></li></ul></li></ul></li><li><span class="tocitem">Notes</span><ul><li><a class="tocitem" href="../../../notes/H_recursions/">Algorithm for computing <span>$H$</span></a></li><li><a class="tocitem" href="../../../notes/sampling_theorems/">Sampling theorems and transformations of spin-weighted spherical harmonics</a></li></ul></li><li><a class="tocitem" href="../../../references/">References</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Conventions</a></li><li><a class="is-disabled">Comparisons</a></li><li class="is-active"><a href>LALSuite (2025)</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>LALSuite (2025)</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/moble/SphericalFunctions.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/moble/SphericalFunctions.jl/blob/main/docs/literate_input/conventions/comparisons/lalsuite_2025.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><p>TODO: <code>python -m pip install --no-deps lalsuite; python -m pip install numpy</code> to directly compare without translating source code... except that this doesn&#39;t work on Windows</p><h1 id="LALSuite-(2025)"><a class="docs-heading-anchor" href="#LALSuite-(2025)">LALSuite (2025)</a><a id="LALSuite-(2025)-1"></a><a class="docs-heading-anchor-permalink" href="#LALSuite-(2025)" title="Permalink"></a></h1><div class="admonition is-info"><header class="admonition-header">Summary</header><div class="admonition-body"><p>The LALSuite definitions of the spherical harmonics and Wigner&#39;s <span>$d$</span> and <span>$D$</span> functions agree with the definitions used in the <code>SphericalFunctions</code> package.</p></div></div><p><a href="../../../references/#LALSuite_2018">LALSuite (LSC Algorithm Library Suite)</a> is a collection of software routines, comprising the primary official software used by the LIGO-Virgo-KAGRA Collaboration to detect and characterize gravitational waves.  As far as I can tell, the ultimate source for all spin-weighted spherical harmonic values used in LALSuite is the function <a href="https://git.ligo.org/lscsoft/lalsuite/-/blob/6e653c91b6e8a6728c4475729c4f967c9e09f020/lal/lib/utilities/SphericalHarmonics.c"><code>XLALSpinWeightedSphericalHarmonic</code></a>, which cites the NINJA paper [<a href="../../../references/#AjithEtAl_2011">32</a>] as its source.  Unfortunately, it cites version <em>1</em>, which contained a serious error, using <span>$\tfrac{\cos\iota}{2}$</span> instead of <span>$\cos \tfrac{\iota}{2}$</span> and similarly for <span>$\sin$</span>.  This error was corrected in version 2, but the citation was not updated.  Nonetheless, it appears that the actual code is consistent with the <em>corrected</em> versions of the NINJA paper.</p><p>They also (quite separately) define Wigner&#39;s <span>$D$</span> matrices in terms of the <span>$d$</span> matrices, which are — in turn — defined in terms of Jacobi polynomials.  For all of these, they cite Wikipedia (despite the fact that the NINJA paper defined the spin-weighted spherical harmonics in terms of the <span>$d$</span> matrices).  Nonetheless, the definitions in the code are consistent with the definitions in the NINJA paper, which are consistent with the definitions in the <code>SphericalFunctions</code> package.</p><h2 id="Implementing-formulas"><a class="docs-heading-anchor" href="#Implementing-formulas">Implementing formulas</a><a id="Implementing-formulas-1"></a><a class="docs-heading-anchor-permalink" href="#Implementing-formulas" title="Permalink"></a></h2><p>We begin by directly translating the C code of LALSuite over to Julia code.  There are three functions that we will want to compare with the definitions in this package:</p><pre><code class="language-c hljs">COMPLEX16 XLALSpinWeightedSphericalHarmonic( REAL8 theta, REAL8 phi, int s, int l, int m );
+double XLALWignerdMatrix( int l, int mp, int m, double beta );
+COMPLEX16 XLALWignerDMatrix( int l, int mp, int m, double alpha, double beta, double gam );</code></pre><p>The <a href="../lalsuite_SphericalHarmonics/">original source code</a> (as of early 2025) is stored alongside this file, so we will read it in to a <code>String</code> and then apply a series of regular expressions to convert it to Julia code, parse it and evaluate it to turn it into runnable Julia.  We encapsulate the formulas in a module so that we can test them against the <code>SphericalFunctions</code> package.</p><p>We begin by setting up that module, and introducing a set of basic replacements that would usually be defined in separate C headers.</p><pre><code class="language-julia hljs">module LALSuite
+
+
+using Printf: @sprintf
+
+const I = im
+const LAL_PI = π
+const XLAL_EINVAL = &quot;XLAL Error: Invalid arguments&quot;
+MIN(a, b) = min(a, b)
+gsl_sf_choose(a, b) = binomial(a, b)
+pow(a, b) = a^b
+cexp(a) = exp(a)
+cpolar(a, b) = a * cis(b)
+macro XLALPrError(msg, args...)
+    quote
+        @error @sprintf($msg, $(args...))
+    end
+end</code></pre><p>Next, we simply read the source file into a string.</p><pre><code class="language-julia hljs">lalsource = read(joinpath(@__DIR__, &quot;lalsuite_SphericalHarmonics.c&quot;), String)</code></pre><p>Now we define a series of replacements to apply to the C code to convert it to Julia code. Note that some of these will be quite specific to this particular file, and may not be generally applicable.</p><pre><code class="language-julia hljs">replacements = (
+    # Deal with newlines in the middle of an assignment
+    r&quot;( = .*[^;]\s*)\n&quot; =&gt; s&quot;\1&quot;,
+
+    # Remove a couple old, unused functions
+    r&quot;(?ms)XLALScalarSphericalHarmonic.*?\n}&quot; =&gt; &quot;# Removed&quot;,
+    r&quot;(?ms)XLALSphHarm.*?\n}&quot; =&gt; &quot;# Removed&quot;,
+
+    # Remove type annotations
+    r&quot;COMPLEX16 ?&quot; =&gt; &quot;&quot;,
+    r&quot;REAL8 ?&quot; =&gt; &quot;&quot;,
+    r&quot;INT4 ?&quot; =&gt; &quot;&quot;,
+    r&quot;int ?&quot; =&gt; &quot;&quot;,
+    r&quot;double ?&quot; =&gt; &quot;&quot;,
+
+    # Translate comments
+    &quot;/*&quot; =&gt; &quot;#=&quot;,
+    &quot;*/&quot; =&gt; &quot;=#&quot;,
+
+    # Brackets
+    r&quot; ?{&quot; =&gt; &quot;&quot;,
+    r&quot;}.*(\n *else)&quot; =&gt; s&quot;\1&quot;,
+    r&quot;} *else&quot; =&gt; &quot;else&quot;,
+    r&quot;^}&quot; =&gt; &quot;&quot;,
+    &quot;}&quot; =&gt; &quot;end&quot;,
+
+    # Flow control
+    r&quot;( *if.*);&quot;=&gt;s&quot;\1 end&quot;,  ## one-line `if` statements
+    &quot;for( s=0; n-s &gt;= 0; s++ )&quot; =&gt; &quot;for s=0:n&quot;,
+    &quot;else if&quot; =&gt; &quot;elseif&quot;,
+    r&quot;(?m)  break;\n *\n *case(.*?):&quot; =&gt; s&quot;elseif m == \1&quot;,
+    r&quot;(?m)  break;\n\s*case(.*?):&quot; =&gt; s&quot;elseif m == \1&quot;,
+    r&quot;(?m)  break;\n *\n *default:&quot; =&gt; &quot;else&quot;,
+    r&quot;(?m)  break;\n *default:&quot; =&gt; &quot;else&quot;,
+    r&quot;(?m)switch.*?\n *\n( *)case(.*?):&quot; =&gt; s&quot;\n\1if m == \2&quot;,
+    r&quot;\n *break;&quot; =&gt; &quot;&quot;,
+    r&quot;(?m)( *ans = fac;)\n&quot; =&gt; s&quot;\1\n  end\n&quot;,
+
+    # Deal with ugly C declarations
+    &quot;f1 = (x-1)/2.0, f2 = (x+1)/2.0&quot; =&gt; &quot;f1 = (x-1)/2.0; f2 = (x+1)/2.0&quot;,
+    &quot;sum=0, val=0&quot; =&gt; &quot;sum=0; val=0&quot;,
+    &quot;a=0, lam=0&quot; =&gt; &quot;a=0; lam=0&quot;,
+    r&quot;\n *fac;&quot; =&gt; &quot;&quot;,
+    r&quot;\n *ans;&quot; =&gt; &quot;&quot;,
+    r&quot;\n *gslStatus;&quot; =&gt; &quot;&quot;,
+    r&quot;\n *gsl_sf_result pLm;&quot; =&gt; &quot;&quot;,
+    r&quot;\n ?XLAL&quot; =&gt; &quot;\nfunction XLAL&quot;,
+
+    # Differences in Julia syntax
+    &quot;++&quot; =&gt; &quot;+=1&quot;,
+    &quot;.*&quot; =&gt; &quot;. *&quot;,
+    &quot;./&quot; =&gt; &quot;. /&quot;,
+    &quot;.+&quot; =&gt; &quot;. +&quot;,
+    &quot;.-&quot; =&gt; &quot;. -&quot;,
+
+    # Deal with random bad syntax
+    &quot;if (m)&quot; =&gt; &quot;if m != 0&quot;,
+    &quot;case 4:&quot; =&gt; &quot;elseif m == 4&quot;,
+    &quot;XLALPrError&quot; =&gt; &quot;@XLALPrError&quot;,
+    &quot;__func__&quot; =&gt; &quot;\&quot;\&quot;&quot;,
+)</code></pre><p>And we apply the replacements to the source code to convert it to Julia code.  Note that we apply them successively, even though <code>replace</code> can handle multiple &quot;simultaneous&quot; replacements, because the order of replacements is important.</p><pre><code class="language-julia hljs">for (pattern, replacement) in replacements
+    global lalsource = replace(lalsource, pattern =&gt; replacement)
+end</code></pre><p>Finally, we just parse and evaluate the code to turn it into a runnable Julia, and we are done defining the module</p><pre><code class="language-julia hljs">eval(Meta.parseall(lalsource))
+
+end  # module LALSuite</code></pre><h2 id="Tests"><a class="docs-heading-anchor" href="#Tests">Tests</a><a id="Tests-1"></a><a class="docs-heading-anchor-permalink" href="#Tests" title="Permalink"></a></h2><p>We can now test the functions against the equivalent functions from the <code>SphericalFunctions</code> package.  We will need to test approximate floating-point equality, so we set absolute and relative tolerances (respectively) in terms of the machine epsilon:</p><pre><code class="language-julia hljs">ϵₐ = 100eps()
+ϵᵣ = 100eps()</code></pre><p>The spin-weighted spherical harmonics are defined explicitly, but only for</p><pre><code class="language-julia hljs">s = -2</code></pre><p>and only up to</p><pre><code class="language-julia hljs">ℓₘₐₓ = 8</code></pre><p>so we only test up to that point.</p><pre><code class="language-julia hljs">for (θ, ϕ) ∈ θϕrange()
+    for (ℓ, m) ∈ ℓmrange(abs(s), ℓₘₐₓ)
+        @test LALSuite.XLALSpinWeightedSphericalHarmonic(θ, ϕ, s, ℓ, m) ≈
+            SphericalFunctions.Y(s, ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+    end
+end</code></pre><p>Now, the Wigner <span>$d$</span> matrices are defined generally, but we only need to test up to</p><pre><code class="language-julia hljs">ℓₘₐₓ = 4</code></pre><p>because the formulas are fairly inefficient and inaccurate, and this will be sufficient to sort out any sign or normalization differences, which are the most likely sources of error.</p><pre><code class="language-julia hljs">for β ∈ βrange()
+    for (ℓ, m′, m) ∈ ℓm′mrange(ℓₘₐₓ)
+        @test LALSuite.XLALWignerdMatrix(ℓ, m′, m, β) ≈ SphericalFunctions.d(ℓ, m′, m, β) atol=ϵₐ rtol=ϵᵣ
+    end
+end</code></pre><p>We can see more-or-less by inspection that the code defines the <span>$D$</span> matrix in agreement with our convention, the key line being</p><pre><code class="language-c hljs">cexp( -(1.0I)*mp*alpha ) * XLALWignerdMatrix( l, mp, m, beta ) * cexp( -(1.0I)*m*gam );</code></pre><p>And because of the higher dimensionality of the space in which to test, we want to restrict the range of the tests to avoid excessive computation.  We will test up to</p><pre><code class="language-julia hljs">ℓₘₐₓ = 2</code></pre><p>because the space of options for disagreement is smaller.</p><pre><code class="language-julia hljs">for (α,β,γ) ∈ αβγrange()
+    for (ℓ, m′, m) ∈ ℓm′mrange(ℓₘₐₓ)
+        @test LALSuite.XLALWignerDMatrix(ℓ, m′, m, α, β, γ) ≈
+            conj(SphericalFunctions.D(ℓ, m′, m, α, β, γ)) atol=ϵₐ rtol=ϵᵣ
+    end
+end
+@test_broken false  # We haven&#39;t flipped the conjugation of D yet</code></pre><p>These successful tests show that the spin-weighted spherical harmonics and the Wigner <span>$d$</span> and <span>$D$</span> matrices defined in LALSuite agree with the corresponding functions defined by the <code>SphericalFunctions</code> package.</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../condon_shortley_1935/">« Condon-Shortley (1935)</a><a class="docs-footer-nextpage" href="../ninja_2011/">NINJA (2011) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.10.1 on <span class="colophon-date" title="Saturday 5 April 2025 16:25">Saturday 5 April 2025</span>. Using Julia version 1.11.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
