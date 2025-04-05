@@ -2,7 +2,8 @@ md"""
 # Blanchet (2024)
 
 !!! info "Summary"
-    TODO
+    Blanchet's  definition of the spherical harmonics agrees with the definition used in the
+    `SphericalFunctions` package.
 
 Luc Blanchet is one of the pre-eminent researchers in post-Newtonian approximations, and has
 written a "living" review article on the subject [Blanchet_2024](@cite), which he has kept
@@ -17,7 +18,7 @@ is denoted ``\iota``:
 
 ## Implementing formulas
 
-We begin by writing code that implements the formulas from Ref. [AjithEtAl_2011](@cite).  We
+We begin by writing code that implements the formulas from Ref. [Blanchet_2024](@cite).  We
 encapsulate the formulas in a module so that we can test them against the
 `SphericalFunctions` package.
 
@@ -43,10 +44,10 @@ end
 
 # Immediately following that, in Eq. (184b), we find the definition of the ``d`` function:
 # ```math
-#   d^{\ell m}(\theta)
+#   d^{\ell m}
 #   =
 #   \sum_{k = k_1}^{k_2}
-#   \frac{(-1)^k}{k!}
+#   \frac{(-)^k}{k!}
 #   e_k^{\ell m}
 #   \left(\cos\frac{\theta}{2}\right)^{2\ell+m-2k-2}
 #   \left(\sin\frac{\theta}{2}\right)^{2k-m+2},
@@ -65,12 +66,6 @@ function d(l, m, θ::T) where {T<:Real}
 end
 #+
 
-# Note that he seems to have flipped the sign of ``s=-2`` in that equation, so that he has
-# evidently given formulas for the ``s=2`` harmonics instead.  His notation seems consistent
-# with the NINJA paper [AjithEtAl_2011](@cite), which unfortunately included a confusing
-# negative sign on the left-hand side of the definition of the spin-weighted spherical
-# harmonics.
-#
 # The ``e_k^{\ell m}`` symbol is defined in Eq. (184c) as
 # ```math
 #   e_k^{\ell m} = \frac{
@@ -85,7 +80,10 @@ function eₖˡᵐ(k, l, m)
         / ((k - m + 2)❗ * (l + m - k)❗ * (l - k - 2)❗)
     )
 end
+#+
 
+# The paper did not give an expression for the Wigner D-matrices, but the definition of the
+# spin-weighted spherical harmonics is probably most relevant, so this will suffice.
 
 end  # module Blanchet
 #+
@@ -93,25 +91,32 @@ end  # module Blanchet
 # ## Tests
 #
 # We can now test the functions against the equivalent functions from the
-# `SphericalFunctions` package.  We will need to test approximate floating-point equality,
-# so we set absolute and relative tolerances (respectively) in terms of the machine epsilon:
-ϵₐ = 10eps()
-ϵᵣ = 10eps()
+# `SphericalFunctions` package.  We will test up to
+ℓₘₐₓ = 8
 #+
 
-# We will only test up to
-ℓₘₐₓ = 2
+# because that's the maximum ``\ell`` used for PN results — and that's roughly the limit to
+# which I'd trust these expressions anyway.  We will also only test the
+s = -2
 #+
-# because the formulas are very slow, and this will be sufficient to sort out any sign or
-# normalization differences, which are the most likely source of error.
-for (θ, ϕ) ∈ θϕrange(Float64, 1)
-    for (ℓ, m) ∈ ℓmrange(ℓₘₐₓ)
-        @test Blanchet.Yˡᵐ₋₂(ℓ, m, θ, ϕ) ≈ SphericalFunctions.Y(2, ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+
+# case, which is the only one defined in the paper.
+# We will need to test approximate floating-point equality,
+# so we set absolute and relative tolerances (respectively) in terms of the machine epsilon:
+ϵₐ = 10eps()
+ϵᵣ = 500eps()
+#+
+
+# This loose relative tolerance is necessary because the numerical errors in Blanchet's
+# explicit expressions grow rapidly with ``\ell``.
+for (θ, ϕ) ∈ θϕrange()
+    for (ℓ, m) ∈ ℓmrange(abs(s), ℓₘₐₓ)
+        @test Blanchet.Yˡᵐ₋₂(ℓ, m, θ, ϕ) ≈ SphericalFunctions.Y(s, ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
 
-# These successful tests show that TODO: finish this sentence
+# These successful tests show that Blanchet's expression agrees with ours.
 
 
 end  #hide
