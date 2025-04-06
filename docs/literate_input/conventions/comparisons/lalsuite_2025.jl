@@ -73,6 +73,9 @@ lalsource = read(joinpath(@__DIR__, "lalsuite_SphericalHarmonics.c"), String)
 # Note that some of these will be quite specific to this particular file, and may not be
 # generally applicable.
 replacements = (
+    # Deal with annoying Windows line endings
+    "\r\n" => "\n",
+
     ## Deal with newlines in the middle of an assignment
     r"( = .*[^;]\s*)\n" => s"\1",
 
@@ -194,6 +197,7 @@ end
 # ```c
 # cexp( -(1.0I)*mp*alpha ) * XLALWignerdMatrix( l, mp, m, beta ) * cexp( -(1.0I)*m*gam );
 # ```
+# Note that this package changed conventions in 2025 to use these signs.
 for (α,β,γ) ∈ αβγrange()
     for (ℓ, m′, m) ∈ ℓm′mrange(ℓₘₐₓ)
         @test LALSuite.XLALWignerDMatrix(ℓ, m′, m, α, β, γ) ≈
@@ -202,8 +206,10 @@ for (α,β,γ) ∈ αβγrange()
 end
 #+
 
-# Now, just to remind ourselves, we will be changing the convention for ``D`` soon
+# Now, just to remind ourselves, we will be changing the convention for ``D`` soon, so the
+# test above should have `conj` removed.
 @test_broken false  # We haven't flipped the conjugation of D yet
+## Remove `conj` from the test above when we do.
 #+
 
 # These successful tests show that the spin-weighted spherical harmonics and the Wigner
