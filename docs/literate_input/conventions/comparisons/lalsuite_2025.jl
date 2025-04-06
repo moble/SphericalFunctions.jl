@@ -2,7 +2,7 @@ md"""
 # LALSuite (2025)
 
 !!! info "Summary"
-    The `LALSuite`` definitions of the spherical harmonics and Wigner's ``d`` and ``D``
+    The `LALSuite` definitions of the spherical harmonics and Wigner's ``d`` and ``D``
     functions agree with the definitions used in the `SphericalFunctions` package.
 
 [`LALSuite` (the LSC Algorithm Library Suite)](@cite LALSuite_2018) is a collection of
@@ -24,49 +24,128 @@ consistent with the definitions in the NINJA paper, which are consistent with th
 definitions in the `SphericalFunctions` package.
 
 
-## Implementing code
+## Implementing formulas
 
-We will call the python module `lal` directly, but there are some minor inconveniences to
-deal with first.  We have to install the `lalsuite` python package, but we don't want all
-its dependencies; only `numpy` is required for what we want to do, so we run
-```bash
-python -m pip install -q numpy
-python -m pip install -q --no-deps lalsuite
+We begin by directly translating the C code of LALSuite over to Julia code.  There are three
+functions that we will want to compare with the definitions in this package:
+```c
+COMPLEX16 XLALSpinWeightedSphericalHarmonic( REAL8 theta, REAL8 phi, int s, int l, int m );
+double XLALWignerdMatrix( int l, int mp, int m, double beta );
+COMPLEX16 XLALWignerDMatrix( int l, int mp, int m, double alpha, double beta, double gam );
 ```
-The details are messy, so we hide them in a separate file, and just include it here.
+The [original source code](./lalsuite_SphericalHarmonics.md) (as of early 2025) is stored
+alongside this file, so we will read it in to a `String` and then apply a series of regular
+expressions to convert it to Julia code, parse it and evaluate it to turn it into runnable
+Julia.  We encapsulate the formulas in a module so that we can test them against the
+`SphericalFunctions` package.
 
-Then, we have to translate to native Julia types, so we'll just write three quick and easy
-wrappers for the three functions we will actually test.  We encapsulate the formulas in a
-module so that we can test them against the `SphericalFunctions` package.
+We begin by setting up that module, and introducing a set of basic replacements that would
+usually be defined in separate C headers.
 
 """
 using TestItems: @testitem  #hide
-@testitem "LALSuite conventions B" setup=[ConventionsSetup, Utilities] begin  #hide
+@testitem "LALSuite conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
 
 module LALSuite
 
-include("conventions_install_lalsuite.jl")
+using Printf: @sprintf
 
-import PythonCall
-const lal = PythonCall.pyimport("lal")
+const I = im
+const LAL_PI = π
+const XLAL_EINVAL = "XLAL Error: Invalid arguments"
+MIN(a, b) = min(a, b)
+gsl_sf_choose(a, b) = binomial(a, b)
+pow(a, b) = a^b
+cexp(a) = exp(a)
+cpolar(a, b) = a * cis(b)
+macro XLALPrError(msg, args...)
+    quote
+        @error @sprintf($msg, $(args...))
+    end
+end
+#+
 
-## COMPLEX16 XLALSpinWeightedSphericalHarmonic( REAL8 theta, REAL8 phi, int s, int l, int m )
-SpinWeightedSphericalHarmonic(theta, phi, s, l, m) = copy(PythonCall.pyconvert(
-    ComplexF64,
-    lal.SpinWeightedSphericalHarmonic(theta, phi, s, l, m)
-))
+# Next, we simply read the source file into a string.
+lalsource = read(joinpath(@__DIR__, "lalsuite_SphericalHarmonics.c"), String)
+#+
 
-## double XLALWignerdMatrix( int l, int mp, int m, double beta )
-WignerdMatrix(l, mp, m, beta) = PythonCall.pyconvert(
-    Float64,
-    lal.WignerdMatrix(l, mp, m, beta)
+# Now we define a series of replacements to apply to the C code to convert it to Julia code.
+# Note that some of these will be quite specific to this particular file, and may not be
+# generally applicable.
+replacements = (
+    ## Deal with newlines in the middle of an assignment
+    r"( = .*[^;]\s*)\n" => s"\1",
+
+    ## Remove a couple old, unused functions
+    r"(?ms)XLALScalarSphericalHarmonic.*?\n}" => "# Removed",
+    r"(?ms)XLALSphHarm.*?\n}" => "# Removed",
+
+    ## Remove type annotations
+    r"COMPLEX16 ?" => "",
+    r"REAL8 ?" => "",
+    r"INT4 ?" => "",
+    r"int ?" => "",
+    r"double ?" => "",
+
+    ## Translate comments
+    "/*" => "#=",
+    "*/" => "=#",
+
+    ## Brackets
+    r" ?{" => "",
+    r"}.*(\n *else)" => s"\1",
+    r"} *else" => "else",
+    r"^}" => "",
+    "}" => "end",
+
+    ## Flow control
+    r"( *if.*);"=>s"\1 end",  ## one-line `if` statements
+    "for( s=0; n-s >= 0; s++ )" => "for s=0:n",
+    "else if" => "elseif",
+    r"(?m)  break;\n *\n *case(.*?):" => s"elseif m == \1",
+    r"(?m)  break;\n\s*case(.*?):" => s"elseif m == \1",
+    r"(?m)  break;\n *\n *default:" => "else",
+    r"(?m)  break;\n *default:" => "else",
+    r"(?m)switch.*?\n *\n( *)case(.*?):" => s"\n\1if m == \2",
+    r"\n *break;" => "",
+    r"(?m)( *ans = fac;)\n" => s"\1\n  end\n",
+
+    ## Deal with ugly C declarations
+    "f1 = (x-1)/2.0, f2 = (x+1)/2.0" => "f1 = (x-1)/2.0; f2 = (x+1)/2.0",
+    "sum=0, val=0" => "sum=0; val=0",
+    "a=0, lam=0" => "a=0; lam=0",
+    r"\n *fac;" => "",
+    r"\n *ans;" => "",
+    r"\n *gslStatus;" => "",
+    r"\n *gsl_sf_result pLm;" => "",
+    r"\n ?XLAL" => "\nfunction XLAL",
+
+    ## Differences in Julia syntax
+    "++" => "+=1",
+    ".*" => ". *",
+    "./" => ". /",
+    ".+" => ". +",
+    ".-" => ". -",
+
+    ## Deal with random bad syntax
+    "if (m)" => "if m != 0",
+    "case 4:" => "elseif m == 4",
+    "XLALPrError" => "@XLALPrError",
+    "__func__" => "\"\"",
 )
+#+
 
-## COMPLEX16 XLALWignerDMatrix( int l, int mp, int m, double alpha, double beta, double gam )
-WignerDMatrix(l, mp, m, alpha, beta, gam) = copy(PythonCall.pyconvert(
-    ComplexF64,
-    lal.WignerDMatrix(l, mp, m, alpha, beta, gam)
-))
+# And we apply the replacements to the source code to convert it to Julia code.  Note that
+# we apply them successively, even though `replace` can handle multiple "simultaneous"
+# replacements, because the order of replacements is important.
+for (pattern, replacement) in replacements
+    global lalsource = replace(lalsource, pattern => replacement)
+end
+#+
+
+# Finally, we just parse and evaluate the code to turn it into a runnable Julia, and we are
+# done defining the module
+eval(Meta.parseall(lalsource))
 
 end  # module LALSuite
 #+
@@ -90,7 +169,7 @@ s = -2
 # so we only test up to that point.
 for (θ, ϕ) ∈ θϕrange()
     for (ℓ, m) ∈ ℓmrange(abs(s), ℓₘₐₓ)
-        @test LALSuite.SpinWeightedSphericalHarmonic(θ, ϕ, s, ℓ, m) ≈
+        @test LALSuite.XLALSpinWeightedSphericalHarmonic(θ, ϕ, s, ℓ, m) ≈
             SphericalFunctions.Y(s, ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
     end
 end
@@ -104,7 +183,7 @@ end
 # error.
 for β ∈ βrange()
     for (ℓ, m′, m) ∈ ℓm′mrange(ℓₘₐₓ)
-        @test LALSuite.WignerdMatrix(ℓ, m′, m, β) ≈
+        @test LALSuite.XLALWignerdMatrix(ℓ, m′, m, β) ≈
             SphericalFunctions.d(ℓ, m′, m, β) atol=ϵₐ rtol=ϵᵣ
     end
 end
@@ -115,18 +194,15 @@ end
 # ```c
 # cexp( -(1.0I)*mp*alpha ) * XLALWignerdMatrix( l, mp, m, beta ) * cexp( -(1.0I)*m*gam );
 # ```
-# And because of the higher dimensionality of the space in which to test, we want to
-# restrict the range of the tests to avoid excessive computation.  We will test up to
-ℓₘₐₓ = 2
-#+
-
-# because the space of options for disagreement is smaller.
 for (α,β,γ) ∈ αβγrange()
     for (ℓ, m′, m) ∈ ℓm′mrange(ℓₘₐₓ)
-        @test LALSuite.WignerDMatrix(ℓ, m′, m, α, β, γ) ≈
+        @test LALSuite.XLALWignerDMatrix(ℓ, m′, m, α, β, γ) ≈
             conj(SphericalFunctions.D(ℓ, m′, m, α, β, γ)) atol=ϵₐ rtol=ϵᵣ
     end
 end
+#+
+
+# Now, just to remind ourselves, we will be changing the convention for ``D`` soon
 @test_broken false  # We haven't flipped the conjugation of D yet
 #+
 
