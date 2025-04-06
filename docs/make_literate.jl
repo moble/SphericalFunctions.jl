@@ -6,7 +6,6 @@
 skip_input_files = (  # Non-.jl files will be skipped anyway
     "ConventionsUtilities.jl",  # Used for TestItemRunners.jl
     "ConventionsSetup.jl",  # Used for TestItemRunners.jl
-    "conventions_install_lalsuite.jl",  # lalsuite_2025.jl
 )
 literate_input = joinpath(@__DIR__, "literate_input")
 
@@ -54,4 +53,23 @@ for (root, _, files) ∈ walkdir(literate_input), file ∈ files
     inputfile = joinpath(root, file)
     # Run the conversion
     generate_markdown(inputfile)
+end
+
+# Make "lalsuite_SphericalHarmonics.c" available in the docs
+let
+    inputfile = joinpath(literate_input, "conventions", "comparisons", "lalsuite_SphericalHarmonics.c")
+    outputfile = joinpath(docs_src_dir, "conventions", "comparisons", "lalsuite_SphericalHarmonics.c")
+    ensure_in_gitignore(relpath(replace(outputfile, ".c"=>".md"), package_root))
+    lalsource = read(
+        joinpath(literate_input, "conventions", "comparisons", "lalsuite_SphericalHarmonics.c"),
+        String
+    )
+    write(
+        joinpath(docs_src_dir, "conventions", "comparisons", "lalsuite_SphericalHarmonics.md"),
+        "# LALSuite: Spherical Harmonics original source code\n"
+        * "The official repository is [here]("
+        * "https://git.ligo.org/lscsoft/lalsuite/-/blob/22e4cd8fff0487c7b42a2c26772ae9204c995637/lal/lib/utilities/SphericalHarmonics.c"
+        * ")\n"
+        * "```c\n$lalsource\n```\n"
+    )
 end
