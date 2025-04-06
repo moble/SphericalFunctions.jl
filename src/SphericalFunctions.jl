@@ -6,7 +6,7 @@ using LinearAlgebra: LinearAlgebra, Bidiagonal, Diagonal, convert, ldiv!, mul!
 using OffsetArrays: OffsetArray, OffsetVector
 using ProgressMeter: Progress, next!
 using Quaternionic: Quaternionic, Rotor, from_spherical_coordinates,
-                    to_euler_phases, to_spherical_coordinates
+                    to_euler_phases, to_spherical_coordinates, basetype
 using StaticArrays: @SVector
 using SpecialFunctions, DoubleFloats
 using LoopVectorization: @turbo
