@@ -213,13 +213,13 @@ with the result instead.
 
 """
 function D_matrices(R, ℓₘₐₓ)
-    D_storage = D_prep(ℓₘₐₓ, eltype(R))
+    D_storage = D_prep(ℓₘₐₓ, basetype(R))
     D_matrices!(D_storage, R)
 end
 
 function D_matrices(α, β, γ, ℓₘₐₓ)
     R = Quaternionic.from_euler_angles(α, β, γ)
-    T = eltype(R)
+    T = basetype(R)
     D_storage = D_prep(ℓₘₐₓ, T)
     D_matrices!(D_storage, R)
 end
@@ -274,7 +274,7 @@ D = D_matrices!(D_storage, R)
 
 """
 function D_matrices!(D, R, ℓₘₐₓ)
-    D_storage = (D, Dworkspace(ℓₘₐₓ, eltype(R))...)
+    D_storage = (D, Dworkspace(ℓₘₐₓ, basetype(R))...)
     D_matrices!(D_storage, R)
 end
 
@@ -427,7 +427,7 @@ calculations that could be reused.  If you need to evaluate the matrices for man
 
 """
 function sYlm_values(R::AbstractQuaternion, ℓₘₐₓ, spin)
-    sYlm_storage = sYlm_prep(ℓₘₐₓ, spin, eltype(R), abs(spin))
+    sYlm_storage = sYlm_prep(ℓₘₐₓ, spin, basetype(R), abs(spin))
     sYlm_values!(sYlm_storage, R, spin)
 end
 
@@ -496,7 +496,7 @@ sYlm = sYlm_values!(sYlm_storage, R, spin)
 
 """
 function sYlm_values!(Y, R::AbstractQuaternion, ℓₘₐₓ, spin)
-    sYlm_storage = (Y, Y_workspace(ℓₘₐₓ, spin, eltype(R), abs(spin))...)
+    sYlm_storage = (Y, Y_workspace(ℓₘₐₓ, spin, basetype(R), abs(spin))...)
     sYlm_values!(sYlm_storage, R, spin)
 end
 
