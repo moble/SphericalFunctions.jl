@@ -2,16 +2,13 @@ md"""
 # LALSuite (2025)
 
 !!! info "Summary"
-    The LALSuite definitions of the spherical harmonics and Wigner's ``d`` and ``D``
+    The `LALSuite`` definitions of the spherical harmonics and Wigner's ``d`` and ``D``
     functions agree with the definitions used in the `SphericalFunctions` package.
 
-"""
-md"""
-[LALSuite (LSC Algorithm Library Suite)](@cite LALSuite_2018) is a collection of software
+[`LALSuite` (the LSC Algorithm Library Suite)](@cite LALSuite_2018) is a collection of
 routines, comprising the primary official software used by the LIGO-Virgo-KAGRA
 Collaboration to detect and characterize gravitational waves.  As far as I can tell, the
-ultimate source for all spin-weighted spherical harmonic values used in LALSuite is the
-function
+ultimate source for all spin-weighted spherical harmonics used in `LALSuite` is the function
 [`XLALSpinWeightedSphericalHarmonic`](https://git.ligo.org/lscsoft/lalsuite/-/blob/6e653c91b6e8a6728c4475729c4f967c9e09f020/lal/lib/utilities/SphericalHarmonics.c),
 which cites the NINJA paper [AjithEtAl_2011](@cite) as its source.  Unfortunately, it cites
 version *1*, which contained a serious error, using ``\tfrac{\cos\iota}{2}`` instead of
@@ -27,14 +24,20 @@ consistent with the definitions in the NINJA paper, which are consistent with th
 definitions in the `SphericalFunctions` package.
 
 
-## Implementing formulas
+## Implementing code
 
 We will call the python module `lal` directly, but there are some minor inconveniences to
-deal with first.  We have to install the `lalsuite` package, but we don't want all its
-dependencies, so we run `python -m pip install --no-deps lalsuite`.  Then, we have to
-translate to native Julia types, so we'll just write three quick and easy wrappers.  We
-encapsulate the formulas in a module so that we can test them against the
-`SphericalFunctions` package.
+deal with first.  We have to install the `lalsuite` python package, but we don't want all
+its dependencies; only `numpy` is required for what we want to do, so we run
+```bash
+python -m pip install -q numpy
+python -m pip install -q --no-deps lalsuite
+```
+The details are messy, so we hide them in a separate file, and just include it here.
+
+Then, we have to translate to native Julia types, so we'll just write three quick and easy
+wrappers for the three functions we will actually test.  We encapsulate the formulas in a
+module so that we can test them against the `SphericalFunctions` package.
 
 """
 using TestItems: @testitem  #hide
@@ -43,28 +46,27 @@ using TestItems: @testitem  #hide
 module LALSuite
 
 include("conventions_install_lalsuite.jl")
-import PythonCall
 
+import PythonCall
 const lal = PythonCall.pyimport("lal")
 
-function SpinWeightedSphericalHarmonic(θ, ϕ, s, ℓ, m)
-    PythonCall.pyconvert(
-        ComplexF64,
-        lal.SpinWeightedSphericalHarmonic(θ, ϕ, s, ℓ, m),
-    )
-end
-function WignerdMatrix(ℓ, m′, m, β)
-    PythonCall.pyconvert(
-        Float64,
-        lal.WignerdMatrix(ℓ, m′, m, β),
-    )
-end
-function WignerDMatrix(ℓ, m′, m, α, β, γ)
-    PythonCall.pyconvert(
-        ComplexF64,
-        lal.WignerDMatrix(ℓ, m′, m, α, β, γ),
-    )
-end
+## COMPLEX16 XLALSpinWeightedSphericalHarmonic( REAL8 theta, REAL8 phi, int s, int l, int m )
+SpinWeightedSphericalHarmonic(theta, phi, s, l, m) = copy(PythonCall.pyconvert(
+    ComplexF64,
+    lal.SpinWeightedSphericalHarmonic(theta, phi, s, l, m)
+))
+
+## double XLALWignerdMatrix( int l, int mp, int m, double beta )
+WignerdMatrix(l, mp, m, beta) = PythonCall.pyconvert(
+    Float64,
+    lal.WignerdMatrix(l, mp, m, beta)
+)
+
+## COMPLEX16 XLALWignerDMatrix( int l, int mp, int m, double alpha, double beta, double gam )
+WignerDMatrix(l, mp, m, alpha, beta, gam) = copy(PythonCall.pyconvert(
+    ComplexF64,
+    lal.WignerDMatrix(l, mp, m, alpha, beta, gam)
+))
 
 end  # module LALSuite
 #+
@@ -72,7 +74,7 @@ end  # module LALSuite
 
 # ## Tests
 #
-# We can now test the functions against the equivalent functions from the
+# We can now test the `LALSuite` functions against the equivalent functions from the
 # `SphericalFunctions` package.  We will need to test approximate floating-point equality,
 # so we set absolute and relative tolerances (respectively) in terms of the machine epsilon:
 ϵₐ = 100eps()
@@ -117,6 +119,7 @@ end
 # restrict the range of the tests to avoid excessive computation.  We will test up to
 ℓₘₐₓ = 2
 #+
+
 # because the space of options for disagreement is smaller.
 for (α,β,γ) ∈ αβγrange()
     for (ℓ, m′, m) ∈ ℓm′mrange(ℓₘₐₓ)
@@ -125,11 +128,10 @@ for (α,β,γ) ∈ αβγrange()
     end
 end
 @test_broken false  # We haven't flipped the conjugation of D yet
-
 #+
 
 # These successful tests show that the spin-weighted spherical harmonics and the Wigner
-# ``d`` and ``D`` matrices defined in LALSuite agree with the corresponding functions
+# ``d`` and ``D`` matrices defined in `LALSuite` agree with the corresponding functions
 # defined by the `SphericalFunctions` package.
 
 end  #hide
