@@ -26,8 +26,10 @@ definitions in the `SphericalFunctions` package.
 
 ## Implementing formulas
 
-We begin by directly translating the C code of LALSuite over to Julia code.  There are three
-functions that we will want to compare with the definitions in this package:
+Unfortunately, the `lalsuite` python package cannot be reliably tested on multiple
+platforms, so we will take a much hackier, but ultimately more robust, approach.  We will
+simply read the C source code, and convert it to Julia code.  There are three functions that
+we will want to compare with the definitions in this package:
 ```c
 COMPLEX16 XLALSpinWeightedSphericalHarmonic( REAL8 theta, REAL8 phi, int s, int l, int m );
 double XLALWignerdMatrix( int l, int mp, int m, double beta );
