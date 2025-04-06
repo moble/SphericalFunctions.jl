@@ -1,3 +1,7 @@
+# First, we set this, in hopes of avoiding "benign" segfaults associated with garbage
+# collection.
+ENV["PYTHON_JULIACALL_HANDLE_SIGNALS"] = "yes"
+
 # Construct the CondaPkg.toml file to use to make sure we get the right Python version and
 # we get pip installed.
 conda_pkg_toml = """
