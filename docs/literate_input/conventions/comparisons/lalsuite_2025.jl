@@ -73,7 +73,7 @@ lalsource = read(joinpath(@__DIR__, "lalsuite_SphericalHarmonics.c"), String)
 # Note that some of these will be quite specific to this particular file, and may not be
 # generally applicable.
 replacements = (
-    # Deal with annoying Windows line endings
+    ## Deal with annoying Windows line endings
     "\r\n" => "\n",
 
     ## Deal with newlines in the middle of an assignment
