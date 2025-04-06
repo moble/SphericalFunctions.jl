@@ -1,34 +1,14 @@
-### Currently, all the generated output goes into the `docs/src/literate_output` directory.
-### This is nice just because it lets me add just that directory to the `.gitignore` file;
-### I can't add `docs/src` to the `.gitignore` file because it would ignore all the
-### non-generated files in that directory.  However, it would be nice to have the generated
-### files in directories that are more consistent with the documentation structure.  For
-### example, the `docs/src/literate_output/conventions/comparisons` directory contains files
-### that really should be in the `docs/src/conventions/comparisons` directory.  I intend to
-### reorganize the functionality in this file so that the outputs are in directories that
-### are more consistent with the documentation structure.
-###
-### Instead of just plain for loops doing all the work, I will create functions that
-### encapsulate things, and then call those functions in the for loops.  This will make it
-### easier to add new functionality in the future, and make it easier to read the code.
-###
-### To deal with the gitignore issue, I will add a step that ensures the output file is
-### listed in the `.gitignore` file.
-###
-### The files in the `docs/src/literate_input` directory will be rearranged so that they
-### are in directories that are more consistent with the documentation structure.  For
-### example, the `docs/literate_input/conventions/comparisons` directory will be
-### moved to `docs/literate_input/conventions/comparisons`, and the output for every file in
-### that directory will be sent to `docs/src/conventions/comparisons`.  There will no longer
-### be a `docs/src/literate_output` directory; all the output will be in the same
-### directory as the non-generated files.
+# This file is intended to be included in the `docs/make.jl` file, and is responsible for
+# converting the Literate-formatted scripts in `docs/literate_input` into
+# Documenter-friendly markdown files in `docs/src`.
 
-literate_input = joinpath(@__DIR__, "literate_input")
+# Set up which files will be converted, and which will be skipped
 skip_input_files = (  # Non-.jl files will be skipped anyway
     "ConventionsUtilities.jl",  # Used for TestItemRunners.jl
     "ConventionsSetup.jl",  # Used for TestItemRunners.jl
     "conventions_install_lalsuite.jl",  # lalsuite_2025.jl
 )
+literate_input = joinpath(@__DIR__, "literate_input")
 
 # Ensure a file is listed in the .gitignore file
 function ensure_in_gitignore(file_path)
@@ -63,12 +43,15 @@ function generate_markdown(inputfile)
     Literate.markdown(inputfile, outputdir; documenter, mdstrings, execute)
 end
 
+# Now, just walk through the literate_input directory and generate the markdown files for
+# each literate script.
 for (root, _, files) ∈ walkdir(literate_input), file ∈ files
     # Skip some files
     if splitext(file)[2] != ".jl" || file ∈ skip_input_files
         continue
     end
-    # full path to a literate script
+    # Full path to the literate script
     inputfile = joinpath(root, file)
+    # Run the conversion
     generate_markdown(inputfile)
 end
