@@ -989,15 +989,39 @@ first and last Euler angles (Eq. 3.5.50):
 \langle \ell, m' | \exp[-iL_y \beta] | \ell, m \rangle.
 \end{aligned}
 ```
+To belabor this point, recall that in general
+```math
+\left(\left\langle \psi | A\, B\, C | \chi \right\rangle\right)^\ast
+=
+\left\langle \chi | C^\dag\, B^\dag\, A^\dag | \psi \right\rangle,
+```
+and
+```math
+\left( e^{-i \epsilon L_u} \right)^\dag
+=
+e^{i \epsilon L_u^\dag}
+=
+e^{i \epsilon L_u}.
+```
+Together with the eigenvalue property for the ``L_z`` operator acting
+on a ket, this allows us to derive the above result by factoring out
+the first and last operators.
 
-
+Now we are left with the middle operator, which we use to define
+```math
+\begin{aligned}
+d^{(\ell)}_{m',m}(\beta)
+&=
+\langle \ell, m' | \exp[-iL_y \beta] | \ell, m \rangle.
+\end{aligned}
+```
 Using
 ```math
 L_y = (L₊ − L₋) / (2i)
 ```
 we can expand
 ```math
-exp[-iL_y β]
+\exp[-iL_y β]
 =
 Σ_k (-iL_y β)^k / k!
 =
@@ -1006,11 +1030,11 @@ exp[-iL_y β]
 
 Now, writing ``d_+(X) = [L_+, X]``, Eq. (9) of https://arxiv.org/pdf/1707.03861 says
 ```math
-(L₋ - L₊)^k = \sum_{j=0}^k \binom{k, j} ((L₋ - d_+)^j 1) (-L₊)^{k-j}
+(L₋ - L₊)^k = \sum_{j=0}^k \binom{k}{j} \left((L₋ - d_+)^j 1\right) (-L₊)^{k-j}
 ```
 The sum will automatically be zero unless ``m+k-j ≤ ℓ`` — which means ``j ≥ m+k-ℓ``
 ```math
-(-L₊)^{k-j}|ℓ,m\rangle = (-1)^{k-j} \sqrt{\frac{(\ell+m+k-j)!}{(\ell+m)!},\frac{(\ell-m)!}{(\ell-m-k+j)!}} |ℓ,m+k-j\rangle
+(-L₊)^{k-j}|ℓ,m\rangle = (-1)^{k-j} \sqrt{\frac{(\ell+m+k-j)!}{(\ell+m)!}\,\frac{(\ell-m)!}{(\ell-m-k+j)!}} |ℓ,m+k-j\rangle
 ```
 
 ``[L₊, L₋] = 2 L_z``
