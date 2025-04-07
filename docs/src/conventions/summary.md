@@ -20,7 +20,7 @@ unit basis vectors ``(𝐱, 𝐲, 𝐳)``.
 
 ## Spherical coordinates
 We define spherical coordinates ``(r, \theta, \phi)`` and unit basis
-vectors ``(𝐫, \boldsymbol{\theta}, \boldsymbol{\phi})``.  The "polar
+vectors ``(𝐧, \boldsymbol{\theta}, \boldsymbol{\phi})``.  The "polar
 angle" ``\theta \in [0, \pi]`` measures the angle between the
 specified direction and the positive ``𝐳`` axis.  The "azimuthal
 angle" ``\phi \in [0, 2\pi)`` measures the angle between the
@@ -29,11 +29,17 @@ the positive ``𝐱`` axis, with the positive ``𝐲`` axis corresponding
 to the positive angle ``\phi = \pi/2``.
 
 ## Quaternions
-A quaternion is written ``𝐐 = W + X𝐢 + Y𝐣 + Z𝐤``, where ``𝐢𝐣𝐤 =
--1``.  In software, this quaternion is represented by ``(W, X, Y,
-Z)``.  We will depict a three-dimensional vector ``𝐯 = v_x 𝐱 + v_y
-𝐲 + v_z 𝐳`` interchangeably as a quaternion ``v_x 𝐢 + v_y 𝐣 + v_z
-𝐤``.
+A quaternion is written ``𝐐 = W + X𝐢 + Y𝐣 + Z𝐤``, where ``𝐢^2 =
+𝐣^2 = 𝐤^2 = 𝐢𝐣𝐤 = -1``.  In the code, this quaternion is
+represented by ``(W, X, Y, Z)``.
+
+We will frequently depict a three-dimensional vector ``𝐯 = v_x 𝐱 +
+v_y 𝐲 + v_z 𝐳`` interchangeably as a quaternion ``v_x 𝐢 + v_y 𝐣 +
+v_z 𝐤``.  Even though they really belong to different spaces, there
+is a (vector-space) isomorphism between them, and the subspaces are
+even isomorphic under the *algebra* isomorphism given by duality in
+the geometric algebra.  This translation allows us to operate on
+vectors as if they were quaternions, and vice versa.
 
 ## Quaternion rotations
 A rotation represented by the unit quaternion ``𝐑`` acts on a vector
@@ -41,26 +47,70 @@ A rotation represented by the unit quaternion ``𝐑`` acts on a vector
 assumed to be right-handed, so that a quaternion characterizing the
 rotation through an angle ``\vartheta`` about a unit vector ``𝐮`` can
 be expressed as ``𝐑 = \exp(\vartheta 𝐮/2)``.  Note that ``-𝐑``
-would deliver the same *rotation*, which makes the group of unit
+would deliver the same *rotation*, which means that the group of unit
 quaternions ``\mathrm{Spin}(3) = \mathrm{SU}(2)`` is a *double cover*
 of the group of rotations ``\mathrm{SO}(3)``.  Nonetheless, ``𝐑`` and
 ``-𝐑`` are distinct quaternions, and represent distinct "spinors".
 
-## Euler angles
-Euler angles parametrize a unit quaternion as ``𝐑 = \exp(\alpha
-𝐤/2)\, \exp(\beta 𝐣/2)\, \exp(\gamma 𝐤/2)``.  The angles ``\alpha``
-and ``\gamma`` take values in ``[0, 2\pi)``.  The angle ``\beta``
-takes values in ``[0, 2\pi]`` to parametrize the group of unit
-quaternions ``\mathrm{Spin}(3) = \mathrm{SU}(2)``, or in ``[0, \pi]``
-to parametrize the group of rotations ``\mathrm{SO}(3)``.
-
-## Spherical coordinates as Euler angles
+## Spherical coordinates as quaternions
 A point on the unit sphere with spherical coordinates ``(\theta,
-\phi)`` can be represented by Euler angles ``(\alpha, \beta, \gamma) =
-(\phi, \theta, 0)``.  The rotation with these Euler angles takes the
-positive ``𝐳`` axis to the specified direction.  In particular, any
-function of spherical coordinates can be promoted to a function on
-Euler angles using this identification.
+\phi)`` can be represented by the unit quaternion
+```math
+𝐑_{\theta, \phi}
+=
+\exp(\phi 𝐤/2)\, \exp(\theta 𝐣/2).
+```
+This not only takes the positive ``𝐳`` axis to the specified
+direction, but also takes the ``𝐱`` and ``𝐲`` axes onto the unit
+basis vectors of the spherical coordinate system:
+```math
+\begin{aligned}
+𝐧 &= 𝐑_{\theta, \phi}\, 𝐳\, 𝐑_{\theta, \phi}^{-1}, \\
+\boldsymbol{\theta} &= 𝐑_{\theta, \phi}\, 𝐱\, 𝐑_{\theta, \phi}^{-1}, \\
+\boldsymbol{\phi} &= 𝐑_{\theta, \phi}\, 𝐲\, 𝐑_{\theta, \phi}^{-1}.
+\end{aligned}
+```
+
+## Euler angles (and spherical coordinates)
+Euler angles parametrize a unit quaternion as
+```math
+𝐑_{\alpha, \beta, \gamma}
+=
+\exp(\alpha 𝐤/2)\, \exp(\beta 𝐣/2)\, \exp(\gamma 𝐤/2).
+```
+The angles ``\alpha`` and ``\gamma`` take values in ``[0, 2\pi)``.
+The angle ``\beta`` takes values in ``[0, 2\pi]`` to parametrize the
+group of unit quaternions ``\mathrm{Spin}(3) = \mathrm{SU}(2)``, or in
+``[0, \pi]`` to parametrize the group of rotations ``\mathrm{SO}(3)``.
+
+By comparison, we can immediately see that spherical coordinates
+``(\theta, \phi)`` can be represented as Euler angles with the
+equivalence ``(\alpha, \beta, \gamma) = (\phi, \theta, 0)``.  In
+particular, any function of spherical coordinates can be promoted to a
+function on Euler angles using this identification.
+
+It's worth noting that the action of Euler angles on the Cartesian
+basis is similar to the action of the spherical-coordinate quaternion,
+but rotates the tangent basis ($\boldsymbol{\theta},
+\boldsymbol{\phi}$).  That is, we still have
+```math
+𝐧 = 𝐑_{\phi, \theta, \gamma}\, 𝐳\, 𝐑_{\phi, \theta, \gamma}^{-1},
+```
+but the action on the ``𝐱`` and ``𝐲`` axes is a little more
+complicated due to the initial rotation by ``\exp(\gamma 𝐤/2)``,
+which is equivalent to a *final* rotation through ``\gamma`` about
+``𝐧``.  It's easier to write this down if we form the combination
+```math
+𝐦 = \frac{1}{\sqrt{2}} \left(
+    \boldsymbol{\theta} + i \boldsymbol{\phi}
+\right),
+```
+and find that
+```math
+𝐦 = e^{-i\gamma} 𝐑_{\phi, \theta, \gamma}\, \frac{1}{\sqrt{2}} \left(
+    𝐱 + i 𝐲
+\right)\, 𝐑_{\phi, \theta, \gamma}^{-1}.
+```
 
 ## Left and right angular-momentum operators
 For a complex-valued function ``f(𝐑)``, we define two operators, the
@@ -153,7 +203,12 @@ definitions of the spherical harmonics, so we adopt a function that is
 consistent with the standard expressions.  More specifically, this
 package defines the spherical harmonics in terms of Wigner's 𝔇
 matrices, by way of the spin-weighted spherical harmonics, as a
-function of a quaternion.
+function of a quaternion:
+```math
+Y_{l,m}(\mathbf{Q}) = \sqrt{\frac{2\ell+1}{4\pi}} e^{im\phi}
+    D^{(l)}_{m,0}(\mathbf{Q}),
+```
+where ``D^{(l)}_{m,0}`` is the Wigner 𝔇 matrix.  This is a
 
 For concreteness, however, we can write the standard expression in
 terms of spherical coordinates.  This is what our definition will
@@ -169,8 +224,8 @@ terms of spherical coordinates, that expression is
   \frac{(-1)^k \ell! [(\ell+m)!(\ell-m)!]^{1/2}}
   {(\ell+m-k)!(\ell-k)!k!(k-m)!}
   \\ &\qquad \times
-  \left(\cos\left(\frac{\iota}{2}\right)\right)^{2\ell+m-2k}
-  \left(\sin\left(\frac{\iota}{2}\right)\right)^{2k-m}
+  \left(\cos\left(\frac{\theta}{2}\right)\right)^{2\ell+m-2k}
+  \left(\sin\left(\frac{\theta}{2}\right)\right)^{2k-m}
 \end{align}
 ```
 where ``k_1 = \textrm{max}(0, m)`` and ``k_2=\textrm{min}(\ell+m,
@@ -184,24 +239,39 @@ as
 ```math
 m^\mu = \frac{1}{\sqrt{2}} \left(
     \boldsymbol{\theta} + i \boldsymbol{\phi}
-\right)
+\right)^\mu
 ```
 and discuss spin weight in terms of the rotation
 ```math
 (m^\mu)' = e^{i\psi} m^\mu,
 ```
 where the tangent basis rotates but we are "keeping the
-coordinates fixed".   We find that we can emulate this using Euler
-angles ``(\phi, \theta, -\psi)``.  Note the negative sign in the
-last angle.  As usual, this rotates the positive ``𝐳`` axis to
-the point ``(\theta, \phi)``, and rotates ``(𝐱 + i 𝐲) /
-\sqrt{2}`` onto ``(m^\mu)'``.  They then define a function to have
+coordinates fixed".  They then define a function to have
 spin weight ``s`` if it transforms as
 ```math
 \eta' = e^{is\psi} \eta.
 ```
-In our notation, we can realize this function as a function of
-Euler angles, and that equation becomes
+Such functions are generally the result of contracting a tensor field
+with some number of ``m^\mu`` and some number of ``\bar{m}^\mu``
+vectors (though spinor extensions resulting in half-integer spin
+weights are also possible).
+
+Note that this definition shows that it is clearly *impossible* to
+define spin-weighted functions on the 2-sphere; the 2-sphere alone
+includes no information about the directions of basis vectors in its
+tangent space.  Instead, we *must* think of spin-weighted functions as
+defined on the "unit tangent bundle over the 2-sphere" so that this
+behavior with respect to rotation of tangent basis can possibly have
+any effect.  This unit tangent bundle happens to be homeomorphic to
+the 3-sphere, which is also the space of unit quaternions.  Thus, we
+think of spin-weighted functions as defined on the group of unit
+quaternions ``\mathrm{Spin}(3)=\mathrm{SU}(2)``, and frequently
+discuss them in terms of Euler angles.
+
+As we saw [above](@ref "Euler angles (and spherical coordinates)"),
+``m^\mu`` corresponds to the Euler angles ``(\phi, \theta, 0)``, while
+``(m^\mu)'`` corresponds to the Euler angles ``(\phi, \theta,
+-\psi)``.  The function, written in terms of Euler angles, becomes
 ```math
 \eta(\phi, \theta, -\psi) = e^{is\psi} \eta(\phi, \theta, 0),
 ```
