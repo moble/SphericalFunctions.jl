@@ -1043,7 +1043,7 @@ The sum will automatically be zero unless ``m+k-j ≤ ℓ`` — which means ``j 
 
 I wonder if there's a nicer approach using the symmetry transformation
 Edmonds notes in Sec. 4.5 (and credits to Wigner) — or the presumably
-equivalent one McEwan and Wieux use (and credit Risbo):
+equivalent one McEwen and Wiaux use (and credit to Risbo):
 ```math
 \exp\left[ \beta 𝐣 / 2 \right]
 =
