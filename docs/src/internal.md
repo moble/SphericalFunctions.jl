@@ -32,7 +32,7 @@ SphericalFunctions.AlternatingCountdown
 
 
 
-## ₛ𝐘
+## ``Y``, ``d``, and ``D``
 
 Various `d`, `D`, and `sYlm` functions are important in the main API.  Their
 names and signatures have been tweaked from older versions of this package.  The
@@ -43,6 +43,9 @@ interacting with [`SSHT`](@ref).
 
 ```@docs
 ₛ𝐘
+SphericalFunctions.Y
+SphericalFunctions.d
+SphericalFunctions.D
 ```
 
 

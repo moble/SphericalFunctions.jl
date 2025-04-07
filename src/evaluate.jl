@@ -29,7 +29,6 @@ with the result instead.
 """
 d_matrices(β::Real, ℓₘₐₓ) = d_matrices(cis(β), ℓₘₐₓ)
 
-
 @doc raw"""
     d_matrices!(d_storage, β)
     d_matrices!(d_storage, expiβ)
@@ -180,6 +179,22 @@ function dprep(ℓₘₐₓ, ::Type{T}) where {T<:Real}
     d, H_rec_coeffs
 end
 
+@doc raw"""
+    d(ℓ, m′, m, β)
+    d(ℓ, m′, m, expiβ)
+
+NOTE: This function is primarily a test function just to make comparisons between this
+package's Wigner ``d`` function and other references' more clear.  It is inefficient, both
+in terms of memory and computation time, and should generally not be used in production
+code.
+
+Computes a single (complex) value of the ``d`` matrix ``(\ell, m', m)`` at the given
+angle ``(\iota)``.
+"""
+function d(ℓ, m′, m, β)
+    d(β, ℓ)[WignerDindex(ℓ, m′, m)]
+end
+
 
 @doc raw"""
     D_matrices(R, ℓₘₐₓ)
@@ -198,13 +213,13 @@ with the result instead.
 
 """
 function D_matrices(R, ℓₘₐₓ)
-    D_storage = D_prep(ℓₘₐₓ, eltype(R))
+    D_storage = D_prep(ℓₘₐₓ, basetype(R))
     D_matrices!(D_storage, R)
 end
 
 function D_matrices(α, β, γ, ℓₘₐₓ)
     R = Quaternionic.from_euler_angles(α, β, γ)
-    T = eltype(R)
+    T = basetype(R)
     D_storage = D_prep(ℓₘₐₓ, T)
     D_matrices!(D_storage, R)
 end
@@ -259,7 +274,7 @@ D = D_matrices!(D_storage, R)
 
 """
 function D_matrices!(D, R, ℓₘₐₓ)
-    D_storage = (D, Dworkspace(ℓₘₐₓ, eltype(R))...)
+    D_storage = (D, Dworkspace(ℓₘₐₓ, basetype(R))...)
     D_matrices!(D_storage, R)
 end
 
@@ -371,6 +386,28 @@ function Dworkspace(ℓₘₐₓ, ::Type{T}) where {T<:Real}
     eⁱᵐᵞ = Vector{Complex{T}}(undef, ℓₘₐₓ+1)
     H_rec_coeffs, eⁱᵐᵅ, eⁱᵐᵞ
 end
+@doc raw"""
+    D(ℓ, m′, m, β)
+    D(ℓ, m′, m, expiβ)
+
+NOTE: This function is primarily a test function just to make comparisons between this
+package's Wigner ``D`` function and other references' more clear.  It is inefficient, both
+in terms of memory and computation time, and should generally not be used in production
+code.
+
+Computes a single (complex) value of the ``D`` matrix ``(\ell, m', m)`` at the given
+angle ``(\iota)``.
+"""
+function D(ℓ, m′, m, α, β, γ)
+    D(α, β, γ, ℓ)[WignerDindex(ℓ, m′, m)]
+end
+function D(α, β, γ, ℓₘₐₓ)
+    α, β, γ = promote(α, β, γ)
+    D_storage = D_prep(ℓₘₐₓ, typeof(β))
+    D_matrices!(D_storage, α, β, γ)
+    D_storage[1]
+end
+
 
 
 @doc raw"""
@@ -390,7 +427,7 @@ calculations that could be reused.  If you need to evaluate the matrices for man
 
 """
 function sYlm_values(R::AbstractQuaternion, ℓₘₐₓ, spin)
-    sYlm_storage = sYlm_prep(ℓₘₐₓ, spin, eltype(R), abs(spin))
+    sYlm_storage = sYlm_prep(ℓₘₐₓ, spin, basetype(R), abs(spin))
     sYlm_values!(sYlm_storage, R, spin)
 end
 
@@ -459,7 +496,7 @@ sYlm = sYlm_values!(sYlm_storage, R, spin)
 
 """
 function sYlm_values!(Y, R::AbstractQuaternion, ℓₘₐₓ, spin)
-    sYlm_storage = (Y, Y_workspace(ℓₘₐₓ, spin, eltype(R), abs(spin))...)
+    sYlm_storage = (Y, Y_workspace(ℓₘₐₓ, spin, basetype(R), abs(spin))...)
     sYlm_values!(sYlm_storage, R, spin)
 end
 
@@ -608,3 +645,24 @@ function ₛ𝐘(s, ℓₘₐₓ, ::Type{T}=Float64, Rθϕ=golden_ratio_spiral_r
     end
     ₛ𝐘
 end
+
+
+@doc raw"""
+    Y(ℓ, m, θ, ϕ)
+    Y(s, ℓ, m, θ, ϕ)
+
+NOTE: This function is primarily a test function just to make comparisons between this
+package's spherical harmonics and other references' more clear.  It is inefficient, both in
+terms of memory and computation time, and should generally not be used in production code.
+
+Computes a single (complex) value of the spherical harmonic ``(\ell, m)`` at the given
+spherical coordinate ``(\theta, \phi)``.
+"""
+function Y(s::Int, ℓ::Int, m::Int, θ, ϕ)
+    θ, ϕ = promote(θ, ϕ)
+    Rθϕ = Quaternionic.from_spherical_coordinates(θ, ϕ)
+    ₛ𝐘(s, ℓ, typeof(θ), [Rθϕ])[1, Yindex(ℓ, m, abs(s))]
+end
+Y(ℓ::Int, m::Int, θ, ϕ) = Y(0, ℓ, m, θ, ϕ)
+Y(s::Int, ℓ::Int, m::Int, θϕ) = Y(s, ℓ, m, θϕ[1], θϕ[2])
+Y(ℓ::Int, m::Int, θϕ) = Y(0, ℓ, m, θϕ[1], θϕ[2])

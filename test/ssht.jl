@@ -77,14 +77,13 @@ end
 
 
 # These test the ability of ssht to precisely reconstruct a pure `sYlm`.
-@testitem "Synthesis" setup=[NINJA,SSHT] begin
+@testitem "Synthesis" setup=[SSHT] begin
     for (method, T) in cases
 
-        # We can't go to very high ℓ, because NINJA.sYlm fails for low-precision numbers
         for ℓmax ∈ 3:7
 
-            # We need ϵ to be huge, seemingly mostly due to the low-precision method
-            # used for NINJA.sYlm; it is used because it is a simple reference method.
+            # This was huge because we used to use NINJA expressions, which were
+            # low-accuracy; we can probably reduce this now.
             ϵ = 500ℓmax^3 * eps(T)
 
             for s in -2:2
@@ -97,7 +96,7 @@ end
                             f = zeros(Complex{T}, SphericalFunctions.Ysize(ℓmin, ℓmax))
                             f[SphericalFunctions.Yindex(ℓ, m, ℓmin)] = one(T)
                             computed = 𝒯 * f
-                            expected = NINJA.sYlm.(s, ℓ, m, pixels(𝒯))
+                            expected = SphericalFunctions.Y.(s, ℓ, m, pixels(𝒯))
                             explain(computed, expected, method, T, ℓmax, s, ℓ, m, ϵ)
                             @test computed ≈ expected atol=ϵ rtol=ϵ
                         end
@@ -110,14 +109,13 @@ end
 
 
 # These test the ability of ssht to precisely decompose the results of `sYlm`.
-@testitem "Analysis" setup=[NINJA,SSHT] begin
+@testitem "Analysis" setup=[SSHT] begin
     for (method, T) in cases
 
-        # We can't go to very high ℓ, because NINJA.sYlm fails for low-precision numbers
         for ℓmax ∈ 3:7
 
-            # We need ϵ to be huge, seemingly mostly due to the low-precision method
-            # used for NINJA.sYlm; it is used because it is a simple reference method.
+            # This was huge because we used to use NINJA expressions, which were
+            # low-accuracy; we can probably reduce this now.
             ϵ = 500ℓmax^3 * eps(T)
             if method == "Minimal"
                 ϵ *= 50
@@ -128,7 +126,7 @@ end
                 let ℓmin = abs(s)
                     for ℓ in abs(s):ℓmax
                         for m in -ℓ:ℓ
-                            f = NINJA.sYlm.(s, ℓ, m, pixels(𝒯))
+                            f = SphericalFunctions.Y.(s, ℓ, m, pixels(𝒯))
                             computed = 𝒯 \ f
                             expected = zeros(Complex{T}, size(computed))
                             expected[SphericalFunctions.Yindex(ℓ, m, ℓmin)] = one(T)
