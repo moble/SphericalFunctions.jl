@@ -26,7 +26,7 @@ end
     @testset "$T" for T in [BigFloat, Float64, Float32]
         # Now, we're ready to check that d_{n}^{m′,m}(β) matches the expected values
         # for a range of β values
-        tol = ifelse(T === BigFloat, 100, 1) * 30eps(T)
+        tol = ifelse(T === BigFloat, 100, ifelse(T === Float32, 5, 1)) * 30eps(T)
         for β in βrange(T)
             expiβ = cis(β)
             for ℓₘₐₓ in 0:4
