@@ -1,5 +1,6 @@
 module SphericalFunctions
 
+using TestItems: @testitem
 using FastTransforms: FFTW, fft, fftshift!, ifft, ifftshift!, irfft,
                       plan_bfft!, plan_fft, plan_fft!
 using LinearAlgebra: LinearAlgebra, Bidiagonal, Diagonal, convert, ldiv!, mul!
@@ -64,5 +65,6 @@ export L², Lz, L₊, L₋, R², Rz, R₊, R₋, ð, ð̄
 #export rotate!
 
 
+include("redesign/SphericalFunctions.jl")
 
 end # module
