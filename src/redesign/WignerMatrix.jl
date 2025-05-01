@@ -42,7 +42,12 @@ struct WignerDMatrix{NT, IT} <: WignerMatrix{NT, IT}
     ℓ::IT
     m′ₘₐₓ::IT
     mₘₐₓ::IT
-    function WignerDMatrix{NT, IT}(data::Matrix{NT}, ℓ::IT, m′ₘₐₓ::IT=ℓ, mₘₐₓ::IT=ℓ) where {NT, IT}
+    function WignerDMatrix{NT, IT}(data::Matrix{NT}, ℓ::IT) where {NT, IT}
+        m′ₘₐₓ = IT((size(data, 1) - 1) // 2)
+        mₘₐₓ = IT((size(data, 2) - 1) // 2)
+        if ℓ < 0
+            throw(ErrorException("ℓ=$ℓ should be non-negative."))
+        end
         if !(NT <: NTuple{3, IT}) && complex(NT) ≢ NT
             throw(ErrorException(
                 "WignerDMatrix only supports complex types; the input type is $NT.\n"
@@ -53,19 +58,15 @@ struct WignerDMatrix{NT, IT} <: WignerMatrix{NT, IT}
             if denominator(ℓ) ≠ 2 || denominator(m′ₘₐₓ) ≠ 2 || denominator(mₘₐₓ) ≠ 2
                 throw(ErrorException(
                     "Index limits must be either integers or half-integer Rationals; "
-                    * "the inputs are Rationals $ℓ, $m′ₘₐₓ, $mₘₐₓ."
+                    * "the inputs are Rationals: $ℓ, $m′ₘₐₓ, $mₘₐₓ."
                 ))
             end
         end
         new(data, ℓ, abs(m′ₘₐₓ), abs(mₘₐₓ))
     end
 end
-function WignerDMatrix(
-    data::Matrix{NT}, ℓ::IT;
-    mpmax::IT=ℓ, mmax::IT=ℓ,
-    m′ₘₐₓ::IT=mpmax, mₘₐₓ::IT=mmax
-) where {NT, IT}
-    WignerDMatrix{NT, IT}(data, ℓ, m′ₘₐₓ, mₘₐₓ)
+function WignerDMatrix(data::Matrix{NT}, ℓ::IT) where {NT, IT}
+    WignerDMatrix{NT, IT}(data, ℓ)
 end
 
 
@@ -74,7 +75,12 @@ struct WignerdMatrix{NT, IT} <: WignerMatrix{NT, IT}
     ℓ::IT
     m′ₘₐₓ::IT
     mₘₐₓ::IT
-    function WignerdMatrix{NT, IT}(data::Matrix{NT}, ℓ::IT, m′ₘₐₓ::IT, mₘₐₓ::IT) where {NT, IT}
+    function WignerdMatrix{NT, IT}(data::Matrix{NT}, ℓ::IT) where {NT, IT}
+        m′ₘₐₓ = IT((size(data, 1) - 1) // 2)
+        mₘₐₓ = IT((size(data, 2) - 1) // 2)
+        if ℓ < 0
+            throw(ErrorException("ℓ=$ℓ should be non-negative."))
+        end
         if !(NT <: NTuple{3, IT}) && real(NT) ≢ NT
             throw(ErrorException(
                 "WignerdMatrix only supports real types; the input type is $NT.\n"
@@ -85,19 +91,15 @@ struct WignerdMatrix{NT, IT} <: WignerMatrix{NT, IT}
             if denominator(ℓ) ≠ 2 || denominator(m′ₘₐₓ) ≠ 2 || denominator(mₘₐₓ) ≠ 2
                 throw(ErrorException(
                     "Index limits must be either integers or half-integer Rationals; "
-                    * "the inputs are Rationals $ℓ, $m′ₘₐₓ, $mₘₐₓ."
+                    * "the inputs are Rationals: $ℓ, $m′ₘₐₓ, $mₘₐₓ."
                 ))
             end
         end
-        new(data, ℓ, abs(m′ₘₐₓ), abs(mₘₐₓ))
+        new(data, ℓ, m′ₘₐₓ, mₘₐₓ)
     end
 end
-function WignerdMatrix(
-    data::Matrix{NT}, ℓ::IT;
-    mpmax::IT=ℓ, mmax::IT=ℓ,
-    m′ₘₐₓ::IT=mpmax, mₘₐₓ::IT=mmax
-) where {NT, IT}
-    WignerdMatrix{NT, IT}(data, ℓ, m′ₘₐₓ, mₘₐₓ)
+function WignerdMatrix(data::Matrix{NT}, ℓ::IT) where {NT, IT}
+    WignerdMatrix{NT, IT}(data, ℓ)
 end
 
 
@@ -111,7 +113,7 @@ end
                     (ℓ, m′, m)
                     for m′ ∈ -m′ₘₐₓ:m′ₘₐₓ, m ∈ -mₘₐₓ:mₘₐₓ
                 ]
-                for D ∈ (WignerDMatrix(data, ℓ; m′ₘₐₓ, mₘₐₓ), WignerdMatrix(data, ℓ; m′ₘₐₓ, mₘₐₓ))
+                for D ∈ (WignerDMatrix(data, ℓ), WignerdMatrix(data, ℓ))
                     @test D.data == data
                     @test D.ℓ == ℓ
                     @test D.m′ₘₐₓ == m′ₘₐₓ
