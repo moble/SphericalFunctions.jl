@@ -1,3 +1,5 @@
+import Base: @propagate_inbounds
+
 abstract type WignerMatrix{NT, IT} end
 
 ### General methods for all WignerMatrix types
