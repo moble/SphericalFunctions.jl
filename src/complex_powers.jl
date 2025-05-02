@@ -81,9 +81,6 @@ function complex_powers(z, m::Int)
 end
 
 
-
-
-
 struct ComplexPowers{T}
     z¹::T
     ϕ::Complex{Int}
@@ -176,3 +173,20 @@ Base.eltype(::Type{ComplexPowers{T}}) where {T} = T
 
 Base.isdone(iterator::ComplexPowers{T}) where {T} = false
 Base.isdone(iterator::ComplexPowers{T}, state) where {T} = false
+
+
+@testitem "ComplexPowers" begin
+    mₘₐₓ = 10_000
+    for θ ∈ BigFloat(0):big(1//10):2big(π)
+        z¹ = cis(θ)
+        p = ComplexPowers(ComplexF64(z¹))
+        for (i, zᵐ) in enumerate(p)
+            m = i-1
+            err = Float64(abs(zᵐ - z¹^m))
+            @test err < mₘₐₓ * eps(Float64)
+            if m == mₘₐₓ
+                break
+            end
+        end
+    end
+end
