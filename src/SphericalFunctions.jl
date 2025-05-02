@@ -24,7 +24,7 @@ export sorted_rings, sorted_ring_pixels, sorted_ring_rotors
 export fejer1_rings, fejer2_rings, clenshaw_curtis_rings
 
 include("complex_powers.jl")
-export complex_powers, complex_powers!
+export complex_powers, complex_powers!, ComplexPowers
 
 include("indexing.jl")
 export Ysize, Yrange, Yindex, deduce_limits, theta_phi, phi_theta
