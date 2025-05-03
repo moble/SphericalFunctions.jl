@@ -147,7 +147,7 @@ H^ℓ_{m′, m} &= H^ℓ_{-m′, -m}.
 ```
 
 """
-function impose_symmetries!(Hˡ::WignerMatrix{NT, IT}, cisα::NT, cisβ::NT) where {NT, IT<:Integer}
+function impose_symmetries!(Hˡ::WignerMatrix{NT, IT}) where {NT, IT<:Integer}
     @inbounds let ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
         for m ∈ -ℓ:ℓ
             for m′ ∈ abs(m):m′ₘₐₓ
