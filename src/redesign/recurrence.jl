@@ -183,12 +183,24 @@ Convert the Wigner matrix `Hˡ` to the D matrix `Dˡ`, which just involves multi
 complex phases related to the `m′` and `m` indices.
 
 """
-function convert_H_to_D!(Hˡ::WignerMatrix{NT, IT}) where {NT, IT<:Integer}
-    @inbounds let ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
-        throw(ErrorException("convert_H_to_D! is not yet implemented"))
-        for m ∈ -ℓ:ℓ
-            for m′ ∈ -m′ₘₐₓ:m′ₘₐₓ
-                Hˡ[m′, m] *= ϵ(m′) * ϵ(-m)
+function convert_H_to_D!(Hˡ::WignerMatrix{NT, IT}, eⁱᵅ::NT, eⁱᵞ::NT) where {NT, IT<:Integer}
+    # NOTE: This function will have to be modified to work for Rational indices because the
+    # phases will not be integer powers; we'll have to incorporate √eⁱᵅ and √eⁱᵞ.
+    @inbounds let ℓ=ℓ(Hˡ), ℓₘᵢₙ=ℓₘᵢₙ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
+        ϕᵞ = ComplexPowers(eⁱᵞ)
+        ϕᵅ = ComplexPowers(eⁱᵅ)
+        for (m, eⁱᵐᵞ) ∈ zip(ℓₘᵢₙ:ℓ, ϕᵞ)
+            for (m′, eⁱᵐ′ᵅ) ∈ zip(ℓₘᵢₙ:m′ₘₐₓ, ϕᵅ)
+                Hˡ[m′, m] *= ϵ(m′) * ϵ(-m) * conj(eⁱᵐ′ᵅ) * conj(eⁱᵐᵞ)
+                if m′ ≠ 0
+                    Hˡ[-m′, m] *= ϵ(-m′) * ϵ(-m) * eⁱᵐ′ᵅ * conj(eⁱᵐᵞ)
+                    if m ≠ 0
+                        Hˡ[-m′, -m] *= ϵ(-m′) * ϵ(m) * eⁱᵐ′ᵅ * eⁱᵐᵞ
+                    end
+                end
+                if m ≠ 0
+                    Hˡ[m′, -m] *= ϵ(m′) * ϵ(m) * conj(eⁱᵐ′ᵅ) * eⁱᵐᵞ
+                end
             end
         end
     end
