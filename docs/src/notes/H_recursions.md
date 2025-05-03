@@ -19,7 +19,7 @@ where
 ```
 
 ``H`` has various advantages over ``d``, including the fact that it can be efficiently
-and robustly valculated via recurrence relations, and the following symmetry
+and robustly calculated via recurrence relations, and the following symmetry
 relations:
 
 ```math
