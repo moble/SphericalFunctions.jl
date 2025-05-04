@@ -17,26 +17,57 @@ is_rational(::WignerMatrix{NT, IT}) where {NT, IT<:Rational} = true
 
 Base.eltype(::WignerMatrix{NT, IT}) where {NT, IT} = NT
 Base.size(w::WignerMatrix{NT, IT}) where {NT, IT} = size(data(w))
+Base.length(w::WignerMatrix{NT, IT}) where {NT, IT} = length(data(w))
 
 @propagate_inbounds function Base.getindex(w::WignerMatrix{NT, IT}, i::Int) where {NT, IT}
+    @boundscheck begin
+        if i<1 || i>length(w)
+            throw(BoundsError(
+                "i=$i out of bounds for WignerMatrix with length=$(length(w))."
+            ))
+        end
+    end
     data(w)[i]
 end
 @propagate_inbounds function Base.getindex(w::WignerMatrix{NT, IT}, m′::IT, m::IT) where {NT, IT}
     @boundscheck begin
         if abs(m′) > m′ₘₐₓ(w)
-            throw(BoundsError("m′=$m′ out of bounds for WignerMatrix with m′ₘₐₓ=$(m′ₘₐₓ(w))."))
+            throw(BoundsError(
+                "m′=$m′ out of bounds for WignerMatrix with m′ₘₐₓ=$(m′ₘₐₓ(w))."
+            ))
         end
         if abs(m) > mₘₐₓ(w)
-            throw(BoundsError("m=$m out of bounds for WignerMatrix with mₘₐₓ=$(mₘₐₓ(w))."))
+            throw(BoundsError(
+                "m=$m out of bounds for WignerMatrix with mₘₐₓ=$(mₘₐₓ(w))."
+            ))
         end
     end
     @inbounds data(w)[Int(m′+m′ₘₐₓ(w))+1, Int(m+mₘₐₓ(w))+1]
 end
 
 @propagate_inbounds function Base.setindex!(w::WignerMatrix{NT, IT}, v::NT, i::Int) where {NT, IT}
+    @boundscheck begin
+        if i<1 || i>length(w)
+            throw(BoundsError(
+                "i=$i out of bounds for WignerMatrix with length=$(length(w))."
+            ))
+        end
+    end
     data(w)[i] = v
 end
 @propagate_inbounds function Base.setindex!(w::WignerMatrix{NT, IT}, v::NT, m′::IT, m::IT) where {NT, IT}
+    @boundscheck begin
+        if abs(m′) > m′ₘₐₓ(w)
+            throw(BoundsError(
+                "m′=$m′ out of bounds for WignerMatrix with m′ₘₐₓ=$(m′ₘₐₓ(w))."
+            ))
+        end
+        if abs(m) > mₘₐₓ(w)
+            throw(BoundsError(
+                "m=$m out of bounds for WignerMatrix with mₘₐₓ=$(mₘₐₓ(w))."
+            ))
+        end
+    end
     data(w)[Int(m′+m′ₘₐₓ(w))+1, Int(m+mₘₐₓ(w))+1] = v
 end
 
