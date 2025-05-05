@@ -200,12 +200,12 @@ end
             @test_throws "along first dim" WignerdMatrix(Array{Float64}(undef, 0, Int(2mₘₐₓ)+1), ℓ)
 
             for m′ₘₐₓ ∈ (ℓ isa Rational ? (1//2:ℓ) : (0:ℓ))
-                # Make a big, dumb array full of the explicit indices to check that indexing
-                # works as expected.
+                # Make a big, dumb array full of the explicit indices.
                 data = [
                     (ℓ, m′, m)
                     for m′ ∈ -m′ₘₐₓ:m′ₘₐₓ, m ∈ -mₘₐₓ:mₘₐₓ
                 ]
+                # Check that indexing works as expected.
                 for w ∈ (WignerDMatrix(data, ℓ), WignerdMatrix(data, ℓ))
                     @test w.data == data
                     @test w.ℓ == ℓ
@@ -216,6 +216,30 @@ end
                             @test w[m′, m] == (ℓ, m′, m)
                         end
                     end
+                end
+            end
+
+            for m′ₘₐₓ ∈ (ℓ isa Rational ? (1//2:ℓ) : (0:ℓ))
+                for WignerMatrixType ∈ (WignerDMatrix, WignerdMatrix)
+                    data = rand(
+                        WignerMatrixType<:WignerDMatrix ? ComplexF64 : Float64,
+                        Int(2mₘₐₓ)+1, Int(2m′ₘₐₓ)+1
+                    )
+                    w = WignerMatrixType(data, ℓ)
+
+                    # Check that the data array is stored correctly.
+                    @test w.data == data
+                    @test w.ℓ == ℓ
+                    @test w.m′ₘₐₓ == m′ₘₐₓ
+                    @test w.mₘₐₓ == mₘₐₓ
+
+                    # The Julia docs say that the `axes` function should
+                    # > Return a tuple of `AbstractUnitRange{<:Integer}` of valid indices.
+                    # > The axes should be their own axes, that is `axes.(axes(A),1) ==
+                    # > axes(A)` should be satisfied.
+                    # https://docs.julialang.org/en/v1/manual/interfaces/#man-interface-array
+                    @test typeof(axes(w)) <: AbstractUnitRange{<:Integer}
+                    @test axes.(axes(w),1) == axes(w)
                 end
             end
         end
