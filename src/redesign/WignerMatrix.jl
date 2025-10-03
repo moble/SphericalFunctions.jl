@@ -1,23 +1,99 @@
 import Base: @propagate_inbounds
 
-abstract type WignerMatrix{NT, IT} end
+"""
+    WignerMatrix{NT, IT}
+
+Abstract base type for Wigner rotation‐matrix objects of a specific ``ℓ`` value.
+- `NT` is the number type (e.g., `ComplexF64` for D-matrices or `Float64` for d-matrices).
+- `IT` is the index type (an `Integer` or half‐integer `Rational`), governing the allowed
+  ranges of `m′` and `m`.
+
+The basic concrete subtypes (`WignerDMatrix`, `WignerdMatrix`) store their data in a
+`Matrix{NT}` and implement the usual `size`, `getindex` and `setindex!` so that one can use
+`w[m′,m]`.  Specifically, these indices can be negative or positive, and must obey `abs(m′)
+≤ m′ₘₐₓ` and `abs(m) ≤ ℓ`.
+
+# Methods
+
+Methods defined for `WignerMatrix` objects include:
+- `parent(w)`: the underlying data array.
+- `ℓ(w)` or `ell(w)`: the value of ``ℓ``.
+- `m′ₘₐₓ(w)` or `mpmax(w)`: the maximum value of ``m′``.
+- `mₘₐₓ(w)` or `mmax(w)`: the maximum value of ``m``.
+- `ℓₘᵢₙ(w)` or `ellmin(w)`: the minimum value of ``ℓ``, which is either 0 or 1//2.
+- `isrational(w)`: whether the indices are rational (i.e., half‐integer).
+- `size(w)`: the size of the underlying data array.
+- `length(w)`: the length of the underlying data array.
+- `getindex(w, i)`: get the value at index `i` in the underlying data array.
+- `getindex(w, m′, m)`: get the value at index `(m′, m)`.
+- `setindex!(w, v, i)`: set the value at index `i` in the underlying data array to `v`.
+- `setindex!(w, v, m′, m)`: set the value at index `(m′, m)`.
+- `axes(w)`: the axes of the matrix, which are 2-tuples of ranges for the `m′` and `m`
+  indices.
+
+# Implementation
+
+Any new subtypes of `WignerMatrix` should inherit from this type and re-implement any of the
+methods mentioned above that are not appropriate for the new type.  Specifically, the
+default implementations assume that subtypes store the fields
+- `parent::Matrix{NT}`: the underlying data array.
+- `ℓ::IT`: the value of ``ℓ``.
+- `m′ₘₐₓ::IT`: the maximum value of ``m′``.
+
+For example, if the parent Matrix is not stored as the `parent` field, then the `parent(w)`
+method should be re-implemented to return the correct parent object.  The `getindex` and
+`setindex!`
+"""
+abstract type WignerMatrix{NT, IT} <: AbstractMatrix{NT} end
 
 ### General methods for all WignerMatrix types
 
-data(w::WignerMatrix{NT, IT}) where {NT, IT} = w.data
+Base.parent(w::WignerMatrix{NT, IT}) where {NT, IT} = w.parent
 ℓ(w::WignerMatrix{NT, IT}) where {NT, IT} = w.ℓ
 m′ₘₐₓ(w::WignerMatrix{NT, IT}) where {NT, IT} = w.m′ₘₐₓ
-mₘₐₓ(w::WignerMatrix{NT, IT}) where {NT, IT} = w.mₘₐₓ
+mₘₐₓ(w::WignerMatrix{NT, IT}) where {NT, IT} = ℓ(w)
 
-ℓₘᵢₙ(::WignerMatrix{NT, IT}) where {NT, IT<:Integer} = zero(IT)
-ℓₘᵢₙ(::WignerMatrix{NT, IT}) where {NT, IT<:Rational} = IT(1//2)
+ℓₘᵢₙ(::IT) where {IT} = ℓₘᵢₙ(IT)
+ℓₘᵢₙ(::Type{IT}) where {IT<:Integer} = zero(IT)
+ℓₘᵢₙ(::Type{IT}) where {IT<:Rational} = IT(1//2)
+ℓₘᵢₙ(::WignerMatrix{NT, IT}) where {NT, IT} = ℓₘᵢₙ(IT)
 
-is_rational(::WignerMatrix{NT, IT}) where {NT, IT<:Integer} = false
-is_rational(::WignerMatrix{NT, IT}) where {NT, IT<:Rational} = true
+const ell = ℓ
+const mpmax = m′ₘₐₓ
+const mmax = mₘₐₓ
+const ellmin = ℓₘᵢₙ
+
+isrational(::WignerMatrix{NT, IT}) where {NT, IT<:Integer} = false
+isrational(::WignerMatrix{NT, IT}) where {NT, IT<:Rational} = true
 
 Base.eltype(::WignerMatrix{NT, IT}) where {NT, IT} = NT
-Base.size(w::WignerMatrix{NT, IT}) where {NT, IT} = size(data(w))
-Base.length(w::WignerMatrix{NT, IT}) where {NT, IT} = length(data(w))
+Base.size(w::WignerMatrix{NT, IT}) where {NT, IT} = size(parent(w))
+Base.length(w::WignerMatrix{NT, IT}) where {NT, IT} = length(parent(w))
+
+struct WignerRange{T<:Union{Integer,Rational}} <: AbstractUnitRange{T}
+    start::T
+    stop::T
+
+    WignerRange(r::UnitRange{T}) where {T} = new{T}(r.start, r.stop)
+end
+@inline Base.axes(r::WignerRange) = (axes1(r),)
+@inline axes1(r::WignerRange) = WignerRange(r.start:r.stop)
+if VERSION < v"1.8.2"
+    Base.axes1(r::WignerRange) = axes1(r)
+end
+Base.inds2string(inds::NTuple{2, WignerRange}) =
+    string(inds[1].start, ":", inds[1].stop, "×", inds[2].start, ":", inds[2].stop)
+
+function Base.axes(w::WignerMatrix{NT, IT}) where {NT, IT}
+    (WignerRange(-m′ₘₐₓ(w):m′ₘₐₓ(w)), WignerRange(-mₘₐₓ(w):mₘₐₓ(w)))
+end
+
+# We don't have to override Base.show; most of its machinery works just fine, except that
+# printing the data itself gets screwed up when the indices are Rational.  So we override
+# this core part of the printing machinery to just print the parent matrix as usual.  The
+# only other thing show really does is add a "summary" line, for which the only
+Base.print_array(io::IO, w::WignerMatrix{NT, IT}) where {NT, IT<:Rational} =
+    Base.print_array(io, parent(w))
 
 @propagate_inbounds function Base.getindex(w::WignerMatrix{NT, IT}, i::Int) where {NT, IT}
     @boundscheck begin
@@ -27,7 +103,7 @@ Base.length(w::WignerMatrix{NT, IT}) where {NT, IT} = length(data(w))
             ))
         end
     end
-    data(w)[i]
+    Base.parent(w)[i]
 end
 @propagate_inbounds function Base.getindex(w::WignerMatrix{NT, IT}, m′::IT, m::IT) where {NT, IT}
     @boundscheck begin
@@ -36,13 +112,13 @@ end
                 "m′=$m′ out of bounds for WignerMatrix with m′ₘₐₓ=$(m′ₘₐₓ(w))."
             ))
         end
-        if abs(m) > mₘₐₓ(w)
+        if abs(m) > ℓ(w)
             throw(BoundsError(
-                "m=$m out of bounds for WignerMatrix with mₘₐₓ=$(mₘₐₓ(w))."
+                "m=$m out of bounds for WignerMatrix with ℓ=$(ℓ(w))."
             ))
         end
     end
-    @inbounds data(w)[Int(m′+m′ₘₐₓ(w))+1, Int(m+mₘₐₓ(w))+1]
+    @inbounds Base.parent(w)[Int(m′+m′ₘₐₓ(w))+1, Int(m+mₘₐₓ(w))+1]
 end
 
 @propagate_inbounds function Base.setindex!(w::WignerMatrix{NT, IT}, v::NT, i::Int) where {NT, IT}
@@ -53,7 +129,7 @@ end
             ))
         end
     end
-    data(w)[i] = v
+    Base.parent(w)[i] = v
 end
 @propagate_inbounds function Base.setindex!(w::WignerMatrix{NT, IT}, v::NT, m′::IT, m::IT) where {NT, IT}
     @boundscheck begin
@@ -62,185 +138,276 @@ end
                 "m′=$m′ out of bounds for WignerMatrix with m′ₘₐₓ=$(m′ₘₐₓ(w))."
             ))
         end
-        if abs(m) > mₘₐₓ(w)
+        if abs(m) > ℓ(w)
             throw(BoundsError(
-                "m=$m out of bounds for WignerMatrix with mₘₐₓ=$(mₘₐₓ(w))."
+                "m=$m out of bounds for WignerMatrix with ℓ=$(ℓ(w))."
             ))
         end
     end
-    data(w)[Int(m′+m′ₘₐₓ(w))+1, Int(m+mₘₐₓ(w))+1] = v
-end
-
-function Base.axes(w::WignerMatrix{NT, IT}) where {NT, IT}
-    (-m′ₘₐₓ(w):m′ₘₐₓ(w), -mₘₐₓ(w):mₘₐₓ(w))
+    Base.parent(w)[Int(m′+m′ₘₐₓ(w))+1, Int(m+mₘₐₓ(w))+1] = v
 end
 
 
 ### Specialize to D and d matrices
 
+"""
+    WignerDMatrix{NT, IT}
+
+Specialized subtype of [`WignerMatrix`](@ref) for D-matrices, which are complex matrices.
+"""
 struct WignerDMatrix{NT, IT} <: WignerMatrix{NT, IT}
-    data::Matrix{NT}
+    parent::Matrix{NT}
     ℓ::IT
     m′ₘₐₓ::IT
-    mₘₐₓ::IT
-    function WignerDMatrix{NT, IT}(data::Matrix{NT}, ℓ::IT) where {NT, IT}
-        if ℓ < 0
-            throw(ErrorException("ℓ=$ℓ should be non-negative."))
-        end
-        if size(data, 1) == 0
-            throw(ErrorException("Input data has 0 extent along first dimension."))
-        end
-        if size(data, 2) == 0
-            throw(ErrorException("Input data has 0 extent along second dimension."))
-        end
-        m′ₘₐₓ = IT((size(data, 1) - 1) // 2)
-        mₘₐₓ = IT((size(data, 2) - 1) // 2)
-        if ℓ < max(m′ₘₐₓ, mₘₐₓ)
-            throw(ErrorException(
-                "ℓ=$ℓ should be greater than or equal to both m′ₘₐₓ=$m′ₘₐₓ and mₘₐₓ=$mₘₐₓ."
-            ))
-        end
+    function WignerDMatrix{NT, IT}(parent::Matrix{NT}, ℓ::IT) where {NT, IT<:Union{Integer, Rational}}
+        # We want to secretly allow NTuple{3, IT} for testing purposes, so we can't just use
+        # a restriction on NT in the type declaration.
         if !(NT <: NTuple{3, IT}) && complex(NT) ≢ NT
             throw(ErrorException(
                 "WignerDMatrix only supports complex types; the input type is $NT.\n"
                 * "Perhaps you meant to use WignerdMatrix?"
             ))
         end
+        if ℓ < 0 || (IT <: Rational && denominator(ℓ) ≠ 2)
+            throw(ErrorException(
+                "ℓ=$ℓ should be non-negative integer or half-integer.  In particular,\n"
+                * "if ℓ is an integer its type must be <:Integer, not <:Rational."
+            ))
+        end
+        s₁, s₂ = size(parent)
+        if s₂ ≠ Int(2ℓ + 1)
+            throw(ErrorException(
+                "The extent of the second dimension in the input data must be "
+                * "2ℓ+1=$(Int(2ℓ+1)); it is $s₂."
+            ))
+        end
+        if s₁ == 0 || s₁ > s₂
+            throw(ErrorException(
+                "The extent of the first dimension in the input data must be greater than 0"
+                * " and less than or equal to 2ℓ+1=$(Int(2ℓ+1)); it is $s₁."
+            ))
+        end
         if IT <: Rational
-            if denominator(ℓ) ≠ 2 || denominator(m′ₘₐₓ) ≠ 2 || denominator(mₘₐₓ) ≠ 2
+            if isodd(s₁)
                 throw(ErrorException(
-                    "Index limits must be either integers or half-integer Rationals; "
-                    * "the inputs are Rationals: $ℓ, $m′ₘₐₓ, $mₘₐₓ."
+                    "ℓ=$ℓ is a half-integer, but the extent of the first dimension in the "
+                    * "input data ($s₁) corresponds to whole-integer values of m′."
+                ))
+            end
+        else
+            if iseven(s₁)
+                throw(ErrorException(
+                    "ℓ=$ℓ is an integer, but the extent of the first dimension in the "
+                    * "input data ($s₁) corresponds to half-integer values of m′."
                 ))
             end
         end
-        new(data, ℓ, abs(m′ₘₐₓ), abs(mₘₐₓ))
+        m′ₘₐₓ = IT((s₁ - 1) // 2)
+        new(parent, ℓ, m′ₘₐₓ)
     end
 end
-function WignerDMatrix(data::Matrix{NT}, ℓ::IT) where {NT, IT}
-    WignerDMatrix{NT, IT}(data, ℓ)
+
+"""
+    WignerDMatrix(parent, ℓ)
+
+Construct a `WignerDMatrix` object from the given parent matrix and ``ℓ`` value.  Note that
+the type of `ℓ` *must* be either `Integer` or `Rational`.  If it is `Rational`, the
+denominator *must* be 2; if it is 1, you must convert to an `Int` first.  Also, the parent
+matrix must have the correct size: the first dimension must be greater than 0 and less than
+or equal to `2ℓ+1`, and the second dimension must be equal to `2ℓ+1`.
+"""
+function WignerDMatrix(parent::Matrix{NT}, ℓ::IT) where {NT, IT}
+    WignerDMatrix{NT, IT}(parent, ℓ)
+end
+function WignerDMatrix(::Type{NT}, ℓ::IT, m′::IT=ℓ) where {NT, IT}
+    if complex(NT) ≢ NT
+        throw(ErrorException(
+            "WignerDMatrix only supports complex types; the input type is $NT.\n"
+            * "Perhaps you meant to use WignerdMatrix?"
+        ))
+    end
+    WignerDMatrix{NT, IT}(Matrix{NT}(undef, Int(2m′)+1, Int(2ℓ)+1), ℓ)
 end
 
 
+
+"""
+    WignerdMatrix{NT, IT}
+
+Specialized subtype of [`WignerMatrix`](@ref) for d-matrices, which are real matrices.
+"""
 struct WignerdMatrix{NT, IT} <: WignerMatrix{NT, IT}
-    data::Matrix{NT}
+    parent::Matrix{NT}
     ℓ::IT
     m′ₘₐₓ::IT
-    mₘₐₓ::IT
-    function WignerdMatrix{NT, IT}(data::Matrix{NT}, ℓ::IT) where {NT, IT}
-        if ℓ < 0
-            throw(ErrorException("ℓ=$ℓ should be non-negative."))
-        end
-        if size(data, 1) == 0
-            throw(ErrorException("Input data has 0 extent along first dimension."))
-        end
-        if size(data, 2) == 0
-            throw(ErrorException("Input data has 0 extent along second dimension."))
-        end
-        m′ₘₐₓ = IT((size(data, 1) - 1) // 2)
-        mₘₐₓ = IT((size(data, 2) - 1) // 2)
-        if ℓ < max(m′ₘₐₓ, mₘₐₓ)
-            throw(ErrorException(
-                "ℓ=$ℓ should be greater than or equal to both m′ₘₐₓ=$m′ₘₐₓ and mₘₐₓ=$mₘₐₓ."
-            ))
-        end
+    function WignerdMatrix{NT, IT}(parent::Matrix{NT}, ℓ::IT) where {NT, IT<:Union{Integer, Rational}}
+        # We want to secretly allow NTuple{3, IT} for testing purposes, so we can't just use
+        # a restriction on NT in the type declaration.
         if !(NT <: NTuple{3, IT}) && real(NT) ≢ NT
             throw(ErrorException(
                 "WignerdMatrix only supports real types; the input type is $NT.\n"
                 * "Perhaps you meant to use WignerDMatrix?"
             ))
         end
+        if ℓ < 0 || (IT <: Rational && denominator(ℓ) ≠ 2)
+            throw(ErrorException(
+                "ℓ=$ℓ should be non-negative integer or half-integer.  In particular,\n"
+                * "if ℓ is an integer its type must be <:Integer, not <:Rational."
+            ))
+        end
+        s₁, s₂ = size(parent)
+        if s₂ ≠ Int(2ℓ + 1)
+            throw(ErrorException(
+                "The extent of the second dimension in the input data must be "
+                * "2ℓ+1=$(Int(2ℓ+1)); it is $s₂."
+            ))
+        end
+        if s₁ == 0 || s₁ > s₂
+            throw(ErrorException(
+                "The extent of the first dimension in the input data must be greater than 0"
+                * " and less than or equal to 2ℓ+1=$(Int(2ℓ+1)); it is $s₁."
+            ))
+        end
         if IT <: Rational
-            if denominator(ℓ) ≠ 2 || denominator(m′ₘₐₓ) ≠ 2 || denominator(mₘₐₓ) ≠ 2
+            if isodd(s₁)
                 throw(ErrorException(
-                    "Index limits must be either integers or half-integer Rationals; "
-                    * "the inputs are Rationals: $ℓ, $m′ₘₐₓ, $mₘₐₓ."
+                    "ℓ=$ℓ is a half-integer, but the extent of the first dimension in the "
+                    * "input data ($s₁) corresponds to whole-integer values of m′."
+                ))
+            end
+        else
+            if iseven(s₁)
+                throw(ErrorException(
+                    "ℓ=$ℓ is an integer, but the extent of the first dimension in the "
+                    * "input data ($s₁) corresponds to half-integer values of m′."
                 ))
             end
         end
-        new(data, ℓ, m′ₘₐₓ, mₘₐₓ)
+        m′ₘₐₓ = IT((s₁ - 1) // 2)
+        new(parent, ℓ, m′ₘₐₓ)
     end
 end
-function WignerdMatrix(data::Matrix{NT}, ℓ::IT) where {NT, IT}
-    WignerdMatrix{NT, IT}(data, ℓ)
+
+"""
+    WignerdMatrix(parent, ℓ)
+
+Construct a `WignerdMatrix` object from the given parent matrix and ``ℓ`` value.  Note that
+the type of `ℓ` *must* be either `Integer` or `Rational`.  If it is `Rational`, the
+denominator *must* be 2; if it is 1, you must convert to an `Int` first.  Also, the parent
+matrix must have the correct size: the first dimension must be greater than 0 and less than
+or equal to `2ℓ+1`, and the second dimension must be equal to `2ℓ+1`.
+"""
+function WignerdMatrix(parent::Matrix{NT}, ℓ::IT) where {NT, IT}
+    WignerdMatrix{NT, IT}(parent, ℓ)
+end
+function WignerdMatrix(::Type{NT}, ℓ::IT, m′::IT=ℓ) where {NT, IT}
+    if real(NT) ≢ NT
+        throw(ErrorException(
+            "WignerdMatrix only supports real types; the input type is $NT.\n"
+            * "Perhaps you meant to use WignerDMatrix?"
+        ))
+    end
+    WignerdMatrix{NT, IT}(Matrix{NT}(undef, Int(2m′)+1, Int(2ℓ)+1), ℓ)
 end
 
 
 @testitem "WignerMatrix" begin
-    import SphericalFunctions.Redesign: WignerDMatrix, WignerdMatrix
+    import SphericalFunctions.Redesign: WignerDMatrix, WignerdMatrix,
+        parent, ell, mpmax, mmax, m′ₘₐₓ, mₘₐₓ
+
+    # Check that mixed-up types throw an error
+    @test_throws "WignerDMatrix only supports complex types" WignerDMatrix(rand(Float64, 3, 3), 1)
+    @test_throws "WignerdMatrix only supports real types" WignerdMatrix(rand(ComplexF64, 3, 3), 1)
+    @test_throws "WignerDMatrix only supports complex types" WignerDMatrix(rand(Float64, 2, 2), 1//2)
+    @test_throws "WignerdMatrix only supports real types" WignerdMatrix(rand(ComplexF64, 2, 2), 1//2)
 
     # Check that a negative ℓ value throws an error
-    @test_throws "should be non-negative." WignerDMatrix(rand(ComplexF64, 3, 3), -1)
-    @test_throws "should be non-negative." WignerdMatrix(rand(Float64, 3, 3), -1)
-    @test_throws "should be non-negative." WignerDMatrix(rand(ComplexF64, 2, 2), -1//2)
-    @test_throws "should be non-negative." WignerdMatrix(rand(Float64, 2, 2), -1//2)
+    @test_throws "should be non-negative integer or half-integer." WignerDMatrix(rand(ComplexF64, 3, 3), -1)
+    @test_throws "should be non-negative integer or half-integer." WignerdMatrix(rand(Float64, 3, 3), -1)
+    @test_throws "should be non-negative integer or half-integer." WignerDMatrix(rand(ComplexF64, 2, 2), -1//2)
+    @test_throws "should be non-negative integer or half-integer." WignerdMatrix(rand(Float64, 2, 2), -1//2)
 
-    for ℓ ∈ Any[collect(0:8); collect(1//2:15//2)]
-        # Check that ℓ < m′ₘₐₓ and ℓ < mₘₐₓ throw errors
-        @test_throws "both m′ₘₐₓ=" WignerDMatrix(Array{Float64}(undef, Int(2ℓ)+3, Int(2ℓ)+1), ℓ)
-        @test_throws "both m′ₘₐₓ=" WignerDMatrix(Array{Float64}(undef, Int(2ℓ)+1, Int(2ℓ)+3), ℓ)
-        @test_throws "both m′ₘₐₓ=" WignerdMatrix(Array{Float64}(undef, Int(2ℓ)+3, Int(2ℓ)+1), ℓ)
-        @test_throws "both m′ₘₐₓ=" WignerdMatrix(Array{Float64}(undef, Int(2ℓ)+1, Int(2ℓ)+3), ℓ)
+    # Check that a non-half-integer ℓ value throws an error
+    @test_throws "should be non-negative integer or half-integer." WignerDMatrix(rand(ComplexF64, 3, 3), 1//3)
+    @test_throws "should be non-negative integer or half-integer." WignerdMatrix(rand(Float64, 3, 3), 1//3)
+    @test_throws "should be non-negative integer or half-integer." WignerDMatrix(rand(ComplexF64, 2, 2), 1//3)
+    @test_throws "should be non-negative integer or half-integer." WignerdMatrix(rand(Float64, 2, 2), 1//3)
+    @test_throws "should be non-negative integer or half-integer." WignerDMatrix(rand(ComplexF64, 3, 3), 2//2)
+    @test_throws "should be non-negative integer or half-integer." WignerdMatrix(rand(Float64, 3, 3), 2//2)
+    @test_throws "should be non-negative integer or half-integer." WignerDMatrix(rand(ComplexF64, 2, 2), 2//2)
+    @test_throws "should be non-negative integer or half-integer." WignerdMatrix(rand(Float64, 2, 2), 2//2)
+
+    #for ℓ ∈ Any[collect(0:8); collect(1//2:15//2)]
+    for ℓ ∈ Any[collect(0:2); collect(1//2:3//2)]
+        mₘ = ℓ
+
+        # Check that ℓ < m′ₘₐₓ and ℓ ≠ mₘₐₓ throw errors
+        @test_throws "greater than 0 and less than or equal to 2ℓ+1=" WignerDMatrix(Array{ComplexF64}(undef, Int(2ℓ)+2, Int(2ℓ)+1), ℓ)
+        @test_throws "greater than 0 and less than or equal to 2ℓ+1=" WignerdMatrix(Array{Float64}(undef, Int(2ℓ)+2, Int(2ℓ)+1), ℓ)
+        @test_throws "in the input data must be 2ℓ+1=" WignerDMatrix(Array{ComplexF64}(undef, Int(2ℓ)+1, Int(2ℓ)+2), ℓ)
+        @test_throws "in the input data must be 2ℓ+1=" WignerdMatrix(Array{Float64}(undef, Int(2ℓ)+1, Int(2ℓ)+2), ℓ)
+        @test_throws "in the input data must be 2ℓ+1=" WignerDMatrix(Array{ComplexF64}(undef, Int(2ℓ)+1, Int(2ℓ)+0), ℓ)
+        @test_throws "in the input data must be 2ℓ+1=" WignerdMatrix(Array{Float64}(undef, Int(2ℓ)+1, Int(2ℓ)+0), ℓ)
 
         # Check that a mismatch between integer/half-integer throws an error
         if ℓ>0 && ℓ isa Int
-            @test_throws "InexactError: Int64(1//2)" WignerDMatrix(rand(ComplexF64, 2, 2), ℓ)
-            @test_throws "InexactError: Int64(1//2)" WignerdMatrix(rand(Float64, 2, 2), ℓ)
+            @test_throws "is an integer, but the extent of the first dimension" WignerDMatrix(rand(ComplexF64, 2ℓ, 2ℓ+1), ℓ)
+            @test_throws "is an integer, but the extent of the first dimension" WignerdMatrix(rand(Float64, 2ℓ, 2ℓ+1), ℓ)
         elseif ℓ isa Rational
-            @test_throws "either integers or half-integer" WignerDMatrix(rand(ComplexF64, 1, 1), ℓ)
-            @test_throws "either integers or half-integer" WignerdMatrix(rand(Float64, 1, 1), ℓ)
+            @test_throws "is a half-integer, but the extent of the first dimension" WignerDMatrix(rand(ComplexF64, Int(2ℓ), Int(2ℓ+1)), ℓ)
+            @test_throws "is a half-integer, but the extent of the first dimension" WignerdMatrix(rand(Float64, Int(2ℓ), Int(2ℓ+1)), ℓ)
         end
+        @test_throws "in the input data must be 2ℓ+1=" WignerDMatrix(rand(ComplexF64, Int(2ℓ+1), Int(2ℓ)), ℓ)
+        @test_throws "in the input data must be 2ℓ+1=" WignerdMatrix(rand(Float64, Int(2ℓ+1), Int(2ℓ)), ℓ)
 
-        for mₘₐₓ ∈ (ℓ isa Rational ? (1//2:ℓ) : (0:ℓ))
-            # Check a data array with a dimension of 0 extent throws an error.
-            # (Note that we're pretending mₘₐₓ is m′ₘₐₓ for two cases, just for efficiency.)
-            @test_throws "along second dim" WignerDMatrix(Array{Float64}(undef, Int(2mₘₐₓ)+1, 0), ℓ)
-            @test_throws "along first dim" WignerDMatrix(Array{Float64}(undef, 0, Int(2mₘₐₓ)+1), ℓ)
-            @test_throws "along second dim" WignerdMatrix(Array{Float64}(undef, Int(2mₘₐₓ)+1, 0), ℓ)
-            @test_throws "along first dim" WignerdMatrix(Array{Float64}(undef, 0, Int(2mₘₐₓ)+1), ℓ)
+        # Check that a data array with a dimension of 0 extent throws an error.
+        @test_throws "in the input data must be 2ℓ+1=" WignerDMatrix(Array{ComplexF64}(undef, Int(2ℓ)+1, 0), ℓ)
+        @test_throws "greater than 0 and less than or equal to 2ℓ+1=" WignerDMatrix(Array{ComplexF64}(undef, 0, Int(2ℓ)+1), ℓ)
+        @test_throws "in the input data must be 2ℓ+1=" WignerdMatrix(Array{Float64}(undef, Int(2ℓ)+1, 0), ℓ)
+        @test_throws "greater than 0 and less than or equal to 2ℓ+1=" WignerdMatrix(Array{Float64}(undef, 0, Int(2ℓ)+1), ℓ)
 
-            for m′ₘₐₓ ∈ (ℓ isa Rational ? (1//2:ℓ) : (0:ℓ))
-                # Make a big, dumb array full of the explicit indices.
-                data = [
-                    (ℓ, m′, m)
-                    for m′ ∈ -m′ₘₐₓ:m′ₘₐₓ, m ∈ -mₘₐₓ:mₘₐₓ
-                ]
-                # Check that indexing works as expected.
-                for w ∈ (WignerDMatrix(data, ℓ), WignerdMatrix(data, ℓ))
-                    @test w.data == data
-                    @test w.ℓ == ℓ
-                    @test w.m′ₘₐₓ == m′ₘₐₓ
-                    @test w.mₘₐₓ == mₘₐₓ
-                    for m ∈ -mₘₐₓ:mₘₐₓ
-                        for m′ ∈ -m′ₘₐₓ:m′ₘₐₓ
-                            @test w[m′, m] == (ℓ, m′, m)
-                        end
+        for m′ₘ ∈ ℓₘᵢₙ(ℓ):ℓ
+            # Make a big, dumb array full of the explicit indices.
+            data = [
+                (ℓ, m′, m)
+                for m′ ∈ -m′ₘ:m′ₘ, m ∈ -mₘ:mₘ
+            ]
+            # Check that indexing works as expected.
+            for WignerMatrixType ∈ (WignerDMatrix, WignerdMatrix)
+                w = WignerMatrixType(data, ℓ)
+                @test Base.parent(w) == data
+                @test ell(w) == ℓ
+                @test mpmax(w) == m′ₘ
+                @test mmax(w) == ℓ
+                for m ∈ -mₘ:mₘ
+                    for m′ ∈ -m′ₘ:m′ₘ
+                        @test w[m′, m] == (ℓ, m′, m)
                     end
                 end
             end
+        end
 
-            for m′ₘₐₓ ∈ (ℓ isa Rational ? (1//2:ℓ) : (0:ℓ))
-                for WignerMatrixType ∈ (WignerDMatrix, WignerdMatrix)
-                    data = rand(
-                        WignerMatrixType<:WignerDMatrix ? ComplexF64 : Float64,
-                        Int(2mₘₐₓ)+1, Int(2m′ₘₐₓ)+1
-                    )
-                    w = WignerMatrixType(data, ℓ)
+        for m′ₘ ∈ ℓₘᵢₙ(ℓ):ℓ
+            for WignerMatrixType ∈ (WignerDMatrix, WignerdMatrix)
+                data = rand(
+                    WignerMatrixType<:WignerDMatrix ? ComplexF64 : Float64,
+                    Int(2m′ₘ)+1, Int(2mₘ)+1
+                )
+                w = WignerMatrixType(data, ℓ)
 
-                    # Check that the data array is stored correctly.
-                    @test w.data == data
-                    @test w.ℓ == ℓ
-                    @test w.m′ₘₐₓ == m′ₘₐₓ
-                    @test w.mₘₐₓ == mₘₐₓ
+                # Check that the data array is stored correctly.
+                @test Base.parent(w) == data
+                @test ell(w) == ℓ
+                @test m′ₘₐₓ(w) == m′ₘ
+                @test mₘₐₓ(w) == ℓ
 
-                    # The Julia docs say that the `axes` function should
-                    # > Return a tuple of `AbstractUnitRange{<:Integer}` of valid indices.
-                    # > The axes should be their own axes, that is `axes.(axes(A),1) ==
-                    # > axes(A)` should be satisfied.
-                    # https://docs.julialang.org/en/v1/manual/interfaces/#man-interface-array
-                    @test typeof(axes(w)) <: AbstractUnitRange{<:Integer}
-                    @test axes.(axes(w),1) == axes(w)
-                end
+                # The Julia docs say that the `axes` function should
+                # > Return a tuple of `AbstractUnitRange{<:Integer}` of valid indices.
+                # > The axes should be their own axes, that is `axes.(axes(A),1) ==
+                # > axes(A)` should be satisfied.
+                # https://docs.julialang.org/en/v1/manual/interfaces/#man-interface-array
+                @test typeof(axes(w)) <: NTuple{2, AbstractUnitRange}
+                @test axes.(axes(w),1) == axes(w)
             end
         end
     end
