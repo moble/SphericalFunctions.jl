@@ -311,6 +311,20 @@ function WignerdMatrix(::Type{NT}, ℓ::IT, m′::IT=ℓ) where {NT, IT}
 end
 
 
+"""
+    Hˡrow{NT, IT}
+
+Specialized subtype of [`WignerMatrix`](@ref) intended to store one row of the ``H`` matrix
+— usually the ``H^{\ell-1}_{0,m}`` or ``H^{\ell+1}_{0,m}`` components needed during the
+recurrence relations.
+"""
+struct Hˡrow{NT, IT} <: WignerMatrix{NT, IT}
+    parent::Matrix{NT}
+    ℓ::IT
+    m′ₘₐₓ::IT
+end
+
+
 @testitem "WignerMatrix" begin
     import SphericalFunctions.Redesign: WignerDMatrix, WignerdMatrix,
         parent, ell, mpmax, mmax, m′ₘₐₓ, mₘₐₓ

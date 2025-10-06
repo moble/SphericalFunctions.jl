@@ -1,8 +1,18 @@
+"""
+    AbstractWignerMatrices{NT, IT, MT}
+
+A container for a series of Wigner matrices (
+- `NT` is the number type (e.g., `ComplexF64` for D-matrices or `Float64` for d-matrices).
+- `IT` is the index type (an `Integer` or half‐integer `Rational`), governing the allowed
+  ranges of `m′` and `m` in each matrix.
+- `MT` is the type of the matrices.
+
+"""
 abstract type AbstractWignerMatrices{NT, IT, MT} <: AbstractVector{MT} end
 
 
 
-struct WignerDMatrices{NT, IT, MT} <: AbstractWignerMatrice{NT, IT, MT}
+struct WignerDMatrices{NT, IT, MT} <: AbstractWignerMatrices{NT, IT, MT}
     D::Vector{MT}
     ℓₘₐₓ::IT
     m′ₘₐₓ::IT
