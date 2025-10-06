@@ -73,6 +73,7 @@ makedocs(
             sort(readdir(joinpath(docs_src_dir, "notes")))
         ),
         "References" => "references.md",
+        "Redesign" => "redesign.md",
     ],
     #warnonly=true,
     #doctest = false,
