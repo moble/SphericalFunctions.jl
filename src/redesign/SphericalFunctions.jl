@@ -6,6 +6,7 @@ import TestItems: @testitem, @testsnippet
 
 include("WignerMatrix.jl")
 include("WignerMatrices.jl")
+include("recurrence.jl")
 
 
 function WignerD(R::Quaternionic.Rotor, ℓₘₐₓ::IT, m′ₘₐₓ::IT=ℓₘₐₓ) where {IT}

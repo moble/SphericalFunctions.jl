@@ -6,7 +6,17 @@ sgn(m) = m ≥ 0 ? 1 : -1
 ϵ(m) = (m ≥ 0 ? (-1)^m : 1)
 
 
-function initialize!(Hˡ::WignerMatrix{NT, IT}, sinβ::T, cosβ::T) where {NT, IT<:Integer, T}
+@doc raw"""
+    initialize!(Hˡ, sinβ, cosβ)
+
+Step 1 of the computation of ``H``: Initialize the Wigner matrix `Hˡ` for the recurrence
+relations.  This only sets the values ``H^0_{0,0}=0``, ``H^1_{0,0}=cosβ``, and
+``H^1_{0,1}=sinβ/√2``.
+
+Note that `Hˡ` can be any `WignerMatrix` with integer indices.  In particular, it can be a
+`D` matrix or a `d` matrix.
+"""
+function initialize!(Hˡ::WignerMatrix{NT, IT}, sinβ::T, cosβ::T) where {NT, IT<:Signed, T}
     @inbounds let √=sqrt∘T, ℓ=ℓ(Hˡ)
         if ℓ == 0
             Hˡ[0, 0] = 0
@@ -17,9 +27,16 @@ function initialize!(Hˡ::WignerMatrix{NT, IT}, sinβ::T, cosβ::T) where {NT, I
     end
 end
 
+@doc raw"""
+    recurrence_0_m!(Hˡ, Hˡ⁻¹, sinβ, cosβ)
+
+Step 2 of the computation of ``H``: Given ``H^{\ell-1}`` with its ``(0, m)`` entries,
+compute ``H^{\ell}_{0,m}`` for all ``m \geq 0``.
+
+"""
 function recurrence_0_m!(
     Hˡ::WignerMatrix{NT, IT}, Hˡ⁻¹::WignerMatrix{NT, IT}, sinβ::T, cosβ::T
-) where {NT, IT<:Integer, T}
+) where {NT, IT<:Signed, T}
     @assert ℓ(Hˡ⁻¹) == ℓ(Hˡ) - 1
     # Note that in this step only, we use notation derived from Xing et al., denoting the
     # coefficients as b̄ₗ, c̄ₗₘ, d̄ₗₘ, ēₗₘ.  In the following steps, we will use notation
@@ -55,9 +72,16 @@ function recurrence_0_m!(
     end
 end
 
+@doc raw"""
+    recurrence_1_m!(Hˡ, Hˡ⁺¹, sinβ, cosβ)
+
+Step 3 of the computation of ``H``: Given ``H^{\ell+1}`` with all its ``(0, m)`` entries,
+compute ``H^{\ell}_{1,m}`` for all ``m \geq 1``.
+
+"""
 function recurrence_1_m!(
     Hˡ::WignerMatrix{NT, IT}, Hˡ⁺¹::WignerMatrix{NT, IT}, sinβ::T, cosβ::T
-) where {NT, IT<:Integer, T}
+) where {NT, IT<:Signed, T}
     @assert ℓ(Hˡ⁺¹) == ℓ(Hˡ) + 1
     @inbounds let √=sqrt∘T, ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
         if ℓ > 0 && m′ₘₐₓ ≥ 1
@@ -76,9 +100,16 @@ function recurrence_1_m!(
     end
 end
 
+@doc raw"""
+    recurrence_m′₊!(Hˡ, sinβ, cosβ)
+
+Step 4 of the computation of ``H``: Given ``H^{\ell}`` with all its ``(0, m)`` and ``(1,
+m)`` entries, compute ``H^{\ell}_{m′+1,m}`` for all ``m′ \geq 1`` and ``m \geq 1``.
+
+"""
 function recurrence_m′₊!(
     Hˡ::WignerMatrix{NT, IT}, sinβ::T, cosβ::T
-) where {NT, IT<:Integer, T}
+) where {NT, IT<:Signed, T}
     @inbounds let √=sqrt∘T, ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
         for m′ ∈ 1:min(ℓ, m′ₘₐₓ)-1
             # Note that the signs of m′ and m are always +1, so we leave them out of the
@@ -105,9 +136,16 @@ function recurrence_m′₊!(
     end
 end
 
+@doc raw"""
+    recurrence_m′₋!(Hˡ, sinβ, cosβ)
+
+Step 5 of the computation of ``H``: Given ``H^{\ell}`` with all its ``(m′, m)`` entries for
+`m′ ≥ 0`, compute ``H^{\ell}_{m′-1,m}`` for all `m′ ≤ -1` and `m`.
+
+"""
 function recurrence_m′₋!(
     Hˡ::WignerMatrix{NT, IT}, sinβ::T, cosβ::T
-) where {NT, IT<:Integer, T}
+) where {NT, IT<:Signed, T}
     @inbounds let √=sqrt∘T, ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
         for m′ ∈ 0:-1:-min(ℓ, m′ₘₐₓ)+1
             d̄ₗᵐ′ = sgn(m′) * √((ℓ-m′)*(ℓ+m′+1))
@@ -147,7 +185,7 @@ H^ℓ_{m′, m} &= H^ℓ_{-m′, -m}.
 ```
 
 """
-function impose_symmetries!(Hˡ::WignerMatrix{NT, IT}) where {NT, IT<:Integer}
+function impose_symmetries!(Hˡ::WignerMatrix{NT, IT}) where {NT, IT<:Signed}
     @inbounds let ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
         for m ∈ -ℓ:ℓ
             for m′ ∈ abs(m):m′ₘₐₓ
@@ -165,7 +203,7 @@ Convert the Wigner matrix `Hˡ` to the d matrix `dˡ`, which just involves multi
 signs related to the `m′` and `m` indices.
 
 """
-function convert_H_to_d!(Hˡ::WignerMatrix{NT, IT}) where {NT, IT<:Integer}
+function convert_H_to_d!(Hˡ::WignerMatrix{NT, IT}) where {NT, IT<:Signed}
     @inbounds let ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
         for m ∈ -ℓ:ℓ
             for m′ ∈ -m′ₘₐₓ:m′ₘₐₓ
@@ -183,7 +221,7 @@ Convert the Wigner matrix `Hˡ` to the D matrix `Dˡ`, which just involves multi
 complex phases related to the `m′` and `m` indices.
 
 """
-function convert_H_to_D!(Hˡ::WignerMatrix{NT, IT}, eⁱᵅ::NT, eⁱᵞ::NT) where {NT, IT<:Integer}
+function convert_H_to_D!(Hˡ::WignerMatrix{NT, IT}, eⁱᵅ::NT, eⁱᵞ::NT) where {NT, IT<:Signed}
     # NOTE: This function will have to be modified to work for Rational indices because the
     # phases will not be integer powers; we'll have to incorporate √eⁱᵅ and √eⁱᵞ.
     @inbounds let ℓ=ℓ(Hˡ), ℓₘᵢₙ=ℓₘᵢₙ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
