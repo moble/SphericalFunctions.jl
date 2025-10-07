@@ -25,6 +25,7 @@ function initialize!(Hˡ::WignerMatrix{NT, IT}, sinβ::T, cosβ::T) where {NT, I
             Hˡ[0, 1] = sinβ / √2
         end
     end
+    Hˡ
 end
 
 @doc raw"""
@@ -35,41 +36,44 @@ compute ``H^{\ell}_{0,m}`` for all ``m \geq 0``.
 
 """
 function recurrence_0_m!(
-    Hˡ::WignerMatrix{NT, IT}, Hˡ⁻¹::WignerMatrix{NT, IT}, sinβ::T, cosβ::T
-) where {NT, IT<:Signed, T}
+    Hˡ::WignerMatrix{NT, IT}, Hˡ⁻¹::WignerMatrix{NT2, IT}, sinβ::T, cosβ::T
+) where {NT, NT2, IT<:Signed, T}
     @assert ℓ(Hˡ⁻¹) == ℓ(Hˡ) - 1
     # Note that in this step only, we use notation derived from Xing et al., denoting the
     # coefficients as b̄ₗ, c̄ₗₘ, d̄ₗₘ, ēₗₘ.  In the following steps, we will use notation
     # from Gumerov and Duraiswami, who denote their different coefficients aₗᵐ, etc.
-    @inbounds let √=sqrt∘T, ℓ=ℓ(Hˡ)
+    #@inbounds let √=sqrt∘T, ℓ=ℓ(Hˡ)
+    @warn "Turned off inbounds for debugging"
+    let √=sqrt∘T, ℓ=ℓ(Hˡ)
         if ℓ > 1
             b̄ₗ = √(T(ℓ-1)/ℓ)
             Hˡ[0, 0] = cosβ * Hˡ⁻¹[0, 0] - b̄ₗ * sinβ * Hˡ⁻¹[0, 1]
             for m ∈ 1:ℓ-2
-                c̄ₙₘ = √((ℓ+m)*(ℓ-m)) / ℓ
-                d̄ₙₘ = √((ℓ-m)*(ℓ-m-1)) / 2ℓ
-                ēₙₘ = √((ℓ+m)*(ℓ+m-1)) / 2ℓ
+                c̄ₗₘ = √((ℓ+m)*(ℓ-m)) / ℓ
+                d̄ₗₘ = √((ℓ-m)*(ℓ-m-1)) / 2ℓ
+                ēₗₘ = √((ℓ+m)*(ℓ+m-1)) / 2ℓ
                 Hˡ[0, m] = (
                     c̄ₗₘ * cosβ * Hˡ⁻¹[0, m]
                     - sinβ * (d̄ₗₘ * Hˡ⁻¹[0, m+1] - ēₗₘ * Hˡ⁻¹[0, m-1])
                 )
             end
             let m = ℓ-1
-                c̄ₙₘ = √((ℓ+m)*(ℓ-m)) / ℓ
-                ēₙₘ = √((ℓ+m)*(ℓ+m-1)) / 2ℓ
+                c̄ₗₘ = √((ℓ+m)*(ℓ-m)) / ℓ
+                ēₗₘ = √((ℓ+m)*(ℓ+m-1)) / 2ℓ
                 Hˡ[0, m] = (
                     c̄ₗₘ * cosβ * Hˡ⁻¹[0, m]
                     - sinβ * (- ēₗₘ * Hˡ⁻¹[0, m-1])
                 )
             end
             let m = ℓ
-                ēₙₘ = √((ℓ+m)*(ℓ+m-1)) / 2ℓ
+                ēₗₘ = √((ℓ+m)*(ℓ+m-1)) / 2ℓ
                 Hˡ[0, m] = (
                     - sinβ * (- ēₗₘ * Hˡ⁻¹[0, m-1])
                 )
             end
         end
     end
+    Hˡ
 end
 
 @doc raw"""
@@ -80,13 +84,13 @@ compute ``H^{\ell}_{1,m}`` for all ``m \geq 1``.
 
 """
 function recurrence_1_m!(
-    Hˡ::WignerMatrix{NT, IT}, Hˡ⁺¹::WignerMatrix{NT, IT}, sinβ::T, cosβ::T
-) where {NT, IT<:Signed, T}
+    Hˡ::WignerMatrix{NT, IT}, Hˡ⁺¹::WignerMatrix{NT2, IT}, sinβ::T, cosβ::T
+) where {NT, NT2, IT<:Signed, T}
     @assert ℓ(Hˡ⁺¹) == ℓ(Hˡ) + 1
     @inbounds let √=sqrt∘T, ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
         if ℓ > 0 && m′ₘₐₓ ≥ 1
             c = 1 / √(ℓ*(ℓ+1))
-            for m ∈ 0:ℓ
+            for m ∈ 1:ℓ
                 āₗᵐ = √((ℓ+m+1)*(ℓ-m+1))
                 b̄ₗ₊₁ᵐ⁻¹ = √((ℓ-m+1)*(ℓ-m+2))
                 b̄ₗ₊₁⁻ᵐ⁻¹ = √((ℓ+m+1)*(ℓ+m+2))
@@ -98,6 +102,7 @@ function recurrence_1_m!(
             end
         end
     end
+    Hˡ
 end
 
 @doc raw"""
@@ -116,7 +121,7 @@ function recurrence_m′₊!(
             # calculations of d̄ in this function.
             d̄ₗᵐ′ = √((ℓ-m′)*(ℓ+m′+1))
             d̄ₗᵐ′⁻¹ = √((ℓ-m′+1)*(ℓ+m′))
-            for m ∈ m′:ℓ-1
+            for m ∈ (m′+1):ℓ-1
                 d̄ₗᵐ⁻¹ = √((ℓ-m+1)*(ℓ+m))
                 d̄ₗᵐ = √((ℓ-m)*(ℓ+m+1))
                 Hˡ[m′+1, m] = (
@@ -134,6 +139,7 @@ function recurrence_m′₊!(
             end
         end
     end
+    Hˡ
 end
 
 @doc raw"""
@@ -150,7 +156,7 @@ function recurrence_m′₋!(
         for m′ ∈ 0:-1:-min(ℓ, m′ₘₐₓ)+1
             d̄ₗᵐ′ = sgn(m′) * √((ℓ-m′)*(ℓ+m′+1))
             d̄ₗᵐ′⁻¹ = sgn(m′-1) * √((ℓ-m′+1)*(ℓ+m′))
-            for m ∈ -m′:ℓ-1
+            for m ∈ -(m′-1):ℓ-1
                 d̄ₗᵐ = sgn(m) * √((ℓ-m)*(ℓ+m+1))
                 d̄ₗᵐ⁻¹ = sgn(m-1) * √((ℓ-m+1)*(ℓ+m))
                 Hˡ[m′-1, m] = (
@@ -168,6 +174,7 @@ function recurrence_m′₋!(
             end
         end
     end
+    Hˡ
 end
 
 @doc raw"""
@@ -187,12 +194,19 @@ H^ℓ_{m′, m} &= H^ℓ_{-m′, -m}.
 """
 function impose_symmetries!(Hˡ::WignerMatrix{NT, IT}) where {NT, IT<:Signed}
     @inbounds let ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
-        for m ∈ -ℓ:ℓ
-            for m′ ∈ abs(m):m′ₘₐₓ
-                Hˡ[m, m′] = Hˡ[-m, -m′] = Hˡ[-m′, -m] = Hˡ[m′, m]
+        # The idea here is to impose
+        #   Hˡ[m, m′] = Hˡ[-m, -m′] = Hˡ[-m′, -m] = Hˡ[m′, m]
+        # without double-counting any entries, and accounting for m′ₘₐₓ.
+        for m ∈ 1:ℓ
+            for m′ ∈ -min(m′ₘₐₓ, m):min(m′ₘₐₓ, m)
+                Hˡ[-m′, -m] = Hˡ[m′, m]
+            end
+            for m′ ∈ -min(m′ₘₐₓ, m-1):min(m′ₘₐₓ, m-1)
+                Hˡ[m, m′] = Hˡ[-m, -m′] = Hˡ[m′, m]
             end
         end
     end
+    Hˡ
 end
 
 
@@ -211,6 +225,7 @@ function convert_H_to_d!(Hˡ::WignerMatrix{NT, IT}) where {NT, IT<:Signed}
             end
         end
     end
+    Hˡ
 end
 
 
@@ -242,4 +257,5 @@ function convert_H_to_D!(Hˡ::WignerMatrix{NT, IT}, eⁱᵅ::NT, eⁱᵞ::NT) wh
             end
         end
     end
+    Hˡ
 end
