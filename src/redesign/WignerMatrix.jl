@@ -10,10 +10,10 @@ Abstract base type for Wigner rotation‐matrix objects of a specific ``ℓ`` va
 - `ST` is the storage type (typically `Matrix{NT}`, but other `AbstractMatrix{NT}` storage
   can be used).
 
-The basic concrete subtypes (`WignerDMatrix`, `WignerdMatrix`) default to storing their data in a
-`Matrix{NT}` and implement the usual `size`, `getindex` and `setindex!` so that one can use
-`w[m′,m]`.  Specifically, these indices can be negative or positive, and must obey `abs(m′)
-≤ m′ₘₐₓ` and `abs(m) ≤ ℓ`.
+The basic concrete subtypes (`WignerDMatrix`, `WignerdMatrix`) default to storing their data
+in a `Matrix{NT}` and implement the usual `size`, `getindex` and `setindex!` so that one can
+use `w[m′,m]`.  Specifically, these indices can be negative or positive, and must obey
+`abs(m′) ≤ m′ₘₐₓ` and `abs(m) ≤ ℓ`.
 
 # Methods
 
@@ -46,23 +46,27 @@ For example, if the parent Matrix is not stored as the `parent` field, then the 
 method should be re-implemented to return the correct parent object.  The `getindex` and
 `setindex!`
 """
-abstract type WignerMatrix{IT, NT, ST} <: AbstractMatrix{NT} end
+abstract type WignerMatrix{IT<:Union{Integer,Rational}, NT, ST<:AbstractMatrix{NT}} <: AbstractMatrix{NT} end
 
 ### General methods for all WignerMatrix types
 
-Base.parent(w::WignerMatrix{IT, NT, ST}) where {IT, NT, ST} = w.parent
-ℓ(w::WignerMatrix{IT, NT, ST}) where {IT, NT, ST} = w.ℓ
-m′ₘₐₓ(w::WignerMatrix{IT, NT, ST}) where {IT, NT, ST} = w.m′ₘₐₓ
-mₘₐₓ(w::WignerMatrix{IT, NT, ST}) where {IT, NT, ST} = ℓ(w)
+Base.parent(w::WignerMatrix) = w.parent
+ℓ(w::WignerMatrix) = w.ℓ
+m′ₘₐₓ(w::WignerMatrix) = w.m′ₘₐₓ
+m′ₘᵢₙ(w::WignerMatrix) = -m′ₘₐₓ(w)
+mₘₐₓ(w::WignerMatrix) = ℓ(w)
+mₘᵢₙ(w::WignerMatrix) = -mₘₐₓ(w)
 
 ℓₘᵢₙ(::IT) where {IT} = ℓₘᵢₙ(IT)
 ℓₘᵢₙ(::Type{IT}) where {IT<:Integer} = zero(IT)
 ℓₘᵢₙ(::Type{IT}) where {IT<:Rational} = IT(1//2)
-ℓₘᵢₙ(::WignerMatrix{IT, NT, ST}) where {IT, NT, ST} = ℓₘᵢₙ(IT)
+ℓₘᵢₙ(::WignerMatrix{IT}) where {IT} = ℓₘᵢₙ(IT)
 
 const ell = ℓ
 const mpmax = m′ₘₐₓ
+const mpmin = m′ₘᵢₙ
 const mmax = mₘₐₓ
+const mmin = mₘᵢₙ
 const ellmin = ℓₘᵢₙ
 
 isrational(::WignerMatrix{IT, NT, ST}) where {IT<:Integer, NT, ST} = false
@@ -84,58 +88,70 @@ if VERSION < v"1.8.2"
     Base.axes1(r::WignerRange) = axes1(r)
 end
 Base.inds2string(inds::NTuple{2, WignerRange}) =
-    string("(", inds[1].start, ":", inds[1].stop, ")×(", inds[2].start, ":", inds[2].stop, ")")
+    string(
+        "(", inds[1].start, ":", inds[1].stop, ")",
+        "×",
+        "(", inds[2].start, ":", inds[2].stop, ")"
+    )
 
-function Base.axes(w::WignerMatrix{IT, NT, ST}) where {IT, NT, ST}
-    (WignerRange(-m′ₘₐₓ(w):m′ₘₐₓ(w)), WignerRange(-mₘₐₓ(w):mₘₐₓ(w)))
+function Base.getindex(v::WignerRange, i::Bool)
+    throw(ArgumentError("invalid index: $i of type Bool"))
+end
+@propagate_inbounds function Base.getindex(v::WignerRange{T}, i::Integer) where {T}
+    val = convert(T, v.start + (i - oneunit(i)))
+    @boundscheck (i>0 && val <= v.stop && val >= v.start) || throw(BoundsError(v, i))
+    val
+end
+
+function Base.axes(w::WignerMatrix{IT}) where {IT}
+    (WignerRange(m′ₘᵢₙ(w):m′ₘₐₓ(w)), WignerRange(mₘᵢₙ(w):mₘₐₓ(w)))
 end
 
 # We don't have to override Base.show; most of its machinery works just fine, except that
 # printing the data itself gets screwed up when the indices are Rational.  So we override
 # this core part of the printing machinery to just print the parent matrix as usual.  The
 # only other thing show really does is add a "summary" line, for which the only
-Base.print_array(io::IO, w::WignerMatrix{IT, NT, ST}) where {IT<:Rational, NT, ST} =
-    Base.print_array(io, parent(w))
+Base.print_array(io::IO, w::WignerMatrix) = Base.print_array(io, parent(w))
 
-@propagate_inbounds function Base.getindex(w::WignerMatrix{IT, NT, ST}, i::Int) where {IT, NT, ST}
+@propagate_inbounds function Base.getindex(w::WignerMatrix, i::Int)
     @boundscheck if i<1 || i>length(w)
         throw(BoundsError(w, i))
     end
     Base.parent(w)[i]
 end
-@propagate_inbounds function Base.getindex(w::WignerMatrix{IT, NT, ST}, m′::IT, m::IT) where {IT, NT, ST}
+@propagate_inbounds function Base.getindex(w::WignerMatrix{IT}, m′::IT, m::IT) where {IT}
     @boundscheck if m′ ∉ axes(w, 1) || m ∉ axes(w, 2)
         throw(BoundsError(w, (m′, m)))
     end
-    @inbounds Base.parent(w)[Int(m′+m′ₘₐₓ(w))+1, Int(m+mₘₐₓ(w))+1]
+    @inbounds Base.parent(w)[Int(m′-m′ₘᵢₙ(w))+1, Int(m-mₘᵢₙ(w))+1]
 end
 
-@propagate_inbounds function Base.setindex!(w::WignerMatrix, v, i)
+@propagate_inbounds function Base.setindex!(w::WignerMatrix, v, i::Int)
     @boundscheck if i<1 || i>length(w)
         throw(BoundsError(w, i))
     end
     Base.parent(w)[i] = v
 end
-@propagate_inbounds function Base.setindex!(w::WignerMatrix{IT, NT, ST}, v, m′::IT, m::IT) where {IT, NT, ST}
+@propagate_inbounds function Base.setindex!(w::WignerMatrix{IT}, v, m′::IT, m::IT) where {IT}
     @boundscheck if m′ ∉ axes(w, 1) || m ∉ axes(w, 2)
         throw(BoundsError(w, (m′, m)))
     end
-    Base.parent(w)[Int(m′+m′ₘₐₓ(w))+1, Int(m+mₘₐₓ(w))+1] = v
+    Base.parent(w)[Int(m′-m′ₘᵢₙ(w))+1, Int(m-mₘᵢₙ(w))+1] = v
 end
 
 
 ### Specialize to D and d matrices
 
 """
-    WignerDMatrix{IT, NT, ST}
+    WignerDMatrix{IT, NT, ST} <: WignerMatrix{IT, NT, ST}
 
 Specialized subtype of [`WignerMatrix`](@ref) for D-matrices, which are complex matrices.
 """
-struct WignerDMatrix{IT, NT, ST<:AbstractMatrix{NT}} <: WignerMatrix{IT, NT, ST}
+struct WignerDMatrix{IT, NT, ST} <: WignerMatrix{IT, NT, ST}
     parent::ST
     ℓ::IT
     m′ₘₐₓ::IT
-    function WignerDMatrix{IT, NT, ST}(parent::ST, ℓ::IT) where {IT<:Union{Integer, Rational}, NT, ST<:AbstractMatrix{NT}}
+    function WignerDMatrix{IT, NT, ST}(parent::ST, ℓ::IT) where {IT, NT, ST}
         # We want to secretly allow NTuple{3, IT} for testing purposes, so we can't just use
         # a restriction on NT in the type declaration.
         if !(NT <: NTuple{3, IT}) && complex(NT) ≢ NT
@@ -192,14 +208,14 @@ denominator *must* be 2; if it is 1, you must convert to an `Int` first.  Also, 
 matrix must have the correct size: the first dimension must be greater than 0 and less than
 or equal to `2ℓ+1`, and the second dimension must be equal to `2ℓ+1`.
 """
-function WignerDMatrix(parent::ST, ℓ::IT) where {IT<:Union{Integer, Rational}, NT, ST<:AbstractMatrix{NT}}
-    WignerDMatrix{IT, NT, ST}(parent, ℓ)
+function WignerDMatrix(parent::ST, ℓ::IT) where {IT, ST}
+    WignerDMatrix{IT, eltype(ST), ST}(parent, ℓ)
 end
-function WignerDMatrix(::Type{NT}, ℓ::IT, m′::IT=ℓ) where {NT, IT<:Union{Integer, Rational}}
+function WignerDMatrix(::Type{NT}, ℓ::IT, m′::IT=ℓ) where {NT, IT}
     if complex(NT) ≢ NT
         throw(ErrorException(
-            "WignerDMatrix only supports complex types; the input type is $NT.\n"
-            * "Perhaps you meant to use WignerdMatrix?"
+            "`WignerDMatrix` only supports complex types; the input type is $NT.\n"
+            * "Perhaps you meant to use `WignerdMatrix`?"
         ))
     end
     WignerDMatrix{IT, NT, Matrix{NT}}(Matrix{NT}(undef, Int(2m′)+1, Int(2ℓ)+1), ℓ)
@@ -208,15 +224,15 @@ end
 
 
 """
-    WignerdMatrix{IT, NT, ST}
+    WignerdMatrix{IT, NT, ST} <: WignerMatrix{IT, NT, ST}
 
 Specialized subtype of [`WignerMatrix`](@ref) for d-matrices, which are real matrices.
 """
-struct WignerdMatrix{IT, NT, ST<:AbstractMatrix{NT}} <: WignerMatrix{IT, NT, ST}
+struct WignerdMatrix{IT, NT, ST} <: WignerMatrix{IT, NT, ST}
     parent::ST
     ℓ::IT
     m′ₘₐₓ::IT
-    function WignerdMatrix{IT, NT, ST}(parent::ST, ℓ::IT) where {IT<:Union{Integer, Rational}, NT, ST<:AbstractMatrix{NT}}
+    function WignerdMatrix{IT, NT, ST}(parent::ST, ℓ::IT) where {IT, NT, ST}
         # We want to secretly allow NTuple{3, IT} for testing purposes, so we can't just use
         # a restriction on NT in the type declaration.
         if !(NT <: NTuple{3, IT}) && real(NT) ≢ NT
@@ -273,14 +289,14 @@ denominator *must* be 2; if it is 1, you must convert to an `Int` first.  Also, 
 matrix must have the correct size: the first dimension must be greater than 0 and less than
 or equal to `2ℓ+1`, and the second dimension must be equal to `2ℓ+1`.
 """
-function WignerdMatrix(parent::ST, ℓ::IT) where {IT<:Union{Integer, Rational}, NT, ST<:AbstractMatrix{NT}}
-    WignerdMatrix{IT, NT, ST}(parent, ℓ)
+function WignerdMatrix(parent::ST, ℓ::IT) where {IT, ST}
+    WignerdMatrix{IT, eltype(ST), ST}(parent, ℓ)
 end
-function WignerdMatrix(::Type{NT}, ℓ::IT, m′::IT=ℓ) where {NT, IT<:Union{Integer, Rational}}
+function WignerdMatrix(::Type{NT}, ℓ::IT, m′::IT=ℓ) where {NT, IT}
     if real(NT) ≢ NT
         throw(ErrorException(
-            "WignerdMatrix only supports real types; the input type is $NT.\n"
-            * "Perhaps you meant to use WignerDMatrix?"
+            "`WignerdMatrix` only supports real types; the input type is $NT.\n"
+            * "Perhaps you meant to use `WignerDMatrix`?"
         ))
     end
     WignerdMatrix{IT, NT, Matrix{NT}}(Matrix{NT}(undef, Int(2m′)+1, Int(2ℓ)+1), ℓ)
@@ -294,34 +310,34 @@ Specialized subtype of [`WignerMatrix`](@ref) intended to store one row of the `
 — usually the ``H^{\ell-1}_{0,m}`` or ``H^{\ell+1}_{0,m}`` components needed during the
 recurrence relations.
 """
-struct Hˡrow{IT, NT, ST<:AbstractMatrix{NT}} <: WignerMatrix{IT, NT, ST}
+struct Hˡrow{IT, NT, ST} <: WignerMatrix{IT, NT, ST}
     parent::ST
     ℓ::IT
     m′ₘₐₓ::IT
 end
 
-function Base.axes(w::Hˡrow)
-    (WignerRange(m′ₘₐₓ(w):m′ₘₐₓ(w)), WignerRange(0:mₘₐₓ(w)))
-end
+m′ₘᵢₙ(w::Hˡrow) = m′ₘₐₓ(w)
+mₘₐₓ(w::Hˡrow) = ℓ(w)
+mₘᵢₙ(w::Hˡrow) = ℓₘᵢₙ(w)
 
-@propagate_inbounds function Base.getindex(w::Hˡrow{IT, NT, ST}, m′::IT, m::IT) where {IT, NT, ST}
-    @boundscheck if m′ ∉ axes(w, 1) || m ∉ axes(w, 2)
-        throw(BoundsError(w, (m′, m)))
-    end
-    @inbounds Base.parent(w)[Int(m′-ℓₘᵢₙ(w))+1, Int(m-ℓₘᵢₙ(w))+1]
-end
+# @propagate_inbounds function Base.getindex(w::Hˡrow{IT}, m′::IT, m::IT) where {IT}
+#     @boundscheck if m′ ∉ axes(w, 1) || m ∉ axes(w, 2)
+#         throw(BoundsError(w, (m′, m)))
+#     end
+#     @inbounds Base.parent(w)[Int(m′-ℓₘᵢₙ(w))+1, Int(m-ℓₘᵢₙ(w))+1]
+# end
 
-@propagate_inbounds function Base.setindex!(w::Hˡrow{IT, NT, ST}, v, m′::IT, m::IT) where {IT, NT, ST}
-    @boundscheck if m′ ∉ axes(w, 1) || m ∉ axes(w, 2)
-        throw(BoundsError(w, (m′, m)))
-    end
-    Base.parent(w)[Int(m′-ℓₘᵢₙ(w))+1, Int(m-ℓₘᵢₙ(w))+1] = v
-end
+# @propagate_inbounds function Base.setindex!(w::Hˡrow{IT, NT, ST}, v, m′::IT, m::IT) where {IT, NT, ST}
+#     @boundscheck if m′ ∉ axes(w, 1) || m ∉ axes(w, 2)
+#         throw(BoundsError(w, (m′, m)))
+#     end
+#     Base.parent(w)[Int(m′-ℓₘᵢₙ(w))+1, Int(m-ℓₘᵢₙ(w))+1] = v
+# end
 
 
 @testitem "WignerMatrix" begin
     import SphericalFunctions.Redesign: WignerDMatrix, WignerdMatrix,
-        parent, ell, mpmax, mmax, m′ₘₐₓ, mₘₐₓ
+        parent, ell, mpmax, mpmin, mmax, mmin, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, ℓₘᵢₙ
 
     # Check that mixed-up types throw an error
     @test_throws "WignerDMatrix only supports complex types" WignerDMatrix(rand(Float64, 3, 3), 1)
@@ -387,6 +403,8 @@ end
                 @test ell(w) == ℓ
                 @test mpmax(w) == m′ₘ
                 @test mmax(w) == ℓ
+                @test mpmin(w) == -mpmax(w)
+                @test mmin(w) == -mmax(w)
                 for m ∈ -mₘ:mₘ
                     for m′ ∈ -m′ₘ:m′ₘ
                         @test w[m′, m] == (ℓ, m′, m)
@@ -408,6 +426,8 @@ end
                 @test ell(w) == ℓ
                 @test m′ₘₐₓ(w) == m′ₘ
                 @test mₘₐₓ(w) == ℓ
+                @test m′ₘᵢₙ(w) == -m′ₘₐₓ(w)
+                @test mₘᵢₙ(w) == -mₘₐₓ(w)
 
                 # The Julia docs say that the `axes` function should
                 # > Return a tuple of `AbstractUnitRange{<:Integer}` of valid indices.
