@@ -3,6 +3,9 @@ module Redesign
 import Quaternionic
 import TestItems: @testitem, @testsnippet
 
+# TEMPORARY!!!!
+import SphericalFunctions: ComplexPowers
+
 
 include("WignerMatrix.jl")
 include("WignerMatrices.jl")

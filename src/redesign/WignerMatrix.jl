@@ -82,7 +82,7 @@ if VERSION < v"1.8.2"
     Base.axes1(r::WignerRange) = axes1(r)
 end
 Base.inds2string(inds::NTuple{2, WignerRange}) =
-    string(inds[1].start, ":", inds[1].stop, "×", inds[2].start, ":", inds[2].stop)
+    string("(", inds[1].start, ":", inds[1].stop, ")×(", inds[2].start, ":", inds[2].stop, ")")
 
 function Base.axes(w::WignerMatrix{NT, IT}) where {NT, IT}
     (WignerRange(-m′ₘₐₓ(w):m′ₘₐₓ(w)), WignerRange(-mₘₐₓ(w):mₘₐₓ(w)))
@@ -96,53 +96,27 @@ Base.print_array(io::IO, w::WignerMatrix{NT, IT}) where {NT, IT<:Rational} =
     Base.print_array(io, parent(w))
 
 @propagate_inbounds function Base.getindex(w::WignerMatrix{NT, IT}, i::Int) where {NT, IT}
-    @boundscheck begin
-        if i<1 || i>length(w)
-            throw(BoundsError(
-                "i=$i out of bounds for WignerMatrix with length=$(length(w))."
-            ))
-        end
+    @boundscheck if i<1 || i>length(w)
+        throw(BoundsError(w, i))
     end
     Base.parent(w)[i]
 end
 @propagate_inbounds function Base.getindex(w::WignerMatrix{NT, IT}, m′::IT, m::IT) where {NT, IT}
-    @boundscheck begin
-        if abs(m′) > m′ₘₐₓ(w)
-            throw(BoundsError(
-                "m′=$m′ out of bounds for WignerMatrix with m′ₘₐₓ=$(m′ₘₐₓ(w))."
-            ))
-        end
-        if abs(m) > ℓ(w)
-            throw(BoundsError(
-                "m=$m out of bounds for WignerMatrix with ℓ=$(ℓ(w))."
-            ))
-        end
+    @boundscheck if m′ ∉ axes(w, 1) || m ∉ axes(w, 2)
+        throw(BoundsError(w, (m′, m)))
     end
     @inbounds Base.parent(w)[Int(m′+m′ₘₐₓ(w))+1, Int(m+mₘₐₓ(w))+1]
 end
 
-@propagate_inbounds function Base.setindex!(w::WignerMatrix{NT, IT}, v::NT, i::Int) where {NT, IT}
-    @boundscheck begin
-        if i<1 || i>length(w)
-            throw(BoundsError(
-                "i=$i out of bounds for WignerMatrix with length=$(length(w))."
-            ))
-        end
+@propagate_inbounds function Base.setindex!(w::WignerMatrix, v, i)
+    @boundscheck if i<1 || i>length(w)
+        throw(BoundsError(w, i))
     end
     Base.parent(w)[i] = v
 end
-@propagate_inbounds function Base.setindex!(w::WignerMatrix{NT, IT}, v::NT, m′::IT, m::IT) where {NT, IT}
-    @boundscheck begin
-        if abs(m′) > m′ₘₐₓ(w)
-            throw(BoundsError(
-                "m′=$m′ out of bounds for WignerMatrix with m′ₘₐₓ=$(m′ₘₐₓ(w))."
-            ))
-        end
-        if abs(m) > ℓ(w)
-            throw(BoundsError(
-                "m=$m out of bounds for WignerMatrix with ℓ=$(ℓ(w))."
-            ))
-        end
+@propagate_inbounds function Base.setindex!(w::WignerMatrix{NT, IT}, v, m′::IT, m::IT) where {NT, IT}
+    @boundscheck if m′ ∉ axes(w, 1) || m ∉ axes(w, 2)
+        throw(BoundsError(w, (m′, m)))
     end
     Base.parent(w)[Int(m′+m′ₘₐₓ(w))+1, Int(m+mₘₐₓ(w))+1] = v
 end
@@ -322,6 +296,24 @@ struct Hˡrow{NT, IT} <: WignerMatrix{NT, IT}
     parent::Matrix{NT}
     ℓ::IT
     m′ₘₐₓ::IT
+end
+
+function Base.axes(w::Hˡrow)
+    (WignerRange(m′ₘₐₓ(w):m′ₘₐₓ(w)), WignerRange(0:mₘₐₓ(w)))
+end
+
+@propagate_inbounds function Base.getindex(w::Hˡrow{NT, IT}, m′::IT, m::IT) where {NT, IT}
+    @boundscheck if m′ ∉ axes(w, 1) || m ∉ axes(w, 2)
+        throw(BoundsError(w, (m′, m)))
+    end
+    @inbounds Base.parent(w)[Int(m′-ℓₘᵢₙ(w))+1, Int(m-ℓₘᵢₙ(w))+1]
+end
+
+@propagate_inbounds function Base.setindex!(w::Hˡrow{NT, IT}, v, m′::IT, m::IT) where {NT, IT}
+    @boundscheck if m′ ∉ axes(w, 1) || m ∉ axes(w, 2)
+        throw(BoundsError(w, (m′, m)))
+    end
+    Base.parent(w)[Int(m′-ℓₘᵢₙ(w))+1, Int(m-ℓₘᵢₙ(w))+1] = v
 end
 
 
