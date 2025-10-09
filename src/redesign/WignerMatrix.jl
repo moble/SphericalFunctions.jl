@@ -315,6 +315,25 @@ struct Hˡrow{IT, NT, ST} <: WignerMatrix{IT, NT, ST}
     ℓ::IT
     m′ₘₐₓ::IT
 end
+function Hˡrow(parent::ST, ℓ::IT, m′::IT) where {IT, ST}
+    length_m′ = 1
+    length_m = Int(ℓ - ℓₘᵢₙ(ℓ)) + 1
+    if size(parent,1) < length_m′ || size(parent,2) < length_m
+        error(
+            "The input `parent` matrix for ℓ=$ℓ must have size at least "
+            * "($length_m′,$length_m); it has size $(size(parent))."
+        )
+    end
+    Hˡrow{IT, eltype(ST), ST}(parent, ℓ, m′)
+end
+function Hˡrow(::Type{NT}, ℓ::IT, m′::IT) where {NT, IT}
+    if real(NT) ≢ NT
+        error("`Hˡrow` only supports real types; the input type is $NT.")
+    end
+    length_m′ = 1
+    length_m = Int(ℓ - ℓₘᵢₙ(ℓ)) + 1
+    Hˡrow{IT, NT, Matrix{NT}}(Matrix{NT}(undef, length_m′, length_m), ℓ, m′)
+end
 
 m′ₘᵢₙ(w::Hˡrow) = m′ₘₐₓ(w)
 mₘₐₓ(w::Hˡrow) = ℓ(w)
