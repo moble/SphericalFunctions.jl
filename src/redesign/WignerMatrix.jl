@@ -155,43 +155,43 @@ struct WignerDMatrix{IT, NT, ST} <: WignerMatrix{IT, NT, ST}
         # We want to secretly allow NTuple{3, IT} for testing purposes, so we can't just use
         # a restriction on NT in the type declaration.
         if !(NT <: NTuple{3, IT}) && complex(NT) ≢ NT
-            throw(ErrorException(
+            error(
                 "WignerDMatrix only supports complex types; the input type is $NT.\n"
                 * "Perhaps you meant to use WignerdMatrix?"
-            ))
+            )
         end
         if ℓ < 0 || (IT <: Rational && denominator(ℓ) ≠ 2)
-            throw(ErrorException(
+            error(
                 "ℓ=$ℓ should be non-negative integer or half-integer.  In particular,\n"
                 * "if ℓ is an integer its type must be <:Integer, not <:Rational."
-            ))
+            )
         end
         s₁, s₂ = size(parent)
         if s₂ ≠ Int(2ℓ + 1)
-            throw(ErrorException(
+            error(
                 "The extent of the second dimension in the input data must be "
                 * "2ℓ+1=$(Int(2ℓ+1)); it is $s₂."
-            ))
+            )
         end
         if s₁ == 0 || s₁ > s₂
-            throw(ErrorException(
+            error(
                 "The extent of the first dimension in the input data must be greater than 0"
                 * " and less than or equal to 2ℓ+1=$(Int(2ℓ+1)); it is $s₁."
-            ))
+            )
         end
         if IT <: Rational
             if isodd(s₁)
-                throw(ErrorException(
+                error(
                     "ℓ=$ℓ is a half-integer, but the extent of the first dimension in the "
                     * "input data ($s₁) corresponds to whole-integer values of m′."
-                ))
+                )
             end
         else
             if iseven(s₁)
-                throw(ErrorException(
+                error(
                     "ℓ=$ℓ is an integer, but the extent of the first dimension in the "
                     * "input data ($s₁) corresponds to half-integer values of m′."
-                ))
+                )
             end
         end
         m′ₘₐₓ = IT((s₁ - 1) // 2)
@@ -213,10 +213,10 @@ function WignerDMatrix(parent::ST, ℓ::IT) where {IT, ST}
 end
 function WignerDMatrix(::Type{NT}, ℓ::IT, m′::IT=ℓ) where {NT, IT}
     if complex(NT) ≢ NT
-        throw(ErrorException(
+        error(
             "`WignerDMatrix` only supports complex types; the input type is $NT.\n"
             * "Perhaps you meant to use `WignerdMatrix`?"
-        ))
+        )
     end
     WignerDMatrix{IT, NT, Matrix{NT}}(Matrix{NT}(undef, Int(2m′)+1, Int(2ℓ)+1), ℓ)
 end
@@ -236,43 +236,43 @@ struct WignerdMatrix{IT, NT, ST} <: WignerMatrix{IT, NT, ST}
         # We want to secretly allow NTuple{3, IT} for testing purposes, so we can't just use
         # a restriction on NT in the type declaration.
         if !(NT <: NTuple{3, IT}) && real(NT) ≢ NT
-            throw(ErrorException(
+            error(
                 "WignerdMatrix only supports real types; the input type is $NT.\n"
                 * "Perhaps you meant to use WignerDMatrix?"
-            ))
+            )
         end
         if ℓ < 0 || (IT <: Rational && denominator(ℓ) ≠ 2)
-            throw(ErrorException(
+            error(
                 "ℓ=$ℓ should be non-negative integer or half-integer.  In particular,\n"
                 * "if ℓ is an integer its type must be <:Integer, not <:Rational."
-            ))
+            )
         end
         s₁, s₂ = size(parent)
         if s₂ ≠ Int(2ℓ + 1)
-            throw(ErrorException(
+            error(
                 "The extent of the second dimension in the input data must be "
                 * "2ℓ+1=$(Int(2ℓ+1)); it is $s₂."
-            ))
+            )
         end
         if s₁ == 0 || s₁ > s₂
-            throw(ErrorException(
+            error(
                 "The extent of the first dimension in the input data must be greater than 0"
                 * " and less than or equal to 2ℓ+1=$(Int(2ℓ+1)); it is $s₁."
-            ))
+            )
         end
         if IT <: Rational
             if isodd(s₁)
-                throw(ErrorException(
+                error(
                     "ℓ=$ℓ is a half-integer, but the extent of the first dimension in the "
                     * "input data ($s₁) corresponds to whole-integer values of m′."
-                ))
+                )
             end
         else
             if iseven(s₁)
-                throw(ErrorException(
+                error(
                     "ℓ=$ℓ is an integer, but the extent of the first dimension in the "
                     * "input data ($s₁) corresponds to half-integer values of m′."
-                ))
+                )
             end
         end
         m′ₘₐₓ = IT((s₁ - 1) // 2)
@@ -294,14 +294,13 @@ function WignerdMatrix(parent::ST, ℓ::IT) where {IT, ST}
 end
 function WignerdMatrix(::Type{NT}, ℓ::IT, m′::IT=ℓ) where {NT, IT}
     if real(NT) ≢ NT
-        throw(ErrorException(
+        error(
             "`WignerdMatrix` only supports real types; the input type is $NT.\n"
             * "Perhaps you meant to use `WignerDMatrix`?"
-        ))
+        )
     end
     WignerdMatrix{IT, NT, Matrix{NT}}(Matrix{NT}(undef, Int(2m′)+1, Int(2ℓ)+1), ℓ)
 end
-
 
 """
     Hˡrow{IT, NT, ST}
