@@ -339,20 +339,6 @@ m′ₘᵢₙ(w::Hˡrow) = m′ₘₐₓ(w)
 mₘₐₓ(w::Hˡrow) = ℓ(w)
 mₘᵢₙ(w::Hˡrow) = ℓₘᵢₙ(w)
 
-# @propagate_inbounds function Base.getindex(w::Hˡrow{IT}, m′::IT, m::IT) where {IT}
-#     @boundscheck if m′ ∉ axes(w, 1) || m ∉ axes(w, 2)
-#         throw(BoundsError(w, (m′, m)))
-#     end
-#     @inbounds Base.parent(w)[Int(m′-ℓₘᵢₙ(w))+1, Int(m-ℓₘᵢₙ(w))+1]
-# end
-
-# @propagate_inbounds function Base.setindex!(w::Hˡrow{IT, NT, ST}, v, m′::IT, m::IT) where {IT, NT, ST}
-#     @boundscheck if m′ ∉ axes(w, 1) || m ∉ axes(w, 2)
-#         throw(BoundsError(w, (m′, m)))
-#     end
-#     Base.parent(w)[Int(m′-ℓₘᵢₙ(w))+1, Int(m-ℓₘᵢₙ(w))+1] = v
-# end
-
 
 @testitem "WignerMatrix" begin
     import SphericalFunctions.Redesign: WignerDMatrix, WignerdMatrix,
