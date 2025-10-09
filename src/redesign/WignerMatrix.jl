@@ -93,7 +93,8 @@ Base.inds2string(inds::NTuple{2, WignerRange}) =
         "×",
         "(", inds[2].start, ":", inds[2].stop, ")"
     )
-
+Base.firstindex(r::WignerRange) = 1
+Base.lastindex(r::WignerRange) = length(r)
 function Base.getindex(v::WignerRange, i::Bool)
     throw(ArgumentError("invalid index: $i of type Bool"))
 end
