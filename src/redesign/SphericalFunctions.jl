@@ -24,7 +24,7 @@ function WignerD!(D::WignerDMatrices{Complex{FT1}}, R::Quaternionic.Rotor{FT2}) 
 end
 
 function WignerD!(D::WignerDMatrices{Complex{FT}}, R::Quaternionic.Rotor{FT}) where {FT}
-    throw(ErrorException("WignerD! is not yet implemented"))
+    error("WignerD! is not yet implemented")
 end
 
 end  # module Redesign
