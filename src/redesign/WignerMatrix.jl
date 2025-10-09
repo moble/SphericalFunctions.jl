@@ -117,7 +117,7 @@ Base.print_array(io::IO, w::WignerMatrix) = Base.print_array(io, parent(w))
     @boundscheck if i<1 || i>length(w)
         throw(BoundsError(w, i))
     end
-    Base.parent(w)[i]
+    @inbounds Base.parent(w)[i]
 end
 @propagate_inbounds function Base.getindex(w::WignerMatrix{IT}, m′::IT, m::IT) where {IT}
     @boundscheck if m′ ∉ axes(w, 1) || m ∉ axes(w, 2)
@@ -130,13 +130,13 @@ end
     @boundscheck if i<1 || i>length(w)
         throw(BoundsError(w, i))
     end
-    Base.parent(w)[i] = v
+    @inbounds Base.parent(w)[i] = v
 end
 @propagate_inbounds function Base.setindex!(w::WignerMatrix{IT}, v, m′::IT, m::IT) where {IT}
     @boundscheck if m′ ∉ axes(w, 1) || m ∉ axes(w, 2)
         throw(BoundsError(w, (m′, m)))
     end
-    Base.parent(w)[Int(m′-m′ₘᵢₙ(w))+1, Int(m-mₘᵢₙ(w))+1] = v
+    @inbounds Base.parent(w)[Int(m′-m′ₘᵢₙ(w))+1, Int(m-mₘᵢₙ(w))+1] = v
 end
 
 
