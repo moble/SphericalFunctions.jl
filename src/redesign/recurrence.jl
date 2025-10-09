@@ -43,7 +43,14 @@ function recurrence_0_m!(
     # coefficients as b̄ₗ, c̄ₗₘ, d̄ₗₘ, ēₗₘ.  In the following steps, we will use notation
     # from Gumerov and Duraiswami, who denote their different coefficients aₗᵐ, etc.
     @inbounds let √=sqrt∘T, ℓ=ℓ(Hˡ)
-        if ℓ > 1
+        if ℓ == 1
+            # The ℓ>1 branch would try to access invalid indices of H⁰; if we treat those
+            # elements as zero, we can simplify that branch to just the following much
+            # simpler code anyway.  So fundamentally, this branch is the same as the other
+            # branch.
+            Hˡ[0, 0] = cosβ
+            Hˡ[0, 1] = sinβ / √2
+        elseif ℓ > 1
             b̄ₗ = √(T(ℓ-1)/ℓ)
             Hˡ[0, 0] = cosβ * Hˡ⁻¹[0, 0] - b̄ₗ * sinβ * Hˡ⁻¹[0, 1]
             for m ∈ 1:ℓ-2
@@ -69,6 +76,8 @@ function recurrence_0_m!(
                     - sinβ * (- ēₗₘ * Hˡ⁻¹[0, m-1])
                 )
             end
+        else
+            error("Tried to recurse with ℓ=$ℓ; only ℓ ≥ 1 is supported.")
         end
     end
     Hˡ
