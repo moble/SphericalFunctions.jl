@@ -38,7 +38,7 @@ Methods defined for `WignerMatrix` objects include:
 Any new subtypes of `WignerMatrix` should inherit from this type and re-implement any of the
 methods mentioned above that are not appropriate for the new type.  Specifically, the
 default implementations assume that subtypes store the fields
-- `parent::Matrix{NT}`: the underlying data array.
+- `parent::ST`: the underlying storage type.
 - `ℓ::IT`: the value of ``ℓ``.
 - `m′ₘₐₓ::IT`: the maximum value of ``m′``.
 
@@ -51,11 +51,11 @@ abstract type WignerMatrix{IT<:Union{Integer,Rational}, NT, ST<:AbstractMatrix{N
 ### General methods for all WignerMatrix types
 
 Base.parent(w::WignerMatrix) = w.parent
-ℓ(w::WignerMatrix) = w.ℓ
-m′ₘₐₓ(w::WignerMatrix) = w.m′ₘₐₓ
-m′ₘᵢₙ(w::WignerMatrix) = -m′ₘₐₓ(w)
-mₘₐₓ(w::WignerMatrix) = ℓ(w)
-mₘᵢₙ(w::WignerMatrix) = -mₘₐₓ(w)
+ℓ(w::WignerMatrix{IT}) where {IT} = w.ℓ
+m′ₘₐₓ(w::WignerMatrix{IT}) where {IT} = w.m′ₘₐₓ
+m′ₘᵢₙ(w::WignerMatrix{IT}) where {IT} = -m′ₘₐₓ(w)
+mₘₐₓ(w::WignerMatrix{IT}) where {IT} = ℓ(w)
+mₘᵢₙ(w::WignerMatrix{IT}) where {IT} = -mₘₐₓ(w)
 
 ℓₘᵢₙ(::IT) where {IT} = ℓₘᵢₙ(IT)
 ℓₘᵢₙ(::Type{IT}) where {IT<:Integer} = zero(IT)
@@ -111,8 +111,9 @@ end
 # We don't have to override Base.show; most of its machinery works just fine, except that
 # printing the data itself gets screwed up when the indices are Rational.  So we override
 # this core part of the printing machinery to just print the parent matrix as usual.  The
-# only other thing show really does is add a "summary" line, for which the only
-Base.print_array(io::IO, w::WignerMatrix) = Base.print_array(io, parent(w))
+# only other thing show really does is add a "summary" line, for which the `axes` and thence
+# `inds2string` methods above are used.
+Base.print_array(io::IO, w::WignerMatrix{<:Rational}) = Base.print_array(io, parent(w))
 
 @propagate_inbounds function Base.getindex(w::WignerMatrix, i::Int)
     @boundscheck if i<1 || i>length(w)
