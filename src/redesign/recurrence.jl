@@ -16,10 +16,10 @@ relations.  This only sets the values ``H^0_{0,0}=0``, ``H^1_{0,0}=cosβ``, and
 Note that `Hˡ` can be any `WignerMatrix` with integer indices.  In particular, it can be a
 `D` matrix or a `d` matrix.
 """
-function initialize!(Hˡ::WignerMatrix{NT, IT}, sinβ::T, cosβ::T) where {NT, IT<:Signed, T}
+function initialize!(Hˡ::WignerMatrix{IT, NT}, sinβ::T, cosβ::T) where {IT<:Signed, NT, T}
     @inbounds let √=sqrt∘T, ℓ=ℓ(Hˡ)
         if ℓ == 0
-            Hˡ[0, 0] = 0
+            Hˡ[0, 0] = 1
         elseif ℓ == 1
             Hˡ[0, 0] = cosβ
             Hˡ[0, 1] = sinβ / √2
@@ -36,15 +36,13 @@ compute ``H^{\ell}_{0,m}`` for all ``m \geq 0``.
 
 """
 function recurrence_0_m!(
-    Hˡ::WignerMatrix{NT, IT}, Hˡ⁻¹::WignerMatrix{NT2, IT}, sinβ::T, cosβ::T
-) where {NT, NT2, IT<:Signed, T}
+    Hˡ::WignerMatrix{IT, NT}, Hˡ⁻¹::WignerMatrix{IT, NT2}, sinβ::T, cosβ::T
+) where {IT<:Signed, NT, NT2, T}
     @assert ℓ(Hˡ⁻¹) == ℓ(Hˡ) - 1
     # Note that in this step only, we use notation derived from Xing et al., denoting the
     # coefficients as b̄ₗ, c̄ₗₘ, d̄ₗₘ, ēₗₘ.  In the following steps, we will use notation
     # from Gumerov and Duraiswami, who denote their different coefficients aₗᵐ, etc.
-    #@inbounds let √=sqrt∘T, ℓ=ℓ(Hˡ)
-    @warn "Turned off inbounds for debugging"
-    let √=sqrt∘T, ℓ=ℓ(Hˡ)
+    @inbounds let √=sqrt∘T, ℓ=ℓ(Hˡ)
         if ℓ > 1
             b̄ₗ = √(T(ℓ-1)/ℓ)
             Hˡ[0, 0] = cosβ * Hˡ⁻¹[0, 0] - b̄ₗ * sinβ * Hˡ⁻¹[0, 1]
@@ -84,8 +82,8 @@ compute ``H^{\ell}_{1,m}`` for all ``m \geq 1``.
 
 """
 function recurrence_1_m!(
-    Hˡ::WignerMatrix{NT, IT}, Hˡ⁺¹::WignerMatrix{NT2, IT}, sinβ::T, cosβ::T
-) where {NT, NT2, IT<:Signed, T}
+    Hˡ::WignerMatrix{IT, NT}, Hˡ⁺¹::WignerMatrix{IT, NT2}, sinβ::T, cosβ::T
+) where {IT<:Signed, NT, NT2, T}
     @assert ℓ(Hˡ⁺¹) == ℓ(Hˡ) + 1
     @inbounds let √=sqrt∘T, ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
         if ℓ > 0 && m′ₘₐₓ ≥ 1
@@ -113,8 +111,8 @@ m)`` entries, compute ``H^{\ell}_{m′+1,m}`` for all ``m′ \geq 1`` and ``m \g
 
 """
 function recurrence_m′₊!(
-    Hˡ::WignerMatrix{NT, IT}, sinβ::T, cosβ::T
-) where {NT, IT<:Signed, T}
+    Hˡ::WignerMatrix{IT, NT}, sinβ::T, cosβ::T
+) where {IT<:Signed, NT, T}
     @inbounds let √=sqrt∘T, ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
         for m′ ∈ 1:min(ℓ, m′ₘₐₓ)-1
             # Note that the signs of m′ and m are always +1, so we leave them out of the
@@ -150,8 +148,8 @@ Step 5 of the computation of ``H``: Given ``H^{\ell}`` with all its ``(m′, m)`
 
 """
 function recurrence_m′₋!(
-    Hˡ::WignerMatrix{NT, IT}, sinβ::T, cosβ::T
-) where {NT, IT<:Signed, T}
+    Hˡ::WignerMatrix{IT, NT}, sinβ::T, cosβ::T
+) where {IT<:Signed, NT, T}
     @inbounds let √=sqrt∘T, ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
         for m′ ∈ 0:-1:-min(ℓ, m′ₘₐₓ)+1
             d̄ₗᵐ′ = sgn(m′) * √((ℓ-m′)*(ℓ+m′+1))
@@ -192,7 +190,7 @@ H^ℓ_{m′, m} &= H^ℓ_{-m′, -m}.
 ```
 
 """
-function impose_symmetries!(Hˡ::WignerMatrix{NT, IT}) where {NT, IT<:Signed}
+function impose_symmetries!(Hˡ::WignerMatrix{IT, NT}) where {IT<:Signed, NT}
     @inbounds let ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
         # The idea here is to impose
         #   Hˡ[m, m′] = Hˡ[-m, -m′] = Hˡ[-m′, -m] = Hˡ[m′, m]
@@ -217,7 +215,7 @@ Convert the Wigner matrix `Hˡ` to the d matrix `dˡ`, which just involves multi
 signs related to the `m′` and `m` indices.
 
 """
-function convert_H_to_d!(Hˡ::WignerMatrix{NT, IT}) where {NT, IT<:Signed}
+function convert_H_to_d!(Hˡ::WignerMatrix{IT, NT}) where {IT<:Signed, NT}
     @inbounds let ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
         for m ∈ -ℓ:ℓ
             for m′ ∈ -m′ₘₐₓ:m′ₘₐₓ
@@ -236,7 +234,7 @@ Convert the Wigner matrix `Hˡ` to the D matrix `Dˡ`, which just involves multi
 complex phases related to the `m′` and `m` indices.
 
 """
-function convert_H_to_D!(Hˡ::WignerMatrix{NT, IT}, eⁱᵅ::NT, eⁱᵞ::NT) where {NT, IT<:Signed}
+function convert_H_to_D!(Hˡ::WignerMatrix{IT, NT}, eⁱᵅ::NT, eⁱᵞ::NT) where {IT<:Signed, NT}
     # NOTE: This function will have to be modified to work for Rational indices because the
     # phases will not be integer powers; we'll have to incorporate √eⁱᵅ and √eⁱᵞ.
     @inbounds let ℓ=ℓ(Hˡ), ℓₘᵢₙ=ℓₘᵢₙ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
