@@ -7,35 +7,33 @@ sgn(m) = m ≥ 0 ? 1 : -1
 
 
 @doc raw"""
-    initialize!(Hˡ, sinβ, cosβ)
+    recurrence_step1!(H⁰)
 
-Step 1 of the computation of ``H``: Initialize the Wigner matrix `Hˡ` for the recurrence
-relations.  This only sets the values ``H^0_{0,0}=0``, ``H^1_{0,0}=cosβ``, and
-``H^1_{0,1}=sinβ/√2``.
+Initialize the Wigner matrix `H⁰` for the recurrence relations.  This only sets the values
+`H⁰[0,0]=1`.
 
-Note that `Hˡ` can be any `WignerMatrix` with integer indices.  In particular, it can be a
+Note that `H⁰` can be any `WignerMatrix` with integer indices.  In particular, it can be a
 `D` matrix or a `d` matrix.
 """
-function initialize!(Hˡ::WignerMatrix{IT, NT}, sinβ::T, cosβ::T) where {IT<:Signed, NT, T}
-    @inbounds let √=sqrt∘T, ℓ=ℓ(Hˡ)
+function initialize!(H⁰::WignerMatrix{IT, NT}) where {IT<:Signed, NT}
+    @inbounds let √=sqrt∘T, ℓ=ℓ(H⁰)
         if ℓ == 0
-            Hˡ[0, 0] = 1
-        elseif ℓ == 1
-            Hˡ[0, 0] = cosβ
-            Hˡ[0, 1] = sinβ / √2
+            H⁰[0, 0] = 1
+        else
+            error("Trying to initialize ℓ=$ℓ; only ℓ=0 is supported.")
         end
     end
-    Hˡ
+    H⁰
 end
 
 @doc raw"""
-    recurrence_0_m!(Hˡ, Hˡ⁻¹, sinβ, cosβ)
+    recurrence_step2!(Hˡ, Hˡ⁻¹, sinβ, cosβ)
 
-Step 2 of the computation of ``H``: Given ``H^{\ell-1}`` with its ``(0, m)`` entries,
-compute ``H^{\ell}_{0,m}`` for all ``m \geq 0``.
+Compute the values of ``H^{\ell}_{0,m}``, from the values of ``H^{\ell-1}_{0,m}`` for all
+``m \geq 0``.
 
 """
-function recurrence_0_m!(
+function recurrence_step2!(
     Hˡ::WignerMatrix{IT, NT}, Hˡ⁻¹::WignerMatrix{IT, NT2}, sinβ::T, cosβ::T
 ) where {IT<:Signed, NT, NT2, T}
     @assert ℓ(Hˡ⁻¹) == ℓ(Hˡ) - 1
@@ -77,20 +75,20 @@ function recurrence_0_m!(
                 )
             end
         else
-            error("Tried to recurse with ℓ=$ℓ; only ℓ ≥ 1 is supported.")
+            error("Tried to recurse with ℓ=$ℓ; only integer ℓ ≥ 1 is supported.")
         end
     end
     Hˡ
 end
 
 @doc raw"""
-    recurrence_1_m!(Hˡ, Hˡ⁺¹, sinβ, cosβ)
+    recurrence_step3!(Hˡ, Hˡ⁺¹, sinβ, cosβ)
 
-Step 3 of the computation of ``H``: Given ``H^{\ell+1}`` with all its ``(0, m)`` entries,
-compute ``H^{\ell}_{1,m}`` for all ``m \geq 1``.
+Compute the values of ``H^{\ell}_{1,m}``, from the values of ``H^{\ell+1}_{0,m}`` for all
+``m \geq 0``.
 
 """
-function recurrence_1_m!(
+function recurrence_step3!(
     Hˡ::WignerMatrix{IT, NT}, Hˡ⁺¹::WignerMatrix{IT, NT2}, sinβ::T, cosβ::T
 ) where {IT<:Signed, NT, NT2, T}
     @assert ℓ(Hˡ⁺¹) == ℓ(Hˡ) + 1
@@ -113,13 +111,13 @@ function recurrence_1_m!(
 end
 
 @doc raw"""
-    recurrence_m′₊!(Hˡ, sinβ, cosβ)
+    recurrence_step4!(Hˡ, sinβ, cosβ)
 
-Step 4 of the computation of ``H``: Given ``H^{\ell}`` with all its ``(0, m)`` and ``(1,
-m)`` entries, compute ``H^{\ell}_{m′+1,m}`` for all ``m′ \geq 1`` and ``m \geq 1``.
+Compute the values of ``H^{\ell}_{m'+1,m}``, from the values of ``H^{\ell}_{m',m-1}``,
+``H^{\ell}_{m'-1,m}``, and  ``H^{\ell}_{m',m+1}``, for all ``m' > 1`` and ``m \geq m'``.
 
 """
-function recurrence_m′₊!(
+function recurrence_step4!(
     Hˡ::WignerMatrix{IT, NT}, sinβ::T, cosβ::T
 ) where {IT<:Signed, NT, T}
     @inbounds let √=sqrt∘T, ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
@@ -150,13 +148,13 @@ function recurrence_m′₊!(
 end
 
 @doc raw"""
-    recurrence_m′₋!(Hˡ, sinβ, cosβ)
+    recurrence_step5!(Hˡ, sinβ, cosβ)
 
-Step 5 of the computation of ``H``: Given ``H^{\ell}`` with all its ``(m′, m)`` entries for
-`m′ ≥ 0`, compute ``H^{\ell}_{m′-1,m}`` for all `m′ ≤ -1` and `m`.
+Compute the values of ``H^{\ell}_{m'-1,m}``, from the values of ``H^{\ell}_{m',m-1}``,
+``H^{\ell}_{m'+1,m}``, and  ``H^{\ell}_{m',m+1}``, for all ``m' \leq 0`` and ``m > -m'``.
 
 """
-function recurrence_m′₋!(
+function recurrence_step5!(
     Hˡ::WignerMatrix{IT, NT}, sinβ::T, cosβ::T
 ) where {IT<:Signed, NT, T}
     @inbounds let √=sqrt∘T, ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
@@ -185,12 +183,15 @@ function recurrence_m′₋!(
 end
 
 @doc raw"""
-    impose_symmetries!(Hˡ)
+    recurrence_step6!(Hˡ)
+
+Impose the symmetries of the Wigner matrix `Hˡ` to fill in all the values that have not yet
+been computed.
 
 Assuming that `Hˡ` has already been computed as much as possible by the recurrence
 relations, this function imposes the symmetries, rather than recalculating terms.
-Specifically, the recurrence relations will calculate the terms for all `m`, and
-`m′ ≥ abs(m)`, and this function will complete the calculations using the symmetries
+Specifically, the recurrence relations will calculate the terms for all `m`, and `m′ ≥
+abs(m)`, and this function will complete the calculations using the symmetries
 ```math
 \begin{aligned}
 H^ℓ_{m′, m} &= H^ℓ_{m, m′}, \\
@@ -199,7 +200,7 @@ H^ℓ_{m′, m} &= H^ℓ_{-m′, -m}.
 ```
 
 """
-function impose_symmetries!(Hˡ::WignerMatrix{IT, NT}) where {IT<:Signed, NT}
+function recurrence_step6!(Hˡ::WignerMatrix{IT, NT}) where {IT<:Signed, NT}
     @inbounds let ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
         # The idea here is to impose
         #   Hˡ[m, m′] = Hˡ[-m, -m′] = Hˡ[-m′, -m] = Hˡ[m′, m]
