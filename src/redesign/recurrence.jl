@@ -15,7 +15,7 @@ Initialize the Wigner matrix `H⁰` for the recurrence relations.  This only set
 Note that `H⁰` can be any `WignerMatrix` with integer indices.  In particular, it can be a
 `D` matrix or a `d` matrix.
 """
-function initialize!(H⁰::WignerMatrix{IT, NT}) where {IT<:Signed, NT}
+function recurrence_step1!(H⁰::WignerMatrix{IT, NT}) where {IT<:Signed, NT}
     @inbounds let √=sqrt∘T, ℓ=ℓ(H⁰)
         if ℓ == 0
             H⁰[0, 0] = 1
