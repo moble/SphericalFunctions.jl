@@ -48,10 +48,9 @@ that paper unless otherwise noted.
 
 Because of the symmetries noted above, we only compute ``H_{m',
 m}^\ell`` with ``m ≥ |m'|`` — roughly one quarter of all possible
-values.  Furthermore, for computations of spin-weighted spherical
-harmonics of weight ``s``, we only need to compute values with ``|m'|
-≤ |s|``, which constitutes a dramatic savings when ``|s| ≪ ℓₘₐₓ``.
-The data are stored in the array `Hwedge`.
+values.  Furthermore, for spin-weighted spherical harmonics of weight
+``s``, we only need to compute values with ``|m'| ≤ |s|``, which
+constitutes a dramatic savings when ``|s| ≪ ℓₘₐₓ``.
 
 
 ### Step 1: Initialize ``H^{0}_{0,0}``
