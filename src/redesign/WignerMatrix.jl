@@ -51,23 +51,24 @@ abstract type WignerMatrix{IT<:Union{Integer,Rational}, NT, ST<:AbstractMatrix{N
 ### General methods for all WignerMatrix types
 
 Base.parent(w::WignerMatrix) = w.parent
-ℓ(w::WignerMatrix{IT}) where {IT} = w.ℓ
-m′ₘₐₓ(w::WignerMatrix{IT}) where {IT} = w.m′ₘₐₓ
-m′ₘᵢₙ(w::WignerMatrix{IT}) where {IT} = -m′ₘₐₓ(w)
-mₘₐₓ(w::WignerMatrix{IT}) where {IT} = ℓ(w)
-mₘᵢₙ(w::WignerMatrix{IT}) where {IT} = -mₘₐₓ(w)
 
+ℓ(w::WignerMatrix{IT}) where {IT} = w.ℓ
 ℓₘᵢₙ(::IT) where {IT} = ℓₘᵢₙ(IT)
 ℓₘᵢₙ(::Type{IT}) where {IT<:Integer} = zero(IT)
 ℓₘᵢₙ(::Type{IT}) where {IT<:Rational} = IT(1//2)
 ℓₘᵢₙ(::WignerMatrix{IT}) where {IT} = ℓₘᵢₙ(IT)
 
+m′ₘₐₓ(w::WignerMatrix{IT}) where {IT} = w.m′ₘₐₓ
+m′ₘᵢₙ(w::WignerMatrix{IT}) where {IT} = -m′ₘₐₓ(w)
+mₘₐₓ(w::WignerMatrix{IT}) where {IT} = ℓ(w)
+mₘᵢₙ(w::WignerMatrix{IT}) where {IT} = -mₘₐₓ(w)
+
 const ell = ℓ
+const ellmin = ℓₘᵢₙ
 const mpmax = m′ₘₐₓ
 const mpmin = m′ₘᵢₙ
 const mmax = mₘₐₓ
 const mmin = mₘᵢₙ
-const ellmin = ℓₘᵢₙ
 
 isrational(::WignerMatrix{IT, NT, ST}) where {IT<:Integer, NT, ST} = false
 isrational(::WignerMatrix{IT, NT, ST}) where {IT<:Rational, NT, ST} = true
