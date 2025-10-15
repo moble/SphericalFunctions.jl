@@ -1,7 +1,7 @@
 import Base: @propagate_inbounds
 
 """
-    WignerMatrix{IT, NT, ST}
+    AbstractWignerMatrix{IT, NT, ST}
 
 Abstract base type for Wigner rotation‐matrix objects of a specific ``ℓ`` value.
 - `IT` is the index type (an `Integer` or half-integer `Rational`), governing the allowed
@@ -17,7 +17,7 @@ use `w[m′,m]`.  Specifically, these indices can be negative or positive, and m
 
 # Methods
 
-Methods defined for `WignerMatrix` objects include:
+Methods defined for `AbstractWignerMatrix` objects include:
 - `parent(w)`: the underlying data array.
 - `ℓ(w)` or `ell(w)`: the value of ``ℓ``.
 - `m′ₘₐₓ(w)` or `mpmax(w)`: the maximum value of ``m′``.
@@ -35,7 +35,7 @@ Methods defined for `WignerMatrix` objects include:
 
 # Implementation
 
-Any new subtypes of `WignerMatrix` should inherit from this type and re-implement any of the
+Any new subtypes of `AbstractWignerMatrix` should inherit from this type and re-implement any of the
 methods mentioned above that are not appropriate for the new type.  Specifically, the
 default implementations assume that subtypes store the fields
 - `parent::ST`: the underlying storage type.
@@ -46,23 +46,23 @@ For example, if the parent Matrix is not stored as the `parent` field, then the 
 method should be re-implemented to return the correct parent object.  The `getindex` and
 `setindex!`
 """
-abstract type WignerMatrix{IT<:Union{Integer,Rational}, NT, ST<:AbstractMatrix{NT}} <: AbstractMatrix{NT} end
+abstract type AbstractWignerMatrix{IT<:Union{Integer,Rational}, NT, ST<:AbstractMatrix{NT}} <: AbstractMatrix{NT} end
 
-### General methods for all WignerMatrix types
+### General methods for all AbstractWignerMatrix types
 
-Base.parent(w::WignerMatrix) = w.parent
+Base.parent(w::AbstractWignerMatrix) = w.parent
 
-ℓ(w::WignerMatrix{IT}) where {IT} = w.ℓ
+ℓ(w::AbstractWignerMatrix{IT}) where {IT} = w.ℓ
 ℓₘᵢₙ(::IT) where {IT} = ℓₘᵢₙ(IT)
 ℓₘᵢₙ(::Type{IT}) where {IT} = error("No method defined for `ℓₘᵢₙ(::Type{$IT})`.")
 ℓₘᵢₙ(::Type{IT}) where {IT<:Integer} = zero(IT)
 ℓₘᵢₙ(::Type{IT}) where {IT<:Rational} = IT(1//2)
-ℓₘᵢₙ(::WignerMatrix{IT}) where {IT} = ℓₘᵢₙ(IT)
+ℓₘᵢₙ(::AbstractWignerMatrix{IT}) where {IT} = ℓₘᵢₙ(IT)
 
-m′ₘₐₓ(w::WignerMatrix{IT}) where {IT} = w.m′ₘₐₓ
-m′ₘᵢₙ(w::WignerMatrix{IT}) where {IT} = -m′ₘₐₓ(w)
-mₘₐₓ(w::WignerMatrix{IT}) where {IT} = ℓ(w)
-mₘᵢₙ(w::WignerMatrix{IT}) where {IT} = -mₘₐₓ(w)
+m′ₘₐₓ(w::AbstractWignerMatrix{IT}) where {IT} = w.m′ₘₐₓ
+m′ₘᵢₙ(w::AbstractWignerMatrix{IT}) where {IT} = -m′ₘₐₓ(w)
+mₘₐₓ(w::AbstractWignerMatrix{IT}) where {IT} = ℓ(w)
+mₘᵢₙ(w::AbstractWignerMatrix{IT}) where {IT} = -mₘₐₓ(w)
 
 const ell = ℓ
 const ellmin = ℓₘᵢₙ
@@ -71,12 +71,12 @@ const mpmin = m′ₘᵢₙ
 const mmax = mₘₐₓ
 const mmin = mₘᵢₙ
 
-isrational(::WignerMatrix{IT}) where {IT<:Integer} = false
-isrational(::WignerMatrix{IT}) where {IT<:Rational} = true
+isrational(::AbstractWignerMatrix{IT}) where {IT<:Integer} = false
+isrational(::AbstractWignerMatrix{IT}) where {IT<:Rational} = true
 
-Base.eltype(::WignerMatrix{IT, NT, ST}) where {IT, NT, ST} = NT
-Base.size(w::WignerMatrix{IT, NT, ST}) where {IT, NT, ST} = size(parent(w))
-Base.length(w::WignerMatrix{IT, NT, ST}) where {IT, NT, ST} = length(parent(w))
+Base.eltype(::AbstractWignerMatrix{IT, NT, ST}) where {IT, NT, ST} = NT
+Base.size(w::AbstractWignerMatrix{IT, NT, ST}) where {IT, NT, ST} = size(parent(w))
+Base.length(w::AbstractWignerMatrix{IT, NT, ST}) where {IT, NT, ST} = length(parent(w))
 
 struct WignerRange{T<:Union{Integer,Rational}} <: AbstractUnitRange{T}
     start::T
@@ -106,7 +106,7 @@ end
     val
 end
 
-function Base.axes(w::WignerMatrix{IT}) where {IT}
+function Base.axes(w::AbstractWignerMatrix{IT}) where {IT}
     (WignerRange(m′ₘᵢₙ(w):m′ₘₐₓ(w)), WignerRange(mₘᵢₙ(w):mₘₐₓ(w)))
 end
 
@@ -115,28 +115,28 @@ end
 # this core part of the printing machinery to just print the parent matrix as usual.  The
 # only other thing show really does is add a "summary" line, for which the `axes` and thence
 # `inds2string` methods above are used.
-Base.print_array(io::IO, w::WignerMatrix{<:Rational}) = Base.print_array(io, parent(w))
+Base.print_array(io::IO, w::AbstractWignerMatrix{<:Rational}) = Base.print_array(io, parent(w))
 
-@propagate_inbounds function Base.getindex(w::WignerMatrix, i::Int)
+@propagate_inbounds function Base.getindex(w::AbstractWignerMatrix, i::Int)
     @boundscheck if i<1 || i>length(w)
         throw(BoundsError(w, i))
     end
     @inbounds Base.parent(w)[i]
 end
-@propagate_inbounds function Base.getindex(w::WignerMatrix{IT}, m′::IT, m::IT) where {IT}
+@propagate_inbounds function Base.getindex(w::AbstractWignerMatrix{IT}, m′::IT, m::IT) where {IT}
     @boundscheck if m′ ∉ axes(w, 1) || m ∉ axes(w, 2)
         throw(BoundsError(w, (m′, m)))
     end
     @inbounds Base.parent(w)[Int(m′-m′ₘᵢₙ(w))+1, Int(m-mₘᵢₙ(w))+1]
 end
 
-@propagate_inbounds function Base.setindex!(w::WignerMatrix, v, i::Int)
+@propagate_inbounds function Base.setindex!(w::AbstractWignerMatrix, v, i::Int)
     @boundscheck if i<1 || i>length(w)
         throw(BoundsError(w, i))
     end
     @inbounds Base.parent(w)[i] = v
 end
-@propagate_inbounds function Base.setindex!(w::WignerMatrix{IT}, v, m′::IT, m::IT) where {IT}
+@propagate_inbounds function Base.setindex!(w::AbstractWignerMatrix{IT}, v, m′::IT, m::IT) where {IT}
     @boundscheck if m′ ∉ axes(w, 1) || m ∉ axes(w, 2)
         throw(BoundsError(w, (m′, m)))
     end
@@ -147,11 +147,11 @@ end
 ### Specialize to D and d matrices
 
 """
-    WignerDMatrix{IT, NT, ST} <: WignerMatrix{IT, NT, ST}
+    WignerDMatrix{IT, NT, ST} <: AbstractWignerMatrix{IT, NT, ST}
 
-Specialized subtype of [`WignerMatrix`](@ref) for D-matrices, which are complex matrices.
+Specialized subtype of [`AbstractWignerMatrix`](@ref) for D-matrices, which are complex matrices.
 """
-struct WignerDMatrix{IT, NT, ST} <: WignerMatrix{IT, NT, ST}
+struct WignerDMatrix{IT, NT, ST} <: AbstractWignerMatrix{IT, NT, ST}
     parent::ST
     ℓ::IT
     m′ₘₐₓ::IT
@@ -228,11 +228,11 @@ end
 
 
 """
-    WignerdMatrix{IT, NT, ST} <: WignerMatrix{IT, NT, ST}
+    WignerdMatrix{IT, NT, ST} <: AbstractWignerMatrix{IT, NT, ST}
 
-Specialized subtype of [`WignerMatrix`](@ref) for d-matrices, which are real matrices.
+Specialized subtype of [`AbstractWignerMatrix`](@ref) for d-matrices, which are real matrices.
 """
-struct WignerdMatrix{IT, NT, ST} <: WignerMatrix{IT, NT, ST}
+struct WignerdMatrix{IT, NT, ST} <: AbstractWignerMatrix{IT, NT, ST}
     parent::ST
     ℓ::IT
     m′ₘₐₓ::IT
@@ -309,11 +309,11 @@ end
 """
     Hˡrow{IT, NT, ST}
 
-Specialized subtype of [`WignerMatrix`](@ref) intended to store one row of the ``H`` matrix
+Specialized subtype of [`AbstractWignerMatrix`](@ref) intended to store one row of the ``H`` matrix
 — usually the ``H^{\ell-1}_{0,m}`` or ``H^{\ell+1}_{0,m}`` components needed during the
 recurrence relations.
 """
-struct Hˡrow{IT, NT, ST} <: WignerMatrix{IT, NT, ST}
+struct Hˡrow{IT, NT, ST} <: AbstractWignerMatrix{IT, NT, ST}
     parent::ST
     ℓ::IT
     m′ₘₐₓ::IT
