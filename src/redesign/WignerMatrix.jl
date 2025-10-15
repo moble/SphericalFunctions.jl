@@ -71,8 +71,8 @@ const mpmin = m′ₘᵢₙ
 const mmax = mₘₐₓ
 const mmin = mₘᵢₙ
 
-isrational(::WignerMatrix{IT, NT, ST}) where {IT<:Integer, NT, ST} = false
-isrational(::WignerMatrix{IT, NT, ST}) where {IT<:Rational, NT, ST} = true
+isrational(::WignerMatrix{IT}) where {IT<:Integer} = false
+isrational(::WignerMatrix{IT}) where {IT<:Rational} = true
 
 Base.eltype(::WignerMatrix{IT, NT, ST}) where {IT, NT, ST} = NT
 Base.size(w::WignerMatrix{IT, NT, ST}) where {IT, NT, ST} = size(parent(w))
