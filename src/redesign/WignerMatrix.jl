@@ -54,6 +54,7 @@ Base.parent(w::WignerMatrix) = w.parent
 
 ℓ(w::WignerMatrix{IT}) where {IT} = w.ℓ
 ℓₘᵢₙ(::IT) where {IT} = ℓₘᵢₙ(IT)
+ℓₘᵢₙ(::Type{IT}) where {IT} = error("No method defined for `ℓₘᵢₙ(::Type{$IT})`.")
 ℓₘᵢₙ(::Type{IT}) where {IT<:Integer} = zero(IT)
 ℓₘᵢₙ(::Type{IT}) where {IT<:Rational} = IT(1//2)
 ℓₘᵢₙ(::WignerMatrix{IT}) where {IT} = ℓₘᵢₙ(IT)
