@@ -206,14 +206,10 @@ function recurrence_step6!(Hˡ::AbstractWignerMatrix{IT, NT}) where {IT<:Signed,
         #   Hˡ[m, m′] = Hˡ[-m, -m′] = Hˡ[-m′, -m] = Hˡ[m′, m]
         # without double-counting any entries, and accounting for m′ₘₐₓ.
         for m ∈ 1:ℓ
-            @info m
             for m′ ∈ -min(m′ₘₐₓ, m):min(m′ₘₐₓ, m)
-                @show (-m′, -m) (m′, m) Hˡ[m′, m]
                 Hˡ[-m′, -m] = Hˡ[m′, m]
             end
             for m′ ∈ -min(m′ₘₐₓ, m-1):min(m′ₘₐₓ, m-1)
-                @show (m, m′) (m′, m) Hˡ[m′, m]
-                @show (-m, -m′) (m′, m) Hˡ[m′, m]
                 Hˡ[m, m′] = Hˡ[-m, -m′] = Hˡ[m′, m]
             end
         end
