@@ -1,9 +1,10 @@
 # Eq. (44) in Gumerov and Duraiswami (2015).  Note that they define `sgn` as follows, which
 # is different from the usual definition, including from Julia's `sign` function, at 0:
-sgn(m) = m ≥ 0 ? 1 : -1
+sgn(m) = ifelse(m ≥ 0, 1, -1)
 
 # Eq. (7) in Gumerov and Duraiswami (2015)
-ϵ(m) = (m ≥ 0 ? (-1)^m : 1)
+# ϵ(m) = (m ≥ 0 ? (-1)^m : 1)
+ϵ(m) = ifelse(m > 0 && isodd(m), -1, 1)
 
 
 @doc raw"""
