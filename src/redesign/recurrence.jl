@@ -226,7 +226,7 @@ Convert the Wigner matrix `Hˡ` to the d matrix `dˡ`, which just involves multi
 signs related to the `m′` and `m` indices.
 
 """
-function convert_H_to_d!(Hˡ::AbstractWignerMatrix{IT, NT}) where {IT<:Signed, NT}
+function convert_H_to_d!(Hˡ::AbstractWignerMatrix{IT, NT}) where {IT<:Signed, NT<:Real}
     @inbounds let ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
         for m ∈ -ℓ:ℓ
             for m′ ∈ -m′ₘₐₓ:m′ₘₐₓ
@@ -245,7 +245,7 @@ Convert the Wigner matrix `Hˡ` to the D matrix `Dˡ`, which just involves multi
 complex phases related to the `m′` and `m` indices.
 
 """
-function convert_H_to_D!(Hˡ::AbstractWignerMatrix{IT, NT}, eⁱᵅ::NT, eⁱᵞ::NT) where {IT<:Signed, NT}
+function convert_H_to_D!(Hˡ::AbstractWignerMatrix{IT, NT}, eⁱᵅ::NT, eⁱᵞ::NT) where {IT<:Signed, NT<:Complex}
     # NOTE: This function will have to be modified to work for Rational indices because the
     # phases will not be integer powers; we'll have to incorporate √eⁱᵅ and √eⁱᵞ.
     @inbounds let ℓ=ℓ(Hˡ), ℓₘᵢₙ=ℓₘᵢₙ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
