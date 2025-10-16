@@ -174,11 +174,6 @@ function recurrence!(
             recurrence_step2!(w, eⁱᵝ, ℓ′)
         end
 
-        let
-            Wˡ, Hˡ, Hˡ⁺¹ = w(ℓ)
-            @info "recurrence! called with skip_ℓ_recurrence=$skip_ℓ_recurrence" Hˡ Hˡ⁺¹
-        end
-
         # Copy Hˡ₀ₘ to Wˡ₀ₘ
         fillW!(w, ℓ)
 
