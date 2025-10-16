@@ -59,7 +59,8 @@ end
 
 function fillW!(w::WignerCalculator{IT}, ℓ::IT) where {IT}
     Wˡ, Hˡ, Hˡ⁺¹ = w(ℓ)
-    Wˡ[0:0, 0:ℓ] .= Hˡ[0:0, 0:ℓ]
+    # Wˡ[0:0, 0:ℓ] .= Hˡ[0:0, 0:ℓ]
+    @views copyto!(Wˡ[0:0, 0:ℓ], Hˡ[0:0, 0:ℓ])
     w
 end
 
