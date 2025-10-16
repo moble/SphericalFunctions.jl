@@ -44,8 +44,9 @@ function (wc::WignerCalculator{IT, RT, NT})(ℓ::IT) where {IT, RT, NT}
     end
     if ℓ < ℓₘᵢₙ(wc) || ℓ > ℓₘₐₓ(wc)
         error(
-            "ℓ=$ℓ is out of range for this WignerCalculator "
-            * "(which has ℓₘᵢₙ=$(ℓₘᵢₙ(wc)) and ℓₘₐₓ=$(ℓₘₐₓ(wc))).")
+            "ℓ=$ℓ is out of range for this WignerCalculator " *
+            "(which has ℓₘᵢₙ=$(ℓₘᵢₙ(wc)) and ℓₘₐₓ=$(ℓₘₐₓ(wc)))."
+        )
     end
     let ℓₘᵢₙ=ℓₘᵢₙ(wc), m′ₘₐₓ=min(ℓ, m′ₘₐₓ(wc)), m′ₘᵢₙ=max(-ℓ, m′ₘᵢₙ(wc)),
         mₘₐₓ=min(ℓ, mₘₐₓ(wc)), mₘᵢₙ=max(-ℓ, mₘᵢₙ(wc))
@@ -86,8 +87,6 @@ function recurrence_step2!(w::WignerCalculator{IT}, eⁱᵝ, ℓ) where {IT<:Sig
     cosβ, sinβ = reim(eⁱᵝ)
     recurrence_step2!(Hˡ, Hˡ⁻¹, sinβ, cosβ)
     Wˡ, Hˡ, Hˡ⁺¹ = w(ℓ)
-    # Hˡ[0:0, 0:ℓ] .= Hˡ⁺¹[0:0, 0:ℓ]
-    # Wˡ[0:0, 0:ℓ] .= Hˡ⁺¹[0:0, 0:ℓ]
     copyto!(view(Hˡ, 0:0, 0:ℓ), view(Hˡ⁺¹, 0:0, 0:ℓ))
     copyto!(view(Wˡ, 0:0, 0:ℓ), view(Hˡ⁺¹, 0:0, 0:ℓ))
     recurrence_step2!(Hˡ⁺¹, Hˡ, sinβ, cosβ)
@@ -99,7 +98,6 @@ function recurrence_step3!(w::WignerCalculator{IT}, eⁱᵝ, ℓ) where {IT<:Sig
     cosβ, sinβ = reim(eⁱᵝ)
     recurrence_step3!(Wˡ, Hˡ⁺¹, sinβ, cosβ)
     Wˡ⁺¹, Hˡ⁺¹, Hˡ⁺² = w(ℓ+1)
-    # Hˡ⁺¹[0:0, 0:ℓ+1] .= Hˡ⁺²[0:0, 0:ℓ+1]
     copyto!(view(Hˡ⁺¹, 0:0, 0:ℓ+1), view(Hˡ⁺², 0:0, 0:ℓ+1))
     w
 end
