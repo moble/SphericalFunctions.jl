@@ -48,11 +48,11 @@ function (wc::WignerCalculator{IT, RT, NT})(ℓ::IT) where {IT, RT, NT}
             * "(which has ℓₘᵢₙ=$(ℓₘᵢₙ(wc)) and ℓₘₐₓ=$(ℓₘₐₓ(wc))).")
     end
     let ℓₘᵢₙ=ℓₘᵢₙ(wc), m′ₘₐₓ=min(ℓ, m′ₘₐₓ(wc)), m′ₘᵢₙ=max(-ℓ, m′ₘᵢₙ(wc)),
-        mₘₐₓ⁺=min(ℓ+1, mₘₐₓ(wc)), mₘₐₓ=min(ℓ, mₘₐₓ(wc)), mₘᵢₙ=max(-ℓ, mₘᵢₙ(wc))
+        mₘₐₓ=min(ℓ, mₘₐₓ(wc)), mₘᵢₙ=max(-ℓ, mₘᵢₙ(wc))
 
         Wˡ = WignerMatrix(wc.Wˡ, ℓ; m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
         H⁻ = WignerMatrix(wc.H⁻, ℓ; m′ₘₐₓ=ℓₘᵢₙ, m′ₘᵢₙ=ℓₘᵢₙ, mₘₐₓ, mₘᵢₙ=ℓₘᵢₙ)
-        H⁺ = WignerMatrix(wc.H⁺, ℓ+1; m′ₘₐₓ=ℓₘᵢₙ, m′ₘᵢₙ=ℓₘᵢₙ, mₘₐₓ=mₘₐₓ⁺, mₘᵢₙ=ℓₘᵢₙ)
+        H⁺ = WignerMatrix(wc.H⁺, ℓ+1; m′ₘₐₓ=ℓₘᵢₙ, m′ₘᵢₙ=ℓₘᵢₙ, mₘₐₓ=mₘₐₓ+1, mₘᵢₙ=ℓₘᵢₙ)
         Wˡ, H⁻, H⁺
     end
 end
