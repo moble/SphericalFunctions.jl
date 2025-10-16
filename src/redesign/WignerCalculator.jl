@@ -5,9 +5,10 @@ struct WignerCalculator{IT, RT<:Real, NT<:Union{RT, Complex{RT}}}
     m′ₘᵢₙ::IT
     mₘₐₓ::IT
     mₘᵢₙ::IT
-    H⁻::Matrix{RT}
-    H⁺::Matrix{RT}
+    Hᵃ::Matrix{RT}
+    Hᵇ::Matrix{RT}
     Wˡ::Matrix{NT}
+    swapH::Base.RefValue{Bool}  # wc(ℓ) returns (Wˡ, Hᵇ, Hᵃ) if `true`, otherwise (Wˡ, Hᵃ, Hᵇ)
     function WignerCalculator(
         ℓₘₐₓ::IT, rt::Type{RT}, ::Type{NT}=rt;
         m′ₘₐₓ::IT=ℓₘₐₓ, m′ₘᵢₙ::IT=-ℓₘₐₓ, mₘₐₓ::IT=ℓₘₐₓ, mₘᵢₙ::IT=-ℓₘₐₓ
@@ -16,16 +17,14 @@ struct WignerCalculator{IT, RT<:Real, NT<:Union{RT, Complex{RT}}}
             error("RT=$RT is supposed to be the real type of NT=$NT.")
         end
         validate_index_ranges(ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
-        # `H⁻p` may (eventually) be required to store all the coefficients for Hˡ₀ₘ with
-        # non-negative `m`; even though that won't strictly be necessary for `ℓₘₐₓ`, it is
-        # just one extra `RT`, and may simplify the coding significantly.  `H⁺p` will
-        # (eventually) be required to store all the coefficients for Hˡ⁺¹₀ₘ with
-        # non-negative `m` (and that will be strictly necessary), so we give it one extra
-        # column.
-        H⁻p = Matrix{RT}(undef, 1, Int(mₘₐₓ-ℓₘᵢₙ(ℓₘₐₓ))+1)
-        H⁺p = Matrix{RT}(undef, 1, Int(mₘₐₓ-ℓₘᵢₙ(ℓₘₐₓ))+2)
+        # One of the H matrices will (eventually) be required to store all the coefficients
+        # for Hˡ⁺¹₀ₘ with non-negative `m` (and that will be strictly necessary), so we give
+        # it one extra column.  Since we may not know which one that will be, we give both
+        # of them that extra column.
+        Hᵃp = Matrix{RT}(undef, 1, Int(mₘₐₓ-ℓₘᵢₙ(ℓₘₐₓ))+2)
+        Hᵇp = Matrix{RT}(undef, 1, Int(mₘₐₓ-ℓₘᵢₙ(ℓₘₐₓ))+2)
         Wˡp = Matrix{NT}(undef, Int(m′ₘₐₓ-m′ₘᵢₙ)+1, Int(mₘₐₓ-mₘᵢₙ)+1)
-        new{IT, RT, NT}(ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, H⁻p, H⁺p, Wˡp)
+        new{IT, RT, NT}(ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, Hᵃp, Hᵇp, Wˡp, Ref(false))
     end
 end
 
@@ -35,6 +34,20 @@ m′ₘₐₓ(wc::WignerCalculator{IT}) where {IT} = wc.m′ₘₐₓ
 m′ₘᵢₙ(wc::WignerCalculator{IT}) where {IT} = wc.m′ₘᵢₙ
 mₘₐₓ(wc::WignerCalculator{IT}) where {IT} = wc.mₘₐₓ
 mₘᵢₙ(wc::WignerCalculator{IT}) where {IT} = wc.mₘᵢₙ
+
+Hᵃ(wc::WignerCalculator) = swapH(wc) ? wc.Hᵇ : wc.Hᵃ
+Hᵇ(wc::WignerCalculator) = swapH(wc) ? wc.Hᵃ : wc.Hᵇ
+Wˡ(wc::WignerCalculator) = wc.Wˡ
+
+function swapH(wc::WignerCalculator)
+    wc.swapH[]
+end
+
+function swapH!(wc::WignerCalculator)
+    wc.swapH[] = !wc.swapH[]
+    wc
+end
+
 
 function (wc::WignerCalculator{IT, RT, NT})(ℓ::IT) where {IT, RT, NT}
     if IT <: Rational
