@@ -135,24 +135,49 @@ function recurrence_step6!(w::WignerCalculator{IT}, ℓ) where {IT<:Signed}
 end
     
 function recurrence!(
-    w::WignerCalculator{IT, RT, NT}, α::RT, β::RT, γ::RT, ℓ::IT
+    w::WignerCalculator{IT, RT, NT}, α::RT, β::RT, γ::RT, ℓ::IT,
+    skip_ℓ_recurrence::Bool=false
 ) where {IT<:Signed, RT, NT}
     eⁱᵅ, eⁱᵝ, eⁱᵞ = cis(α), cis(β), cis(γ)
 
-    # H⁰₀₀ = 1
-    recurrence_step1!(w)
+    # NOTE: In the comments explaining the recurrence steps below, we use notation with
+    # ℓₘᵢₙ=0 for simplicity, but the code should work for ℓₘᵢₙ=1//2 as well.
 
     if ℓ == ℓₘᵢₙ(w)
-        fillW!(w, ℓₘᵢₙ(w))
+        # H⁰₀₀ = 1
+        recurrence_step1!(w)
+
+        # Record the result in Wˡ
+        fillW!(w, ℓ)
+
+        # Now, to leave `w` in a good state for the next ℓ, compute H¹₀ₘ and swap
+        # H⁰₀ₘ -> H¹₀ₘ
+        recurrence_step2!(w, eⁱᵝ, ℓ+1)
+        swapH!(w)
+
         Wˡ, Hˡ, Hˡ⁺¹ = w(ℓ)
         Wˡ
     else
-        for ℓ′ in ℓₘᵢₙ(w)+1:ℓ+1
-            # Hˡ⁻¹₀ₘ -> Hˡ₀ₘ
-            recurrence_step2!(w, eⁱᵝ, ℓ′)
-            swapH!(w)
+        if !skip_ℓ_recurrence
+            # H⁰₀₀ = 1
+            recurrence_step1!(w)
+
+            for ℓ′ in ℓₘᵢₙ(w)+1:ℓ
+                # Hˡ⁻¹₀ₘ -> Hˡ₀ₘ
+                recurrence_step2!(w, eⁱᵝ, ℓ′)
+                swapH!(w)
+            end
         end
-        swapH!(w)
+
+        let ℓ′ = ℓ+1
+            # Hˡ₀ₘ -> Hˡ⁺¹₀ₘ
+            recurrence_step2!(w, eⁱᵝ, ℓ′)
+        end
+
+        let
+            Wˡ, Hˡ, Hˡ⁺¹ = w(ℓ)
+            @info "recurrence! called with skip_ℓ_recurrence=$skip_ℓ_recurrence" Hˡ Hˡ⁺¹
+        end
 
         # Copy Hˡ₀ₘ to Wˡ₀ₘ
         fillW!(w, ℓ)
@@ -172,6 +197,10 @@ function recurrence!(
         # Finish conversion to Dˡ
         Wˡ, Hˡ, Hˡ⁺¹ = w(ℓ)
         convert_H_to_D!(Wˡ, eⁱᵅ, eⁱᵞ)
+
+        # Swap the H matrices once more so that the current Hˡ⁺¹ is the next loop's Hˡ
+        swapH!(w)
+
         Wˡ
     end
 
