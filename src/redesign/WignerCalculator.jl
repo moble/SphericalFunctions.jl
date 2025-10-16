@@ -8,7 +8,7 @@ struct WignerCalculator{IT, RT<:Real, NT<:Union{RT, Complex{RT}}}
     Hᵃ::Matrix{RT}
     Hᵇ::Matrix{RT}
     Wˡ::Matrix{NT}
-    swapH::Base.RefValue{Bool}  # wc(ℓ) returns (Wˡ, Hᵇ, Hᵃ) if `true`, otherwise (Wˡ, Hᵃ, Hᵇ)
+    swapH::Base.RefValue{Bool}  # w(ℓ) returns (Wˡ, Hᵇ, Hᵃ) if `true`, otherwise (Wˡ, Hᵃ, Hᵇ)
     function WignerCalculator(
         ℓₘₐₓ::IT, rt::Type{RT}, ::Type{NT}=rt;
         m′ₘₐₓ::IT=ℓₘₐₓ, m′ₘᵢₙ::IT=-ℓₘₐₓ, mₘₐₓ::IT=ℓₘₐₓ, mₘᵢₙ::IT=-ℓₘₐₓ
@@ -28,49 +28,49 @@ struct WignerCalculator{IT, RT<:Real, NT<:Union{RT, Complex{RT}}}
     end
 end
 
-ℓₘᵢₙ(wc::WignerCalculator{IT}) where {IT} = ℓₘᵢₙ(wc.ℓₘₐₓ)
-ℓₘₐₓ(wc::WignerCalculator{IT}) where {IT} = wc.ℓₘₐₓ
-m′ₘₐₓ(wc::WignerCalculator{IT}) where {IT} = wc.m′ₘₐₓ
-m′ₘᵢₙ(wc::WignerCalculator{IT}) where {IT} = wc.m′ₘᵢₙ
-mₘₐₓ(wc::WignerCalculator{IT}) where {IT} = wc.mₘₐₓ
-mₘᵢₙ(wc::WignerCalculator{IT}) where {IT} = wc.mₘᵢₙ
+ℓₘᵢₙ(w::WignerCalculator{IT}) where {IT} = ℓₘᵢₙ(w.ℓₘₐₓ)
+ℓₘₐₓ(w::WignerCalculator{IT}) where {IT} = w.ℓₘₐₓ
+m′ₘₐₓ(w::WignerCalculator{IT}) where {IT} = w.m′ₘₐₓ
+m′ₘᵢₙ(w::WignerCalculator{IT}) where {IT} = w.m′ₘᵢₙ
+mₘₐₓ(w::WignerCalculator{IT}) where {IT} = w.mₘₐₓ
+mₘᵢₙ(w::WignerCalculator{IT}) where {IT} = w.mₘᵢₙ
 
-Hᵃ(wc::WignerCalculator) = swapH(wc) ? wc.Hᵇ : wc.Hᵃ
-Hᵇ(wc::WignerCalculator) = swapH(wc) ? wc.Hᵃ : wc.Hᵇ
-Wˡ(wc::WignerCalculator) = wc.Wˡ
+Hᵃ(w::WignerCalculator) = swapH(w) ? w.Hᵇ : w.Hᵃ
+Hᵇ(w::WignerCalculator) = swapH(w) ? w.Hᵃ : w.Hᵇ
+Wˡ(w::WignerCalculator) = w.Wˡ
 
-function swapH(wc::WignerCalculator)
-    wc.swapH[]
+function swapH(w::WignerCalculator)
+    w.swapH[]
 end
 
-function swapH!(wc::WignerCalculator)
-    wc.swapH[] = !wc.swapH[]
-    wc
+function swapH!(w::WignerCalculator)
+    w.swapH[] = !w.swapH[]
+    w
 end
 
-function fillW!(wc::WignerCalculator{IT}, ℓ::IT) where {IT}
-    Wˡ, Hˡ, Hˡ⁺¹ = wc(ℓ)
+function fillW!(w::WignerCalculator{IT}, ℓ::IT) where {IT}
+    Wˡ, Hˡ, Hˡ⁺¹ = w(ℓ)
     Wˡ[0:0, 0:ℓ] .= Hˡ[0:0, 0:ℓ]
-    wc
+    w
 end
 
-function (wc::WignerCalculator{IT, RT, NT})(ℓ::IT) where {IT, RT, NT}
+function (w::WignerCalculator{IT, RT, NT})(ℓ::IT) where {IT, RT, NT}
     if IT <: Rational
         if denominator(ℓ) ≠ 2
             error("For IT=$IT <: Rational, ℓ=$ℓ must have denominator 2")
         end
     end
-    if ℓ < ℓₘᵢₙ(wc) || ℓ > ℓₘₐₓ(wc)
+    if ℓ < ℓₘᵢₙ(w) || ℓ > ℓₘₐₓ(w)
         error(
             "ℓ=$ℓ is out of range for this WignerCalculator " *
-            "(which has ℓₘᵢₙ=$(ℓₘᵢₙ(wc)) and ℓₘₐₓ=$(ℓₘₐₓ(wc)))."
+            "(which has ℓₘᵢₙ=$(ℓₘᵢₙ(w)) and ℓₘₐₓ=$(ℓₘₐₓ(w)))."
         )
     end
-    let ℓₘᵢₙ=ℓₘᵢₙ(wc), m′ₘₐₓ=min(ℓ, m′ₘₐₓ(wc)), m′ₘᵢₙ=max(-ℓ, m′ₘᵢₙ(wc)),
-        mₘₐₓ=min(ℓ, mₘₐₓ(wc)), mₘᵢₙ=max(-ℓ, mₘᵢₙ(wc)),
-        Wˡ=WignerMatrix(Wˡ(wc), ℓ; m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ),
-        Hˡ=WignerMatrix(Hᵃ(wc), ℓ; m′ₘₐₓ=ℓₘᵢₙ, m′ₘᵢₙ=ℓₘᵢₙ, mₘₐₓ, mₘᵢₙ=ℓₘᵢₙ),
-        Hˡ⁺¹=WignerMatrix(Hᵇ(wc), ℓ+1; m′ₘₐₓ=ℓₘᵢₙ, m′ₘᵢₙ=ℓₘᵢₙ, mₘₐₓ=mₘₐₓ+1, mₘᵢₙ=ℓₘᵢₙ)
+    let ℓₘᵢₙ=ℓₘᵢₙ(w), m′ₘₐₓ=min(ℓ, m′ₘₐₓ(w)), m′ₘᵢₙ=max(-ℓ, m′ₘᵢₙ(w)),
+        mₘₐₓ=min(ℓ, mₘₐₓ(w)), mₘᵢₙ=max(-ℓ, mₘᵢₙ(w)),
+        Wˡ=WignerMatrix(Wˡ(w), ℓ; m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ),
+        Hˡ=WignerMatrix(Hᵃ(w), ℓ; m′ₘₐₓ=ℓₘᵢₙ, m′ₘᵢₙ=ℓₘᵢₙ, mₘₐₓ, mₘᵢₙ=ℓₘᵢₙ),
+        Hˡ⁺¹=WignerMatrix(Hᵇ(w), ℓ+1; m′ₘₐₓ=ℓₘᵢₙ, m′ₘᵢₙ=ℓₘᵢₙ, mₘₐₓ=mₘₐₓ+1, mₘᵢₙ=ℓₘᵢₙ)
 
         Wˡ, Hˡ, Hˡ⁺¹
     end
