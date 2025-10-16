@@ -48,6 +48,11 @@ function swapH!(wc::WignerCalculator)
     wc
 end
 
+function fillW!(wc::WignerCalculator{IT}, ℓ::IT) where {IT}
+    Wˡ, Hˡ, Hˡ⁺¹ = wc(ℓ)
+    Wˡ[0:0, 0:ℓ] .= Hˡ[0:0, 0:ℓ]
+    wc
+end
 
 function (wc::WignerCalculator{IT, RT, NT})(ℓ::IT) where {IT, RT, NT}
     if IT <: Rational
@@ -62,16 +67,16 @@ function (wc::WignerCalculator{IT, RT, NT})(ℓ::IT) where {IT, RT, NT}
         )
     end
     let ℓₘᵢₙ=ℓₘᵢₙ(wc), m′ₘₐₓ=min(ℓ, m′ₘₐₓ(wc)), m′ₘᵢₙ=max(-ℓ, m′ₘᵢₙ(wc)),
-        mₘₐₓ=min(ℓ, mₘₐₓ(wc)), mₘᵢₙ=max(-ℓ, mₘᵢₙ(wc))
+        mₘₐₓ=min(ℓ, mₘₐₓ(wc)), mₘᵢₙ=max(-ℓ, mₘᵢₙ(wc)),
+        Wˡ=WignerMatrix(Wˡ(wc), ℓ; m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ),
+        Hˡ=WignerMatrix(Hᵃ(wc), ℓ; m′ₘₐₓ=ℓₘᵢₙ, m′ₘᵢₙ=ℓₘᵢₙ, mₘₐₓ, mₘᵢₙ=ℓₘᵢₙ),
+        Hˡ⁺¹=WignerMatrix(Hᵇ(wc), ℓ+1; m′ₘₐₓ=ℓₘᵢₙ, m′ₘᵢₙ=ℓₘᵢₙ, mₘₐₓ=mₘₐₓ+1, mₘᵢₙ=ℓₘᵢₙ)
 
-        Wˡ = WignerMatrix(wc.Wˡ, ℓ; m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
-        H⁻ = WignerMatrix(wc.H⁻, ℓ; m′ₘₐₓ=ℓₘᵢₙ, m′ₘᵢₙ=ℓₘᵢₙ, mₘₐₓ, mₘᵢₙ=ℓₘᵢₙ)
-        H⁺ = WignerMatrix(wc.H⁺, ℓ+1; m′ₘₐₓ=ℓₘᵢₙ, m′ₘᵢₙ=ℓₘᵢₙ, mₘₐₓ=mₘₐₓ+1, mₘᵢₙ=ℓₘᵢₙ)
-        Wˡ, H⁻, H⁺
+        Wˡ, Hˡ, Hˡ⁺¹
     end
 end
 
-function WignerDComputer(
+function WignerDCalculator(
     ℓₘₐₓ::IT, ::Type{RT};
     mp_max::IT=ℓₘₐₓ, mp_min::IT=-ℓₘₐₓ, m_max::IT=ℓₘₐₓ, m_min::IT=-ℓₘₐₓ,
     m′ₘₐₓ::IT=mp_max, m′ₘᵢₙ::IT=mp_min, mₘₐₓ::IT=m_max, mₘᵢₙ::IT=m_min
@@ -80,7 +85,7 @@ function WignerDComputer(
     WignerCalculator(ℓₘₐₓ, RT, NT; m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
 end
 
-function WignerdComputer(
+function WignerdCalculator(
     ℓₘₐₓ::IT, ::Type{RT};
     mp_max::IT=ℓₘₐₓ, mp_min::IT=-ℓₘₐₓ, m_max::IT=ℓₘₐₓ, m_min::IT=-ℓₘₐₓ,
     m′ₘₐₓ::IT=mp_max, m′ₘᵢₙ::IT=mp_min, mₘₐₓ::IT=m_max, mₘᵢₙ::IT=m_min
@@ -99,10 +104,6 @@ function recurrence_step2!(w::WignerCalculator{IT}, eⁱᵝ, ℓ) where {IT<:Sig
     Wˡ⁻¹, Hˡ⁻¹, Hˡ = w(ℓ-1)
     cosβ, sinβ = reim(eⁱᵝ)
     recurrence_step2!(Hˡ, Hˡ⁻¹, sinβ, cosβ)
-    Wˡ, Hˡ, Hˡ⁺¹ = w(ℓ)
-    copyto!(view(Hˡ, 0:0, 0:ℓ), view(Hˡ⁺¹, 0:0, 0:ℓ))
-    copyto!(view(Wˡ, 0:0, 0:ℓ), view(Hˡ⁺¹, 0:0, 0:ℓ))
-    recurrence_step2!(Hˡ⁺¹, Hˡ, sinβ, cosβ)
     w
 end
 
@@ -110,8 +111,6 @@ function recurrence_step3!(w::WignerCalculator{IT}, eⁱᵝ, ℓ) where {IT<:Sig
     Wˡ, Hˡ, Hˡ⁺¹ = w(ℓ)
     cosβ, sinβ = reim(eⁱᵝ)
     recurrence_step3!(Wˡ, Hˡ⁺¹, sinβ, cosβ)
-    Wˡ⁺¹, Hˡ⁺¹, Hˡ⁺² = w(ℓ+1)
-    copyto!(view(Hˡ⁺¹, 0:0, 0:ℓ+1), view(Hˡ⁺², 0:0, 0:ℓ+1))
     w
 end
 
@@ -143,24 +142,37 @@ function recurrence!(
     # H⁰₀₀ = 1
     recurrence_step1!(w)
 
-    for ℓ′ in 1:ℓ
-        # Hˡ⁻¹₀ₘ -> Hˡ₀ₘ
-        recurrence_step2!(w, eⁱᵝ, ℓ′)
+    if ℓ == ℓₘᵢₙ(w)
+        fillW!(w, ℓₘᵢₙ(w))
+        Wˡ, Hˡ, Hˡ⁺¹ = w(ℓ)
+        Wˡ
+    else
+        for ℓ′ in ℓₘᵢₙ(w)+1:ℓ+1
+            # Hˡ⁻¹₀ₘ -> Hˡ₀ₘ
+            recurrence_step2!(w, eⁱᵝ, ℓ′)
+            swapH!(w)
+        end
+        swapH!(w)
+
+        # Copy Hˡ₀ₘ to Wˡ₀ₘ
+        fillW!(w, ℓ)
 
         # Hˡ⁺¹₀ₘ -> Hˡ₁ₘ
-        recurrence_step3!(w, eⁱᵝ, ℓ′)
+        recurrence_step3!(w, eⁱᵝ, ℓ)
 
         # Hˡₘ′ₘ₋₁, Hˡₘ′₋₁ₘ, Hˡₘ′ₘ₊₁ -> Hˡₘ′₊₁ₘ
-        recurrence_step4!(w, eⁱᵝ, ℓ′)
+        recurrence_step4!(w, eⁱᵝ, ℓ)
 
         # Hˡₘ′ₘ₋₁, Hˡₘ′₊₁ₘ, Hˡₘ′ₘ₊₁ -> Hˡₘ′₋₁ₘ
-        recurrence_step5!(w, eⁱᵝ, ℓ′)
+        recurrence_step5!(w, eⁱᵝ, ℓ)
 
         # Impose symmetries
-        recurrence_step6!(w, ℓ′)
+        recurrence_step6!(w, ℓ)
+
+        # Finish conversion to Dˡ
+        Wˡ, Hˡ, Hˡ⁺¹ = w(ℓ)
+        convert_H_to_D!(Wˡ, eⁱᵅ, eⁱᵞ)
+        Wˡ
     end
 
-    Wˡ, Hˡ, Hˡ⁺¹ = w(ℓ)
-    convert_H_to_D!(Wˡ, eⁱᵅ, eⁱᵞ)
-    Wˡ
 end
