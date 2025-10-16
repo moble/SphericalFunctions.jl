@@ -50,12 +50,9 @@ function (wc::WignerCalculator{IT, RT, NT})(ℓ::IT) where {IT, RT, NT}
     let ℓₘᵢₙ=ℓₘᵢₙ(wc), m′ₘₐₓ=min(ℓ, m′ₘₐₓ(wc)), m′ₘᵢₙ=max(-ℓ, m′ₘᵢₙ(wc)),
         mₘₐₓ⁺=min(ℓ+1, mₘₐₓ(wc)), mₘₐₓ=min(ℓ, mₘₐₓ(wc)), mₘᵢₙ=max(-ℓ, mₘᵢₙ(wc))
 
-        #@info "Calling WignerCalculator" wc ℓ m′ₘₐₓ m′ₘᵢₙ mₘₐₓ⁺ mₘₐₓ mₘᵢₙ ℓₘᵢₙ
         Wˡ = WignerMatrix(wc.Wˡ, ℓ; m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
         H⁻ = WignerMatrix(wc.H⁻, ℓ; m′ₘₐₓ=ℓₘᵢₙ, m′ₘᵢₙ=ℓₘᵢₙ, mₘₐₓ, mₘᵢₙ=ℓₘᵢₙ)
         H⁺ = WignerMatrix(wc.H⁺, ℓ+1; m′ₘₐₓ=ℓₘᵢₙ, m′ₘᵢₙ=ℓₘᵢₙ, mₘₐₓ=mₘₐₓ⁺, mₘᵢₙ=ℓₘᵢₙ)
-        # H⁻ = Hˡrow{IT, RT}(wc.H⁻, ℓ, 0)
-        # H⁺ = Hˡrow{IT, RT}(wc.H⁺, ℓ+1, 0)
         Wˡ, H⁻, H⁺
     end
 end
@@ -127,17 +124,11 @@ function recurrence!(
     w::WignerCalculator{IT, RT, NT}, α::RT, β::RT, γ::RT, ℓ::IT
 ) where {IT<:Signed, RT, NT}
     eⁱᵅ, eⁱᵝ, eⁱᵞ = cis(α), cis(β), cis(γ)
-    # @info "Step 1" recurrence_step1!(w)(0)
+
     # H⁰₀₀ = 1
     recurrence_step1!(w)
-    for ℓ′ in 1:ℓ
-        # @info "At ℓ′=$ℓ′"
-        # @info "Step 2" recurrence_step2!(w, eⁱᵝ, ℓ′)(ℓ′)
-        # @info "Step 3" recurrence_step3!(w, eⁱᵝ, ℓ′)(ℓ′)
-        # @info "Step 4" recurrence_step4!(w, eⁱᵝ, ℓ′)(ℓ′)
-        # @info "Step 5" recurrence_step5!(w, eⁱᵝ, ℓ′)(ℓ′)
-        # @info "Step 6" recurrence_step6!(w, ℓ′)(ℓ′)
 
+    for ℓ′ in 1:ℓ
         # Hˡ⁻¹₀ₘ -> Hˡ₀ₘ
         recurrence_step2!(w, eⁱᵝ, ℓ′)
 
@@ -153,8 +144,8 @@ function recurrence!(
         # Impose symmetries
         recurrence_step6!(w, ℓ′)
     end
+
     Wˡ, Hˡ, Hˡ⁺¹ = w(ℓ)
-    #@info "Convert" convert_H_to_D!(Wˡ, eⁱᵅ, eⁱᵞ)
     convert_H_to_D!(Wˡ, eⁱᵅ, eⁱᵞ)
     Wˡ
 end
