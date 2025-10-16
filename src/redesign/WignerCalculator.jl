@@ -39,6 +39,15 @@ Hᵃ(w::WignerCalculator) = swapH(w) ? w.Hᵇ : w.Hᵃ
 Hᵇ(w::WignerCalculator) = swapH(w) ? w.Hᵃ : w.Hᵇ
 Wˡ(w::WignerCalculator) = w.Wˡ
 
+function Base.fill!(w::WignerCalculator{IT, RT}, v::Real) where {IT, RT}
+    let Wˡ = Wˡ(w), Hᵃ = Hᵃ(w), Hᵇ = Hᵇ(w)
+        fill!(Wˡ, eltype(Wˡ)(v))
+        fill!(Hᵃ, eltype(Hᵃ)(v))
+        fill!(Hᵇ, eltype(Hᵇ)(v))
+    end
+    w
+end
+
 function swapH(w::WignerCalculator)
     w.swapH[]
 end
