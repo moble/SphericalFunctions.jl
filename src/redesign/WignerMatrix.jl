@@ -60,9 +60,9 @@ Base.parent(w::AbstractWignerMatrix) = w.parent
 ℓₘᵢₙ(::AbstractWignerMatrix{IT}) where {IT} = ℓₘᵢₙ(IT)
 
 m′ₘₐₓ(w::AbstractWignerMatrix{IT}) where {IT} = w.m′ₘₐₓ
-m′ₘᵢₙ(w::AbstractWignerMatrix{IT}) where {IT} = -m′ₘₐₓ(w)
-mₘₐₓ(w::AbstractWignerMatrix{IT}) where {IT} = ℓ(w)
-mₘᵢₙ(w::AbstractWignerMatrix{IT}) where {IT} = -mₘₐₓ(w)
+m′ₘᵢₙ(w::AbstractWignerMatrix{IT}) where {IT} = w.m′ₘᵢₙ
+mₘₐₓ(w::AbstractWignerMatrix{IT}) where {IT} = w.mₘₐₓ
+mₘᵢₙ(w::AbstractWignerMatrix{IT}) where {IT} = w.mₘᵢₙ
 
 const ell = ℓ
 const ellmin = ℓₘᵢₙ
@@ -141,6 +141,108 @@ end
         throw(BoundsError(w, (m′, m)))
     end
     @inbounds Base.parent(w)[Int(m′-m′ₘᵢₙ(w))+1, Int(m-mₘᵢₙ(w))+1] = v
+end
+
+
+function validate_index_ranges(ℓₘₐₓ::IT, m′ₘₐₓ::IT, m′ₘᵢₙ::IT, mₘₐₓ::IT, mₘᵢₙ::IT) where
+    {IT<:Union{Signed, Rational}}
+    if IT <: Rational
+        if (
+            denominator(ℓₘₐₓ) ≠ 2 ||
+            denominator(m′ₘᵢₙ) ≠ 2 || denominator(m′ₘₐₓ) ≠ 2 ||
+            denominator(mₘᵢₙ) ≠ 2 || denominator(mₘₐₓ) ≠ 2
+        )
+            error(
+                "For IT=$IT <: Rational, indices must have denominator 2:\n"
+                * "\tℓₘₐₓ=$ℓₘₐₓ, m′ₘᵢₙ=$m′ₘᵢₙ, m′ₘₐₓ=$m′ₘₐₓ, mₘᵢₙ=$mₘᵢₙ, mₘₐₓ=$mₘₐₓ."
+            )
+        end
+    end
+
+    if ℓₘₐₓ < ℓₘᵢₙ(ℓₘₐₓ)
+        error("ℓₘₐₓ=$ℓₘₐₓ must be non-negative.")
+    end
+
+    # The m′ and m values must bracket ℓₘᵢₙ
+    if m′ₘᵢₙ > ℓₘᵢₙ(ℓₘₐₓ)
+        error("m′ₘᵢₙ=$m′ₘᵢₙ is too large for this index type.")
+    end
+    if m′ₘₐₓ < ℓₘᵢₙ(ℓₘₐₓ)
+        error("m′ₘₐₓ=$m′ₘₐₓ is too small for this index type.")
+    end
+    if mₘᵢₙ > ℓₘᵢₙ(ℓₘₐₓ)
+        error("mₘᵢₙ=$mₘᵢₙ is too large for this index type.")
+    end
+    if mₘₐₓ < ℓₘᵢₙ(ℓₘₐₓ)
+        error("mₘₐₓ=$mₘₐₓ is too small for this index type.")
+    end
+
+    # The m′ and m values must be in range for ℓₘₐₓ
+    if abs(m′ₘᵢₙ) > ℓₘₐₓ
+        error("|m′ₘᵢₙ|=|$m′ₘᵢₙ| is too large for ℓₘₐₓ=$ℓₘₐₓ.")
+    end
+    if abs(m′ₘₐₓ) > ℓₘₐₓ
+        error("|m′ₘₐₓ|=|$m′ₘₐₓ| is too large for ℓₘₐₓ=$ℓₘₐₓ.")
+    end
+    if abs(mₘᵢₙ) > ℓₘₐₓ
+        error("|mₘᵢₙ|=|$mₘᵢₙ| is too large for ℓₘₐₓ=$ℓₘₐₓ.")
+    end
+    if abs(mₘₐₓ) > ℓₘₐₓ
+        error("|mₘₐₓ|=|$mₘₐₓ| is too large for ℓₘₐₓ=$ℓₘₐₓ.")
+    end
+
+end
+
+
+"""
+    WignerMatrix{IT, NT, ST} <: AbstractWignerMatrix{IT, NT, ST}
+
+General concrete subtype of [`AbstractWignerMatrix`](@ref) for Wigner rotation matrices,
+which can include D-matrices (when `NT` is complex) or d-matrices (when `NT` is real).
+
+In general, the storage type `ST` can be any `AbstractMatrix{NT}`, but should be 1-based.
+That is, the storage should generally be either a `Matrix` or a view.  That matrix will
+represent a rectangular array of values representing some or all of the Wigner matrix for a
+specific ``ℓ`` value.  The first dimension corresponds to the `m′` index, and the second
+dimension corresponds to the `m` index.  The allowed ranges of `m′` and `m` are governed by
+the fields `m′ₘₐₓ`, `m′ₘᵢₙ`, `mₘₐₓ`, and `mₘᵢₙ`, which must satisfy
+```math
+\begin{aligned}
+-ℓₘₐₓ &≤ m′ₘᵢₙ ≤ ℓₘᵢₙ ≤ m′ₘₐₓ ≤ ℓₘₐₓ, \\
+-ℓₘₐₓ &≤ mₘᵢₙ ≤ ℓₘᵢₙ ≤ mₘₐₓ ≤ ℓₘₐₓ,
+\end{aligned}
+```
+where `ℓₘᵢₙ` is either 0 or 1//2 depending on whether `IT` is an integer or rational type.
+
+"""
+struct WignerMatrix{IT, NT, ST} <: AbstractWignerMatrix{IT, NT, ST}
+    parent::ST
+    ℓ::IT
+    m′ₘₐₓ::IT
+    m′ₘᵢₙ::IT
+    mₘₐₓ::IT
+    mₘᵢₙ::IT
+    function WignerMatrix(
+        parent::ST, ℓ::IT;
+        mp_max::IT=ℓ, mp_min::IT=-ℓ, m_max::IT=ℓ, m_min::IT=-ℓ,
+        m′ₘₐₓ::IT=mp_max, m′ₘᵢₙ::IT=mp_min, mₘₐₓ::IT=m_max, mₘᵢₙ::IT=m_min
+    ) where {IT, NT, ST<:AbstractMatrix{NT}}
+        validate_index_ranges(ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
+        s₁, s₂ = size(parent)
+        if s₁ < Int(m′ₘₐₓ - m′ₘᵢₙ + 1)
+            error(
+                "The extent of the first dimension in the input data must be at least "
+                * "m′ₘₐₓ-m′ₘᵢₙ+1=$(Int(m′ₘₐₓ - m′ₘᵢₙ + 1)); it is $s₁."
+            )
+        end
+        if s₂ < Int(mₘₐₓ - mₘᵢₙ + 1)
+            error(
+                "The extent of the second dimension in the input data must be at least "
+                * "mₘₐₓ-mₘᵢₙ+1=$(Int(mₘₐₓ - mₘᵢₙ + 1)); it is $s₂."
+            )
+        end
+        new{IT, NT, ST}(parent, ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
+    end
 end
 
 
