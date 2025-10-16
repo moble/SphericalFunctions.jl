@@ -86,8 +86,10 @@ function recurrence_step2!(w::WignerCalculator{IT}, eⁱᵝ, ℓ) where {IT<:Sig
     cosβ, sinβ = reim(eⁱᵝ)
     recurrence_step2!(Hˡ, Hˡ⁻¹, sinβ, cosβ)
     Wˡ, Hˡ, Hˡ⁺¹ = w(ℓ)
-    Hˡ[0:0, 0:ℓ] .= Hˡ⁺¹[0:0, 0:ℓ]
-    Wˡ[0:0, 0:ℓ] .= Hˡ⁺¹[0:0, 0:ℓ]
+    # Hˡ[0:0, 0:ℓ] .= Hˡ⁺¹[0:0, 0:ℓ]
+    # Wˡ[0:0, 0:ℓ] .= Hˡ⁺¹[0:0, 0:ℓ]
+    copyto!(view(Hˡ, 0:0, 0:ℓ), view(Hˡ⁺¹, 0:0, 0:ℓ))
+    copyto!(view(Wˡ, 0:0, 0:ℓ), view(Hˡ⁺¹, 0:0, 0:ℓ))
     recurrence_step2!(Hˡ⁺¹, Hˡ, sinβ, cosβ)
     w
 end
@@ -97,7 +99,8 @@ function recurrence_step3!(w::WignerCalculator{IT}, eⁱᵝ, ℓ) where {IT<:Sig
     cosβ, sinβ = reim(eⁱᵝ)
     recurrence_step3!(Wˡ, Hˡ⁺¹, sinβ, cosβ)
     Wˡ⁺¹, Hˡ⁺¹, Hˡ⁺² = w(ℓ+1)
-    Hˡ⁺¹[0:0, 0:ℓ+1] .= Hˡ⁺²[0:0, 0:ℓ+1]
+    # Hˡ⁺¹[0:0, 0:ℓ+1] .= Hˡ⁺²[0:0, 0:ℓ+1]
+    copyto!(view(Hˡ⁺¹, 0:0, 0:ℓ+1), view(Hˡ⁺², 0:0, 0:ℓ+1))
     w
 end
 
