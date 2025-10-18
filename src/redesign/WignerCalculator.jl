@@ -103,9 +103,10 @@ function WignerdCalculator(
 end
 
 function recurrence_step1!(w::WignerCalculator{IT}) where {IT<:Signed}
-    W⁰, H⁰, H¹ = w(0)
+    ℓ = ℓₘᵢₙ(w)
+    W⁰, H⁰, H¹ = w(ℓ)
     recurrence_step1!(H⁰)
-    W⁰[0, 0] = H⁰[0, 0]
+    fillW!(w, ℓ)
     w
 end
 
