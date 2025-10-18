@@ -147,66 +147,83 @@ end
 function recurrence!(
     w::WignerCalculator{IT, RT, NT}, α::RT, β::RT, γ::RT, ℓ::IT,
     skip_ℓ_recurrence::Bool=false
-) where {IT<:Signed, RT, NT}
+) where {IT<:Signed, RT, NT<:Complex}
     eⁱᵅ, eⁱᵝ, eⁱᵞ = cis(α), cis(β), cis(γ)
+    recurrence!(w, eⁱᵅ, eⁱᵝ, eⁱᵞ, ℓ, skip_ℓ_recurrence)
+end
 
+function recurrence!(
+    w::WignerCalculator{IT, RT, NT}, β::RT, ℓ::IT,
+    skip_ℓ_recurrence::Bool=false
+) where {IT<:Signed, RT, NT<:Real}
+    eⁱᵝ = cis(β)
+    recurrence!(w, eⁱᵝ, ℓ, skip_ℓ_recurrence)
+end
+
+function recurrence!(
+    w::WignerCalculator{IT, RT, NT}, eⁱᵅ::Complex{RT}, eⁱᵝ::Complex{RT}, eⁱᵞ::Complex{RT},
+    ℓ::IT, skip_ℓ_recurrence::Bool=false
+) where {IT<:Signed, RT, NT<:Complex}
+    _recurrence!(w, eⁱᵝ, ℓ, skip_ℓ_recurrence)
+    Wˡ, Hˡ, Hˡ⁺¹ = w(ℓ)
+    convert_H_to_D!(Wˡ, eⁱᵅ, eⁱᵞ)
+    Wˡ
+end
+
+function recurrence!(
+    w::WignerCalculator{IT, RT, NT}, eⁱᵝ::Complex{RT}, ℓ::IT,
+    skip_ℓ_recurrence::Bool=false
+) where {IT<:Signed, RT, NT<:Real}
+    _recurrence!(w, eⁱᵝ, ℓ, skip_ℓ_recurrence)
+    Wˡ, Hˡ, Hˡ⁺¹ = w(ℓ)
+    convert_H_to_d!(Wˡ)
+    Wˡ
+end
+
+function _recurrence!(
+    w::WignerCalculator{IT, RT, NT}, eⁱᵝ::Complex{RT}, ℓ::IT,
+    skip_ℓ_recurrence::Bool=false
+) where {IT<:Signed, RT, NT}
     # NOTE: In the comments explaining the recurrence steps below, we use notation with
-    # ℓₘᵢₙ=0 for simplicity, but the code should work for ℓₘᵢₙ=1//2 as well.
+    # ℓₘᵢₙ=0 for simplicity, but this sequence may work for ℓₘᵢₙ=1//2 as well.
 
     if ℓ == ℓₘᵢₙ(w)
-        # H⁰₀₀ = 1
-        recurrence_step1!(w)
+        recurrence_step1!(w)  # H⁰₀₀ = 1
+        fillW!(w, ℓ)  # Record the result in Wˡ
 
-        # Record the result in Wˡ
-        fillW!(w, ℓ)
-
-        # Now, to leave `w` in a good state for the next ℓ, compute H¹₀ₘ and swap
-        # H⁰₀ₘ -> H¹₀ₘ
-        recurrence_step2!(w, eⁱᵝ, ℓ+1)
+        # Now, to leave `w` in a good state for the next ℓ, compute H¹₀ₘ and swap.
+        recurrence_step2!(w, eⁱᵝ, ℓ+1)  # H⁰₀ₘ -> H¹₀ₘ
         swapH!(w)
-
-        Wˡ, Hˡ, Hˡ⁺¹ = w(ℓ)
-        Wˡ
     else
         if !skip_ℓ_recurrence
-            # H⁰₀₀ = 1
-            recurrence_step1!(w)
+            recurrence_step1!(w)  # H⁰₀₀ = 1
 
             for ℓ′ in ℓₘᵢₙ(w)+1:ℓ
-                # Hˡ⁻¹₀ₘ -> Hˡ₀ₘ
-                recurrence_step2!(w, eⁱᵝ, ℓ′)
-                swapH!(w)
+                recurrence_step2!(w, eⁱᵝ, ℓ′)  # Hˡ⁻¹₀ₘ -> Hˡ₀ₘ
+                swapH!(w)  # Prepare for the next iteration of ℓ′
             end
         end
 
+        # Do one more step of the recurrence to get Hˡ⁺¹₀ₘ, regardless of whether or not we
+        # asked to skip the ℓ recurrence.  If we did, the user is responsible for having
+        # already set Hˡ₀ₘ correctly; if we didn't, we just set it in the loop above.
         let ℓ′ = ℓ+1
-            # Hˡ₀ₘ -> Hˡ⁺¹₀ₘ
-            recurrence_step2!(w, eⁱᵝ, ℓ′)
+            recurrence_step2!(w, eⁱᵝ, ℓ′)  # Hˡ₀ₘ -> Hˡ⁺¹₀ₘ
         end
 
-        # Copy Hˡ₀ₘ to Wˡ₀ₘ
-        fillW!(w, ℓ)
-
-        # Hˡ⁺¹₀ₘ -> Hˡ₁ₘ
-        recurrence_step3!(w, eⁱᵝ, ℓ)
-
-        # Hˡₘ′ₘ₋₁, Hˡₘ′₋₁ₘ, Hˡₘ′ₘ₊₁ -> Hˡₘ′₊₁ₘ
-        recurrence_step4!(w, eⁱᵝ, ℓ)
-
-        # Hˡₘ′ₘ₋₁, Hˡₘ′₊₁ₘ, Hˡₘ′ₘ₊₁ -> Hˡₘ′₋₁ₘ
-        recurrence_step5!(w, eⁱᵝ, ℓ)
+        fillW!(w, ℓ)  # Copy Hˡ₀ₘ to Wˡ₀ₘ
+        recurrence_step3!(w, eⁱᵝ, ℓ)  # Hˡ⁺¹₀ₘ -> Hˡ₁ₘ
+        recurrence_step4!(w, eⁱᵝ, ℓ)  # Hˡₘ′ₘ₋₁, Hˡₘ′₋₁ₘ, Hˡₘ′ₘ₊₁ -> Hˡₘ′₊₁ₘ
+        recurrence_step5!(w, eⁱᵝ, ℓ)  # Hˡₘ′ₘ₋₁, Hˡₘ′₊₁ₘ, Hˡₘ′ₘ₊₁ -> Hˡₘ′₋₁ₘ
 
         # Impose symmetries
         recurrence_step6!(w, ℓ)
 
-        # Finish conversion to Dˡ
-        Wˡ, Hˡ, Hˡ⁺¹ = w(ℓ)
-        convert_H_to_D!(Wˡ, eⁱᵅ, eⁱᵞ)
-
         # Swap the H matrices once more so that the current Hˡ⁺¹ is the next loop's Hˡ
         swapH!(w)
-
-        Wˡ
     end
+
+    Wˡ, Hˡ, Hˡ⁺¹ = w(ℓ)
+    Wˡ
 
 end
