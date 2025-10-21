@@ -46,7 +46,7 @@ For example, if the parent Matrix is not stored as the `parent` field, then the 
 method should be re-implemented to return the correct parent object.  The `getindex` and
 `setindex!`
 """
-abstract type AbstractWignerMatrix{IT<:Union{Integer,Rational}, NT, ST<:AbstractMatrix{NT}} <: AbstractMatrix{NT} end
+abstract type AbstractWignerMatrix{IT<:Union{Integer,Rational}, NT, ST<:AbstractArray{NT}} <: AbstractMatrix{NT} end
 
 ### General methods for all AbstractWignerMatrix types
 
