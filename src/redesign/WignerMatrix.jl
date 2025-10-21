@@ -77,39 +77,6 @@ isrational(::AbstractWignerMatrix{IT}) where {IT<:Rational} = true
 Base.eltype(::AbstractWignerMatrix{IT, NT, ST}) where {IT, NT, ST} = NT
 Base.size(w::AbstractWignerMatrix{IT, NT, ST}) where {IT, NT, ST} = size(parent(w))
 Base.length(w::AbstractWignerMatrix{IT, NT, ST}) where {IT, NT, ST} = length(parent(w))
-
-# struct WignerRange{T<:Union{Integer,Rational}} <: AbstractUnitRange{T}
-#     start::T
-#     stop::T
-
-#     WignerRange(r::UnitRange{T}) where {T} = new{T}(r.start, r.stop)
-# end
-# @inline Base.axes(r::WignerRange) = (axes1(r),)
-# @inline axes1(r::WignerRange) = WignerRange(r.start:r.stop)
-# if VERSION < v"1.8.2"
-#     Base.axes1(r::WignerRange) = axes1(r)
-# end
-# Base.inds2string(inds::NTuple{2, WignerRange}) =
-#     string(
-#         "(", inds[1].start, ":", inds[1].stop, ")",
-#         "×",
-#         "(", inds[2].start, ":", inds[2].stop, ")"
-#     )
-# Base.firstindex(r::WignerRange) = 1
-# Base.lastindex(r::WignerRange) = length(r)
-# function Base.getindex(v::WignerRange, i::Bool)
-#     throw(ArgumentError("invalid index: $i of type Bool"))
-# end
-# @propagate_inbounds function Base.getindex(v::WignerRange{T}, i::Integer) where {T}
-#     val = convert(T, v.start + (i - oneunit(i)))
-#     @boundscheck (i>0 && val <= v.stop && val >= v.start) || throw(BoundsError(v, i))
-#     val
-# end
-
-# function Base.axes(w::AbstractWignerMatrix{IT}) where {IT}
-#     (WignerRange(m′ₘᵢₙ(w):m′ₘₐₓ(w)), WignerRange(mₘᵢₙ(w):mₘₐₓ(w)))
-# end
-
 function Base.axes(w::AbstractWignerMatrix{IT}) where {IT}
     ((m′ₘᵢₙ(w):m′ₘₐₓ(w)), (mₘᵢₙ(w):mₘₐₓ(w)))
 end
