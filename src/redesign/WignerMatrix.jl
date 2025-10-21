@@ -193,100 +193,30 @@ struct WignerMatrix{IT, NT, ST} <: AbstractWignerMatrix{IT, NT, ST}
     m′ₘᵢₙ::IT
     mₘₐₓ::IT
     mₘᵢₙ::IT
-    function WignerMatrix(
-        parent::ST, ℓ::IT;
-        mp_max::IT=ℓ, mp_min::IT=-ℓ, m_max::IT=ℓ, m_min::IT=-ℓ,
-        m′ₘₐₓ::IT=mp_max, m′ₘᵢₙ::IT=mp_min, mₘₐₓ::IT=m_max, mₘᵢₙ::IT=m_min
-    ) where {IT, NT, ST<:AbstractMatrix{NT}}
-        validate_index_ranges(ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
-        s₁, s₂ = size(parent)
-        if s₁ < Int(m′ₘₐₓ - m′ₘᵢₙ + 1)
-            error(
-                "The extent of the first dimension in the input data must be at least "
-                * "m′ₘₐₓ-m′ₘᵢₙ+1=$(Int(m′ₘₐₓ - m′ₘᵢₙ + 1)); it is $s₁."
-            )
-        end
-        if s₂ < Int(mₘₐₓ - mₘᵢₙ + 1)
-            error(
-                "The extent of the second dimension in the input data must be at least "
-                * "mₘₐₓ-mₘᵢₙ+1=$(Int(mₘₐₓ - mₘᵢₙ + 1)); it is $s₂."
-            )
-        end
-        new{IT, NT, ST}(parent, ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
-    end
 end
 
-
-### Specialize to D and d matrices
-
-"""
-    WignerDMatrix{IT, NT, ST} <: AbstractWignerMatrix{IT, NT, ST}
-
-Specialized subtype of [`AbstractWignerMatrix`](@ref) for D-matrices, which are complex matrices.
-"""
-struct WignerDMatrix{IT, NT, ST} <: AbstractWignerMatrix{IT, NT, ST}
-    parent::ST
-    ℓ::IT
-    m′ₘₐₓ::IT
-    function WignerDMatrix{IT, NT, ST}(parent::ST, ℓ::IT) where {IT, NT, ST}
-        # We want to secretly allow NTuple{3, IT} for testing purposes, so we can't just use
-        # a restriction on NT in the type declaration.
-        if !(NT <: NTuple{3, IT}) && complex(NT) ≢ NT
-            error(
-                "WignerDMatrix only supports complex types; the input type is $NT.\n"
-                * "Perhaps you meant to use WignerdMatrix?"
-            )
-        end
-        if ℓ < 0 || (IT <: Rational && denominator(ℓ) ≠ 2)
-            error(
-                "ℓ=$ℓ should be non-negative integer or half-integer.  In particular,\n"
-                * "if ℓ is an integer its type must be <:Integer, not <:Rational."
-            )
-        end
-        s₁, s₂ = size(parent)
-        if s₂ ≠ Int(2ℓ + 1)
-            error(
-                "The extent of the second dimension in the input data must be "
-                * "2ℓ+1=$(Int(2ℓ+1)); it is $s₂."
-            )
-        end
-        if s₁ == 0 || s₁ > s₂
-            error(
-                "The extent of the first dimension in the input data must be greater than 0"
-                * " and less than or equal to 2ℓ+1=$(Int(2ℓ+1)); it is $s₁."
-            )
-        end
-        if IT <: Rational
-            if isodd(s₁)
-                error(
-                    "ℓ=$ℓ is a half-integer, but the extent of the first dimension in the "
-                    * "input data ($s₁) corresponds to whole-integer values of m′."
-                )
-            end
-        else
-            if iseven(s₁)
-                error(
-                    "ℓ=$ℓ is an integer, but the extent of the first dimension in the "
-                    * "input data ($s₁) corresponds to half-integer values of m′."
-                )
-            end
-        end
-        m′ₘₐₓ = IT((s₁ - 1) // 2)
-        new(parent, ℓ, m′ₘₐₓ)
+function WignerMatrix(
+    parent::ST, ℓ::IT;
+    mp_max::IT=ℓ, mp_min::IT=-ℓ, m_max::IT=ℓ, m_min::IT=-ℓ,
+    m′ₘₐₓ::IT=mp_max, m′ₘᵢₙ::IT=mp_min, mₘₐₓ::IT=m_max, mₘᵢₙ::IT=m_min
+) where {IT, NT, ST<:AbstractMatrix{NT}}
+    validate_index_ranges(ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
+    s₁, s₂ = size(parent)
+    if s₁ < Int(m′ₘₐₓ - m′ₘᵢₙ + 1)
+        error(
+            "The extent of the first dimension in the input data must be at least "
+            * "m′ₘₐₓ-m′ₘᵢₙ+1=$(Int(m′ₘₐₓ - m′ₘᵢₙ + 1)); it is $s₁."
+        )
     end
+    if s₂ < Int(mₘₐₓ - mₘᵢₙ + 1)
+        error(
+            "The extent of the second dimension in the input data must be at least "
+            * "mₘₐₓ-mₘᵢₙ+1=$(Int(mₘₐₓ - mₘᵢₙ + 1)); it is $s₂."
+        )
+    end
+    WignerMatrix{IT, NT, ST}(parent, ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
 end
 
-"""
-    WignerDMatrix(parent, ℓ)
-
-Construct a `WignerDMatrix` object from the given parent matrix and ``ℓ`` value.  Note that
-the type of `ℓ` *must* be either `Integer` or `Rational`.  If it is `Rational`, the
-denominator *must* be 2; if it is 1, you must convert to an `Int` first.  Also, the parent
-matrix must have the correct size: the first dimension must be greater than 0 and less than
-or equal to `2ℓ+1`, and the second dimension must be equal to `2ℓ+1`.
-"""
-function WignerDMatrix(parent::ST, ℓ::IT) where {IT, ST}
-    WignerDMatrix{IT, eltype(ST), ST}(parent, ℓ)
 end
 function WignerDMatrix(::Type{NT}, ℓ::IT, m′::IT=ℓ) where {NT, IT}
     if complex(NT) ≢ NT
