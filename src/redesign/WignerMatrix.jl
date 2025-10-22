@@ -125,7 +125,8 @@ function validate_index_ranges(ℓₘₐₓ::IT, m′ₘₐₓ::IT, m′ₘᵢ�
         )
             error(
                 "For IT=$IT <: Rational, indices must have denominator 2:\n"
-                * "\tℓₘₐₓ=$ℓₘₐₓ, m′ₘᵢₙ=$m′ₘᵢₙ, m′ₘₐₓ=$m′ₘₐₓ, mₘᵢₙ=$mₘᵢₙ, mₘₐₓ=$mₘₐₓ."
+                * "\tℓₘₐₓ=$ℓₘₐₓ, m′ₘᵢₙ=$m′ₘᵢₙ, m′ₘₐₓ=$m′ₘₐₓ, mₘᵢₙ=$mₘᵢₙ, mₘₐₓ=$mₘₐₓ.\n"
+                * "If you want an integer index type, use IT=<:Integer instead."
             )
         end
     end
@@ -136,16 +137,16 @@ function validate_index_ranges(ℓₘₐₓ::IT, m′ₘₐₓ::IT, m′ₘᵢ�
 
     # The m′ and m values must bracket ℓₘᵢₙ
     if m′ₘᵢₙ > ℓₘᵢₙ(ℓₘₐₓ)
-        error("m′ₘᵢₙ=$m′ₘᵢₙ is too large for this index type.")
+        error("m′ₘᵢₙ=$m′ₘᵢₙ is too large for this index type, $IT.")
     end
     if m′ₘₐₓ < ℓₘᵢₙ(ℓₘₐₓ)
-        error("m′ₘₐₓ=$m′ₘₐₓ is too small for this index type.")
+        error("m′ₘₐₓ=$m′ₘₐₓ is too small for this index type, $IT.")
     end
     if mₘᵢₙ > ℓₘᵢₙ(ℓₘₐₓ)
-        error("mₘᵢₙ=$mₘᵢₙ is too large for this index type.")
+        error("mₘᵢₙ=$mₘᵢₙ is too large for this index type, $IT.")
     end
     if mₘₐₓ < ℓₘᵢₙ(ℓₘₐₓ)
-        error("mₘₐₓ=$mₘₐₓ is too small for this index type.")
+        error("mₘₐₓ=$mₘₐₓ is too small for this index type, $IT.")
     end
 
     # The m′ and m values must be in range for ℓₘₐₓ
@@ -476,32 +477,39 @@ end
     @test_throws "WignerdMatrix only supports real types" WignerdMatrix(rand(ComplexF64, 2, 2), 1//2)
 
     # Check that a negative ℓ value throws an error
-    @test_throws "should be non-negative integer or half-integer." WignerDMatrix(rand(ComplexF64, 3, 3), -1)
-    @test_throws "should be non-negative integer or half-integer." WignerdMatrix(rand(Float64, 3, 3), -1)
-    @test_throws "should be non-negative integer or half-integer." WignerDMatrix(rand(ComplexF64, 2, 2), -1//2)
-    @test_throws "should be non-negative integer or half-integer." WignerdMatrix(rand(Float64, 2, 2), -1//2)
+    @test_throws "ℓₘₐₓ=-1 must be non-negative." WignerDMatrix(rand(ComplexF64, 3, 3), -1)
+    @test_throws "ℓₘₐₓ=-1 must be non-negative." WignerdMatrix(rand(Float64, 3, 3), -1)
+    @test_throws "ℓₘₐₓ=-1//2 must be non-negative." WignerDMatrix(rand(ComplexF64, 2, 2), -1//2)
+    @test_throws "ℓₘₐₓ=-1//2 must be non-negative." WignerdMatrix(rand(Float64, 2, 2), -1//2)
 
     # Check that a non-half-integer ℓ value throws an error
-    @test_throws "should be non-negative integer or half-integer." WignerDMatrix(rand(ComplexF64, 3, 3), 1//3)
-    @test_throws "should be non-negative integer or half-integer." WignerdMatrix(rand(Float64, 3, 3), 1//3)
-    @test_throws "should be non-negative integer or half-integer." WignerDMatrix(rand(ComplexF64, 2, 2), 1//3)
-    @test_throws "should be non-negative integer or half-integer." WignerdMatrix(rand(Float64, 2, 2), 1//3)
-    @test_throws "should be non-negative integer or half-integer." WignerDMatrix(rand(ComplexF64, 3, 3), 2//2)
-    @test_throws "should be non-negative integer or half-integer." WignerdMatrix(rand(Float64, 3, 3), 2//2)
-    @test_throws "should be non-negative integer or half-integer." WignerDMatrix(rand(ComplexF64, 2, 2), 2//2)
-    @test_throws "should be non-negative integer or half-integer." WignerdMatrix(rand(Float64, 2, 2), 2//2)
+    @test_throws "For IT=Rational{Int64} <: Rational, indices must have denominator 2:" WignerDMatrix(rand(ComplexF64, 3, 3), 1//3)
+    @test_throws "For IT=Rational{Int64} <: Rational, indices must have denominator 2:" WignerdMatrix(rand(Float64, 3, 3), 1//3)
+    @test_throws "For IT=Rational{Int64} <: Rational, indices must have denominator 2:" WignerDMatrix(rand(ComplexF64, 2, 2), 1//3)
+    @test_throws "For IT=Rational{Int64} <: Rational, indices must have denominator 2:" WignerdMatrix(rand(Float64, 2, 2), 1//3)
+    @test_throws "For IT=Rational{Int64} <: Rational, indices must have denominator 2:" WignerDMatrix(rand(ComplexF64, 3, 3), 2//2)
+    @test_throws "For IT=Rational{Int64} <: Rational, indices must have denominator 2:" WignerdMatrix(rand(Float64, 3, 3), 2//2)
+    @test_throws "For IT=Rational{Int64} <: Rational, indices must have denominator 2:" WignerDMatrix(rand(ComplexF64, 2, 2), 2//2)
+    @test_throws "For IT=Rational{Int64} <: Rational, indices must have denominator 2:" WignerdMatrix(rand(Float64, 2, 2), 2//2)
 
     #for ℓ ∈ Any[collect(0:8); collect(1//2:15//2)]
-    for ℓ ∈ Any[collect(0:2); collect(1//2:3//2)]
+    ℓₘₐₓ = 2
+    encode(ℓ, m′, m) = (ℓ+ℓₘₐₓ) + (m′+ℓₘₐₓ)*(4ℓₘₐₓ+1) + (m+ℓₘₐₓ)*(4ℓₘₐₓ+1)^2
+    for ℓ ∈ Any[collect(0:ℓₘₐₓ); collect(1//2:(ℓₘₐₓ+1//2))]
         mₘ = ℓ
 
-        # Check that ℓ < m′ₘₐₓ and ℓ ≠ mₘₐₓ throw errors
-        @test_throws "greater than 0 and less than or equal to 2ℓ+1=" WignerDMatrix(Array{ComplexF64}(undef, Int(2ℓ)+2, Int(2ℓ)+1), ℓ)
-        @test_throws "greater than 0 and less than or equal to 2ℓ+1=" WignerdMatrix(Array{Float64}(undef, Int(2ℓ)+2, Int(2ℓ)+1), ℓ)
-        @test_throws "in the input data must be 2ℓ+1=" WignerDMatrix(Array{ComplexF64}(undef, Int(2ℓ)+1, Int(2ℓ)+2), ℓ)
-        @test_throws "in the input data must be 2ℓ+1=" WignerdMatrix(Array{Float64}(undef, Int(2ℓ)+1, Int(2ℓ)+2), ℓ)
-        @test_throws "in the input data must be 2ℓ+1=" WignerDMatrix(Array{ComplexF64}(undef, Int(2ℓ)+1, Int(2ℓ)+0), ℓ)
-        @test_throws "in the input data must be 2ℓ+1=" WignerdMatrix(Array{Float64}(undef, Int(2ℓ)+1, Int(2ℓ)+0), ℓ)
+        # These tests are old; the input array can be larger than necessary now.
+        # # Check that ℓ < m′ₘₐₓ and ℓ ≠ mₘₐₓ throw errors
+        # @test_throws "greater than 0 and less than or equal to 2ℓ+1=" WignerDMatrix(Array{ComplexF64}(undef, Int(2ℓ)+2, Int(2ℓ)+1), ℓ)
+        # @test_throws "greater than 0 and less than or equal to 2ℓ+1=" WignerdMatrix(Array{Float64}(undef, Int(2ℓ)+2, Int(2ℓ)+1), ℓ)
+        # @test_throws "in the input data must be 2ℓ+1=" WignerDMatrix(Array{ComplexF64}(undef, Int(2ℓ)+1, Int(2ℓ)+2), ℓ)
+        # @test_throws "in the input data must be 2ℓ+1=" WignerdMatrix(Array{Float64}(undef, Int(2ℓ)+1, Int(2ℓ)+2), ℓ)
+
+        # # Check that the input is at least as big as needed for the given ℓ
+        @test_throws r"The extent of the first dimension.*; it is 0." WignerDMatrix(Array{ComplexF64}(undef, Int(2ℓ)+0, Int(2ℓ)+1), ℓ)
+        @test_throws r"The extent of the first dimension.*; it is 0." WignerdMatrix(Array{Float64}(undef, Int(2ℓ)+0, Int(2ℓ)+1), ℓ)
+        @test_throws r"The extent of the second dimension.*; it is 0." WignerDMatrix(Array{ComplexF64}(undef, Int(2ℓ)+1, Int(2ℓ)+0), ℓ)
+        @test_throws r"The extent of the second dimension.*; it is 0." WignerdMatrix(Array{Float64}(undef, Int(2ℓ)+1, Int(2ℓ)+0), ℓ)
 
         # Check that a mismatch between integer/half-integer throws an error
         if ℓ>0 && ℓ isa Int
@@ -511,24 +519,24 @@ end
             @test_throws "is a half-integer, but the extent of the first dimension" WignerDMatrix(rand(ComplexF64, Int(2ℓ), Int(2ℓ+1)), ℓ)
             @test_throws "is a half-integer, but the extent of the first dimension" WignerdMatrix(rand(Float64, Int(2ℓ), Int(2ℓ+1)), ℓ)
         end
-        @test_throws "in the input data must be 2ℓ+1=" WignerDMatrix(rand(ComplexF64, Int(2ℓ+1), Int(2ℓ)), ℓ)
-        @test_throws "in the input data must be 2ℓ+1=" WignerdMatrix(rand(Float64, Int(2ℓ+1), Int(2ℓ)), ℓ)
+        @test_throws r"The extent of the second dimension.*; it is 0." WignerDMatrix(rand(ComplexF64, Int(2ℓ+1), Int(2ℓ)), ℓ)
+        @test_throws r"The extent of the second dimension.*; it is 0." WignerdMatrix(rand(Float64, Int(2ℓ+1), Int(2ℓ)), ℓ)
 
         # Check that a data array with a dimension of 0 extent throws an error.
-        @test_throws "in the input data must be 2ℓ+1=" WignerDMatrix(Array{ComplexF64}(undef, Int(2ℓ)+1, 0), ℓ)
-        @test_throws "greater than 0 and less than or equal to 2ℓ+1=" WignerDMatrix(Array{ComplexF64}(undef, 0, Int(2ℓ)+1), ℓ)
-        @test_throws "in the input data must be 2ℓ+1=" WignerdMatrix(Array{Float64}(undef, Int(2ℓ)+1, 0), ℓ)
-        @test_throws "greater than 0 and less than or equal to 2ℓ+1=" WignerdMatrix(Array{Float64}(undef, 0, Int(2ℓ)+1), ℓ)
+        @test_throws r"The extent of the second dimension.*; it is 0." WignerDMatrix(Array{ComplexF64}(undef, Int(2ℓ)+1, 0), ℓ)
+        @test_throws r"The extent of the first dimension.*; it is 0." WignerDMatrix(Array{ComplexF64}(undef, 0, Int(2ℓ)+1), ℓ)
+        @test_throws r"The extent of the second dimension.*; it is 0." WignerdMatrix(Array{Float64}(undef, Int(2ℓ)+1, 0), ℓ)
+        @test_throws r"The extent of the first dimension.*; it is 0." WignerdMatrix(Array{Float64}(undef, 0, Int(2ℓ)+1), ℓ)
 
         for m′ₘ ∈ ℓₘᵢₙ(ℓ):ℓ
             # Make a big, dumb array full of the explicit indices.
             data = [
-                (ℓ, m′, m)
+                encode(ℓ, m′, m)
                 for m′ ∈ -m′ₘ:m′ₘ, m ∈ -mₘ:mₘ
             ]
             # Check that indexing works as expected.
-            for WignerMatrixType ∈ (WignerDMatrix, WignerdMatrix)
-                w = WignerMatrixType(data, ℓ)
+            for (WignerMatrixType, NT) ∈ ((WignerDMatrix, ComplexF64), (WignerdMatrix, Float64))
+                w = WignerMatrixType(NT.(data), ℓ)
                 @test Base.parent(w) == data
                 @test ell(w) == ℓ
                 @test mpmax(w) == m′ₘ
@@ -537,7 +545,7 @@ end
                 @test mmin(w) == -mmax(w)
                 for m ∈ -mₘ:mₘ
                     for m′ ∈ -m′ₘ:m′ₘ
-                        @test w[m′, m] == (ℓ, m′, m)
+                        @test w[m′, m] == encode(ℓ, m′, m)
                     end
                 end
             end
