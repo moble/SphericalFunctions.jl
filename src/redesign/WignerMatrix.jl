@@ -164,8 +164,17 @@ function validate_index_ranges(ℓₘₐₓ::IT, m′ₘₐₓ::IT, m′ₘᵢ�
         end
     end
 
+    # ℓₘₐₓ must be at least as big as ℓₘᵢₙ(ℓₘₐₓ)
     if ℓₘₐₓ < ℓₘᵢₙ(ℓₘₐₓ)
         error("ℓₘₐₓ=$ℓₘₐₓ must be non-negative.")
+    end
+
+    # The m′ and m ranges must be ordered correctly
+    if m′ₘₐₓ < m′ₘᵢₙ
+        error("m′ₘₐₓ=$m′ₘₐₓ is less than m′ₘᵢₙ=$m′ₘᵢₙ.")
+    end
+    if mₘₐₓ < mₘᵢₙ
+        error("mₘₐₓ=$mₘₐₓ is less than mₘᵢₙ=$mₘᵢₙ.")
     end
 
     # The m′ and m values must bracket ℓₘᵢₙ
