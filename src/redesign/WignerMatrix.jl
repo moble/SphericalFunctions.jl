@@ -337,21 +337,21 @@ end
         # @test_throws "in the input data must be 2ℓ+1=" WignerdMatrix(Array{Float64}(undef, Int(2ℓ)+1, Int(2ℓ)+2), ℓ)
 
         # # Check that the input is at least as big as needed for the given ℓ
-        @test_throws r"The extent of the first dimension.*; it is 0." WignerDMatrix(Array{ComplexF64}(undef, Int(2ℓ)+0, Int(2ℓ)+1), ℓ)
-        @test_throws r"The extent of the first dimension.*; it is 0." WignerdMatrix(Array{Float64}(undef, Int(2ℓ)+0, Int(2ℓ)+1), ℓ)
-        @test_throws r"The extent of the second dimension.*; it is 0." WignerDMatrix(Array{ComplexF64}(undef, Int(2ℓ)+1, Int(2ℓ)+0), ℓ)
-        @test_throws r"The extent of the second dimension.*; it is 0." WignerdMatrix(Array{Float64}(undef, Int(2ℓ)+1, Int(2ℓ)+0), ℓ)
+        @test_throws "The extent of the first dimension" WignerDMatrix(Array{ComplexF64}(undef, Int(2ℓ)+0, Int(2ℓ)+1), ℓ)
+        @test_throws "The extent of the first dimension" WignerdMatrix(Array{Float64}(undef, Int(2ℓ)+0, Int(2ℓ)+1), ℓ)
+        @test_throws "The extent of the second dimension" WignerDMatrix(Array{ComplexF64}(undef, Int(2ℓ)+1, Int(2ℓ)+0), ℓ)
+        @test_throws "The extent of the second dimension" WignerdMatrix(Array{Float64}(undef, Int(2ℓ)+1, Int(2ℓ)+0), ℓ)
 
         # Check that a mismatch between integer/half-integer throws an error
         if ℓ>0 && ℓ isa Int
-            @test_throws "is an integer, but the extent of the first dimension" WignerDMatrix(rand(ComplexF64, 2ℓ, 2ℓ+1), ℓ)
-            @test_throws "is an integer, but the extent of the first dimension" WignerdMatrix(rand(Float64, 2ℓ, 2ℓ+1), ℓ)
+            @test_throws "The extent of the first dimension" WignerDMatrix(rand(ComplexF64, 2ℓ, 2ℓ+1), ℓ)
+            @test_throws "The extent of the first dimension" WignerdMatrix(rand(Float64, 2ℓ, 2ℓ+1), ℓ)
         elseif ℓ isa Rational
-            @test_throws "is a half-integer, but the extent of the first dimension" WignerDMatrix(rand(ComplexF64, Int(2ℓ), Int(2ℓ+1)), ℓ)
-            @test_throws "is a half-integer, but the extent of the first dimension" WignerdMatrix(rand(Float64, Int(2ℓ), Int(2ℓ+1)), ℓ)
+            @test_throws "The extent of the first dimension" WignerDMatrix(rand(ComplexF64, Int(2ℓ), Int(2ℓ+1)), ℓ)
+            @test_throws "The extent of the first dimension" WignerdMatrix(rand(Float64, Int(2ℓ), Int(2ℓ+1)), ℓ)
         end
-        @test_throws r"The extent of the second dimension.*; it is 0." WignerDMatrix(rand(ComplexF64, Int(2ℓ+1), Int(2ℓ)), ℓ)
-        @test_throws r"The extent of the second dimension.*; it is 0." WignerdMatrix(rand(Float64, Int(2ℓ+1), Int(2ℓ)), ℓ)
+        @test_throws "The extent of the second dimension" WignerDMatrix(rand(ComplexF64, Int(2ℓ+1), Int(2ℓ)), ℓ)
+        @test_throws "The extent of the second dimension" WignerdMatrix(rand(Float64, Int(2ℓ+1), Int(2ℓ)), ℓ)
 
         # Check that a data array with a dimension of 0 extent throws an error.
         @test_throws r"The extent of the second dimension.*; it is 0." WignerDMatrix(Array{ComplexF64}(undef, Int(2ℓ)+1, 0), ℓ)
