@@ -239,13 +239,13 @@ function WignerMatrix(
     if s₁ < Int(m′ₘₐₓ - m′ₘᵢₙ + 1)
         error(
             "The extent of the first dimension in the input data must be at least "
-            * "m′ₘₐₓ-m′ₘᵢₙ+1=$(Int(m′ₘₐₓ - m′ₘᵢₙ + 1)); it is $s₁."
+            * "m′ₘₐₓ-m′ₘᵢₙ+1=$m′ₘₐₓ-$m′ₘᵢₙ+1=$(Int(m′ₘₐₓ - m′ₘᵢₙ + 1)); it is $s₁."
         )
     end
     if s₂ < Int(mₘₐₓ - mₘᵢₙ + 1)
         error(
             "The extent of the second dimension in the input data must be at least "
-            * "mₘₐₓ-mₘᵢₙ+1=$(Int(mₘₐₓ - mₘᵢₙ + 1)); it is $s₂."
+            * "mₘₐₓ-mₘᵢₙ+1=$mₘₐₓ-$mₘᵢₙ+1=$(Int(mₘₐₓ - mₘᵢₙ + 1)); it is $s₂."
         )
     end
     WignerMatrix{IT, NT, ST}(parent, ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
