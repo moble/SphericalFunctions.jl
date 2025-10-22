@@ -367,7 +367,7 @@ end
             ]
             # Check that indexing works as expected.
             for (WignerMatrixType, NT) ∈ ((WignerDMatrix, ComplexF64), (WignerdMatrix, Float64))
-                w = WignerMatrixType(NT.(data), ℓ)
+                w = WignerMatrixType(NT.(data), ℓ; m′ₘₐₓ=m′ₘ, m′ₘᵢₙ=-m′ₘ, mₘₐₓ=mₘ, mₘᵢₙ=-mₘ)
                 @test Base.parent(w) == data
                 @test ell(w) == ℓ
                 @test mpmax(w) == m′ₘ
@@ -388,7 +388,7 @@ end
                     WignerMatrixType<:WignerDMatrix ? ComplexF64 : Float64,
                     Int(2m′ₘ)+1, Int(2mₘ)+1
                 )
-                w = WignerMatrixType(data, ℓ)
+                w = WignerMatrixType(data, ℓ; m′ₘₐₓ=m′ₘ, m′ₘᵢₙ=-m′ₘ, mₘₐₓ=mₘ, mₘᵢₙ=-mₘ)
 
                 # Check that the data array is stored correctly.
                 @test Base.parent(w) == data
