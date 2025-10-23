@@ -207,6 +207,49 @@ function validate_index_ranges(ℓₘₐₓ::IT, m′ₘₐₓ::IT, m′ₘᵢ�
 
 end
 
+function validate_index_ranges(ℓₘₐₓ::IT, m′ₘₐₓ::IT, m′ₘᵢₙ::IT) where
+    {IT<:Union{Signed, Rational}}
+    if IT <: Rational
+        if (
+            denominator(ℓₘₐₓ) ≠ 2 ||
+            denominator(m′ₘᵢₙ) ≠ 2 || denominator(m′ₘₐₓ) ≠ 2
+        )
+            error(
+                "For IT=$IT <: Rational, indices must have denominator 2:\n"
+                * "\tℓₘₐₓ=$ℓₘₐₓ, m′ₘᵢₙ=$m′ₘᵢₙ, m′ₘₐₓ=$m′ₘₐₓ.\n"
+                * "If you want an integer index type, use IT=<:Integer instead."
+            )
+        end
+    end
+
+    # ℓₘₐₓ must be at least as big as ℓₘᵢₙ(ℓₘₐₓ)
+    if ℓₘₐₓ < ℓₘᵢₙ(ℓₘₐₓ)
+        error("ℓₘₐₓ=$ℓₘₐₓ must be non-negative.")
+    end
+
+    # The m′ range must be ordered correctly
+    if m′ₘₐₓ < m′ₘᵢₙ
+        error("m′ₘₐₓ=$m′ₘₐₓ is less than m′ₘᵢₙ=$m′ₘᵢₙ.")
+    end
+
+    # The m′ values must bracket ℓₘᵢₙ
+    if m′ₘᵢₙ > ℓₘᵢₙ(ℓₘₐₓ)
+        error("m′ₘᵢₙ=$m′ₘᵢₙ is too large for this index type, $IT.")
+    end
+    if m′ₘₐₓ < ℓₘᵢₙ(ℓₘₐₓ)
+        error("m′ₘₐₓ=$m′ₘₐₓ is too small for this index type, $IT.")
+    end
+
+    # The m′ values must be in range for ℓₘₐₓ
+    if abs(m′ₘᵢₙ) > ℓₘₐₓ
+        error("|m′ₘᵢₙ|=|$m′ₘᵢₙ| is too large for ℓₘₐₓ=$ℓₘₐₓ.")
+    end
+    if abs(m′ₘₐₓ) > ℓₘₐₓ
+        error("|m′ₘₐₓ|=|$m′ₘₐₓ| is too large for ℓₘₐₓ=$ℓₘₐₓ.")
+    end
+
+end
+
 
 """
     WignerMatrix{IT, NT, ST} <: AbstractWignerMatrix{IT, NT, ST}
@@ -418,3 +461,222 @@ end
         end
     end
 end
+
+
+"""
+    HWedge{IT, RT, ST} <: AbstractWignerMatrix{IT, RT, ST}
+
+The ``Hˡ`` matrix is critical to efficient and stable computation of the Wigner ``D`` and
+``d`` matrices — in fact, it essentially *is* the ``d`` matrix with signs adjusted to avoid
+numerical problems with alternating signs.  This gives it additional symmetries that reduce
+the amount of data that needs to be stored to about 1/4 of the total ``d`` size.
+
+The purpose of an `HWedge` is to provide a workspace for the Wigner recurrences that is
+efficient, both in terms of the size of memory used, and the implications for vectorization
+and threading.  Specifically, the data is stored as strictly `Real` values, in contiguous
+storage.  Indexing is performed efficiently via precomputed row offsets.  Once the full
+recurrence is done, the data can be used directly — computing phases and symmetry on the fly
+— or copied into a full explicit matrix with the appropriate phases.
+
+The recurrences require ``m`` in the full range from 0 (or 1/2) to ``ℓ``, but ``m'`` only
+needs to include the axis ``m'=0`` or 1/2.  Thus, we store `m′ₘᵢₙ`and `m′ₘₐₓ` as fields, and
+only require enough storage for those ranges.  Specifically, an `HWedge` will store elements
+in a vector as if they were components of the `Hˡ` matrix:
+
+    [
+        Hˡ[m′, m]
+        for m′ ∈ max(-ℓ, m′ₘᵢₙ):min(ℓ, m′ₘₐₓ)
+        for m ∈ abs(m′):ℓ
+    ]
+
+However, for further efficiency when vectorizing and threading over multiple rotations, the
+data is stored as a 2-dimensional array, with the first dimension indexing different
+rotations, and the second dimension storing the vectorized `Hˡ` data as described above.
+
+"""
+struct HWedge{IT, RT<:Real, ST<:DenseArray{RT}} <: AbstractWignerMatrix{IT, RT, ST}
+    parent::ST
+    row_index::FixedSizeVectorDefault{Int}
+    ℓ::IT
+    m′ₘₐₓ::IT
+    m′ₘᵢₙ::IT
+end
+
+function HWedge(
+    parent::ST, ℓ::IT;
+    mp_max::IT=ℓ, mp_min::IT=-ℓ,
+    m′ₘₐₓ::IT=mp_max, m′ₘᵢₙ::IT=mp_min
+) where {IT<:Union{Integer,Rational}, RT<:Real, ST<:DenseArray{RT}}
+    validate_index_ranges(ℓ, m′ₘₐₓ, m′ₘᵢₙ)
+    expected_size = Hwedge_size(ℓ, m′ₘₐₓ, m′ₘᵢₙ)
+    if ndims(parent) ≠ 2
+        error(
+            "Input must be a 2-dimensional array; it has $(ndims(parent)) dimensions.\n"
+            * "The first dimension is used to vectorize/thread over rotations, and can "
+            * "just have extent 1.\n"
+            * "The second must have length at least $(expected_size) for the input values "
+            * "ℓ=$ℓ, m′ₘₐₓ=$m′ₘₐₓ, and m′ₘᵢₙ=$m′ₘᵢₙ."
+        )
+    end
+    s = size(parent, 2)
+    if s < expected_size
+        error(
+            "The length of the input data must be at least "
+            * "(m′ₘₐₓ-m′ₘᵢₙ+1)*(ℓₘₐₓ-ℓₘᵢₙ+1)="
+            * "($m′ₘₐₓ-$m′ₘᵢₙ+1)*($ℓₘₐₓ-$(ℓₘᵢₙ(ℓₘₐₓ))+1)="
+            * "$(expected_size); it is $s."
+        )
+    end
+    row_index = HWedge_row_index_array(ℓ, m′ₘₐₓ, m′ₘᵢₙ)
+    HWedge{IT, RT, ST}(parent, row_index, ℓ, m′ₘₐₓ, m′ₘᵢₙ)
+end
+
+function HWedge(
+    ::Type{RT}, Nᵣ::Int, ℓ::IT;
+    mp_max::IT=ℓ, mp_min::IT=-ℓ,
+    m′ₘₐₓ::IT=mp_max, m′ₘᵢₙ::IT=mp_min
+) where {IT<:Union{Integer,Rational}, RT<:Real}
+    validate_index_ranges(ℓ, m′ₘₐₓ, m′ₘᵢₙ)
+    if Nᵣ < 1
+        error("Number of rotors Nᵣ=$Nᵣ must be at least 1.")
+    end
+    parent = FixedSizeArrayDefault{RT}(undef, Nᵣ, HWedge_size(ℓ, m′ₘₐₓ, m′ₘᵢₙ))
+    row_index = HWedge_row_index_array(ℓ, m′ₘₐₓ, m′ₘᵢₙ)
+    HWedge{IT, RT, ST}(parent, ℓ, m′ₘₐₓ, m′ₘᵢₙ, row_index)
+end
+
+mₘₐₓ(w::HWedge{IT}) where {IT} = ℓ(w)
+mₘᵢₙ(w::HWedge{IT}) where {IT} = ℓₘᵢₙ(w)
+
+function HWedge_row_index_array(ℓ::IT, m′ₘₐₓ::IT, m′ₘᵢₙ::IT) where {IT}
+    m′range = m′ₘᵢₙ:m′ₘₐₓ
+    row_index = FixedSizeVectorDefault{Int}(undef, length(m′range))
+    index = 1
+    for (i, m′) ∈ enumerate(m′range)
+        row_index[i] = index
+        index += Int(ℓ - abs(m′)) + 1
+    end
+    row_index
+end
+
+function HWedge_size(ℓ::IT, m′ₘₐₓ::IT, m′ₘᵢₙ::IT) where {IT}
+    let ℓₘᵢₙ = ℓₘᵢₙ(IT)
+        Int(
+            (ℓₘᵢₙ - m′ₘᵢₙ) * (2ℓ + m′ₘᵢₙ + ℓₘᵢₙ + 1)
+            - (ℓₘᵢₙ - m′ₘₐₓ - 1) * (2ℓ - m′ₘₐₓ - ℓₘᵢₙ + 2)
+        ) ÷ 2
+    end
+end
+
+function HWedge_storage(::Type{RT}, Nᵣ::Int, ℓₘₐₓ::IT, m′ₘₐₓ::IT=ℓₘₐₓ, m′ₘᵢₙ::IT=ℓₘₐₓ) where {RT<:Real, IT}
+    FixedSizeArrayDefault{RT}(
+        undef,
+        Nᵣ,
+        HWedge_size(ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ)
+    )
+end
+
+"""
+
+An Hˡ wedge will store elements in a vector as if it were the following matrix:
+
+    [
+        H[ℓ, m′, m]
+        for m′ ∈ max(-ℓ, m′ₘᵢₙ):min(ℓ, m′ₘₐₓ)
+        for m ∈ abs(m′):ℓ
+    ]
+
+Here, m′ₘᵢₙ is a negative number and m′ₘₐₓ is a positive number.  Note that for HWedge, we
+currently impose mₘₐₓ = ℓ and mₘᵢₙ = ℓₘᵢₙ(IT), because these are all needed for the
+recurrence relations.
+
+This function returns the linear index into that vector that belongs to the first element
+with the given `m′` value (and therefore `m=abs(m′)`).  The formula for that index involves
+an `if` statement to account for the varying number of `m` values for each `m′` value.
+Nonetheless, it can be computed in closed form (i.e., without an explicit sum or loop).
+
+
+"""
+
+
+
+function row_index(w::HWedge{IT}, m′::IT) where {IT}
+    let ℓ = ℓ(w), m′ₘᵢₙ = m′ₘᵢₙ(w), ℓₘᵢₙ = ℓₘᵢₙ(IT)
+        (
+            Int(ℓₘᵢₙ - m′ₘᵢₙ) * Int(2ℓ + m′ₘᵢₙ + ℓₘᵢₙ + 1)
+            -
+            Int(ℓₘᵢₙ - m′) * Int(2ℓ - abs(m′ + ℓₘᵢₙ - 1) + 2)
+        ) ÷ 2 + 1
+
+        # i = if m′<1
+        #     Int(m′ - m′ₘᵢₙ) * Int(2ℓ + m′ + m′ₘᵢₙ + 1) ÷ 2  # size of wedge to the left of m'
+        # else
+        #     (
+        #         # size of entire left half of wedge
+        #         Int(ℓₘᵢₙ - m′ₘᵢₙ) * Int(2ℓ + ℓₘᵢₙ + m′ₘᵢₙ + 1)
+        #         +
+        #         # size of right half of wedge to the left of m'
+        #         Int(m′ - ℓₘᵢₙ) * Int(2ℓ - ℓₘᵢₙ - m′ + 3)
+        #     ) ÷ 2
+        # end
+        # i + 1
+    end
+end
+
+
+# function row_index(ℓ::IT, m′::IT) where {IT}
+#     let ℓₘᵢₙ = ℓₘᵢₙ(IT)
+#         i = if m′<ℓₘᵢₙ
+#             # size of wedge above m′
+#             Int(m′ - m′ₘᵢₙ) * Int(2ℓ + m′ + m′ₘᵢₙ + 1) ÷ 2
+#         else
+#             (
+#                 # size of entire upper half of wedge excluding m′=ℓₘᵢₙ
+#                 Int(ℓₘᵢₙ - m′ₘᵢₙ) * Int(2ℓ + ℓₘᵢₙ + m′ₘᵢₙ + 1)
+#                 +
+#                 # size of wedge at or below m′=ℓₘᵢₙ but above m′
+#                 Int(m′ - ℓₘᵢₙ) * Int(2ℓ - ℓₘᵢₙ - m′ + 3)
+#             ) ÷ 2
+#         end
+#         i + 1
+#     end
+# end
+
+# function row_index(ℓ::IT, m′::IT, m′ₘᵢₙ::IT) where {IT}
+#     let ℓₘᵢₙ = ℓₘᵢₙ(IT)
+#         # size of entire upper half of wedge excluding m′=ℓₘᵢₙ
+#         zero_index = Int(ℓₘᵢₙ - m′ₘᵢₙ) * Int(2ℓ + ℓₘᵢₙ + m′ₘᵢₙ + 1)
+
+#         i = if m′<ℓₘᵢₙ
+#             (
+#                 zero_index
+#                 +
+#                 # size of wedge at or below m′ but above m′=ℓₘᵢₙ
+#                 Int(m′ - ℓₘᵢₙ) * Int(2ℓ - abs(m′ + ℓₘᵢₙ - 1) + 2)
+#             ) ÷ 2
+#         else
+#             (
+#                 zero_index
+#                 +
+#                 # size of wedge at or below m′=ℓₘᵢₙ but above m′
+#                 Int(m′ - ℓₘᵢₙ) * Int(2ℓ - abs(m′ + ℓₘᵢₙ - 1) + 2)
+#             ) ÷ 2
+#         end
+#         i + 1
+#     end
+# end
+
+# function row_index(ℓ::IT, m′::IT) where {IT}
+#     let ℓₘᵢₙ = ℓₘᵢₙ(IT)#, m′ₘᵢₙ = -ℓ
+#         # Size of upper half (m′ₘᵢₙ to ℓₘᵢₙ-1)
+#         zero_index = Int(ℓₘᵢₙ - m′ₘᵢₙ) * Int(2ℓ + ℓₘᵢₙ + m′ₘᵢₙ + 1)
+
+#         # Correction term (works for both m′ < ℓₘᵢₙ and m′ ≥ ℓₘᵢₙ)
+#         correction = Int(m′ - ℓₘᵢₙ) * Int(2ℓ - ℓₘᵢₙ - m′ + 3)
+        
+#         # For m′ < ℓₘᵢₙ: correction is negative → subtract unwanted rows
+#         # For m′ ≥ ℓₘᵢₙ: correction is positive → add needed rows
+#         i = (zero_index + correction) ÷ 2
+#         i + 1
+#     end
+# end
