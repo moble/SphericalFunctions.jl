@@ -2,7 +2,7 @@ module Redesign
 
 import Quaternionic
 import TestItems: @testitem, @testsnippet
-import FixedSizeArrays: FixedSizeArrayDefault, FixedSizeVectorDefault
+import FixedSizeArrays: FixedSizeArrayDefault, FixedSizeVectorDefault,  FixedSizeArray, FixedSizeVector
 
 # TEMPORARY!!!!
 import SphericalFunctions: ComplexPowers

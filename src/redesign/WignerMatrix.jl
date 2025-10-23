@@ -490,71 +490,97 @@ in a vector as if they were components of the `Hˡ` matrix:
     ]
 
 However, for further efficiency when vectorizing and threading over multiple rotations, the
-data is stored as a 2-dimensional array, with the first dimension indexing different
-rotations, and the second dimension storing the vectorized `Hˡ` data as described above.
+data is stored as a 1-dimensional vector, though it can be indexed as if it were a
+three-dimensional array, with the first dimension indexing `Nᵣ` different rotations, and the
+second dimension indexing `m′`, and the third dimension indexing `m`.  Thus, this object can
+be indexed as `Hˡ[iᵣ, m′, m]` to get the `Hˡ` value for rotor index `iᵣ`, and matrix element
+`(m′, m)`.
+
+Because of this complicated layout, the constructor is fairly restrictive, but will do all
+the allocation needed.  To avoid multiple allocations, it is advisable to first construct an
+instance with the maximum `ℓ` value that will be needed, and then change the `ℓ` field as
+needed to compute different orders.  That is, if `H isa HWedge`, then `H.ℓ = new_ell` can be
+used to change the current order being computed.  The constructor starts out with the
+smallest `ℓ` value possible (0 or 1/2), which is the natural choice for recurrence.
+
+!!! warning "Thread safety"
+
+    The `HWedge` object is not thread safe.  Its internal storage is intended to be changed
+    by different threads, but the code must be designed carefully to avoid accessing the
+    same memory locations from different threads.  In particular, note that changing the `ℓ`
+    field changes internal storage, and is *not* thread-safe.  It may be better to allocate
+    separate `HWedge` objects for each thread.
 
 """
-struct HWedge{IT, RT<:Real, ST<:DenseArray{RT}} <: AbstractWignerMatrix{IT, RT, ST}
-    parent::ST
-    row_index::FixedSizeVectorDefault{Int}
+mutable struct HWedge{IT, RT<:Real, ST} <: AbstractWignerMatrix{IT, RT, ST}
+    const parent::ST
+    const row_index::FixedSizeVectorDefault{Int}
+    const Nᵣ::Int
+    const maxℓ::IT
+    const maxm′ₘₐₓ::IT
+    const minm′ₘᵢₙ::IT
     ℓ::IT
     m′ₘₐₓ::IT
     m′ₘᵢₙ::IT
-end
+    function HWedge(Nᵣ::Int, ℓₘₐₓ::IT, m′ₘₐₓ::IT=ℓₘₐₓ, m′ₘᵢₙ::IT=-ℓₘₐₓ) where {IT}
+        HWedge(Float64, Nᵣ, ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ)
+    end
+    function HWedge(::Type{RT}, Nᵣ::Int, ℓₘₐₓ::IT, m′ₘₐₓ::IT=ℓₘₐₓ, m′ₘᵢₙ::IT=-ℓₘₐₓ) where {IT, RT<:Real}
+        if Nᵣ < 1
+            error("Number of rotors Nᵣ=$Nᵣ must be at least 1.")
+        end
+        validate_index_ranges(ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ)
 
-function HWedge(
-    parent::ST, ℓ::IT;
-    mp_max::IT=ℓ, mp_min::IT=-ℓ,
-    m′ₘₐₓ::IT=mp_max, m′ₘᵢₙ::IT=mp_min
-) where {IT<:Union{Integer,Rational}, RT<:Real, ST<:DenseArray{RT}}
-    validate_index_ranges(ℓ, m′ₘₐₓ, m′ₘᵢₙ)
-    expected_size = Hwedge_size(ℓ, m′ₘₐₓ, m′ₘᵢₙ)
-    if ndims(parent) ≠ 2
-        error(
-            "Input must be a 2-dimensional array; it has $(ndims(parent)) dimensions.\n"
-            * "The first dimension is used to vectorize/thread over rotations, and can "
-            * "just have extent 1.\n"
-            * "The second must have length at least $(expected_size) for the input values "
-            * "ℓ=$ℓ, m′ₘₐₓ=$m′ₘₐₓ, and m′ₘᵢₙ=$m′ₘᵢₙ."
+        # Set up storage for the biggest these values will ever be
+        parent = FixedSizeVector{RT}(undef, Nᵣ * HWedge_size(ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ))
+        row_index = FixedSizeVector{Int}(undef, Int(m′ₘₐₓ - m′ₘᵢₙ) + 1)
+
+        # But start out assuming ℓ is the smallest it can be
+        maxℓ = ℓₘₐₓ
+        maxm′ₘₐₓ = m′ₘₐₓ
+        minm′ₘᵢₙ = m′ₘᵢₙ
+        ℓ = ℓₘᵢₙ(ℓₘₐₓ)
+        m′ₘₐₓ = min(ℓ, m′ₘₐₓ)
+        m′ₘᵢₙ = max(-ℓ, m′ₘᵢₙ)
+        HWedge_row_index!(row_index, Nᵣ, ℓ, m′ₘₐₓ, m′ₘᵢₙ)
+
+        new{IT, RT, typeof(parent)}(
+            parent, row_index, Nᵣ, maxℓ, maxm′ₘₐₓ, minm′ₘᵢₙ, ℓ, m′ₘₐₓ, m′ₘᵢₙ
         )
     end
-    s = size(parent, 2)
-    if s < expected_size
-        error(
-            "The length of the input data must be at least "
-            * "(m′ₘₐₓ-m′ₘᵢₙ+1)*(ℓₘₐₓ-ℓₘᵢₙ+1)="
-            * "($m′ₘₐₓ-$m′ₘᵢₙ+1)*($ℓₘₐₓ-$(ℓₘᵢₙ(ℓₘₐₓ))+1)="
-            * "$(expected_size); it is $s."
-        )
-    end
-    row_index = HWedge_row_index_array(ℓ, m′ₘₐₓ, m′ₘᵢₙ)
-    HWedge{IT, RT, ST}(parent, row_index, ℓ, m′ₘₐₓ, m′ₘᵢₙ)
-end
-
-function HWedge(
-    ::Type{RT}, Nᵣ::Int, ℓ::IT;
-    mp_max::IT=ℓ, mp_min::IT=-ℓ,
-    m′ₘₐₓ::IT=mp_max, m′ₘᵢₙ::IT=mp_min
-) where {IT<:Union{Integer,Rational}, RT<:Real}
-    validate_index_ranges(ℓ, m′ₘₐₓ, m′ₘᵢₙ)
-    if Nᵣ < 1
-        error("Number of rotors Nᵣ=$Nᵣ must be at least 1.")
-    end
-    parent = FixedSizeArrayDefault{RT}(undef, Nᵣ, HWedge_size(ℓ, m′ₘₐₓ, m′ₘᵢₙ))
-    row_index = HWedge_row_index_array(ℓ, m′ₘₐₓ, m′ₘᵢₙ)
-    HWedge{IT, RT, ST}(parent, ℓ, m′ₘₐₓ, m′ₘᵢₙ, row_index)
 end
 
 mₘₐₓ(w::HWedge{IT}) where {IT} = ℓ(w)
 mₘᵢₙ(w::HWedge{IT}) where {IT} = ℓₘᵢₙ(w)
 
-function HWedge_row_index_array(ℓ::IT, m′ₘₐₓ::IT, m′ₘᵢₙ::IT) where {IT}
-    m′range = m′ₘᵢₙ:m′ₘₐₓ
-    row_index = FixedSizeVectorDefault{Int}(undef, length(m′range))
+function Base.setproperty!(H::HWedge{IT}, s::Symbol, ℓ::IIT) where {IT, IIT}
+    if s === :ℓ
+        if IIT !== IT
+            error("Cannot change ℓ from type $IT to type $IIT; they must be the same.")
+        end
+        if ℓ < ℓₘᵢₙ(IT)
+            error("Cannot set ℓ=$ℓ less than ℓₘᵢₙ=$(ℓₘᵢₙ(IT)).")
+        end
+        if ℓ > H.maxℓ
+            error("Cannot set ℓ=$ℓ greater than maxℓ=$(H.maxℓ).")
+        end
+        m′ₘₐₓ = min(ℓ, H.maxm′ₘₐₓ)
+        m′ₘᵢₙ = max(-ℓ, H.minm′ₘᵢₙ)
+        HWedge_row_index!(H.row_index, H.Nᵣ, ℓ, m′ₘₐₓ, m′ₘᵢₙ)
+        Base.setfield!(H, :ℓ, ℓ)
+        Base.setfield!(H, :m′ₘₐₓ, m′ₘₐₓ)
+        Base.setfield!(H, :m′ₘᵢₙ, m′ₘᵢₙ)
+        ℓ
+    else
+        error("Cannot set property `$s` on HWedge; only `ℓ` is allowed to be changed.")
+    end
+end
+
+function HWedge_row_index!(row_index, Nᵣ::Int, ℓ::IT, m′ₘₐₓ::IT, m′ₘᵢₙ::IT) where {IT}
     index = 1
-    for (i, m′) ∈ enumerate(m′range)
-        row_index[i] = index
-        index += Int(ℓ - abs(m′)) + 1
+    for (i, m′) ∈ enumerate(m′ₘᵢₙ:m′ₘₐₓ)
+        @inbounds row_index[i] = index
+        index += Nᵣ * (Int(ℓ - abs(m′)) + 1)
     end
     row_index
 end
@@ -568,60 +594,53 @@ function HWedge_size(ℓ::IT, m′ₘₐₓ::IT, m′ₘᵢₙ::IT) where {IT}
     end
 end
 
-function HWedge_storage(::Type{RT}, Nᵣ::Int, ℓₘₐₓ::IT, m′ₘₐₓ::IT=ℓₘₐₓ, m′ₘᵢₙ::IT=ℓₘₐₓ) where {RT<:Real, IT}
-    FixedSizeArrayDefault{RT}(
-        undef,
-        Nᵣ,
-        HWedge_size(ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ)
-    )
-end
 
-"""
+# """
 
-An Hˡ wedge will store elements in a vector as if it were the following matrix:
+# An Hˡ wedge will store elements in a vector as if it were the following matrix:
 
-    [
-        H[ℓ, m′, m]
-        for m′ ∈ max(-ℓ, m′ₘᵢₙ):min(ℓ, m′ₘₐₓ)
-        for m ∈ abs(m′):ℓ
-    ]
+#     [
+#         H[ℓ, m′, m]
+#         for m′ ∈ max(-ℓ, m′ₘᵢₙ):min(ℓ, m′ₘₐₓ)
+#         for m ∈ abs(m′):ℓ
+#     ]
 
-Here, m′ₘᵢₙ is a negative number and m′ₘₐₓ is a positive number.  Note that for HWedge, we
-currently impose mₘₐₓ = ℓ and mₘᵢₙ = ℓₘᵢₙ(IT), because these are all needed for the
-recurrence relations.
+# Here, m′ₘᵢₙ is a negative number and m′ₘₐₓ is a positive number.  Note that for HWedge, we
+# currently impose mₘₐₓ = ℓ and mₘᵢₙ = ℓₘᵢₙ(IT), because these are all needed for the
+# recurrence relations.
 
-This function returns the linear index into that vector that belongs to the first element
-with the given `m′` value (and therefore `m=abs(m′)`).  The formula for that index involves
-an `if` statement to account for the varying number of `m` values for each `m′` value.
-Nonetheless, it can be computed in closed form (i.e., without an explicit sum or loop).
+# This function returns the linear index into that vector that belongs to the first element
+# with the given `m′` value (and therefore `m=abs(m′)`).  The formula for that index involves
+# an `if` statement to account for the varying number of `m` values for each `m′` value.
+# Nonetheless, it can be computed in closed form (i.e., without an explicit sum or loop).
 
 
-"""
+# """
 
 
 
-function row_index(w::HWedge{IT}, m′::IT) where {IT}
-    let ℓ = ℓ(w), m′ₘᵢₙ = m′ₘᵢₙ(w), ℓₘᵢₙ = ℓₘᵢₙ(IT)
-        (
-            Int(ℓₘᵢₙ - m′ₘᵢₙ) * Int(2ℓ + m′ₘᵢₙ + ℓₘᵢₙ + 1)
-            -
-            Int(ℓₘᵢₙ - m′) * Int(2ℓ - abs(m′ + ℓₘᵢₙ - 1) + 2)
-        ) ÷ 2 + 1
+# function row_index(w::HWedge{IT}, m′::IT) where {IT}
+#     let ℓ = ℓ(w), m′ₘᵢₙ = m′ₘᵢₙ(w), ℓₘᵢₙ = ℓₘᵢₙ(IT)
+#         (
+#             Int(ℓₘᵢₙ - m′ₘᵢₙ) * Int(2ℓ + m′ₘᵢₙ + ℓₘᵢₙ + 1)
+#             -
+#             Int(ℓₘᵢₙ - m′) * Int(2ℓ - abs(m′ + ℓₘᵢₙ - 1) + 2)
+#         ) ÷ 2 + 1
 
-        # i = if m′<1
-        #     Int(m′ - m′ₘᵢₙ) * Int(2ℓ + m′ + m′ₘᵢₙ + 1) ÷ 2  # size of wedge to the left of m'
-        # else
-        #     (
-        #         # size of entire left half of wedge
-        #         Int(ℓₘᵢₙ - m′ₘᵢₙ) * Int(2ℓ + ℓₘᵢₙ + m′ₘᵢₙ + 1)
-        #         +
-        #         # size of right half of wedge to the left of m'
-        #         Int(m′ - ℓₘᵢₙ) * Int(2ℓ - ℓₘᵢₙ - m′ + 3)
-        #     ) ÷ 2
-        # end
-        # i + 1
-    end
-end
+#         # i = if m′<1
+#         #     Int(m′ - m′ₘᵢₙ) * Int(2ℓ + m′ + m′ₘᵢₙ + 1) ÷ 2  # size of wedge to the left of m'
+#         # else
+#         #     (
+#         #         # size of entire left half of wedge
+#         #         Int(ℓₘᵢₙ - m′ₘᵢₙ) * Int(2ℓ + ℓₘᵢₙ + m′ₘᵢₙ + 1)
+#         #         +
+#         #         # size of right half of wedge to the left of m'
+#         #         Int(m′ - ℓₘᵢₙ) * Int(2ℓ - ℓₘᵢₙ - m′ + 3)
+#         #     ) ÷ 2
+#         # end
+#         # i + 1
+#     end
+# end
 
 
 # function row_index(ℓ::IT, m′::IT) where {IT}
