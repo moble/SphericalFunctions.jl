@@ -21,7 +21,8 @@ structures that only accept single integers or floats, such as HWedge.
         output
     end
 
-    function decode(i; pad=2)
+    decode(i; pad=2) = decode(Int(i); pad)
+    function decode(i::Int; pad=2)
         d = digits(i; pad)
         output = Int[]
         for k in 1:2:length(d)
