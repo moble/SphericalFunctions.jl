@@ -77,9 +77,6 @@ isrational(::AbstractWignerMatrix{IT}) where {IT<:Rational} = true
 Base.eltype(::AbstractWignerMatrix{IT, NT, ST}) where {IT, NT, ST} = NT
 Base.size(w::AbstractWignerMatrix{IT, NT, ST}) where {IT, NT, ST} = size(parent(w))
 Base.length(w::AbstractWignerMatrix{IT, NT, ST}) where {IT, NT, ST} = length(parent(w))
-# function Base.axes(w::AbstractWignerMatrix{IT}) where {IT}
-#     ((m′ₘᵢₙ(w):m′ₘₐₓ(w)), (mₘᵢₙ(w):mₘₐₓ(w)))
-# end
 
 struct WignerRange{T<:Union{Integer,Rational}} <: AbstractUnitRange{T}
     start::T
@@ -97,6 +94,14 @@ Base.inds2string(inds::NTuple{2, WignerRange}) =
         "(", inds[1].start, ":", inds[1].stop, ")",
         "×",
         "(", inds[2].start, ":", inds[2].stop, ")"
+    )
+Base.inds2string(inds::Tuple{UnitRange, WignerRange, WignerRange}) =
+    string(
+        "(", inds[1].start, ":", inds[1].stop, ")",
+        "×",
+        "(", inds[2].start, ":", inds[2].stop, ")",
+        "×",
+        "(", inds[3].start, ":", inds[3].stop, ")"
     )
 Base.firstindex(r::WignerRange) = 1
 Base.lastindex(r::WignerRange) = length(r)
@@ -600,6 +605,10 @@ function HWedge_size(ℓ::IT, m′ₘₐₓ::IT, m′ₘᵢₙ::IT) where {IT}
     end
 end
 
+function Base.axes(w::HWedge{IT}) where {IT}
+    (1:Nᵣ(w), WignerRange(m′ₘᵢₙ(w):m′ₘₐₓ(w)), WignerRange(mₘᵢₙ(w):mₘₐₓ(w)))
+end
+
 function Base.checkbounds(::Type{Bool}, w::HWedge, i::Int)
     i ≥ 1 && i ≤ length(w)
 end
@@ -635,6 +644,17 @@ end
     @inbounds Base.parent(w)[i] = v
 end
 
+function Base.show(io::IO, ::MIME"text/plain", H::HWedge{IT, RT, ST}) where {IT, RT, ST}
+    let ℓ = ℓ(H), m′ₘᵢₙ = m′ₘᵢₙ(H), m′ₘₐₓ = m′ₘₐₓ(H), Nᵣ = Nᵣ(H)
+        print(
+            io,
+            "SphericalFunctions.HWedge{$IT, $RT} for ℓ=$(ℓ) with m′=$(m′ₘᵢₙ:m′ₘₐₓ), ",
+            "m=abs(m′):$(ℓ), and iᵣ=1:$(Nᵣ)\n",
+            "Stored in ",
+        )
+        show(io, MIME("text/plain"), parent(H))
+    end
+end
 
 
 # """
