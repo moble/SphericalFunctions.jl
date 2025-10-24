@@ -553,6 +553,12 @@ end
 mₘₐₓ(w::HWedge{IT}) where {IT} = ℓ(w)
 mₘᵢₙ(w::HWedge{IT}) where {IT} = ℓₘᵢₙ(w)
 
+row_index(w::HWedge{IT}) where {IT} = w.row_index
+Nᵣ(w::HWedge{IT}) where {IT} = w.Nᵣ
+maxℓ(w::HWedge{IT}) where {IT} = w.maxℓ
+maxm′ₘₐₓ(w::HWedge{IT}) where {IT} = w.maxm′ₘₐₓ
+minm′ₘᵢₙ(w::HWedge{IT}) where {IT} = w.minm′ₘᵢₙ
+
 function Base.setproperty!(H::HWedge{IT}, s::Symbol, ℓ::IIT) where {IT, IIT}
     if s === :ℓ
         if IIT !== IT
@@ -561,12 +567,12 @@ function Base.setproperty!(H::HWedge{IT}, s::Symbol, ℓ::IIT) where {IT, IIT}
         if ℓ < ℓₘᵢₙ(IT)
             error("Cannot set ℓ=$ℓ less than ℓₘᵢₙ=$(ℓₘᵢₙ(IT)).")
         end
-        if ℓ > H.maxℓ
-            error("Cannot set ℓ=$ℓ greater than maxℓ=$(H.maxℓ).")
+        if ℓ > maxℓ(H)
+            error("Cannot set ℓ=$ℓ greater than maxℓ=$(maxℓ(H)).")
         end
-        m′ₘₐₓ = min(ℓ, H.maxm′ₘₐₓ)
-        m′ₘᵢₙ = max(-ℓ, H.minm′ₘᵢₙ)
-        HWedge_row_index!(H.row_index, H.Nᵣ, ℓ, m′ₘₐₓ, m′ₘᵢₙ)
+        m′ₘₐₓ = min(ℓ, maxm′ₘₐₓ(H))
+        m′ₘᵢₙ = max(-ℓ, minm′ₘᵢₙ(H))
+        HWedge_row_index!(row_index(H), Nᵣ(H), ℓ, m′ₘₐₓ, m′ₘᵢₙ)
         Base.setfield!(H, :ℓ, ℓ)
         Base.setfield!(H, :m′ₘₐₓ, m′ₘₐₓ)
         Base.setfield!(H, :m′ₘᵢₙ, m′ₘᵢₙ)
@@ -593,6 +599,42 @@ function HWedge_size(ℓ::IT, m′ₘₐₓ::IT, m′ₘᵢₙ::IT) where {IT}
         ) ÷ 2
     end
 end
+
+function Base.checkbounds(::Type{Bool}, w::HWedge, i::Int)
+    i ≥ 1 && i ≤ length(w)
+end
+function Base.checkbounds(::Type{Bool}, w::HWedge{IT}, iᵣ::Int, m′::IT, m::IT) where {IT}
+    iᵣ > 0 && iᵣ ≤ Nᵣ(w) && m ≥ abs(m′) && m′ ≥ m′ₘᵢₙ(w) && m′ ≤ m′ₘₐₓ(w)
+end
+
+@propagate_inbounds function Base.getindex(w::HWedge, i::Int)
+    @boundscheck if !checkbounds(Bool, w, i)
+        throw(BoundsError(w, i))
+    end
+    @inbounds Base.parent(w)[i]
+end
+@propagate_inbounds function Base.getindex(w::HWedge{IT}, iᵣ::Int, m′::IT, m::IT) where {IT}
+    @boundscheck if !checkbounds(Bool, w, iᵣ, m′, m)
+        throw(BoundsError(w, (iᵣ, m′, m)))
+    end
+    i = @inbounds (iᵣ - 1) + Nᵣ(w) * Int(m - abs(m′)) + row_index(w)[Int(m′ - m′ₘᵢₙ(w)) + 1]
+    @inbounds Base.parent(w)[i]
+end
+
+@propagate_inbounds function Base.setindex!(w::HWedge, v, i::Int)
+    @boundscheck if !checkbounds(Bool, w, i)
+        throw(BoundsError(w, i))
+    end
+    @inbounds Base.parent(w)[i] = v
+end
+@propagate_inbounds function Base.setindex!(w::HWedge{IT}, v, iᵣ::Int, m′::IT, m::IT) where {IT}
+    @boundscheck if !checkbounds(Bool, w, iᵣ, m′, m)
+        throw(BoundsError(w, (iᵣ, m′, m)))
+    end
+    i = @inbounds (iᵣ - 1) + Nᵣ(w) * Int(m - abs(m′)) + row_index(w)[Int(m′ - m′ₘᵢₙ(w)) + 1]
+    @inbounds Base.parent(w)[i] = v
+end
+
 
 
 # """
