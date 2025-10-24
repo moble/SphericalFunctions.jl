@@ -9,6 +9,7 @@ import SphericalFunctions: ComplexPowers
 
 
 include("WignerMatrix.jl")
+include("WignerH.jl")
 #include("WignerMatrices.jl")
 include("recurrence.jl")
 include("WignerCalculator.jl")
