@@ -1,44 +1,40 @@
-struct WignerCalculator{IT, RT<:Real, NT<:Union{RT, Complex{RT}}}
+struct WignerHCalculator{IT, RT<:Real, ST}
     ℓₘₐₓ::IT
     m′ₘₐₓ::IT
     m′ₘᵢₙ::IT
-    mₘₐₓ::IT
-    mₘᵢₙ::IT
-    Hᵃ::Matrix{RT}
-    Hᵇ::Matrix{RT}
-    Wˡ::Matrix{NT}
+    Hᵃ::HAxis{IT, RT}
+    Hᵇ::HAxis{IT, RT}
+    Wˡ::HWedge{IT, RT, ST}
     swapH::Base.RefValue{Bool}  # w(ℓ) returns (Wˡ, Hᵇ, Hᵃ) if `true`, otherwise (Wˡ, Hᵃ, Hᵇ)
-    function WignerCalculator(
-        ℓₘₐₓ::IT, rt::Type{RT}, ::Type{NT}=rt;
-        m′ₘₐₓ::IT=ℓₘₐₓ, m′ₘᵢₙ::IT=-ℓₘₐₓ, mₘₐₓ::IT=ℓₘₐₓ, mₘᵢₙ::IT=-ℓₘₐₓ
-    ) where {IT, RT, NT}
-        if real(NT) ≠ RT
-            error("RT=$RT is supposed to be the real type of NT=$NT.")
-        end
-        validate_index_ranges(ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
-        # One of the H matrices will (eventually) be required to store all the coefficients
-        # for Hˡ⁺¹₀ₘ with non-negative `m` (and that will be strictly necessary), so we give
-        # it one extra column.  Since we may not know which one that will be, we give both
-        # of them that extra column.
-        Hᵃp = Matrix{RT}(undef, 1, Int(mₘₐₓ-ℓₘᵢₙ(ℓₘₐₓ))+2)
-        Hᵇp = Matrix{RT}(undef, 1, Int(mₘₐₓ-ℓₘᵢₙ(ℓₘₐₓ))+2)
-        Wˡp = Matrix{NT}(undef, Int(m′ₘₐₓ-m′ₘᵢₙ)+1, Int(mₘₐₓ-mₘᵢₙ)+1)
-        new{IT, RT, NT}(ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, Hᵃp, Hᵇp, Wˡp, Ref(false))
-    end
+    # function WignerHCalculator(
+    #     ℓₘₐₓ::IT, rt::Type{RT};
+    #     m′ₘₐₓ::IT=ℓₘₐₓ, m′ₘᵢₙ::IT=-ℓₘₐₓ
+    # ) where {IT, RT}
+    #     if real(NT) ≠ RT
+    #         error("RT=$RT is supposed to be the real type of NT=$NT.")
+    #     end
+    #     validate_index_ranges(ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
+    #     # One of the H matrices will (eventually) be required to store all the coefficients
+    #     # for Hˡ⁺¹₀ₘ with non-negative `m` (and that will be strictly necessary), so we give
+    #     # it one extra column.  Since we may not know which one that will be, we give both
+    #     # of them that extra column.
+    #     Hᵃp = Matrix{RT}(undef, 1, Int(mₘₐₓ-ℓₘᵢₙ(ℓₘₐₓ))+2)
+    #     Hᵇp = Matrix{RT}(undef, 1, Int(mₘₐₓ-ℓₘᵢₙ(ℓₘₐₓ))+2)
+    #     Wˡp = Matrix{NT}(undef, Int(m′ₘₐₓ-m′ₘᵢₙ)+1, Int(mₘₐₓ-mₘᵢₙ)+1)
+    #     new{IT, RT, NT}(ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, Hᵃp, Hᵇp, Wˡp, Ref(false))
+    # end
 end
 
-ℓₘᵢₙ(w::WignerCalculator{IT}) where {IT} = ℓₘᵢₙ(w.ℓₘₐₓ)
-ℓₘₐₓ(w::WignerCalculator{IT}) where {IT} = w.ℓₘₐₓ
-m′ₘₐₓ(w::WignerCalculator{IT}) where {IT} = w.m′ₘₐₓ
-m′ₘᵢₙ(w::WignerCalculator{IT}) where {IT} = w.m′ₘᵢₙ
-mₘₐₓ(w::WignerCalculator{IT}) where {IT} = w.mₘₐₓ
-mₘᵢₙ(w::WignerCalculator{IT}) where {IT} = w.mₘᵢₙ
+ℓₘᵢₙ(w::WignerHCalculator{IT}) where {IT} = ℓₘᵢₙ(w.ℓₘₐₓ)
+ℓₘₐₓ(w::WignerHCalculator{IT}) where {IT} = w.ℓₘₐₓ
+m′ₘₐₓ(w::WignerHCalculator{IT}) where {IT} = w.m′ₘₐₓ
+m′ₘᵢₙ(w::WignerHCalculator{IT}) where {IT} = w.m′ₘᵢₙ
 
-Hᵃ(w::WignerCalculator) = swapH(w) ? w.Hᵇ : w.Hᵃ
-Hᵇ(w::WignerCalculator) = swapH(w) ? w.Hᵃ : w.Hᵇ
-Wˡ(w::WignerCalculator) = w.Wˡ
+Hᵃ(w::WignerHCalculator) = swapH(w) ? w.Hᵇ : w.Hᵃ
+Hᵇ(w::WignerHCalculator) = swapH(w) ? w.Hᵃ : w.Hᵇ
+Wˡ(w::WignerHCalculator) = w.Wˡ
 
-function Base.fill!(w::WignerCalculator{IT, RT}, v::Real) where {IT, RT}
+function Base.fill!(w::WignerHCalculator{IT, RT}, v::Real) where {IT, RT}
     let Wˡ = Wˡ(w), Hᵃ = Hᵃ(w), Hᵇ = Hᵇ(w)
         fill!(Wˡ, eltype(Wˡ)(v))
         fill!(Hᵃ, eltype(Hᵃ)(v))
@@ -47,22 +43,22 @@ function Base.fill!(w::WignerCalculator{IT, RT}, v::Real) where {IT, RT}
     w
 end
 
-function swapH(w::WignerCalculator)
+function swapH(w::WignerHCalculator)
     w.swapH[]
 end
 
-function swapH!(w::WignerCalculator)
+function swapH!(w::WignerHCalculator)
     w.swapH[] = !w.swapH[]
     w
 end
 
-function fillW!(w::WignerCalculator{IT}, ℓ::IT) where {IT}
+function fillW!(w::WignerHCalculator{IT}, ℓ::IT) where {IT}
     Wˡ, Hˡ, Hˡ⁺¹ = w(ℓ)
     @views copyto!(Wˡ[0:0, 0:ℓ], Hˡ[0:0, 0:ℓ])
     w
 end
 
-function (w::WignerCalculator{IT, RT, NT})(ℓ::IT) where {IT, RT, NT}
+function (w::WignerHCalculator{IT, RT, NT})(ℓ::IT) where {IT, RT, NT}
     if IT <: Rational
         if denominator(ℓ) ≠ 2
             error("For IT=$IT <: Rational, ℓ=$ℓ must have denominator 2")
@@ -84,24 +80,24 @@ function (w::WignerCalculator{IT, RT, NT})(ℓ::IT) where {IT, RT, NT}
     end
 end
 
-function WignerDCalculator(
-    ℓₘₐₓ::IT, ::Type{RT};
-    mp_max::IT=ℓₘₐₓ, mp_min::IT=-ℓₘₐₓ, m_max::IT=ℓₘₐₓ, m_min::IT=-ℓₘₐₓ,
-    m′ₘₐₓ::IT=mp_max, m′ₘᵢₙ::IT=mp_min, mₘₐₓ::IT=m_max, mₘᵢₙ::IT=m_min
-) where {IT, RT<:Real}
-    NT = complex(RT)
-    WignerCalculator(ℓₘₐₓ, RT, NT; m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
-end
+# function WignerDCalculator(
+#     ℓₘₐₓ::IT, ::Type{RT};
+#     mp_max::IT=ℓₘₐₓ, mp_min::IT=-ℓₘₐₓ, m_max::IT=ℓₘₐₓ, m_min::IT=-ℓₘₐₓ,
+#     m′ₘₐₓ::IT=mp_max, m′ₘᵢₙ::IT=mp_min, mₘₐₓ::IT=m_max, mₘᵢₙ::IT=m_min
+# ) where {IT, RT<:Real}
+#     NT = complex(RT)
+#     WignerHCalculator(ℓₘₐₓ, RT, NT; m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
+# end
 
-function WignerdCalculator(
-    ℓₘₐₓ::IT, ::Type{RT};
-    mp_max::IT=ℓₘₐₓ, mp_min::IT=-ℓₘₐₓ, m_max::IT=ℓₘₐₓ, m_min::IT=-ℓₘₐₓ,
-    m′ₘₐₓ::IT=mp_max, m′ₘᵢₙ::IT=mp_min, mₘₐₓ::IT=m_max, mₘᵢₙ::IT=m_min
-) where {IT, RT<:Real}
-    WignerCalculator(ℓₘₐₓ, RT, RT; m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
-end
+# function WignerdCalculator(
+#     ℓₘₐₓ::IT, ::Type{RT};
+#     mp_max::IT=ℓₘₐₓ, mp_min::IT=-ℓₘₐₓ, m_max::IT=ℓₘₐₓ, m_min::IT=-ℓₘₐₓ,
+#     m′ₘₐₓ::IT=mp_max, m′ₘᵢₙ::IT=mp_min, mₘₐₓ::IT=m_max, mₘᵢₙ::IT=m_min
+# ) where {IT, RT<:Real}
+#     WignerHCalculator(ℓₘₐₓ, RT, RT; m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
+# end
 
-function recurrence_step1!(w::WignerCalculator{IT}) where {IT<:Signed}
+function recurrence_step1!(w::WignerHCalculator{IT}) where {IT<:Signed}
     ℓ = ℓₘᵢₙ(w)
     W⁰, H⁰, H¹ = w(ℓ)
     recurrence_step1!(H⁰)
@@ -109,42 +105,42 @@ function recurrence_step1!(w::WignerCalculator{IT}) where {IT<:Signed}
     w
 end
 
-function recurrence_step2!(w::WignerCalculator{IT}, eⁱᵝ, ℓ) where {IT<:Signed}
+function recurrence_step2!(w::WignerHCalculator{IT}, eⁱᵝ, ℓ) where {IT<:Signed}
     Wˡ⁻¹, Hˡ⁻¹, Hˡ = w(ℓ-1)
     cosβ, sinβ = reim(eⁱᵝ)
     recurrence_step2!(Hˡ, Hˡ⁻¹, sinβ, cosβ)
     w
 end
 
-function recurrence_step3!(w::WignerCalculator{IT}, eⁱᵝ, ℓ) where {IT<:Signed}
+function recurrence_step3!(w::WignerHCalculator{IT}, eⁱᵝ, ℓ) where {IT<:Signed}
     Wˡ, Hˡ, Hˡ⁺¹ = w(ℓ)
     cosβ, sinβ = reim(eⁱᵝ)
     recurrence_step3!(Wˡ, Hˡ⁺¹, sinβ, cosβ)
     w
 end
 
-function recurrence_step4!(w::WignerCalculator{IT}, eⁱᵝ, ℓ) where {IT<:Signed}
+function recurrence_step4!(w::WignerHCalculator{IT}, eⁱᵝ, ℓ) where {IT<:Signed}
     Wˡ, Hˡ, Hˡ⁺¹ = w(ℓ)
     cosβ, sinβ = reim(eⁱᵝ)
     recurrence_step4!(Wˡ, sinβ, cosβ)
     w
 end
 
-function recurrence_step5!(w::WignerCalculator{IT}, eⁱᵝ, ℓ) where {IT<:Signed}
+function recurrence_step5!(w::WignerHCalculator{IT}, eⁱᵝ, ℓ) where {IT<:Signed}
     Wˡ, Hˡ, Hˡ⁺¹ = w(ℓ)
     cosβ, sinβ = reim(eⁱᵝ)
     recurrence_step5!(Wˡ, sinβ, cosβ)
     w
 end
 
-function recurrence_step6!(w::WignerCalculator{IT}, ℓ) where {IT<:Signed}
+function recurrence_step6!(w::WignerHCalculator{IT}, ℓ) where {IT<:Signed}
     Wˡ, Hˡ, Hˡ⁺¹ = w(ℓ)
     recurrence_step6!(Wˡ)
     w
 end
     
 function recurrence!(
-    w::WignerCalculator{IT, RT, NT}, α::RT, β::RT, γ::RT, ℓ::IT,
+    w::WignerHCalculator{IT, RT, NT}, α::RT, β::RT, γ::RT, ℓ::IT,
     skip_ℓ_recurrence::Bool=false
 ) where {IT<:Signed, RT, NT<:Complex}
     eⁱᵅ, eⁱᵝ, eⁱᵞ = cis(α), cis(β), cis(γ)
@@ -152,7 +148,7 @@ function recurrence!(
 end
 
 function recurrence!(
-    w::WignerCalculator{IT, RT, NT}, β::RT, ℓ::IT,
+    w::WignerHCalculator{IT, RT, NT}, β::RT, ℓ::IT,
     skip_ℓ_recurrence::Bool=false
 ) where {IT<:Signed, RT, NT<:Real}
     eⁱᵝ = cis(β)
@@ -160,7 +156,7 @@ function recurrence!(
 end
 
 function recurrence!(
-    w::WignerCalculator{IT, RT, NT}, eⁱᵅ::Complex{RT}, eⁱᵝ::Complex{RT}, eⁱᵞ::Complex{RT},
+    w::WignerHCalculator{IT, RT, NT}, eⁱᵅ::Complex{RT}, eⁱᵝ::Complex{RT}, eⁱᵞ::Complex{RT},
     ℓ::IT, skip_ℓ_recurrence::Bool=false
 ) where {IT<:Signed, RT, NT<:Complex}
     _recurrence!(w, eⁱᵝ, ℓ, skip_ℓ_recurrence)
@@ -170,7 +166,7 @@ function recurrence!(
 end
 
 function recurrence!(
-    w::WignerCalculator{IT, RT, NT}, eⁱᵝ::Complex{RT}, ℓ::IT,
+    w::WignerHCalculator{IT, RT, NT}, eⁱᵝ::Complex{RT}, ℓ::IT,
     skip_ℓ_recurrence::Bool=false
 ) where {IT<:Signed, RT, NT<:Real}
     _recurrence!(w, eⁱᵝ, ℓ, skip_ℓ_recurrence)
@@ -180,7 +176,7 @@ function recurrence!(
 end
 
 function _recurrence!(
-    w::WignerCalculator{IT, RT, NT}, eⁱᵝ::Complex{RT}, ℓ::IT,
+    w::WignerHCalculator{IT, RT, NT}, eⁱᵝ::Complex{RT}, ℓ::IT,
     skip_ℓ_recurrence::Bool=false
 ) where {IT<:Signed, RT, NT}
     # NOTE: In the comments explaining the recurrence steps below, we use notation with

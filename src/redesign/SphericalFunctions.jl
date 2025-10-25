@@ -13,6 +13,7 @@ include("WignerH.jl")
 #include("WignerMatrices.jl")
 include("recurrence.jl")
 include("WignerCalculator.jl")
+include("WignerHCalculator.jl")
 
 
 # function WignerD(R::Quaternionic.Rotor, ℓₘₐₓ::IT, m′ₘₐₓ::IT=ℓₘₐₓ) where {IT}
