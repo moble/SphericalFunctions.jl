@@ -209,13 +209,14 @@ for rotor index `iᵣ`, and matrix element `(m′, m)`.
 
 
 """
-struct HAxis{IT, RT} <: AbstractWignerMatrix{IT, RT, FixedSizeVectorDefault{RT}}
-    parent::FixedSizeVectorDefault{RT}
-    Nᵣ::Int
-    ℓₘₐₓ::IT
+mutable struct HAxis{IT, RT} <: AbstractWignerMatrix{IT, RT, FixedSizeVectorDefault{RT}}
+    const parent::FixedSizeVectorDefault{RT}
+    const Nᵣ::Int
+    const maxℓ::IT
+    ℓ::IT
     function HAxis(::Type{RT}, Nᵣ::Int, ℓₘₐₓ::IT) where {IT, RT<:Real}
         H = FixedSizeVector{RT}(undef, Nᵣ * (Int(ℓₘₐₓ - ℓₘᵢₙ(IT)) + 1))
-        new{IT, RT}(H, Nᵣ, ℓₘₐₓ)
+        new{IT, RT}(H, Nᵣ, ℓₘₐₓ, ℓₘᵢₙ(IT))
     end
 end
 
@@ -224,14 +225,35 @@ m′ₘᵢₙ(w::HAxis{IT}) where {IT} = ℓₘᵢₙ(IT)
 mₘₐₓ(w::HAxis{IT}) where {IT} = ℓ(w)
 mₘᵢₙ(w::HAxis{IT}) where {IT} = ℓₘᵢₙ(IT)
 
+Nᵣ(w::HAxis{IT}) where {IT} = w.Nᵣ
+maxℓ(w::HAxis{IT}) where {IT} = w.maxℓ
+
+function Base.setproperty!(H::HAxis{IT}, s::Symbol, ℓ::IIT) where {IT, IIT}
+    if s === :ℓ
+        if IIT !== IT
+            error("Cannot change ℓ from type $IT to type $IIT; they must be the same.")
+        end
+        if ℓ < ℓₘᵢₙ(IT)
+            error("Cannot set ℓ=$ℓ less than ℓₘᵢₙ=$(ℓₘᵢₙ(IT)).")
+        end
+        if ℓ > maxℓ(H)
+            error("Cannot set ℓ=$ℓ greater than maxℓ=$(maxℓ(H)).")
+        end
+        Base.setfield!(H, :ℓ, ℓ)
+        ℓ
+    else
+        error("Cannot set property `$s` on HAxis; only `ℓ` is allowed to be changed.")
+    end
+end
+
 function Base.checkbounds(::Type{Bool}, w::HAxis, i::Int)
     i ≥ 1 && i ≤ length(w)
 end
 function Base.checkbounds(::Type{Bool}, w::HAxis{IT}, iᵣ::Int, m::IT) where {IT}
-    iᵣ ≤ Nᵣ(w) && ℓₘᵢₙ(w) ≤ m ≤ ℓₘₐₓ(w)
+    iᵣ ≤ Nᵣ(w) && ℓₘᵢₙ(w) ≤ m ≤ ℓ(w)
 end
 function Base.checkbounds(::Type{Bool}, w::HAxis{IT}, iᵣ::Int, m′::IT, m::IT) where {IT}
-    iᵣ ≤ Nᵣ(w) && m′ == ℓₘᵢₙ(w) && ℓₘᵢₙ(w) ≤ m ≤ ℓₘₐₓ(w)
+    iᵣ ≤ Nᵣ(w) && m′ == ℓₘᵢₙ(w) && ℓₘᵢₙ(w) ≤ m ≤ ℓ(w)
 end
 
 @propagate_inbounds function Base.getindex(w::HAxis, i::Int)
@@ -274,4 +296,16 @@ end
     end
     i = iᵣ + Nᵣ(w) * Int(m - ℓₘᵢₙ(w))
     @inbounds Base.parent(w)[i] = v
+end
+
+function Base.show(io::IO, ::MIME"text/plain", H::HAxis{IT, RT}) where {IT, RT}
+    let ℓ = ℓ(H), ℓₘᵢₙ = ℓₘᵢₙ(H), Nᵣ = Nᵣ(H)
+        print(
+            io,
+            "SphericalFunctions.HAxis{$IT, $RT} for ℓ=$(ℓ) with ",
+            "m=$(ℓₘᵢₙ):$(ℓ), and iᵣ=1:$(Nᵣ)\n",
+            "Stored in ",
+        )
+        show(io, MIME("text/plain"), parent(H))
+    end
 end
