@@ -186,7 +186,7 @@ function Base.show(io::IO, ::MIME"text/plain", H::HWedge{IT, RT, ST}) where {IT,
     end
 end
 
-# Explicit index formula, assuming no iᵣ:
+# Explicit HWedge index formula, assuming no iᵣ:
 # (
 #     Int(ℓₘᵢₙ - m′ₘᵢₙ) * Int(2ℓ + m′ₘᵢₙ + ℓₘᵢₙ + 1)
 #     -
