@@ -24,9 +24,9 @@ in a vector as if they were components of the `Hˡ` matrix:
         for m ∈ abs(m′):ℓ
     ]
 
-However, for further efficiency when vectorizing and threading over multiple rotations, the
+However, for further efficiency when vectorizing and threading over multiple rotors, the
 data is stored as a 1-dimensional vector, though it can be indexed as if it were a
-three-dimensional array, with the first dimension indexing `Nᵣ` different rotations, and the
+three-dimensional array, with the first dimension indexing `Nᵣ` different rotors, and the
 second dimension indexing `m′`, and the third dimension indexing `m`.  Thus, this object can
 be indexed as `Hˡ[iᵣ, m′, m]` to get the `Hˡ` value for rotor index `iᵣ`, and matrix element
 `(m′, m)`.
@@ -192,3 +192,86 @@ end
 #     -
 #     Int(ℓₘᵢₙ - m′) * Int(2ℓ - abs(m′ + ℓₘᵢₙ - 1) + 2)
 # ) ÷ 2 + 1
+
+
+"""
+    HAxis{IT, RT} <: AbstractWignerMatrix{IT, RT, FixedSizeVectorDefault{RT}}
+
+The `HAxis` type represents the ``m'=0``, ``m≥0`` axis of the `Hˡ` matrix used in
+calculation of the Wigner `D` and `d` matrices.
+
+As with [`HWedge`](@ref), the data is stored as a 1-dimensional vector, though it can be
+indexed as if it were a two-dimensional array, with the first dimension indexing `Nᵣ`
+different rotors, and the second dimension indexing `m` — or alternatively as if it were a
+three-dimensional array with the second dimension indexing `m′` and the third indexing `m`.
+Thus, this object can be indexed as `Hˡ₀[iᵣ, m]` or `Hˡ[iᵣ, m′, m]` to get the `Hˡ` value
+for rotor index `iᵣ`, and matrix element `(m′, m)`.
+
+
+"""
+struct HAxis{IT, RT} <: AbstractWignerMatrix{IT, RT, FixedSizeVectorDefault{RT}}
+    parent::FixedSizeVectorDefault{RT}
+    Nᵣ::Int
+    ℓₘₐₓ::IT
+    function HAxis(::Type{RT}, Nᵣ::Int, ℓₘₐₓ::IT) where {IT, RT<:Real}
+        H = FixedSizeVector{RT}(undef, Nᵣ * (Int(ℓₘₐₓ - ℓₘᵢₙ(IT)) + 1))
+        new{IT, RT}(H, Nᵣ, ℓₘₐₓ)
+    end
+end
+
+m′ₘₐₓ(w::HAxis{IT}) where {IT} = ℓₘᵢₙ(IT)
+m′ₘᵢₙ(w::HAxis{IT}) where {IT} = ℓₘᵢₙ(IT)
+mₘₐₓ(w::HAxis{IT}) where {IT} = ℓ(w)
+mₘᵢₙ(w::HAxis{IT}) where {IT} = ℓₘᵢₙ(IT)
+
+function Base.checkbounds(::Type{Bool}, w::HAxis, i::Int)
+    i ≥ 1 && i ≤ length(w)
+end
+function Base.checkbounds(::Type{Bool}, w::HAxis{IT}, iᵣ::Int, m::IT) where {IT}
+    iᵣ ≤ Nᵣ(w) && ℓₘᵢₙ(w) ≤ m ≤ ℓₘₐₓ(w)
+end
+function Base.checkbounds(::Type{Bool}, w::HAxis{IT}, iᵣ::Int, m′::IT, m::IT) where {IT}
+    iᵣ ≤ Nᵣ(w) && m′ == ℓₘᵢₙ(w) && ℓₘᵢₙ(w) ≤ m ≤ ℓₘₐₓ(w)
+end
+
+@propagate_inbounds function Base.getindex(w::HAxis, i::Int)
+    @boundscheck if !checkbounds(Bool, w, i)
+        throw(BoundsError(w, i))
+    end
+    @inbounds Base.parent(w)[i]
+end
+@propagate_inbounds function Base.getindex(w::HAxis{IT}, iᵣ::Int, m::IT) where {IT}
+    @boundscheck if !checkbounds(Bool, w, iᵣ, m)
+        throw(BoundsError(w, (iᵣ, m)))
+    end
+    i = iᵣ + Nᵣ(w) * Int(m - ℓₘᵢₙ(w))
+    @inbounds Base.parent(w)[i]
+end
+@propagate_inbounds function Base.getindex(w::HAxis{IT}, iᵣ::Int, m′::IT, m::IT) where {IT}
+    @boundscheck if !checkbounds(Bool, w, iᵣ, m′, m)
+        throw(BoundsError(w, (iᵣ, m′, m)))
+    end
+    i = iᵣ + Nᵣ(w) * Int(m - ℓₘᵢₙ(w))
+    @inbounds Base.parent(w)[i]
+end
+
+@propagate_inbounds function Base.setindex!(w::HAxis, v, i::Int)
+    @boundscheck if !checkbounds(Bool, w, i)
+        throw(BoundsError(w, i))
+    end
+    @inbounds Base.parent(w)[i] = v
+end
+@propagate_inbounds function Base.setindex!(w::HAxis{IT}, v, iᵣ::Int, m::IT) where {IT}
+    @boundscheck if !checkbounds(Bool, w, iᵣ, m)
+        throw(BoundsError(w, (iᵣ, m)))
+    end
+    i = iᵣ + Nᵣ(w) * Int(m - ℓₘᵢₙ(w))
+    @inbounds Base.parent(w)[i] = v
+end
+@propagate_inbounds function Base.setindex!(w::HAxis{IT}, v, iᵣ::Int, m′::IT, m::IT) where {IT}
+    @boundscheck if !checkbounds(Bool, w, iᵣ, m′, m)
+        throw(BoundsError(w, (iᵣ, m′, m)))
+    end
+    i = iᵣ + Nᵣ(w) * Int(m - ℓₘᵢₙ(w))
+    @inbounds Base.parent(w)[i] = v
+end
