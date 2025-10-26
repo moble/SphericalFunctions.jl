@@ -207,7 +207,6 @@ three-dimensional array with the second dimension indexing `m′` and the third 
 Thus, this object can be indexed as `Hˡ₀[iᵣ, m]` or `Hˡ[iᵣ, m′, m]` to get the `Hˡ` value
 for rotor index `iᵣ`, and matrix element `(m′, m)`.
 
-
 """
 mutable struct HAxis{IT, RT} <: AbstractWignerMatrix{IT, RT, FixedSizeVectorDefault{RT}}
     const parent::FixedSizeVectorDefault{RT}

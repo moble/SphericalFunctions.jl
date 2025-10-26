@@ -80,23 +80,6 @@ function (w::WignerHCalculator{IT, RT, NT})(ℓ::IT) where {IT, RT, NT}
     end
 end
 
-# function WignerDCalculator(
-#     ℓₘₐₓ::IT, ::Type{RT};
-#     mp_max::IT=ℓₘₐₓ, mp_min::IT=-ℓₘₐₓ, m_max::IT=ℓₘₐₓ, m_min::IT=-ℓₘₐₓ,
-#     m′ₘₐₓ::IT=mp_max, m′ₘᵢₙ::IT=mp_min, mₘₐₓ::IT=m_max, mₘᵢₙ::IT=m_min
-# ) where {IT, RT<:Real}
-#     NT = complex(RT)
-#     WignerHCalculator(ℓₘₐₓ, RT, NT; m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
-# end
-
-# function WignerdCalculator(
-#     ℓₘₐₓ::IT, ::Type{RT};
-#     mp_max::IT=ℓₘₐₓ, mp_min::IT=-ℓₘₐₓ, m_max::IT=ℓₘₐₓ, m_min::IT=-ℓₘₐₓ,
-#     m′ₘₐₓ::IT=mp_max, m′ₘᵢₙ::IT=mp_min, mₘₐₓ::IT=m_max, mₘᵢₙ::IT=m_min
-# ) where {IT, RT<:Real}
-#     WignerHCalculator(ℓₘₐₓ, RT, RT; m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
-# end
-
 function recurrence_step1!(w::WignerHCalculator{IT}) where {IT<:Signed}
     ℓ = ℓₘᵢₙ(w)
     W⁰, H⁰, H¹ = w(ℓ)
