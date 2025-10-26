@@ -99,6 +99,9 @@ function Base.setproperty!(H::HWedge{IT}, s::Symbol, ℓ::IIT) where {IT, IIT}
         if IIT !== IT
             error("Cannot change ℓ from type $IT to type $IIT; they must be the same.")
         end
+        if IT <: Rational && denominator(ℓ) ≠ 2
+            error("For IT=$IT <: Rational, ℓ=$ℓ must have denominator 2")
+        end
         if ℓ < ℓₘᵢₙ(IT)
             error("Cannot set ℓ=$ℓ less than ℓₘᵢₙ=$(ℓₘᵢₙ(IT)).")
         end
@@ -231,6 +234,9 @@ function Base.setproperty!(H::HAxis{IT}, s::Symbol, ℓ::IIT) where {IT, IIT}
     if s === :ℓ
         if IIT !== IT
             error("Cannot change ℓ from type $IT to type $IIT; they must be the same.")
+        end
+        if IT <: Rational && denominator(ℓ) ≠ 2
+            error("For IT=$IT <: Rational, ℓ=$ℓ must have denominator 2")
         end
         if ℓ < ℓₘᵢₙ(IT)
             error("Cannot set ℓ=$ℓ less than ℓₘᵢₙ=$(ℓₘᵢₙ(IT)).")
