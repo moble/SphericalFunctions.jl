@@ -182,10 +182,11 @@ function Base.show(io::IO, ::MIME"text/plain", H::HWedge{IT, RT, ST}) where {IT,
         print(
             io,
             "SphericalFunctions.HWedge{$IT, $RT} for ℓ=$(ℓ) with m′=$(m′ₘᵢₙ:m′ₘₐₓ), ",
-            "m=abs(m′):$(ℓ), and iᵣ=1:$(Nᵣ)\n",
-            "Stored in ",
+            "m=abs(m′):$(ℓ), and iᵣ=1:$(Nᵣ) stored in\n",
+            summary(parent(H)), ", currently using\n"
         )
-        show(io, MIME("text/plain"), parent(H))
+        i = row_index(H)[Int(m′ₘₐₓ - m′ₘᵢₙ) + 1] + Nᵣ * (Int(ℓ - abs(m′ₘₐₓ)) + 1) - 1
+        show(io, MIME("text/plain"), parent(H)[begin:i])
     end
 end
 
