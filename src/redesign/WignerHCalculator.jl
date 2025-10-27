@@ -1,12 +1,12 @@
 struct WignerHCalculator{IT, RT<:Real, ST}
-    ℓₘₐₓ::IT
-    m′ₘₐₓ::IT
-    m′ₘᵢₙ::IT
-    h⃗ᵃ::HAxis{IT, RT}
-    h⃗ᵇ::HAxis{IT, RT}
-    Hˡ::HWedge{IT, RT, ST}
-    eⁱᵝ::FixedSizeVectorDefault{Complex{RT}}
-    swapH::Base.RefValue{Bool}  # h⃗ˡ(w) returns h⃗ᵃ if `false`, otherwise h⃗ᵇ; and vice versa for h⃗ˡ⁺¹(w)
+        h⃗ᵃ::HAxis{IT, RT}
+        h⃗ᵇ::HAxis{IT, RT}
+        Hˡ::HWedge{IT, RT, ST}
+        eⁱᵝ::FixedSizeVectorDefault{Complex{RT}}
+        ℓₘₐₓ::IT
+        m′ₘₐₓ::IT
+        m′ₘᵢₙ::IT
+        swapH::Base.RefValue{Bool}  # h⃗ˡ(w) returns h⃗ᵃ if `false`, otherwise h⃗ᵇ; and vice versa for h⃗ˡ⁺¹(w)
     function WignerHCalculator(
         eⁱᵝ::AbstractVector{Complex{RT}}, ℓₘₐₓ::IT, m′ₘₐₓ::IT=ℓₘₐₓ, m′ₘᵢₙ::IT=-ℓₘₐₓ
     ) where {IT, RT<:Real}
@@ -19,7 +19,27 @@ struct WignerHCalculator{IT, RT<:Real, ST}
         h⃗ᵃ = HAxis(RT, Nᵣ, ℓₘₐₓ+1)
         h⃗ᵇ = HAxis(RT, Nᵣ, ℓₘₐₓ+1)
         Hˡ = HWedge(RT, Nᵣ, ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ)
-        new{IT, RT, NT}(ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, h⃗ᵃ, h⃗ᵇ, Hˡ, eⁱᵝ, Ref(false))
+        h⃗ᵇ.ℓ = ℓ(h⃗ᵇ) + 1
+        WignerHCalculator(h⃗ᵃ, h⃗ᵇ, Hˡ, eⁱᵝ, ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, Ref(false))
+    end
+    function WignerHCalculator(
+        h⃗ᵃ::HAxis{IT, RT},
+        h⃗ᵇ::HAxis{IT, RT},
+        Hˡ::HWedge{IT, RT, ST},
+        eⁱᵝ::FixedSizeVectorDefault{Complex{RT}},
+        ℓₘₐₓ::IT,
+        m′ₘₐₓ::IT,
+        m′ₘᵢₙ::IT,
+        swapH::Base.RefValue{Bool}
+    ) where {IT, RT<:Real, ST}
+        if !(Nᵣ(h⃗ᵃ) == Nᵣ(h⃗ᵇ) == Nᵣ(Hˡ) == length(eⁱᵝ))
+            error(
+                "Inconsistent Nᵣ values in WignerHCalculator constructor:\n"
+                * " Nᵣ(h⃗ᵃ)=$(Nᵣ(h⃗ᵃ)), Nᵣ(h⃗ᵇ)=$(Nᵣ(h⃗ᵇ)), Nᵣ(Hˡ)=$(Nᵣ(Hˡ)),"
+                * " length(eⁱᵝ)=$(length(eⁱᵝ))."
+            )
+        end
+        new{IT, RT, ST}(h⃗ᵃ, h⃗ᵇ, Hˡ, eⁱᵝ, ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, swapH)
     end
 end
 
@@ -38,6 +58,7 @@ end
 ℓₘₐₓ(w::WignerHCalculator{IT}) where {IT} = w.ℓₘₐₓ
 m′ₘₐₓ(w::WignerHCalculator{IT}) where {IT} = w.m′ₘₐₓ
 m′ₘᵢₙ(w::WignerHCalculator{IT}) where {IT} = w.m′ₘᵢₙ
+Nᵣ(w::WignerHCalculator{IT}) where {IT} = Nᵣ(Hˡ(w))
 
 h⃗ˡ(w::WignerHCalculator) = swapH(w) ? w.h⃗ᵇ : w.h⃗ᵃ
 h⃗ˡ⁺¹(w::WignerHCalculator) = swapH(w) ? w.h⃗ᵃ : w.h⃗ᵇ
@@ -60,8 +81,9 @@ end
 function increment_axes!(w::WignerHCalculator)
     # The data that is now stored as h⃗ˡ(w) will get swapped below so that it will be
     # returned by h⃗ˡ⁺¹(w), so we need to increment its ℓ value twice.
-    h⃗ˡ = h⃗ˡ(w)
-    h⃗ˡ.ℓ = ℓ(h⃗ˡ) + 2
+    let h⃗ˡ = h⃗ˡ(w)
+        h⃗ˡ.ℓ = ℓ(h⃗ˡ) + 2
+    end
     # The data that is now stored as h⃗ˡ⁺¹(w) will get swapped below so that it will be
     # returned by h⃗ˡ(w), which will already be correct for the next ℓ value.
     w.swapH[] = !w.swapH[]
@@ -81,9 +103,9 @@ function fillHˡ₀ₘ!(w::WignerHCalculator{IT}) where {IT}
             error("Cannot fill Hˡ₀ₘ for ℓ=$(ℓ(Hˡ)) from h⃗ˡ for ℓ=$(ℓ(h⃗ˡ)).")
         end
         # Get the index to the start of the central row, m′ = 0 or 1//2
-        iˡ₀₀ = row_index(w)[Int(ℓₘᵢₙ(w) - m′ₘᵢₙ(w)) + 1]
+        iˡ₀₀ = row_index(Hˡ)[Int(ℓₘᵢₙ(Hˡ) - m′ₘᵢₙ(Hˡ)) + 1]
         # Figure out how many entries to copy
-        N = Nᵣ(Hˡ) * (Int(ℓ(w) - ℓₘᵢₙ(w)) + 1)
+        N = Nᵣ(Hˡ) * (Int(ℓ(Hˡ) - ℓₘᵢₙ(Hˡ)) + 1)
         # Now just copy that many entries from h⃗ˡ₀ₘ into row Hˡ₀ₘ
         copyto!(parent(Hˡ), iˡ₀₀, parent(h⃗ˡ), 1, N)
     end
