@@ -145,9 +145,9 @@ function recurrence_step1!(w::WignerHCalculator{IT}) where {IT<:Signed}
     w
 end
 
-function recurrence_step2!(w::WignerHCalculator{IT}) where {IT<:Signed}
-    let h⃗ˡ = h⃗ˡ(w), h⃗ˡ⁺¹ = h⃗ˡ⁺¹(w)
-        if ℓ < ℓₘᵢₙ(IT)
+function recurrence_step2!(w::WignerHCalculator{IT, RT}) where {IT<:Signed, RT}
+    let h⃗ˡ = h⃗ˡ(w), h⃗ˡ⁺¹ = h⃗ˡ⁺¹(w), eⁱᵝ = eⁱᵝ(w)
+        if ℓ(h⃗ˡ) < ℓₘᵢₙ(IT)
             error(
                 "recurrence_step2! can only be called for ℓ≥ℓₘᵢₙ=$(ℓₘᵢₙ(IT)); current ℓ=$ℓ."
             )
@@ -157,28 +157,28 @@ function recurrence_step2!(w::WignerHCalculator{IT}) where {IT<:Signed}
         # Xing et al., denoting the coefficients as b̄ₗ, c̄ₗₘ, d̄ₗₘ, ēₗₘ.  In the following
         # steps, we will use notation from Gumerov and Duraiswami, who denote their
         # different coefficients aₗᵐ, etc.
-        @inbounds let √=sqrt∘T, ℓ = ℓ(h⃗ˡ), eⁱᵝ = eⁱᵝ(w), Nᵣ = Nᵣ(h⃗ˡ)
-            if ℓ == 1
-                # The ℓ>1 branch would try to access invalid indices of H⁰; if we treat those
-                # elements as zero, we can simplify that branch to just the following much
-                # simpler code anyway.  So fundamentally, this branch is the same as the other
-                # branch.
-                @turbo for i ∈ 1:Nᵣ
+        @inbounds let √=sqrt∘RT, ℓ = ℓ(h⃗ˡ), Nᵣ = Nᵣ(h⃗ˡ)
+            if ℓ == 0
+                # The ℓ>1 branch would try to access invalid indices of H⁰; if we treat
+                # those elements as zero, we can simplify that branch to just the following
+                # much simpler code anyway (because we know that h⃗ˡ₀₀=1).  So
+                # fundamentally, this branch is the same as the other branch.
+                @turbo warn_check_args=false for i ∈ 1:Nᵣ
                     cosβ, sinβ = reim(eⁱᵝ[i])
                     h⃗ˡ⁺¹[i, 0, 0] = cosβ
                     h⃗ˡ⁺¹[i, 0, 1] = sinβ / √2
                 end
-            elseif ℓ > 1
-                b̄ₗ = √(T(ℓ-1)/ℓ)
-                @turbo for i ∈ 1:Nᵣ
+            else
+                b̄ₗ = √(RT(ℓ-1)/ℓ)
+                @turbo warn_check_args=false for i ∈ 1:Nᵣ
                     cosβ, sinβ = reim(eⁱᵝ[i])
                     h⃗ˡ⁺¹[i, 0, 0] = cosβ * h⃗ˡ[i, 0, 0] - b̄ₗ * sinβ * h⃗ˡ[i, 0, 1]
                 end
-                @turbo for m ∈ 1:ℓ-2
+                for m ∈ 1:ℓ-2
                     c̄ₗₘ = √((ℓ+m)*(ℓ-m)) / ℓ
                     d̄ₗₘ = √((ℓ-m)*(ℓ-m-1)) / 2ℓ
                     ēₗₘ = √((ℓ+m)*(ℓ+m-1)) / 2ℓ
-                    for i ∈ 1:Nᵣ
+                    @turbo warn_check_args=false for i ∈ 1:Nᵣ
                         cosβ, sinβ = reim(eⁱᵝ[i])
                         h⃗ˡ⁺¹[i, 0, m] = (
                             c̄ₗₘ * cosβ * h⃗ˡ[i, 0, m]
@@ -189,7 +189,7 @@ function recurrence_step2!(w::WignerHCalculator{IT}) where {IT<:Signed}
                 let m = ℓ-1
                     c̄ₗₘ = √((ℓ+m)*(ℓ-m)) / ℓ
                     ēₗₘ = √((ℓ+m)*(ℓ+m-1)) / 2ℓ
-                    @turbo for i ∈ 1:Nᵣ
+                    @turbo warn_check_args=false for i ∈ 1:Nᵣ
                         cosβ, sinβ = reim(eⁱᵝ[i])
                         h⃗ˡ⁺¹[i, 0, m] = (
                             c̄ₗₘ * cosβ * h⃗ˡ[i, 0, m]
@@ -199,31 +199,29 @@ function recurrence_step2!(w::WignerHCalculator{IT}) where {IT<:Signed}
                 end
                 let m = ℓ
                     ēₗₘ = √((ℓ+m)*(ℓ+m-1)) / 2ℓ
-                    @turbo for i ∈ 1:Nᵣ
+                    @turbo warn_check_args=false for i ∈ 1:Nᵣ
                         cosβ, sinβ = reim(eⁱᵝ[i])
                         h⃗ˡ⁺¹[i, 0, m] = (
                             - sinβ * (- ēₗₘ * h⃗ˡ[i, 0, m-1])
                         )
                     end
                 end
-            else
-                error("Tried to recurse with ℓ=$ℓ; only integer ℓ ≥ 1 is supported.")
             end
         end
     end
     w
 end
 
-function recurrence_step3!(w::WignerHCalculator{IT}) where {IT<:Signed}
+function recurrence_step3!(w::WignerHCalculator{IT, RT}) where {IT<:Signed, RT}
     let Hˡ = Hˡ(w), h⃗ˡ⁺¹ = h⃗ˡ⁺¹(w), eⁱᵝ = eⁱᵝ(w)
-        @inbounds let √=sqrt∘T, ℓ=ℓ(Hˡ), Nᵣ = Nᵣ(h⃗ˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
+        @inbounds let √=sqrt∘RT, ℓ=ℓ(Hˡ), Nᵣ = Nᵣ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
             if ℓ > 0 && m′ₘₐₓ ≥ 1
                 c = 1 / √(ℓ*(ℓ+1))
-                @turbo for m ∈ 1:ℓ
+                for m ∈ 1:ℓ
                     āₗᵐ = √((ℓ+m+1)*(ℓ-m+1))
                     b̄ₗ₊₁ᵐ⁻¹ = √((ℓ-m+1)*(ℓ-m+2))
                     b̄ₗ₊₁⁻ᵐ⁻¹ = √((ℓ+m+1)*(ℓ+m+2))
-                    for i ∈ 1:Nᵣ
+                    @turbo warn_check_args=false for i ∈ 1:Nᵣ
                         cosβ, sinβ = reim(eⁱᵝ[i])
                         Hˡ[i, 1, m] = -c * (
                             b̄ₗ₊₁⁻ᵐ⁻¹ * (1 - cosβ) / 2 * h⃗ˡ⁺¹[i, 0, m+1]
@@ -238,19 +236,18 @@ function recurrence_step3!(w::WignerHCalculator{IT}) where {IT<:Signed}
     w
 end
 
-function recurrence_step4!(w::WignerHCalculator{IT}) where {IT<:Signed}
+function recurrence_step4!(w::WignerHCalculator{IT, RT}) where {IT<:Signed, RT}
     let Hˡ = Hˡ(w), eⁱᵝ = eⁱᵝ(w)
-        @inbounds let √=sqrt∘T, ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ), Nᵣ=Nᵣ(Hˡ)
+        @inbounds let √=sqrt∘RT, ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ), Nᵣ=Nᵣ(Hˡ)
             for m′ ∈ 1:min(ℓ, m′ₘₐₓ)-1
                 # Note that the signs of m′ and m are always +1, so we leave them out of the
                 # calculations of d̄ in this function.
                 d̄ₗᵐ′ = √((ℓ-m′)*(ℓ+m′+1))
                 d̄ₗᵐ′⁻¹ = √((ℓ-m′+1)*(ℓ+m′))
-                @turbo for m ∈ (m′+1):ℓ-1
+                for m ∈ (m′+1):ℓ-1
                     d̄ₗᵐ⁻¹ = √((ℓ-m+1)*(ℓ+m))
                     d̄ₗᵐ = √((ℓ-m)*(ℓ+m+1))
-                    for i ∈ 1:Nᵣ
-                        cosβ, sinβ = reim(eⁱᵝ[i])
+                    @turbo warn_check_args=false for i ∈ 1:Nᵣ
                         Hˡ[i, m′+1, m] = (
                             d̄ₗᵐ′⁻¹ * Hˡ[i, m′-1, m]
                             - d̄ₗᵐ⁻¹ * Hˡ[i, m′, m-1]
@@ -260,8 +257,7 @@ function recurrence_step4!(w::WignerHCalculator{IT}) where {IT<:Signed}
                 end
                 let m = ℓ
                     d̄ₗᵐ⁻¹ = √((ℓ-m+1)*(ℓ+m))
-                    @turbo for i ∈ 1:Nᵣ
-                        cosβ, sinβ = reim(eⁱᵝ[i])
+                    @turbo warn_check_args=false for i ∈ 1:Nᵣ
                         Hˡ[i, m′+1, m] = (
                             d̄ₗᵐ′⁻¹ * Hˡ[i, m′-1, m]
                             - d̄ₗᵐ⁻¹ * Hˡ[i, m′, m-1]
@@ -274,17 +270,16 @@ function recurrence_step4!(w::WignerHCalculator{IT}) where {IT<:Signed}
     w
 end
 
-function recurrence_step5!(w::WignerHCalculator{IT}) where {IT<:Signed}
+function recurrence_step5!(w::WignerHCalculator{IT, RT}) where {IT<:Signed, RT}
     let Hˡ = Hˡ(w), eⁱᵝ = eⁱᵝ(w)
-        @inbounds let √=sqrt∘T, ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ), Nᵣ=Nᵣ(Hˡ)
+        @inbounds let √=sqrt∘RT, ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ), Nᵣ=Nᵣ(Hˡ)
             for m′ ∈ 0:-1:-min(ℓ, m′ₘₐₓ)+1
                 d̄ₗᵐ′ = sgn(m′) * √((ℓ-m′)*(ℓ+m′+1))
                 d̄ₗᵐ′⁻¹ = sgn(m′-1) * √((ℓ-m′+1)*(ℓ+m′))
-                @turbo for m ∈ -(m′-1):ℓ-1
+                @turbo warn_check_args=false for m ∈ -(m′-1):ℓ-1
                     d̄ₗᵐ = sgn(m) * √((ℓ-m)*(ℓ+m+1))
                     d̄ₗᵐ⁻¹ = sgn(m-1) * √((ℓ-m+1)*(ℓ+m))
                     for i ∈ 1:Nᵣ
-                        cosβ, sinβ = reim(eⁱᵝ[i])
                         Hˡ[i, m′-1, m] = (
                             d̄ₗᵐ′ * Hˡ[i, m′+1, m]
                             + d̄ₗᵐ⁻¹ * Hˡ[i, m′, m-1]
@@ -294,8 +289,7 @@ function recurrence_step5!(w::WignerHCalculator{IT}) where {IT<:Signed}
                 end
                 let m = ℓ
                     d̄ₗᵐ⁻¹ = sgn(m-1) * √((ℓ-m+1)*(ℓ+m))
-                    @turbo for i ∈ 1:Nᵣ
-                        cosβ, sinβ = reim(eⁱᵝ[i])
+                    @turbo warn_check_args=false for i ∈ 1:Nᵣ
                         Hˡ[i, m′-1, m] = (
                             d̄ₗᵐ′ * Hˡ[i, m′+1, m]
                             + d̄ₗᵐ⁻¹ * Hˡ[i, m′, m-1]
@@ -308,13 +302,13 @@ function recurrence_step5!(w::WignerHCalculator{IT}) where {IT<:Signed}
     w
 end
 
-function recurrence_step6!(w::WignerHCalculator{IT}, ℓ) where {IT<:Signed}
-    let Hˡ = Hˡ(w)
-        recurrence_step6!(Hˡ)
-    end
-    w
-end
-    
+# function recurrence_step6!(w::WignerHCalculator{IT}, ℓ) where {IT<:Signed}
+#     let Hˡ = Hˡ(w)
+#         recurrence_step6!(Hˡ)
+#     end
+#     w
+# end
+
 # function recurrence!(
 #     w::WignerHCalculator{IT, RT, NT}, α::RT, β::RT, γ::RT, ℓ::IT
 # ) where {IT<:Signed, RT, NT<:Complex}
