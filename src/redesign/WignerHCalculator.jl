@@ -123,6 +123,18 @@ function Base.setproperty!(w::WignerHCalculator{IT}, s::Symbol, ℓ::IIT) where 
     end
 end
 
+function Base.show(io::IO, ::MIME"text/plain", w::WignerHCalculator{IT, RT, ST}) where {IT, RT, ST}
+    let ℓ = ℓ(w), m′ₘᵢₙ = m′ₘᵢₙ(w), m′ₘₐₓ = m′ₘₐₓ(w), Nᵣ = Nᵣ(w)
+        print(
+            io,
+            "SphericalFunctions.WignerHCalculator{$IT, $RT} for ℓ=$(ℓ) with ",
+            "m′=$(m′ₘᵢₙ:m′ₘₐₓ) and iᵣ=1:$(Nᵣ) up to ℓₘₐₓ=$(ℓₘₐₓ(w)), ",
+            "and swapH=$(swapH(w))."#\nStored in ",
+        )
+        # show(io, MIME("text/plain"), Hˡ(w))
+    end
+end
+
 function recurrence_step1!(w::WignerHCalculator{IT}) where {IT<:Signed}
     let h⃗⁰ = h⃗ˡ(w), ℓ = ℓ(h⃗⁰)
         if ℓ ≠ ℓₘᵢₙ(w)
