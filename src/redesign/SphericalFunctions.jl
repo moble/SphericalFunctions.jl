@@ -3,16 +3,17 @@ module Redesign
 import Quaternionic
 import TestItems: @testitem, @testsnippet
 import FixedSizeArrays: FixedSizeArrayDefault, FixedSizeVectorDefault,  FixedSizeArray, FixedSizeVector
+import LoopVectorization: @turbo
 
-# TEMPORARY!!!!
+# TEMPORARY!!!!  Should be able to remove once this moves to SphericalFunctions proper
 import SphericalFunctions: ComplexPowers
 
 
 include("WignerMatrix.jl")
-include("WignerH.jl")
-#include("WignerMatrices.jl")
 include("recurrence.jl")
 include("WignerCalculator.jl")
+
+include("WignerH.jl")
 include("WignerHCalculator.jl")
 
 
