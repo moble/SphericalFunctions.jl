@@ -103,7 +103,7 @@ function fillHˡ₀ₘ!(w::WignerHCalculator{IT}) where {IT}
             error("Cannot fill Hˡ₀ₘ for ℓ=$(ℓ(Hˡ)) from h⃗ˡ for ℓ=$(ℓ(h⃗ˡ)).")
         end
         # Get the index to the start of the central row, m′ = 0 or 1//2
-        iˡ₀₀ = row_index(Hˡ)[Int(ℓₘᵢₙ(Hˡ) - m′ₘᵢₙ(Hˡ)) + 1]
+        iˡ₀₀ = row_index(Hˡ, ℓₘᵢₙ(Hˡ))
         # Figure out how many entries to copy
         N = Nᵣ(Hˡ) * (Int(ℓ(Hˡ) - ℓₘᵢₙ(Hˡ)) + 1)
         # Now just copy that many entries from h⃗ˡ₀ₘ into row Hˡ₀ₘ
@@ -163,47 +163,74 @@ function recurrence_step2!(w::WignerHCalculator{IT, RT}) where {IT<:Signed, RT}
                 # those elements as zero, we can simplify that branch to just the following
                 # much simpler code anyway (because we know that h⃗ˡ₀₀=1).  So
                 # fundamentally, this branch is the same as the other branch.
-                @turbo warn_check_args=false for i ∈ 1:Nᵣ
+                i⁰⁰ = 0
+                i⁰¹ = Nᵣ
+                for i ∈ 1:Nᵣ
                     cosβ, sinβ = reim(eⁱᵝ[i])
-                    h⃗ˡ⁺¹[i, 0, 0] = cosβ
-                    h⃗ˡ⁺¹[i, 0, 1] = sinβ / √2
+                    # h⃗ˡ⁺¹[i, 0, 0] = cosβ
+                    # h⃗ˡ⁺¹[i, 0, 1] = sinβ / √2
+                    h⃗ˡ⁺¹[i⁰⁰ + i] = cosβ
+                    h⃗ˡ⁺¹[i⁰¹ + i] = sinβ / √2
                 end
             else
                 b̄ₗ = √(RT(ℓ-1)/ℓ)
-                @turbo warn_check_args=false for i ∈ 1:Nᵣ
+                i⁰⁰ = 0
+                i⁰¹ = Nᵣ
+                for i ∈ 1:Nᵣ
                     cosβ, sinβ = reim(eⁱᵝ[i])
-                    h⃗ˡ⁺¹[i, 0, 0] = cosβ * h⃗ˡ[i, 0, 0] - b̄ₗ * sinβ * h⃗ˡ[i, 0, 1]
+                    # h⃗ˡ⁺¹[i, 0, 0] = cosβ * h⃗ˡ[i, 0, 0] - b̄ₗ * sinβ * h⃗ˡ[i, 0, 1]
+                    h⃗ˡ⁺¹[i⁰⁰ + i] = cosβ * h⃗ˡ[i⁰⁰ + i] - b̄ₗ * sinβ * h⃗ˡ[i⁰¹ + i]
                 end
                 for m ∈ 1:ℓ-2
                     c̄ₗₘ = √((ℓ+m)*(ℓ-m)) / ℓ
                     d̄ₗₘ = √((ℓ-m)*(ℓ-m-1)) / 2ℓ
                     ēₗₘ = √((ℓ+m)*(ℓ+m-1)) / 2ℓ
-                    @turbo warn_check_args=false for i ∈ 1:Nᵣ
+                    
+                    i⁰ᵐ = Nᵣ * m
+                    i⁰ᵐ⁺¹ = Nᵣ * (m + 1)
+                    i⁰ᵐ⁻¹ = Nᵣ * (m - 1)
+                    
+                    for i ∈ 1:Nᵣ
                         cosβ, sinβ = reim(eⁱᵝ[i])
-                        h⃗ˡ⁺¹[i, 0, m] = (
-                            c̄ₗₘ * cosβ * h⃗ˡ[i, 0, m]
-                            - sinβ * (d̄ₗₘ * h⃗ˡ[i, 0, m+1] - ēₗₘ * h⃗ˡ[i, 0, m-1])
+                        # h⃗ˡ⁺¹[i, 0, m] = (
+                        #     c̄ₗₘ * cosβ * h⃗ˡ[i, 0, m]
+                        #     - sinβ * (d̄ₗₘ * h⃗ˡ[i, 0, m+1] - ēₗₘ * h⃗ˡ[i, 0, m-1])
+                        # )
+                        h⃗ˡ⁺¹[i⁰ᵐ + i] = (
+                            c̄ₗₘ * cosβ * h⃗ˡ[i⁰ᵐ + i]
+                            - sinβ * (d̄ₗₘ * h⃗ˡ[i⁰ᵐ⁺¹ + i] - ēₗₘ * h⃗ˡ[i⁰ᵐ⁻¹ + i])
                         )
                     end
                 end
                 let m = ℓ-1
                     c̄ₗₘ = √((ℓ+m)*(ℓ-m)) / ℓ
                     ēₗₘ = √((ℓ+m)*(ℓ+m-1)) / 2ℓ
-                    @turbo warn_check_args=false for i ∈ 1:Nᵣ
+                    
+                    i⁰ᵐ = Nᵣ * m
+                    i⁰ᵐ⁻¹ = Nᵣ * (m - 1)
+                    
+                    for i ∈ 1:Nᵣ
                         cosβ, sinβ = reim(eⁱᵝ[i])
-                        h⃗ˡ⁺¹[i, 0, m] = (
-                            c̄ₗₘ * cosβ * h⃗ˡ[i, 0, m]
-                            - sinβ * (- ēₗₘ * h⃗ˡ[i, 0, m-1])
+                        # h⃗ˡ⁺¹[i, 0, m] = (
+                        #     c̄ₗₘ * cosβ * h⃗ˡ[i, 0, m]
+                        #     - sinβ * (- ēₗₘ * h⃗ˡ[i, 0, m-1])
+                        # )
+                        h⃗ˡ⁺¹[i⁰ᵐ + i] = (
+                            c̄ₗₘ * cosβ * h⃗ˡ[i⁰ᵐ + i]
+                            - sinβ * (- ēₗₘ * h⃗ˡ[i⁰ᵐ⁻¹ + i])
                         )
                     end
                 end
                 let m = ℓ
                     ēₗₘ = √((ℓ+m)*(ℓ+m-1)) / 2ℓ
-                    @turbo warn_check_args=false for i ∈ 1:Nᵣ
+                    
+                    i⁰ᵐ⁻¹ = Nᵣ * (m - 1)
+                    i⁰ᵐ = Nᵣ * m
+
+                    for i ∈ 1:Nᵣ
                         cosβ, sinβ = reim(eⁱᵝ[i])
-                        h⃗ˡ⁺¹[i, 0, m] = (
-                            - sinβ * (- ēₗₘ * h⃗ˡ[i, 0, m-1])
-                        )
+                        # h⃗ˡ⁺¹[i, 0, m] = (- sinβ * (- ēₗₘ * h⃗ˡ[i, 0, m-1]))
+                        h⃗ˡ⁺¹[i⁰ᵐ + i] = (- sinβ * (- ēₗₘ * h⃗ˡ[i⁰ᵐ⁻¹ + i]))
                     end
                 end
             end
@@ -217,16 +244,33 @@ function recurrence_step3!(w::WignerHCalculator{IT, RT}) where {IT<:Signed, RT}
         @inbounds let √=sqrt∘RT, ℓ=ℓ(Hˡ), Nᵣ = Nᵣ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
             if ℓ > 0 && m′ₘₐₓ ≥ 1
                 c = 1 / √(ℓ*(ℓ+1))
+                
+                # Precompute base offset for m′=1 row in Hˡ
+                r¹ = row_index(Hˡ, 1) - 1
+                
                 for m ∈ 1:ℓ
-                    āₗᵐ = √((ℓ+m+1)*(ℓ-m+1))
+                    āₗᵐ = √((ℓ+m+1)*(ℓ-m+1))
                     b̄ₗ₊₁ᵐ⁻¹ = √((ℓ-m+1)*(ℓ-m+2))
                     b̄ₗ₊₁⁻ᵐ⁻¹ = √((ℓ+m+1)*(ℓ+m+2))
-                    @turbo warn_check_args=false for i ∈ 1:Nᵣ
+                    
+                    # Column offsets in Hˡ row 1 and h⃗ˡ⁺¹ row 0
+                    c¹ᵐ = Nᵣ * Int(m - 1)  # Hˡ[i, 1, m] has m′=1, so column is m-abs(1)=m-1
+                    i¹ᵐ = r¹ + c¹ᵐ
+                    i⁰ᵐ⁺¹ = Nᵣ * (m + 1)
+                    i⁰ᵐ⁻¹ = Nᵣ * (m - 1)
+                    i⁰ᵐ = Nᵣ * m
+                    
+                    for i ∈ 1:Nᵣ
                         cosβ, sinβ = reim(eⁱᵝ[i])
-                        Hˡ[i, 1, m] = -c * (
-                            b̄ₗ₊₁⁻ᵐ⁻¹ * (1 - cosβ) / 2 * h⃗ˡ⁺¹[i, 0, m+1]
-                            + b̄ₗ₊₁ᵐ⁻¹ * (1 + cosβ) / 2 * h⃗ˡ⁺¹[i, 0, m-1]
-                            + āₗᵐ * sinβ * h⃗ˡ⁺¹[i, 0, m]
+                        # Hˡ[i, 1, m] = -c * (
+                        #     b̄ₗ₊₁⁻ᵐ⁻¹ * (1 - cosβ) / 2 * h⃗ˡ⁺¹[i, 0, m+1]
+                        #     + b̄ₗ₊₁ᵐ⁻¹ * (1 + cosβ) / 2 * h⃗ˡ⁺¹[i, 0, m-1]
+                        #     + āₗᵐ * sinβ * h⃗ˡ⁺¹[i, 0, m]
+                        # )
+                        Hˡ[i¹ᵐ + i] = -c * (
+                            b̄ₗ₊₁⁻ᵐ⁻¹ * (1 - cosβ) / 2 * h⃗ˡ⁺¹[i⁰ᵐ⁺¹ + i]
+                            + b̄ₗ₊₁ᵐ⁻¹ * (1 + cosβ) / 2 * h⃗ˡ⁺¹[i⁰ᵐ⁻¹ + i]
+                            + āₗᵐ * sinβ * h⃗ˡ⁺¹[i⁰ᵐ + i]
                         )
                     end
                 end
@@ -238,30 +282,74 @@ end
 
 function recurrence_step4!(w::WignerHCalculator{IT, RT}) where {IT<:Signed, RT}
     let Hˡ = Hˡ(w), eⁱᵝ = eⁱᵝ(w)
-        @inbounds let √=sqrt∘RT, ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ), Nᵣ=Nᵣ(Hˡ)
+        @inbounds @fastmath let √=sqrt∘RT, ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ), Nᵣ=Nᵣ(Hˡ)
             for m′ ∈ 1:min(ℓ, m′ₘₐₓ)-1
                 # Note that the signs of m′ and m are always +1, so we leave them out of the
                 # calculations of d̄ in this function.
                 d̄ₗᵐ′ = √((ℓ-m′)*(ℓ+m′+1))
                 d̄ₗᵐ′⁻¹ = √((ℓ-m′+1)*(ℓ+m′))
+                
+                # Precompute base offsets for m′-1, m′, m′+1 rows.  Note that we subtract 1
+                # here because row_index points to the beginning of the desired row, but we
+                # just want the offset.
+                rᵐ′⁻¹ = row_index(Hˡ, m′ - 1) - 1
+                rᵐ′ = row_index(Hˡ, m′) - 1
+                rᵐ′⁺¹ = row_index(Hˡ, m′ + 1) - 1
+
                 for m ∈ (m′+1):ℓ-1
                     d̄ₗᵐ⁻¹ = √((ℓ-m+1)*(ℓ+m))
                     d̄ₗᵐ = √((ℓ-m)*(ℓ+m+1))
-                    @turbo warn_check_args=false for i ∈ 1:Nᵣ
-                        Hˡ[i, m′+1, m] = (
-                            d̄ₗᵐ′⁻¹ * Hˡ[i, m′-1, m]
-                            - d̄ₗᵐ⁻¹ * Hˡ[i, m′, m-1]
-                            + d̄ₗᵐ * Hˡ[i, m′, m+1]
+                    
+                    # Compute column offsets within each row.  For row m′, column m has
+                    # offset Nᵣ * (m - abs(m′)).
+                    cᵐ′⁻¹ᵐ = Nᵣ * Int(m - abs(m′ - 1))
+                    cᵐ′ᵐ⁻¹ = Nᵣ * Int(m - 1 - abs(m′))
+                    cᵐ′ᵐ⁺¹ = Nᵣ * Int(m + 1 - abs(m′))
+                    cᵐ′⁺¹ᵐ = Nᵣ * Int(m - abs(m′ + 1))
+                    
+                    # Final 1D index offsets (0-based for the loop)
+                    iᵐ′⁻¹ᵐ = rᵐ′⁻¹ + cᵐ′⁻¹ᵐ
+                    iᵐ′ᵐ⁻¹ = rᵐ′ + cᵐ′ᵐ⁻¹
+                    iᵐ′ᵐ⁺¹ = rᵐ′ + cᵐ′ᵐ⁺¹
+                    iᵐ′⁺¹ᵐ = rᵐ′⁺¹ + cᵐ′⁺¹ᵐ
+                    
+                    for i ∈ 1:Nᵣ
+                        # Hˡ[i, m′+1, m] = (
+                        #     d̄ₗᵐ′⁻¹ * Hˡ[i, m′-1, m]
+                        #     - d̄ₗᵐ⁻¹ * Hˡ[i, m′, m-1]
+                        #     + d̄ₗᵐ * Hˡ[i, m′, m+1]
+                        # ) / d̄ₗᵐ′
+                        Hˡ[iᵐ′⁺¹ᵐ + i] = (
+                            d̄ₗᵐ′⁻¹ * Hˡ[iᵐ′⁻¹ᵐ + i]
+                            - d̄ₗᵐ⁻¹ * Hˡ[iᵐ′ᵐ⁻¹ + i]
+                            + d̄ₗᵐ * Hˡ[iᵐ′ᵐ⁺¹ + i]
                         ) / d̄ₗᵐ′
                     end
                 end
+                
+                # Now, we do the m=ℓ case separately, since there is no m+1, so we would get
+                # out-of-bounds accesses; we just copy the body of the loop above, but
+                # remove anything that involves m+1.
                 let m = ℓ
                     d̄ₗᵐ⁻¹ = √((ℓ-m+1)*(ℓ+m))
-                    @turbo warn_check_args=false for i ∈ 1:Nᵣ
-                        Hˡ[i, m′+1, m] = (
-                            d̄ₗᵐ′⁻¹ * Hˡ[i, m′-1, m]
-                            - d̄ₗᵐ⁻¹ * Hˡ[i, m′, m-1]
-                        ) / d̄ₗᵐ′
+                    
+                    cᵐ′⁻¹ᵐ = Nᵣ * Int(m - abs(m′ - 1))
+                    cᵐ′ᵐ⁻¹ = Nᵣ * Int(m - 1 - abs(m′))
+                    cᵐ′⁺¹ᵐ = Nᵣ * Int(m - abs(m′ + 1))
+                    
+                    iᵐ′⁻¹ᵐ = rᵐ′⁻¹ + cᵐ′⁻¹ᵐ
+                    iᵐ′ᵐ⁻¹ = rᵐ′ + cᵐ′ᵐ⁻¹
+                    iᵐ′⁺¹ᵐ = rᵐ′⁺¹ + cᵐ′⁺¹ᵐ
+                    
+                    for i ∈ 1:Nᵣ
+                        # Hˡ[i, m′+1, m] = (
+                        #     d̄ₗᵐ′⁻¹ * Hˡ[i, m′-1, m]
+                        #     - d̄ₗᵐ⁻¹ * Hˡ[i, m′, m-1]
+                        # ) / d̄ₗᵐ′
+                        Hˡ[iᵐ′⁺¹ᵐ + i] = (
+                            d̄ₗᵐ′⁻¹ * Hˡ[iᵐ′⁻¹ᵐ + i]
+                            - d̄ₗᵐ⁻¹ * Hˡ[iᵐ′ᵐ⁻¹ + i]
+                         ) / d̄ₗᵐ′
                     end
                 end
             end
@@ -276,23 +364,59 @@ function recurrence_step5!(w::WignerHCalculator{IT, RT}) where {IT<:Signed, RT}
             for m′ ∈ 0:-1:-min(ℓ, m′ₘₐₓ)+1
                 d̄ₗᵐ′ = sgn(m′) * √((ℓ-m′)*(ℓ+m′+1))
                 d̄ₗᵐ′⁻¹ = sgn(m′-1) * √((ℓ-m′+1)*(ℓ+m′))
-                @turbo warn_check_args=false for m ∈ -(m′-1):ℓ-1
+                
+                # Precompute base offsets for m′-1, m′, m′+1 rows
+                rᵐ′⁻¹ = row_index(Hˡ, m′ - 1) - 1
+                rᵐ′ = row_index(Hˡ, m′) - 1
+                rᵐ′⁺¹ = row_index(Hˡ, m′ + 1) - 1
+                
+                for m ∈ -(m′-1):ℓ-1
                     d̄ₗᵐ = sgn(m) * √((ℓ-m)*(ℓ+m+1))
                     d̄ₗᵐ⁻¹ = sgn(m-1) * √((ℓ-m+1)*(ℓ+m))
+                    
+                    # Compute column offsets within each row
+                    cᵐ′⁺¹ᵐ = Nᵣ * Int(m - abs(m′ + 1))
+                    cᵐ′ᵐ⁻¹ = Nᵣ * Int(m - 1 - abs(m′))
+                    cᵐ′ᵐ⁺¹ = Nᵣ * Int(m + 1 - abs(m′))
+                    cᵐ′⁻¹ᵐ = Nᵣ * Int(m - abs(m′ - 1))
+                    
+                    iᵐ′⁺¹ᵐ = rᵐ′⁺¹ + cᵐ′⁺¹ᵐ
+                    iᵐ′ᵐ⁻¹ = rᵐ′ + cᵐ′ᵐ⁻¹
+                    iᵐ′ᵐ⁺¹ = rᵐ′ + cᵐ′ᵐ⁺¹
+                    iᵐ′⁻¹ᵐ = rᵐ′⁻¹ + cᵐ′⁻¹ᵐ
+                    
                     for i ∈ 1:Nᵣ
-                        Hˡ[i, m′-1, m] = (
-                            d̄ₗᵐ′ * Hˡ[i, m′+1, m]
-                            + d̄ₗᵐ⁻¹ * Hˡ[i, m′, m-1]
-                            - d̄ₗᵐ * Hˡ[i, m′, m+1]
+                        # Hˡ[i, m′-1, m] = (
+                        #     d̄ₗᵐ′ * Hˡ[i, m′+1, m]
+                        #     + d̄ₗᵐ⁻¹ * Hˡ[i, m′, m-1]
+                        #     - d̄ₗᵐ * Hˡ[i, m′, m+1]
+                        # ) / d̄ₗᵐ′⁻¹
+                        Hˡ[iᵐ′⁻¹ᵐ + i] = (
+                            d̄ₗᵐ′ * Hˡ[iᵐ′⁺¹ᵐ + i]
+                            + d̄ₗᵐ⁻¹ * Hˡ[iᵐ′ᵐ⁻¹ + i]
+                            - d̄ₗᵐ * Hˡ[iᵐ′ᵐ⁺¹ + i]
                         ) / d̄ₗᵐ′⁻¹
                     end
                 end
                 let m = ℓ
                     d̄ₗᵐ⁻¹ = sgn(m-1) * √((ℓ-m+1)*(ℓ+m))
-                    @turbo warn_check_args=false for i ∈ 1:Nᵣ
-                        Hˡ[i, m′-1, m] = (
-                            d̄ₗᵐ′ * Hˡ[i, m′+1, m]
-                            + d̄ₗᵐ⁻¹ * Hˡ[i, m′, m-1]
+                    
+                    cᵐ′⁺¹ᵐ = Nᵣ * Int(m - abs(m′ + 1))
+                    cᵐ′ᵐ⁻¹ = Nᵣ * Int(m - 1 - abs(m′))
+                    cᵐ′⁻¹ᵐ = Nᵣ * Int(m - abs(m′ - 1))
+                    
+                    iᵐ′⁺¹ᵐ = rᵐ′⁺¹ + cᵐ′⁺¹ᵐ
+                    iᵐ′ᵐ⁻¹ = rᵐ′ + cᵐ′ᵐ⁻¹
+                    iᵐ′⁻¹ᵐ = rᵐ′⁻¹ + cᵐ′⁻¹ᵐ
+                    
+                    for i ∈ 1:Nᵣ
+                        # Hˡ[i, m′-1, m] = (
+                        #     d̄ₗᵐ′ * Hˡ[i, m′+1, m]
+                        #     + d̄ₗᵐ⁻¹ * Hˡ[i, m′, m-1]
+                        # ) / d̄ₗᵐ′⁻¹
+                        Hˡ[iᵐ′⁻¹ᵐ + i] = (
+                            d̄ₗᵐ′ * Hˡ[iᵐ′⁺¹ᵐ + i]
+                            + d̄ₗᵐ⁻¹ * Hˡ[iᵐ′ᵐ⁻¹ + i]
                         ) / d̄ₗᵐ′⁻¹
                     end
                 end
