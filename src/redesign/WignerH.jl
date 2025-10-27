@@ -89,6 +89,7 @@ mₘₐₓ(w::HWedge{IT}) where {IT} = ℓ(w)
 mₘᵢₙ(w::HWedge{IT}) where {IT} = ℓₘᵢₙ(w)
 
 row_index(w::HWedge{IT}) where {IT} = w.row_index
+row_index(w::HWedge{IT}, m′::IT) where {IT} = row_index(w)[Int(m′ - m′ₘᵢₙ(w)) + 1]
 Nᵣ(w::HWedge{IT}) where {IT} = w.Nᵣ
 maxℓ(w::HWedge{IT}) where {IT} = w.maxℓ
 maxm′ₘₐₓ(w::HWedge{IT}) where {IT} = w.maxm′ₘₐₓ
