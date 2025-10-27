@@ -356,49 +356,58 @@ function _recurrence!(
     # NOTE: In the comments explaining the recurrence steps below, we use notation with
     # ℓₘᵢₙ=0 for simplicity, but this sequence may work for ℓₘᵢₙ=1//2 as well.
 
-    if ℓ == ℓₘᵢₙ(w)
-        w.ℓ = ℓ
-        recurrence_step1!(w)  # H⁰₀₀ = 1
-        fillHˡ₀ₘ!(w)  # Record the result in Hˡ (it was computed in h⃗ˡ)
-
-        # Now, to leave `w` in a good state for the next ℓ, compute H¹₀ₘ.
-        recurrence_step2!(w)  # H⁰₀ₘ -> H¹₀ₘ
-    else
-        if !consistent_ℓ(w) || ℓ(w) ≠ ℓ-1
-            # We need to start over, but will only be using the axes, so we only reset them.
-            h⃗ˡ(w).ℓ = ℓₘᵢₙ(w)
-            h⃗ˡ⁺¹(w).ℓ = ℓₘᵢₙ(w)+1
-
-            recurrence_step1!(w)  # H⁰₀₀ = 1
-            recurrence_step2!(w)  # H⁰₀ₘ -> H¹₀ₘ
-
-            for ℓ′ in ℓₘᵢₙ(w)+1:ℓ-1
-                increment_axes!(w)
-                recurrence_step2!(w)  # Hˡ₀ₘ -> Hˡ⁺¹₀ₘ
-            end
-        end
-
-        # Do one more step of the recurrence to get Hˡ⁺¹₀ₘ, regardless of whether or not the
-        # `if` block above was executed.  If not, it was set in a previous call to this
-        # function, but is currently stored in h⃗ˡ⁺¹ so we have to swap and increment the
-        # axes first.  If so, that block just got us to the same point.
-        increment_axes!(w)
-        recurrence_step2!(w)  # Hˡ₀ₘ -> Hˡ⁺¹₀ₘ
-
-        # So far, we've only used h⃗ˡ and h⃗ˡ⁺¹.  Now we're ready to start using Hˡ.
-        Hˡ(w).ℓ = ℓ
-
-        # The h⃗ˡ and h⃗ˡ⁺¹ are what we need to start the recurrence for Hˡ
-        fillHˡ₀ₘ!(w)  # Copy h⃗ˡ₀ₘ to Hˡ₀ₘ
-        recurrence_step3!(w)  # Hˡ⁺¹₀ₘ -> Hˡ₁ₘ
-        recurrence_step4!(w)  # Hˡₘ′ₘ₋₁, Hˡₘ′₋₁ₘ, Hˡₘ′ₘ₊₁ -> Hˡₘ′₊₁ₘ
-        recurrence_step5!(w)  # Hˡₘ′ₘ₋₁, Hˡₘ′₊₁ₘ, Hˡₘ′ₘ₊₁ -> Hˡₘ′₋₁ₘ
-
-        # # Impose symmetries
-        # recurrence_step6!(w, ℓ)
-
-        # # Swap the H matrices once more so that the current Hˡ⁺¹ is the next loop's Hˡ
-        # increment_axes!(w)
+    if ℓ < ℓₘᵢₙ(w) || ℓ > ℓₘₐₓ(w)
+        error(
+            "Requested ℓ=$(ℓ) is out of bounds [$(ℓₘᵢₙ(w)), $(ℓₘₐₓ(w))] for WignerHCalculator."
+        )
     end
-    Hˡ(w)
+
+    let h⃗ˡ=h⃗ˡ(w), h⃗ˡ⁺¹=h⃗ˡ⁺¹(w), Hˡ=Hˡ(w)
+
+        if ℓ == ℓₘᵢₙ(w)
+            w.ℓ = ℓ
+            recurrence_step1!(w)  # H⁰₀₀ = 1
+            fillHˡ₀ₘ!(w)  # Record the result in Hˡ (it was computed in h⃗ˡ)
+
+            # Now, to leave `w` in a good state for the next ℓ, compute H¹₀ₘ.
+            recurrence_step2!(w)  # H⁰₀ₘ -> H¹₀ₘ
+        else
+            if !consistent_ℓ(w) || h⃗ˡ.ℓ ≠ ℓ-1
+                # We need to start over, but will only be using the axes, so we only reset them.
+                h⃗ˡ.ℓ = ℓₘᵢₙ(w)
+                h⃗ˡ⁺¹.ℓ = ℓₘᵢₙ(w)+1
+
+                recurrence_step1!(w)  # H⁰₀₀ = 1
+                recurrence_step2!(w)  # H⁰₀ₘ -> H¹₀ₘ
+
+                for ℓ′ in ℓₘᵢₙ(w)+1:ℓ-1
+                    increment_axes!(w)
+                    recurrence_step2!(w)  # Hˡ₀ₘ -> Hˡ⁺¹₀ₘ
+                end
+            end
+
+            # Do one more step of the recurrence to get Hˡ⁺¹₀ₘ, regardless of whether or not the
+            # `if` block above was executed.  If not, it was set in a previous call to this
+            # function, but is currently stored in h⃗ˡ⁺¹ so we have to swap and increment the
+            # axes first.  If so, that block just got us to the same point.
+            increment_axes!(w)
+            recurrence_step2!(w)  # Hˡ₀ₘ -> Hˡ⁺¹₀ₘ
+
+            # So far, we've only used h⃗ˡ and h⃗ˡ⁺¹.  Now we're ready to start using Hˡ.
+            Hˡ.ℓ = ℓ
+
+            # The h⃗ˡ and h⃗ˡ⁺¹ are what we need to start the recurrence for Hˡ
+            fillHˡ₀ₘ!(w)  # Copy h⃗ˡ₀ₘ to Hˡ₀ₘ
+            recurrence_step3!(w)  # Hˡ⁺¹₀ₘ -> Hˡ₁ₘ
+            recurrence_step4!(w)  # Hˡₘ′ₘ₋₁, Hˡₘ′₋₁ₘ, Hˡₘ′ₘ₊₁ -> Hˡₘ′₊₁ₘ
+            recurrence_step5!(w)  # Hˡₘ′ₘ₋₁, Hˡₘ′₊₁ₘ, Hˡₘ′ₘ₊₁ -> Hˡₘ′₋₁ₘ
+
+            # # Impose symmetries
+            # recurrence_step6!(w, ℓ)
+
+            # # Swap the H matrices once more so that the current Hˡ⁺¹ is the next loop's Hˡ
+            # increment_axes!(w)
+        end
+        Hˡ
+    end
 end
