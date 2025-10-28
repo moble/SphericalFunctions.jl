@@ -2,18 +2,14 @@ module Redesign
 
 import Quaternionic
 import TestItems: @testitem, @testsnippet
-import FixedSizeArrays: FixedSizeArrayDefault, FixedSizeVectorDefault,  FixedSizeArray, FixedSizeVector
-import LoopVectorization: @turbo
+import FixedSizeArrays: FixedSizeArrayDefault, FixedSizeVectorDefault,  FixedSizeArray,
+    FixedSizeVector
 
 # TEMPORARY!!!!  Should be able to remove once this moves to SphericalFunctions proper
 import SphericalFunctions: ComplexPowers
 
 
-include("Wigner/WignerMatrix.jl")
-include("Wigner/WignerCalculator.jl")
-include("Wigner/WignerH.jl")
-include("Wigner/WignerHCalculator.jl")
-include("Wigner/recurrence.jl")
+include("wigner/wigner.jl")
 
 
 # function WignerD(R::Quaternionic.Rotor, ℓₘₐₓ::IT, m′ₘₐₓ::IT=ℓₘₐₓ) where {IT}
