@@ -9,12 +9,11 @@ import LoopVectorization: @turbo
 import SphericalFunctions: ComplexPowers
 
 
-include("WignerMatrix.jl")
-include("recurrence.jl")
-include("WignerCalculator.jl")
-
-include("WignerH.jl")
-include("WignerHCalculator.jl")
+include("Wigner/WignerMatrix.jl")
+include("Wigner/WignerCalculator.jl")
+include("Wigner/WignerH.jl")
+include("Wigner/WignerHCalculator.jl")
+include("Wigner/recurrence.jl")
 
 
 # function WignerD(R::Quaternionic.Rotor, ℓₘₐₓ::IT, m′ₘₐₓ::IT=ℓₘₐₓ) where {IT}
