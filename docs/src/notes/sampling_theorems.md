@@ -1,6 +1,6 @@
 # Sampling theorems and transformations of spin-weighted spherical harmonics
 
-[McEwen_2011](@citet) (MW) provide a very thorough review of the
+[McEwenWiaux_2011](@citet) (MW) provide a very thorough review of the
 literature on sampling theorems related to spin-weighted spherical
 harmonics up to 2011.  [Reinecke_2013](@citet) (RS) outlined one of
 the more efficient and accurate implementations of spin-weighted
