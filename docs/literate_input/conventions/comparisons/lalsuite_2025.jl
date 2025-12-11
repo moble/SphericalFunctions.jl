@@ -5,7 +5,7 @@ md"""
     The `LALSuite` definitions of the spherical harmonics and Wigner's ``d`` and ``D``
     functions agree with the definitions used in the `SphericalFunctions` package.
 
-[`LALSuite` (the LSC Algorithm Library Suite)](@cite LALSuite_2018) is a collection of
+[`LALSuite` (the LVK Algorithm Library Suite)](@cite LALSuite_2018) is a collection of
 routines, comprising the primary official software used by the LIGO-Virgo-KAGRA
 Collaboration to detect and characterize gravitational waves.  As far as I can tell, the
 ultimate source for all spin-weighted spherical harmonics used in `LALSuite` is the function
