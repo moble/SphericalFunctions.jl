@@ -171,7 +171,7 @@ find that
 Restricting to just the basis vectors, indexed as ``a,b,c``, the first
 of these reduces to ``[L_a, L_b] = i \epsilon_{abc} L_c``, which is
 precisely the standard result.  We can also lift any function on
-``S^2`` to a function on ``S^3`` — or more precisely any function on
+``𝕊²`` to a function on ``𝕊³`` — or more precisely any function on
 spherical coordinates to a function on the space of Euler angles — by
 the correspondence ``(\theta, \phi) \mapsto (\alpha, \beta, \gamma) =
 (\phi, \theta, 0)``.  We can then express the angular-momentum
