@@ -48,10 +48,12 @@ work, and achieve significantly greater accuracy (but no greater ℓ
 range) than `Float64`.  In all cases, results are typically accurate
 to roughly ℓ times the precision of the underlying float type.
 
-The conventions for this package are mostly inherited from — and are
-described in detail by — its predecessors found
+The conventions for this package diverge from its predecessors found
 [here](https://moble.github.io/spherical_functions/) and
-[here](https://moble.github.io/spherical/).
+[here](https://moble.github.io/spherical/), but are described in
+detail on [this page](@ref Summary) and the following pages, including
+detailed comparisons to other sources that are tested automatically
+with each change to this code.
 
 Note that numerous other packages cover some of these use cases,
 including
