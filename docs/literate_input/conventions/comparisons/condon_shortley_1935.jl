@@ -128,8 +128,8 @@ end
 
 # It may be helpful to check some values against explicit formulas for the first few
 # spherical harmonics as given by Condon-Shortley in the footnote to Eq. (15) of Sec. 4³
-# (page 52).  Note the subtle difference between the character `Θ` defining the function above
-# and the character `ϴ` defining the function below.
+# (page 52).  Note the subtle difference between the character `Θ` defining the function
+# above and its variant, the character `ϴ`, defining the function below.
 ϴ(ℓ, m, 𝜃) = ϴ(Val(ℓ), Val(m), 𝜃)
 ϴ(::Val{0}, ::Val{0}, 𝜃) = √(1/2)
 ϴ(::Val{1}, ::Val{0}, 𝜃) = √(3/2) * cos(𝜃)
