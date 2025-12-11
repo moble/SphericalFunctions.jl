@@ -35,9 +35,10 @@ actually used by any of these sources:
 One major result of this is that almost everyone since 1935 has used
 the same exact expression for the (scalar) spherical harmonics.
 
-When choosing my conventions, I intend to prioritize consistency (to
-the extent that any of these references actually have anything to say
-about the above items) with the following sources, in order:
+When choosing conventions for this package, I intend to prioritize
+consistency (to the extent that any of these references actually have
+anything to say about the above items) with the following sources, in
+order:
 
 1. LALSuite
 2. NINJA
@@ -109,7 +110,7 @@ That is, an easy calculation shows that
 ```
 which is precisely our definition.
 
-The spherical coordinates are implicitly defined by
+The spherical coordinates are implicitly defined by this statement:
 
 > It should be noted that the polar coordinates ``\varphi, \theta``
 > with respect to the original frame ``S`` of the ``z``-axis in its

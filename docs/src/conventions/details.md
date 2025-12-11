@@ -127,8 +127,8 @@ of 1 over the sphere is 1, we can simplify this to
 Given the basis vectors ``(𝐱, 𝐲, 𝐳)`` and the Euclidean norm, we
 can define the [geometric
 algebra](https://en.wikipedia.org/wiki/Geometric_algebra).  The key
-feature is the geometric product, which is defined for any pair of
-vectors as ``𝐯`` and ``𝐰`` as
+feature is the geometric product, which we could define for any pair
+of vectors as ``𝐯`` and ``𝐰`` as
 ```math
 𝐯 𝐰 = 𝐯 ⋅ 𝐰 + 𝐯 ∧ 𝐰,
 ```
