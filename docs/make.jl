@@ -27,6 +27,7 @@ bib = CitationBibliography(
 )
 
 using SphericalFunctions
+using SphericalFunctions: SSHTDirect, SSHTMinimal, SSHTRS
 DocMeta.setdocmeta!(SphericalFunctions, :DocTestSetup, :(using SphericalFunctions); recursive=true)
 
 makedocs(
@@ -41,9 +42,9 @@ makedocs(
     ),
     pages = [
         "index.md",
-        "transformations.md",
         "wigner_matrices.md",
         "sYlm.md",
+        "transformations.md",
         "operators.md",
         "utilities.md",
         "API" => [
@@ -75,7 +76,7 @@ makedocs(
         "References" => "references.md",
         "Redesign" => "redesign.md",
     ],
-    #warnonly=true,
+    warnonly=true,
     #doctest = false,
     #draft=true,  # Skips running code in the docs for speed
 )

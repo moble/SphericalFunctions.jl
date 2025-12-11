@@ -91,9 +91,9 @@ set ``\{1/c_{n,m} P_n^m(\cos\theta)`` is an orthonormal basis of
 ``L^2(0, \pi)`` in the ``\theta`` coordinate.  Therefore, the product
 of these two sets is an orthonormal basis of the product space
 ``L^2\left((0,2\pi) \times (0, \pi)\right)``, which forms a coordinate
-space for ``S^2``.  I would probably modify this to point out that
-``(0,2\pi)`` is really ``S^1``, and then we could extend it to point
-out that you can throw on another factor of ``S^1`` to cover ``S^3``,
+space for ``𝕊²``.  I would probably modify this to point out that
+``(0,2\pi)`` is really ``𝕊¹``, and then we could extend it to point
+out that you can throw on another factor of ``𝕊¹`` to cover ``𝕊³``,
 which happens to give us the Wigner D-matrices.
 
 We first define the rotor that takes ``(\hat{x}, \hat{y}, \hat{z})``

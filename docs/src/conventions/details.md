@@ -116,7 +116,7 @@ the determinant of the metric, so we have
 Restricting to the unit sphere, and normalizing so that the integral
 of 1 over the sphere is 1, we can simplify this to
 ```math
-\int_{S^2} f\, d^2\Omega = \frac{1}{4\pi} \int_0^\pi \int_0^{2\pi} f\, \sin\theta\, d\theta\, d\phi.
+\int_{𝕊²} f\, d^2\Omega = \frac{1}{4\pi} \int_0^\pi \int_0^{2\pi} f\, \sin\theta\, d\theta\, d\phi.
 ```
 
 
@@ -460,8 +460,8 @@ the Euler angles ``(\alpha, \beta, \gamma) = (\phi, \theta, 0)``.
 Starting with Cartesian coordinates and the Euclidean norm on
 ``\mathbb{R}^3``, we have *constructed* the geometric algebra over
 that space, as well as the spaces ``\mathrm{Spin}(3) =
-\mathrm{SU}(2)`` (topologically ``S^3``), ``\mathrm{SO}(3)``
-(topologically ``\mathbb{RP}^3``), and ``S^2``.  We will be defining
+\mathrm{SU}(2)`` (topologically ``𝕊³``), ``\mathrm{SO}(3)``
+(topologically ``\mathbb{RP}^3``), and ``𝕊²``.  We will be defining
 complex-valued functions on these spaces, and defining operators to
 construct and classify them.  In particular, because we have
 constructed the spaces, they are naturally supplied with coordinates
@@ -470,16 +470,16 @@ will be using these coordinate systems to construct both the operators
 and functions.  However, it is important to note that the coordinate
 systems may have singularities, which means that the spaces of
 coordinates may have different topologies than the spaces they
-represent.  For example, Euler angles have topology ``S^1 \times I
-\times S^1`` instead of the ``S^3`` and ``\mathbb{RP}^3`` topologies
+represent.  For example, Euler angles have topology ``𝕊¹ \times I
+\times 𝕊¹`` instead of the ``𝕊³`` and ``\mathbb{RP}^3`` topologies
 of the spaces they represent; spherical coordinates have topology
-``S^1 \times I`` instead of ``S^2``.
+``𝕊¹ \times I`` instead of ``𝕊²``.
 
 Defining functions on the coordinate system of a space is subtly
 different from defining functions on the space itself.  For example,
 spin-weighted functions are generally written as functions of
-(``S^2``) spherical coordinates.  However, they *cannot* be defined as
-functions on ``S^2`` itself; some notion of a reference tangent
+(``𝕊²``) spherical coordinates.  However, they *cannot* be defined as
+functions on ``𝕊²`` itself; some notion of a reference tangent
 direction is needed at each point.  The difference is that spherical
 *coordinates* supply a natural choice for the reference tangent
 direction: the unit vector in the ``\boldsymbol{\theta}`` direction.
@@ -575,7 +575,7 @@ action being a homomorphism.
       usually describe these as rotations.
 
 To validate the signs here, it may be helpful to work through a simple
-example involving the sphere ``S^2``.  We define a function on
+example involving the sphere ``𝕊²``.  We define a function on
 spherical coordinates as
 ```math
 f(\theta, \phi) = \sin\theta \sin\phi.
@@ -835,7 +835,7 @@ e^{\theta \mathbf{u} / 2} \mathbf{R}_{\alpha, \beta, \gamma}
 full space of quaternions with arbitrary norm) are harmonic with
 respect to the Laplacian of the full 4-D space.  We also know that
 ```math
-\Delta_{S^{n-1}} f(x) = \Delta_{\mathbb{R}^n} f(x/|x|),
+\Delta_{𝕊^{n-1}} f(x) = \Delta_{\mathbb{R}^n} f(x/|x|),
 ```
 and
 ```math
@@ -843,7 +843,7 @@ and
 =
 \frac{1}{r^{n-1}} \frac{\partial}{\partial r} \left( r^{n-1} \frac{\partial f}{\partial r} \right)
 +
-\frac{1}{r^2} \Delta_{S^{n-1}} f.
+\frac{1}{r^2} \Delta_{𝕊^{n-1}} f.
 ```
 These imply that the restriction to the space of unit quaternions is
 not harmonic with respect to the Laplacian on the 3-sphere, but is an
@@ -1121,9 +1121,9 @@ set ``\{1/c_{n,m} P_n^m(\cos\theta)`` is an orthonormal basis of
 ``L^2(0, \pi)`` in the ``\theta`` coordinate.  Therefore, the product
 of these two sets is an orthonormal basis of the product space
 ``L^2\left((0,2\pi) \times (0, \pi)\right)``, which forms a coordinate
-space for ``S^2``.  I would probably modify this to point out that
-``(0,2\pi)`` is really ``S^1``, and then we could extend it to point
-out that you can throw on another factor of ``S^1`` to cover ``S^3``,
+space for ``𝕊²``.  I would probably modify this to point out that
+``(0,2\pi)`` is really ``𝕊¹``, and then we could extend it to point
+out that you can throw on another factor of ``𝕊¹`` to cover ``𝕊³``,
 which happens to give us the Wigner D-matrices.
 
 ## Recursion relations

@@ -22,15 +22,15 @@ matrices, and spin-weighted spherical harmonics ``{}_{s}Y_{\ell,m}``
 (which includes the ordinary scalar spherical harmonics).  Because
 [*both* 𝔇 *and* the harmonics are most correctly considered](@cite
 Boyle_2016) functions on the rotation group ``𝐒𝐎(3)`` — or more
-generally, the spin group ``𝐒𝐩𝐢𝐧(3)`` that covers it — these
-functions are evaluated directly in terms of quaternions.  Concessions
-are also made for more standard forms of spherical coordinates and
-Euler angles.[^1] Among other applications, those functions permit
-"synthesis" (evaluation of the spin-weighted spherical functions) of
-spin-weighted spherical harmonic coefficients on regular or distorted
-grids.  This package also includes functions enabling efficient
-"analysis" (decomposition into mode coefficients) of functions
-evaluated on regular grids to high order and accuracy.
+generally, the spin group ``𝐒𝐩𝐢𝐧(3) \cong 𝐒𝐔(2)`` that covers it
+— these functions are evaluated directly in terms of quaternions.
+Concessions are also made for more standard forms of spherical
+coordinates and Euler angles.[^1] Among other applications, those
+functions permit "synthesis" (evaluation of the spin-weighted
+spherical functions) of spin-weighted spherical harmonic coefficients
+on regular or distorted grids.  This package also includes functions
+enabling efficient "analysis" (decomposition into mode coefficients)
+of functions evaluated on regular grids to high order and accuracy.
 
 These quantities are computed using recursion relations, which makes
 it possible to compute to very high ℓ values.  Unlike direct
@@ -46,7 +46,7 @@ memory — though it is far slower.  Also note that
 [`DoubleFloats`](https://github.com/JuliaMath/DoubleFloats.jl) will
 work, and achieve significantly greater accuracy (but no greater ℓ
 range) than `Float64`.  In all cases, results are typically accurate
-to roughly ℓ times the precision of the input quaternion.
+to roughly ℓ times the precision of the underlying float type.
 
 The conventions for this package are mostly inherited from — and are
 described in detail by — its predecessors found

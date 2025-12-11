@@ -730,7 +730,7 @@ covariant components:
   &= -i \frac{\partial}{\partial \alpha}
 \end{aligned}
 ```
-We can compare these to the [Full expressions on ``S^3``]() `@ref`, and find
+We can compare these to the [Full expressions on ``𝕊³``]() `@ref`, and find
 that they are precisely equivalent to expressions for ``L_j`` computed in
 this package's conventions.
 

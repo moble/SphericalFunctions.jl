@@ -1,35 +1,140 @@
 # ``s``-SHT Transformations
 
-One important capability of this package is the transformation between the two
-representations of a spin-weighted spherical function:
+Any square-integrable function on the sphere 𝕊² or 𝕊³ can be
+represented as an expansion in spherical harmonics or spin-weighted
+spherical harmonics, respectively.  For a particular spin-weight
+``s``, we can restrict the spin-weighted spherical harmonics to 𝕊²
+(because its behavior on the remaining [𝕊¹ factor of
+𝕊³](https://en.wikipedia.org/wiki/Hopf_fibration) is determined by
+the spin).  So, for example, if ``f`` is a function with spin weight
+``s``, we will frequently write
+```math
+\begin{gathered}
+f(θ, ϕ) = \sum_{ℓ = |s|}^{ℓₘₐₓ} \sum_{m = -ℓ}^{ℓ} f̃_{ℓ, m}
+    \, {}_{s}Y_{ℓ, m}(θ, ϕ) \\
+f(𝐑) = \sum_{ℓ = |s|}^{ℓₘₐₓ} \sum_{m = -ℓ}^{ℓ} f̃_{ℓ, m}
+    \, {}_{s}Y_{ℓ, m}(𝐑),
+\end{gathered}
+```
+where ``(θ, ϕ)`` are spherical coordinates on 𝕊², and we use the
+rotor ``𝐑`` to describe a point on 𝕊³.  The upper limit ``ℓₘₐₓ`` is
+— in principle — infinite, but because we are finite ``ℓₘₐₓ`` will
+also be finite in all applications here.  Similarly, the set of points
+on which we evaluate the function will also be finite.  A little
+terminology will be helpful:
 
-  1. Values `f` of the function evaluated on a set of points or "pixels" in the
-     domain of the function.
-  2. Values `f̃` of the mode weights (coefficients) of an expansion in the
-     standard spin-weighted spherical-harmonic basis.
+  1. Values ``f`` of the function evaluated on a set of points or
+     "pixels" in the domain of the function — sometimes called "nodes"
+     or the "map" values.
+  2. Values ``f̃`` of the mode weights (coefficients) of the expansion
+     — usually called "modes" or sometimes "salm" (for ``_sa_{ℓ,m}``).
 
-In the literature, the transformation `f` ↦ `f̃` is usually called "analysis" or
-`map2salm`, while the inverse transformation `f` ↦ `f̃` is called "synthesis" or
-`salm2map`.  These are both referred to as spin-spherical-harmonic transforms,
-or ``s``-SHTs.
+Here, we are concerned with transformations between these two
+representations of the function.  In the literature, the
+transformation ``f ↦ f̃`` is usually called "analysis" or `map2salm`,
+while the inverse transformation ``f̃ ↦ f`` is called "synthesis" or
+`salm2map`.  These are both referred to as spin-spherical-harmonic
+transforms, or ``s``-SHTs.
 
-To describe the values of a spin-``s`` function up to some maximum angular
-resolution ``\ell_\mathrm{max}``, we need ``(\ell_\mathrm{max}+1)^2 - s^2`` mode
-weights.  We assume throughout that the values `f̃` are stored as
+## Synthesis
+
+The expressions written above already show us one way to transform
+*from* modes ``f̃`` *to* function values ``f``.  If the pixels on
+which we evaluate are indexed by ``k``, then we can write
+```math
+f(𝐑_k) = \sum_{ℓ,m} f̃_{ℓ, m}\, {}_{s}Y_{ℓ, m}(𝐑_k).
+```
+Considering the ``(ℓ,m)`` pairs as a single index, this is just a
+matrix-vector multiplication, where the matrix elements are given by
+```math
+𝒯_{k, (ℓ,m)} = {}_{s}Y_{ℓ, m}(𝐑_k),
+```
+and we might more compactly write
+```math
+f = 𝒯 \, f̃.
+```
+In this expression, ``f̃`` is being treated as a column vector of mode
+weights, and ``f`` is being treated as a column vector of function
+values at the sequence of pixels.  For instance, we will frequently
+store the values ``f̃`` as the (column) vector
 ```julia
 f̃ = [mode_weight(ℓ, m) for ℓ ∈ abs(s):ℓₘₐₓ for m ∈ -ℓ:ℓ]
 ```
-(Here, `mode_weight` is a made-up function intended to provide a schematic.)  In
-particular, the ``m`` index varies most rapidly, and the ``\ell`` index varies
-most slowly.  Correspondingly, there must be *at least*
-``(\ell_\mathrm{max}+1)^2 - s^2`` function values `f`.  However, some ``s``-SHT
-algorithms require more function values — usually by a factor of 2 or 4 —
-trading off between speed and memory usage.
+(Here, `mode_weight` is just for illustration.)  If this
+transformation will be performed repeatedly, it can be very efficient
+to pre-compute the matrix ``𝒯``, and capitalize on the impressive
+efficiency of linear-algebra libraries to perform the transformation.
+And indeed, this is the approach taken by the [`SSHTDirect`](@ref)
+method.
 
-The `SSHT` object implements these transformations, storing pre-computed
-constants and pre-allocated workspace for the transformations.  The interface is
-designed to be similar to that of `FFTW.jl`, whereby an `SSHT` object `𝒯` can
-be used to perform the transformation as either
+However, we must consider the memory requirements of this approach.
+The number of nonzero mode weights is ``M = (ℓₘₐₓ+1)^2 - s^2``.  If
+there are ``N`` pixels in the pixelization, then the matrix ``𝒯`` has
+size ``N × M``.  Typically, we will use roughly the same number of
+pixels as there are mode weights to be able to express roughly the
+same number of degrees of freedom, so that ``N ≈ M``.  Therefore, the
+size of this matrix will typically be ``N × M ∼ ℓₘₐₓ^4``.  For
+standard complex numbers stored in 128 bits, this will exceed 1 GiB of
+memory for ``ℓₘₐₓ ≳ 90``, and grow rapidly.  The computational cost of
+the matrix-vector multiplication will scale just as poorly.  This
+full-storage-matrix approach is very attractive, but only for
+relatively small ``ℓₘₐₓ``.
+
+Another approach would be to compute the matrix elements as needed.
+Given that the SWSH values are best computed via recurrence relations,
+it would make sense to compute them row-by-row.  This would
+essentially eliminate the memory requirements.  Though the
+computational cost would still scale poorly, it would parallelize very
+well, since each row is independent until a final summation.  This is
+not currently implemented, but the pieces are all in place, and it
+will be implemented in the future.
+
+However, we can achieve significantly better performance at high
+``ℓₘₐₓ`` if we select the pixelization carefully.  Recall that a
+spherical harmonic of *any* spin weight still varies azimuthally as
+``e^{i m ϕ}``.  Therefore, if we select a pixelization made up of a
+series of rings, each of which is at a constant ``θ`` and has pixels
+equally spaced in ``ϕ``, then we can use Fast Fourier Transforms
+(FFTs) to perform the azimuthal integration very quickly.
+
+
+
+
+# Analysis
+
+Analytically, we use orthogonality of the spin-weighted spherical
+harmonics to compute the mode weights from the function values as
+```math
+\begin{gathered}
+f̃_{ℓ, m} = \int_{𝕊²} f(θ, ϕ)\, {}_{s}Ȳ_{ℓ, m}(θ, ϕ) \, d^2Ω, \\
+f̃_{ℓ, m} = \int_{𝕊³} f(𝐑)\, {}_{s}Ȳ_{ℓ, m}(𝐑) \, d^3Ω.
+\end{gathered}
+```
+But — again because we are finite — we will only be able to evaluate
+the function at a finite number of points, and so we will need to use
+discrete quadrature to evaluate the integrals.
+
+
+
+To describe the mode weights of a spin-``s`` function up to (and
+including) some maximum angular resolution ``\ell_\mathrm{max}``,
+there are ``(\ell_\mathrm{max}+1)^2 - s^2`` mode weights.  We assume
+throughout that the values `f̃` are stored as the (column) vector
+```julia
+f̃ = [mode_weight(ℓ, m) for ℓ ∈ abs(s):ℓₘₐₓ for m ∈ -ℓ:ℓ]
+```
+(Here, `mode_weight` is a made-up function for schematic purposes.) In
+particular, the ``m`` index varies most rapidly, and the ``\ell``
+index varies most slowly.  Correspondingly, there must be *at least*
+``(\ell_\mathrm{max}+1)^2 - s^2`` function values `f`.  However, some
+``s``-SHT algorithms require more function values — usually by a
+factor of 2 or 4 — trading off between speed and memory usage.
+
+The `SSHT` object implements these transformations, storing
+pre-computed constants and pre-allocated workspace for the
+transformations.  The interface is designed to be similar to that of
+`AbstractFFTs.jl`, whereby an `SSHT` object `𝒯` can be used to
+perform the transformation as either
 ```julia
 f = 𝒯 * f̃
 ```

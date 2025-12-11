@@ -210,7 +210,7 @@ macro display(expr)
 end
 nothing  #hide
 
-# And we'll need another for the angular-momentum operators in standard ``S^2`` form.
+# And we'll need another for the angular-momentum operators in standard ``𝕊²`` form.
 conversion(∂) = ∂.subs(Dict(α => ϕ, β => θ, γ => 0)).simplify()
 macro display2(expr)
     op = string(expr.args[1])
@@ -260,7 +260,7 @@ nothing  #hide
 #md # </details>
 #md # ```
 
-# ## Full expressions on ``S^3``
+# ## Full expressions on ``𝕊³``
 # Finally, we can actually compute the Euler components of the angular momentum operators.
 
 #md # ### ``L`` operators in terms of Euler angles
@@ -373,7 +373,7 @@ commutator(Rz, Rx)
 # This completes independent commutator results, which are all as we expect them to be.
 
 
-# ## Standard expressions on ``S^2``
+# ## Standard expressions on ``𝕊²``
 # We can substitute ``(α, β, γ) \to (φ, θ, 0)`` to get the standard expressions for the
 # angular momentum operators on the 2-sphere.
 
