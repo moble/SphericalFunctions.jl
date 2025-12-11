@@ -1,8 +1,7 @@
 name = "SphericalFunctions"
 uuid = "af6d55de-b1f7-4743-b797-0829a72cf84e"
-version = "2.2.7"
+version = "3.0.0-dev"
 authors = ["Michael Boyle <michael.oliver.boyle@gmail.com>"]
-version = "2.2.8"
 
 [workspace]
 projects = ["docs", "test"]
