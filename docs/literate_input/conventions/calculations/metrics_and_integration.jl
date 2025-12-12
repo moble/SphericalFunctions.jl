@@ -211,7 +211,7 @@ SO3_volume = sympy.integrate(
     (α, 0, 2π)
 )
 
-# And the normalized volume-form factor on ``\mathrm{SO}(3)`` is
+# So the normalized volume-form factor on ``\mathrm{SO}(3)`` is
 SO3_normalized_volume_form_factor = sympy.simplify(
     four_volume_form_factor.subs(abs(sympy.sin(β)), sympy.sin(β)).subs(R, 1) / SO3_volume
 )

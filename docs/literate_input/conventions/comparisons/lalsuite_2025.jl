@@ -148,8 +148,8 @@ for (pattern, replacement) in replacements
 end
 #+
 
-# Finally, we just parse and evaluate the code to turn it into a runnable Julia, and we are
-# done defining the module
+# Finally, we just parse the code to turn it into a runnable Julia expression, evaluate it
+# inside this module, and we are done defining the module.
 eval(Meta.parseall(lalsource))
 
 end  # module LALSuite
