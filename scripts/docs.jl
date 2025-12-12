@@ -18,7 +18,6 @@ Pkg.activate("docs")
 
 import LiveServer: servedocs
 literate_input = joinpath(pwd(), "docs", "literate_input")
-literate_output = joinpath(pwd(), "docs", "src", "literate_output")
 @info "Using input for Literate.jl from $literate_input"
 servedocs(
     include_dirs=["src/"],  # So that docstring changes are picked up
