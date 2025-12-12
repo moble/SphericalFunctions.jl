@@ -73,6 +73,10 @@ makedocs(
             s -> joinpath("notes", s),
             sort(readdir(joinpath(docs_src_dir, "notes")))
         ),
+        "Development" => [
+            "development/index.md",
+            "development/literate_testitems.md",
+        ],
         "References" => "references.md",
         "Redesign" => "redesign.md",
     ],
