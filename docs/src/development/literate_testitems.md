@@ -1,4 +1,6 @@
-# TestItemRunner.jl + Literate.jl = 💪
+# Literate TestItems
+
+TestItemRunner.jl + Literate.jl = 💪
 
 (With honorable mention going to the excellent
 [DocumenterCitations.jl](https://juliadocs.org/DocumenterCitations.jl/stable/)
