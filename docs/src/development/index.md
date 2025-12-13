@@ -25,6 +25,11 @@ The names of individual tests or files can be given as regex patterns
 matching, so that partial matches will work.  Tags must be given
 exactly as they appear in the code (including the colon).
 
+Note that the tests with the `:skipci` tag will be skipped whenever
+the environment variable `CI` is set to "true" (which is the case on
+GitHub Actions), even if it is explicitly included in the command
+line.
+
 Here are some example invocations:
 
 ```bash
