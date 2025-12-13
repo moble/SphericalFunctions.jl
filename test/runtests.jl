@@ -37,6 +37,7 @@ function filter(testitem)
     (; filename, name, tags) = testitem
 
     if CI && :skipci ∈ tags
+        @info "Skipping test '$name' tagged ':skipci' because `CI` is true."
         return false
     end
 
