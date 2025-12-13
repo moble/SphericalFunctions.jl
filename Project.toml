@@ -25,6 +25,7 @@ TestItems = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
 [compat]
 AbstractFFTs = "1"
 Aqua = "0.8"
+ArgParse = "1.2"
 CondaPkg = "0.2"
 Coverage = "1.6"
 DoubleFloats = "1"
@@ -53,6 +54,7 @@ julia = "1.6"
 
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
+ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
 CondaPkg = "992eb4ea-22a4-4c89-a5bb-47a3300528ab"
 Coverage = "a2441757-f6aa-5fb2-8edb-039e3f45d037"
 DoubleFloats = "497a8b3b-efae-58df-a0af-a86822472b78"
@@ -75,4 +77,4 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 TestItemRunner = "f8b46487-2199-4994-9208-9a1283c18c0a"
 
 [targets]
-test = ["Aqua", "CondaPkg", "Coverage", "DoubleFloats", "FFTW", "FastDifferentiation", "FastTransforms", "ForwardDiff", "LinearAlgebra", "Literate", "Logging", "OffsetArrays", "Printf", "ProgressMeter", "PythonCall", "Quaternionic", "Random", "StaticArrays", "Test", "TestItemRunner"]
+test = ["Aqua", "ArgParse", "CondaPkg", "Coverage", "DoubleFloats", "FFTW", "FastDifferentiation", "FastTransforms", "ForwardDiff", "LinearAlgebra", "Literate", "Logging", "OffsetArrays", "Printf", "ProgressMeter", "PythonCall", "Quaternionic", "Random", "StaticArrays", "Test", "TestItemRunner"]
