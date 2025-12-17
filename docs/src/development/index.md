@@ -18,22 +18,23 @@ files will be run.  By default, all tests in all files will be run.
 Optionally, either with or without any of the above specifications,
 add `--skip` followed by one or more tests, tags, or files to skip.
 These override any inclusion criteria specified earlier in the
-command.
+command.  Note that everything before `--skip` constitutes inclusion
+criteria; everything after constitutes exclusion criteria.
 
 The names of individual tests or files can be given as regex patterns
 (probably in quotes), and all such matches will be via `occursin`
 matching, so that partial matches will work.  Tags must be given
 exactly as they appear in the code (including the colon).
 
-Note that the tests with the `:skipci` tag will be skipped whenever
-the environment variable `CI` is set to "true" (which is the case on
-GitHub Actions), even if it is explicitly included in the command
-line.
+Note that any test with the `:skipci` tag will be skipped whenever the
+environment variable `CI` is set to "true" (which is the case on
+GitHub Actions), unless it is explicitly included in the command line
+as a test to run.
 
 Here are some example invocations:
 
 ```bash
-# Run all tests in all files
+# Run all tests in all files (except those tagged :skipci if CI=true)
 julia --project=. scripts/test.jl
 
 # Run everything in complex_powers.jl
@@ -42,16 +43,16 @@ julia --project=. scripts/test.jl complex_powers.jl
 # Run only the ComplexPowers test
 julia --project=. scripts/test.jl ComplexPowers
 
-# Run everything in complex_powers.jl except ComplexPowers
+# Run everything in complex_powers.jl except ComplexPowers (or :skipci if CI=true)
 julia --project=. scripts/test.jl complex_powers.jl --skip ComplexPowers
 
-# Run everything in every file except ComplexPowers
+# Run everything in every file except ComplexPowers (or :skipci if CI=true)
 julia --project=. scripts/test.jl --skip ComplexPowers
 
 # Run only tests tagged :fast
 julia --project=. scripts/test.jl :fast
 
-# Run everything except tests tagged :slow
+# Run everything except tests tagged :slow (or :skipci if CI=true)
 julia --project=. scripts/test.jl --skip :slow
 ```
 

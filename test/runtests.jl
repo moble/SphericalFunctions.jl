@@ -36,11 +36,6 @@ function filter(testitem)
     # while `tags` is a vector of `Symbol`s that can be used to tag test items.
     (; filename, name, tags) = testitem
 
-    if CI && :skipci ∈ tags
-        @info "Skipping test '$name' tagged ':skipci' because `CI` is true."
-        return false
-    end
-
     for skip ∈ skip_files
         if occursin(skip, filename)
             @info "Skipping test '$name' in file '$(relpath(filename))' " *
@@ -66,25 +61,37 @@ function filter(testitem)
     if !isempty(run_files) || !isempty(run_tags) || !isempty(run_tests)
         for run ∈ run_files
             if occursin(run, filename)
+                # @warn "Dry run: including test '$name' in file '$(relpath(filename))' " *
+                #     "due to run filter '$run'."
+                # return false
                 return true
             end
         end
         for run ∈ run_tags
             if run ∈ tags
+                # @warn "Dry run: including test '$name' tagged '$run' due to run filter."
+                # return false
                 return true
             end
         end
         for run ∈ run_tests
             if occursin(run, name)
+                # @warn "Dry run: including test '$name' due to run filter '$run'."
+                # return false
                 return true
             end
         end
         # @info "Excluding test '$name' in file '$(relpath(filename))' because " *
         #     "it does not match any requested tests."
         return false
-    else
-        return true
     end
+
+    if CI && :skipci ∈ tags && :skipci ∉ run_tags
+        @info "Skipping test '$name' tagged ':skipci' because `CI` is true."
+        return false
+    end
+
+    return true
 end
 
 @info "Filtering tests with" run_files run_tags run_tests skip_files skip_tags skip_tests CI
