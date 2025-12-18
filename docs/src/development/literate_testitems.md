@@ -1,5 +1,61 @@
 # Literate TestItems
 
+* Use TestItems to be able to run tests via VS Code
+* Use Documenter (and DocumenterCitations) to build docs
+* Write pages that extensively document *and test* different
+  conventions from the literature against this package
+
+* Use Literate to write files that generate pages for Documenter
+
+Because the conventions pages require significant amounts of code,
+including as their own modules, it is helpful to be able to run the
+tests in those pages separately from the main test suite — i.e., with
+more granularity.  This cannot be done with simple doctests, but can
+be done with TestItems, which necessitates using Literate.
+
+I want these pages to stand on their own as documentation of the
+various conventions, while also actively being used to test the
+package's conventions.
+
+So, basically, I couldn't use doctests for two reasons: the sheer
+complexity of the code and tests, and the need for modularity and
+granularity in running the tests.
+
+Also note that these particular conventions often define things that
+need to be differentiated, for which FastDifferentiation does a very
+good job of converting those general formulas to useful
+implementations.
+
+
+
+
+
+This package computes things like Wigner's 𝔇 matrices.  If you've
+ever dealt with these things — or even just rotations generally —
+you'll know that the literature is an absolute quagmire of subtly
+differing conventions wrapped up in terminology and notation from
+hundreds of years ago.  In an effort to sort some of this out, I
+decided to carefully compare the conventions of as many significant
+sources as I could — everything from Wikipedia and Mathematica, to
+current quantum-mechanics textbooks, all the way back to the original
+books and papers that introduced some of these concepts.  So I went
+through each reference, and wrote a documentation page for each one
+that carefully laid out the conventions used in that source.  
+
+
+
+
+
+
+
+
+
+
+The
+documentation for my package has a whole section collecting all of
+these different pages.
+
+
 TestItemRunner.jl + Literate.jl = 💪
 
 (With honorable mention going to the excellent
@@ -8,21 +64,6 @@ and
 [FastDifferentiation.jl](https://github.com/brianguenter/FastDifferentiation.jl)
 packages.)
 
-I have a package called
-[SphericalFunctions.jl](https://moble.github.io/SphericalFunctions.jl/dev/)
-that computes things like Wigner D matrices and spherical harmonics.
-If you've ever dealt with these things — or even just rotations
-generally — you'll know that the literature is an absolute quagmire of
-subtly differing conventions wrapped up in terminology and notation
-from hundreds of years ago.  In an effort to sort some of this out, I
-decided to carefully compare the conventions of as many significant
-sources as I could — everything from Wikipedia and Mathematica, to
-current quantum-mechanics textbooks, all the way back to the original
-books and papers that introduced some of these concepts.  So I went
-through each reference, and wrote a documentation page for each one
-that carefully laid out the conventions used in that source.  The
-documentation for my package has a whole section collecting all of
-these different pages.
 
 But I didn't just want to *document* these conventions; I wanted to
 *test* how they compared to the implementations in my package.  I
