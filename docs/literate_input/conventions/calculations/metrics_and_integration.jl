@@ -199,7 +199,7 @@ S3_normalized_volume_form_factor = sympy.simplify(
 )
 
 # And finally, we can restrict back to ``\mathrm{SO}(3)`` by taking ``β ∈ [0, π]``, and
-# integrate over that range:
+# integrating over that range:
 SO3_volume = sympy.integrate(
     sympy.integrate(
         sympy.integrate(
