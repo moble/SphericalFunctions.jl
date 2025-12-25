@@ -16,8 +16,9 @@ classical mechanics and mathematical physics of the first half of the 20th centu
 particular, quantum physicists found its approach to be helpful when inventing their new
 branch of physics.  It was originally published in 1904, with the 4th edition coming out in
 1947, which was reissued in 1988, with reprintings as late as 1993 — which perhaps says
-something about its influence.  Goldstein's "Classical Mechanics" came out in 1950, marking
-the end of Whittaker's reign.
+something about its influence.  Sommerfeld's "Lectures on Theoretical Physics" came out
+starting in 1943, and Goldstein's "Classical Mechanics" in 1950, marking the end of
+Whittaker's reign.
 
 For better or for worse, essentially all of the basic conventions used by physicists today
 (including many used by this package) were consolidated here.  Tragically, that includes a
@@ -174,8 +175,8 @@ axis_angle_rotation(ω, α, β, γ) = exp((ω / 2) * line(α, β, γ))
 # which takes ``OY`` to ``OY'=OK`` (hence ``YÔK=ϕ``); then a rotation about ``OY'=OK`` by
 # ``θ`` to take ``OZ`` onto ``OZ'=OZ''=Oz`` (hence ``zÔZ=θ``); finally a rotation about
 # ``OZ'=Oz`` by ``ψ``, which takes ``OY'=OK`` onto ``OY''=Oy`` (hence ``yÔK=ψ``).  That is,
-# in modern parlance this is a ``ZY'Z''`` rotation.  We might write this in quaternion
-# notation as
+# in modern parlance this is a ``z``-``y'``-``z''`` rotation.  We might write this in
+# quaternion notation as
 # ```math
 # \begin{aligned}
 # \exp\left[ \frac{ψ}{2} Oz \right]\,
