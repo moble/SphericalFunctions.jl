@@ -14,28 +14,30 @@ md"""
 !!! warning
 
     Whittaker cited the wrong paper for the Euler angles, referring to Euler's 1776 paper on
-    rigid body dynamics [Euler_1776a](@cite), when in fact Euler introduced these angles
-    in his 1767 paper [Euler_1767](@cite).
+    rigid-body dynamics [Euler_1776a](@cite), when in fact Euler introduced these angles
+    in his 1767 paper on rigid-body dynamics [Euler_1767](@cite).
 
 Whittaker's "Analytical Dynamics" [Whittaker_1947](@cite) was the most influential book on
 classical mechanics and mathematical physics of the first half of the 20th century.  In
-particular, quantum physicists found its approach to be helpful when inventing their new
-branch of physics.  It was originally published in 1904, with the 4th edition coming out in
-1947, which was reissued in 1988, with reprintings as late as 1993 — which perhaps says
+particular, quantum physicists found Whittaker's approach to be helpful when inventing their
+new branch of physics.  It was originally published in 1904, with the 4th edition coming out
+in 1947, which was reissued in 1988, with reprintings as late as 1993 — which perhaps says
 something about its influence.  Sommerfeld's "Lectures on Theoretical Physics" came out
 starting in 1943, and Goldstein's "Classical Mechanics" in 1950, marking the end of
-Whittaker's reign.
+Whittaker's dominance.
 
 For better or for worse, essentially all of the basic conventions used by physicists today
 (including many used by this package) were consolidated here.  Tragically, that includes a
 dismissive snarkiness toward quaternions — presumably because Whittaker, like so many
 physicists of his time, was poisoned by the harsh invective against quaternions coming
 mostly from Gibbs and Heaviside, belying the impoverished understanding at the turn of the
-20th century of the close *interdependence* between quaternions and vectors.  Whittaker even
-goes so far as to make the petty and false claim that quaternion multiplication had been
-discovered independently by three other people in addition to Hamilton.  His muddled and
-tendentious treatment of quaternions surely sealed their fate until aerospace, computer
-graphics, and robotics applications came to rescue them from obscurity.
+20th century of the close *interdependence* between quaternions and vectors.  Whittaker
+often declines to refer to them as "quaternions", referring to them simply as a set of
+parameters.  He even goes so far as to make the petty and false claim that quaternion
+multiplication had been discovered independently by three other people in addition to
+Hamilton.  His muddled and tendentious treatment of quaternions surely sealed their fate
+until computer graphics, aerospace, and robotics applications came to rescue them from
+obscurity.
 
 
 ## Implementing expressions
@@ -61,10 +63,12 @@ module Whittaker
 # > upwards and ``Oy`` is directed to the northern horizon, then ``Ox`` will be directed to
 # > the east.
 
-# This is a right-handed orthogonal system, which we will represent by the corresponding
-# unit vectors as `QuatVec`s:
+# (Note that Whittaker will soon distinguish between the system ``OXYZ`` which will be fixed
+# in space, and the system ``Oxyz`` which will be fixed in the rotating body.) This is a
+# right-handed orthogonal system, which we will represent by the corresponding unit vectors
+# as `QuatVec`s:
 
-import Quaternionic: Quaternionic, 𝐢, 𝐣, 𝐤, ⋅, ×̂ 
+import Quaternionic: Quaternionic, Rotor, 𝐢, 𝐣, 𝐤, ⋅, ×̂ 
 
 const Ox = Quaternionic.𝐢
 const Oy = Quaternionic.𝐣
@@ -76,6 +80,7 @@ const up = Oz
 
 const south = -north
 const west = -east
+const down = -up
 #+
 
 # Whittaker continues:
@@ -218,8 +223,8 @@ function OK(θ, ϕ, ψ)
 end
 #+
 
-# Finally, for testing purposes, we implement functions to evaluate the three angles
-# Whittaker refers to:
+# We also implement, for testing purposes, functions to evaluate the three angles Whittaker
+# refers to:
 function YÔK(θ, ϕ, ψ)
     OY = 𝐣
     let OK=OK(θ, ϕ, ψ)
@@ -242,6 +247,33 @@ function yÔK(θ, ϕ, ψ)
 end
 #+
 
+# Finally, Whittaker provides a table of values for the "direction-cosines" — meaning the
+# projections of the rotated basis vectors onto the fixed basis vectors:
+function direction_cosine(θ, ϕ, ψ)
+    [
+    ##                       X                                Y                      Z
+    #= x =#  cos(ϕ)cos(θ)cos(ψ)-sin(ϕ)sin(ψ)  sin(ϕ)cos(θ)cos(ψ)+cos(ϕ)sin(ψ)  -sin(θ)cos(ψ);
+    #= y =# -cos(ϕ)cos(θ)sin(ψ)-sin(ϕ)cos(ψ) -sin(ϕ)cos(θ)sin(ψ)+cos(ϕ)cos(ψ)   sin(θ)sin(ψ);
+    #= z =#            cos(ϕ)sin(θ)                     sin(ϕ)sin(θ)                cos(θ)
+    ]
+end
+#+
+
+# ### Connecting Eulerian angles to quaternions
+#
+# In section I.11, Whittaker derives the relationship between the Eulerian angles and the
+# quaternion components:
+function quaternion_from_eulerian(θ, ϕ, ψ)
+    ξ = sin(θ/2) * sin((ψ - ϕ)/2)
+    η = sin(θ/2) * cos((ψ - ϕ)/2)
+    ζ = cos(θ/2) * sin((ψ + ϕ)/2)
+    χ = cos(θ/2) * cos((ψ + ϕ)/2)
+    χ + ξ*𝐢 + η*𝐣 + ζ*𝐤
+end
+#+
+
+# These are all the conventions we will need from Whittaker.
+
 end  #module Whittaker
 #+
 
@@ -254,9 +286,16 @@ end  #module Whittaker
 ϵᵣ = 10eps()
 #+
 
-# Test that the angles the line makes with the axes are what Whittaker intended
-# TODO: implement
-
+# ### Basis vectors and handedness
+#
+# Test that the angles the line makes with the axes are what Whittaker intended:
+for (α,β,γ) ∈ αβγrange()
+    l = line(α, β, γ)
+    @test acos(l ⋅ Whittaker.Ox) ≈ α atol=ϵₐ rtol=ϵᵣ
+    @test acos(l ⋅ Whittaker.Oy) ≈ β atol=ϵₐ rtol=ϵᵣ
+    @test acos(l ⋅ Whittaker.Oz) ≈ γ atol=ϵₐ rtol=ϵᵣ
+end
+#+
 
 # Now we'll test the behavior that
 # > the line ``(α, β, γ)`` being directed vertically upwards, the rotation from the southern
@@ -282,14 +321,32 @@ let α=π/2, β=π/2, γ=0
 end
 #+
 
-# We can now test the "Eulerian" angles.  The discussion above shows that the angles
-# ``ϕ,θ,ψ`` in that order correspond to what we would denote as ``α,β,γ`` in that order.
-# So we define our utility function for generating a variety of angles:
+# ### Quaternions
+#
+# We simply test the multiplication rules:
+import Quaternionic: 𝐢, 𝐣, 𝐤
+
+@test 𝐢^2 == 𝐣^2 == 𝐤^2 == -1
+@test 𝐢 * 𝐣 == -𝐣 * 𝐢 == 𝐤
+@test 𝐣 * 𝐤 == -𝐤 * 𝐣 == 𝐢
+@test 𝐤 * 𝐢 == -𝐢 * 𝐤 == -𝐣
+#+
+
+# ### "The Eulerian angles"
+# The discussion above shows that the angles ``ϕ,θ,ψ`` in that order correspond to what we
+# would denote as ``α,β,γ`` in that order.  So we rename our utility function for generating
+# a variety of angles:
 const ϕθψrange = αβγrange
 #+
 
-# First we test that the rotation as we've implemented it results in the angles between axes
-# that Whittaker described:
+# First, we test that the rotation as we've implemented it does correspond to the Euler
+# rotation implemented by `Quaternionic`:
+for (ϕ,θ,ψ) ∈ ϕθψrange()
+    @test Whittaker.eulerian_rotation(θ, ϕ, ψ) ≈ Quaternionic.from_euler_angles(ϕ, θ, ψ)
+end
+#+
+
+# Next, we test that it results in the angles between axes that Whittaker described:
 for (ϕ,θ,ψ) ∈ ϕθψrange()
     @test YÔK(θ, ϕ, ψ) ≈ ϕ 
     @test zÔZ(θ, ϕ, ψ) ≈ θ
@@ -297,12 +354,34 @@ for (ϕ,θ,ψ) ∈ ϕθψrange()
 end
 #+
 
-# Next, we test that the rotation as we've implemented it does correspond to the Euler
-# rotation implemented by `Quaternionic`:
+# Finally, we'll test that the rotated axes project onto the fixed axes according to
+# Whittaker's table of direction-cosines:
 for (ϕ,θ,ψ) ∈ ϕθψrange()
-    @test Whittaker.eulerian_rotation(θ, ϕ, ψ) ≈ Quaternionic.from_euler_angles(ϕ, θ, ψ)
+    X = Whittaker.Ox
+    Y = Whittaker.Oy
+    Z = Whittaker.Oz
+    R = Whittaker.eulerian_rotation(θ, ϕ, ψ)
+    x = R(X)
+    y = R(Y)
+    z = R(Z)
+    projections = [
+        ##         X       Y       Z
+        #= x =#  x ⋅ X   x ⋅ Y   x ⋅ Z ;
+        #= y =#  y ⋅ X   y ⋅ Y   y ⋅ Z ;
+        #= z =#  z ⋅ X   z ⋅ Y   z ⋅ Z
+    ]
+    dcm = Whittaker.direction_cosine(θ, ϕ, ψ)
+    @test projections ≈ dcm atol=ϵₐ rtol=ϵᵣ
 end
-#+
 
+# ### Connecting Eulerian angles to quaternions
+#
+# Finally, we can just test that the components Whittaker derived are the components we've
+# been using.
+for (ϕ,θ,ψ) ∈ ϕθψrange()
+    R₁ = Whittaker.eulerian_rotation(θ, ϕ, ψ)
+    R₂ = quaternion_from_eulerian(θ, ϕ, ψ)
+    @test R₁ ≈ R₂ atol=ϵₐ rtol=ϵᵣ
+end
 
 end  #@testitem  #hide
