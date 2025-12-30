@@ -11,6 +11,12 @@ md"""
     basis elements ``(i, j, k)``, with rotation of a vector ``v`` by a quaternion ``q`` is
     given by ``q v q⁻¹``.
 
+!!! warning
+
+    Whittaker cited the wrong paper for the Euler angles, referring to Euler's 1776 paper on
+    rigid body dynamics [Euler_1776a](@cite), when in fact Euler introduced these angles
+    in his 1767 paper [Euler_1767](@cite).
+
 Whittaker's "Analytical Dynamics" [Whittaker_1947](@cite) was the most influential book on
 classical mechanics and mathematical physics of the first half of the 20th century.  In
 particular, quantum physicists found its approach to be helpful when inventing their new
