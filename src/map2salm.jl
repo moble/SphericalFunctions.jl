@@ -158,19 +158,19 @@ function map2salm!(
 
         # NOTE: We can't thread at a higher level because each thread could access the
         # same element of `salm` simultaneously below; by threading at this level, we
-        # are assured that the `extra.I...` index used below is unique to each thread.
+        # are assured that the `Tuple(extra)...` index used below is unique to each thread.
         @threads for extra ∈ extra_dims
-            # extra is a CartesianIndex; indices are in extra.I
+            # extra is a CartesianIndex; indices are in Tuple(extra)
             with_workspace(pool) do ws
                 G = ws.G
-                @views computeG!(G, map[:, ϑ, extra.I...], weight[ϑ], ws.fftplan)
+                @views computeG!(G, map[:, ϑ, Tuple(extra)...], weight[ϑ], ws.fftplan)
                 for ℓ ∈ absspin:ℓmax
                     λ_factor = ϵs * √((2ℓ+1)*T(π)) / Nφ
 
                     i₀ = WignerHindex(ℓ, spin, 0, m′max)
 
                     let m=0
-                        salm[Yindex(ℓ, m), extra.I...] +=
+                        salm[Yindex(ℓ, m), Tuple(extra)...] +=
                             G[m+1] * λ_factor * Hwedge[i₀]
                     end
 
@@ -180,27 +180,27 @@ function map2salm!(
                         for m ∈ 1:min(ℓ, absspin)
                             i₊ -= ℓ-m+2
                             i₋ += ℓ-m+1
-                            salm[Yindex(ℓ, m), extra.I...] +=
+                            salm[Yindex(ℓ, m), Tuple(extra)...] +=
                                 G[m+1] * ϵ(m) * λ_factor * Hwedge[i₊]
-                            salm[Yindex(ℓ, -m), extra.I...] +=
+                            salm[Yindex(ℓ, -m), Tuple(extra)...] +=
                                 G[Nφ-m+1] * λ_factor * Hwedge[i₋]
                         end
                     else
                         for m ∈ 1:min(ℓ, absspin)
                             i₊ += ℓ-m+1
                             i₋ -= ℓ-m+2
-                            salm[Yindex(ℓ, m), extra.I...] +=
+                            salm[Yindex(ℓ, m), Tuple(extra)...] +=
                                 G[m+1] * ϵ(m) * λ_factor * Hwedge[i₊]
-                            salm[Yindex(ℓ, -m), extra.I...] +=
+                            salm[Yindex(ℓ, -m), Tuple(extra)...] +=
                                 G[Nφ-m+1] * λ_factor * Hwedge[i₋]
                         end
                     end
                     for m ∈ absspin+1:ℓ
                         i₊ += 1
                         i₋ += 1
-                        salm[Yindex(ℓ, m), extra.I...] +=
+                        salm[Yindex(ℓ, m), Tuple(extra)...] +=
                             G[m+1] * ϵ(m) * λ_factor * Hwedge[i₊]
-                        salm[Yindex(ℓ, -m), extra.I...] +=
+                        salm[Yindex(ℓ, -m), Tuple(extra)...] +=
                             G[Nφ-m+1] * λ_factor * Hwedge[i₋]
                     end
                 end
