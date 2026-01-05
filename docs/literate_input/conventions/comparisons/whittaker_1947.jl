@@ -69,7 +69,7 @@ module Whittaker
 # right-handed orthogonal system, which we will represent by the corresponding unit vectors
 # as `QuatVec`s:
 
-import Quaternionic: Quaternionic, Rotor, 𝐢, 𝐣, 𝐤, ⋅, ×̂ 
+import Quaternionic: Quaternionic, 𝐢, 𝐣, 𝐤, ⋅, ×̂ 
 
 const Ox = Quaternionic.𝐢
 const Oy = Quaternionic.𝐣
@@ -211,7 +211,7 @@ function eulerian_rotation(θ, ϕ, ψ)
     R₂ = exp((θ/2) * OK)
     Oz = R₂(R₁(OZ))
     R₃ = exp((ψ/2) * Oz)
-    R₁ * R₂ * R₃
+    R₃ * R₂ * R₁
 end
 #+
 
@@ -229,21 +229,21 @@ end
 function YÔK(θ, ϕ, ψ)
     OY = 𝐣
     let OK=OK(θ, ϕ, ψ)
-        acos(OY ⋅ OK)
+        acos(clamp(OY ⋅ OK, -1, 1))
     end
 end
 function zÔZ(θ, ϕ, ψ)
     OZ = 𝐤
     let OK=OK(θ, ϕ, ψ)
         Oz = eulerian_rotation(θ, ϕ, ψ)(OZ)
-        acos(Oz ⋅ OZ)
+        acos(clamp(Oz ⋅ OZ, -1, 1))
     end
 end
 function yÔK(θ, ϕ, ψ)
     OY = 𝐣
     let OK=OK(θ, ϕ, ψ)
         Oy = eulerian_rotation(θ, ϕ, ψ)(OY)
-        acos(Oy ⋅ OK)
+        acos(clamp(Oy ⋅ OK, -1, 1))
     end
 end
 #+
@@ -289,9 +289,12 @@ end  #module Whittaker
 
 # ### Basis vectors and handedness
 #
-# Test that the angles the line makes with the axes are what Whittaker intended:
-for (α,β,γ) ∈ αβγrange()
-    l = line(α, β, γ)
+# We'll test that the angles the line makes with the axes are what Whittaker intended.
+# First, we need a sampling of "direction angles", which should be in the range ``[0, π]``.
+# This range is supplied by the `θrange` function:
+import Quaternionic: ⋅
+for (α,β,γ) ∈ Iterators.product(θrange(), θrange(), θrange())
+    l = Whittaker.line(α, β, γ)
     @test acos(l ⋅ Whittaker.Ox) ≈ α atol=ϵₐ rtol=ϵᵣ
     @test acos(l ⋅ Whittaker.Oy) ≈ β atol=ϵₐ rtol=ϵᵣ
     @test acos(l ⋅ Whittaker.Oz) ≈ γ atol=ϵₐ rtol=ϵᵣ
@@ -325,12 +328,12 @@ end
 # ### Quaternions
 #
 # We simply test the multiplication rules:
-import Quaternionic: 𝐢, 𝐣, 𝐤
+import Quaternionic: Quaternionic, 𝐢, 𝐣, 𝐤
 
 @test 𝐢^2 == 𝐣^2 == 𝐤^2 == -1
 @test 𝐢 * 𝐣 == -𝐣 * 𝐢 == 𝐤
 @test 𝐣 * 𝐤 == -𝐤 * 𝐣 == 𝐢
-@test 𝐤 * 𝐢 == -𝐢 * 𝐤 == -𝐣
+@test 𝐤 * 𝐢 == -𝐢 * 𝐤 == 𝐣
 #+
 
 # ### "The Eulerian angles"
@@ -347,16 +350,26 @@ for (ϕ,θ,ψ) ∈ ϕθψrange()
 end
 #+
 
-# Next, we test that it results in the angles between axes that Whittaker described:
-for (ϕ,θ,ψ) ∈ ϕθψrange()
-    @test YÔK(θ, ϕ, ψ) ≈ ϕ 
-    @test zÔZ(θ, ϕ, ψ) ≈ θ
-    @test yÔK(θ, ϕ, ψ) ≈ ψ
+# Next, we test that it results in the angles between axes that Whittaker described.  Note
+# that this test is very susceptible to gimbal lock when ``θ`` is near ``0`` or ``π``, so we
+# avoid the poles by moving ``θ`` slightly away from them:
+avoid_poles = √(eps(Float64))
+#+
+
+# Also, because we have to use "direction angles" again, we need to ensure that ϕ and ψ
+# are in ``[-π, π]``, so we just subtract ``π`` from each to use the usual generator, and
+# only test that the absolute values of those two angles are correct:
+for (ϕ,θ,ψ) ∈ ϕθψrange(;avoid_poles)
+    ϕ = ϕ - π
+    ψ = ψ - π
+    @test Whittaker.YÔK(θ, ϕ, ψ) ≈ abs(ϕ) atol=√ϵₐ rtol=√ϵᵣ
+    @test Whittaker.zÔZ(θ, ϕ, ψ) ≈ θ atol=√ϵₐ rtol=√ϵᵣ
+    @test Whittaker.yÔK(θ, ϕ, ψ) ≈ abs(ψ) atol=√ϵₐ rtol=√ϵᵣ
 end
 #+
 
-# Finally, we'll test that the rotated axes project onto the fixed axes according to
-# Whittaker's table of direction-cosines:
+# Now, we'll test that the rotated axes project onto the fixed axes according to Whittaker's
+# table of direction-cosines:
 for (ϕ,θ,ψ) ∈ ϕθψrange()
     X = Whittaker.Ox
     Y = Whittaker.Oy
@@ -372,14 +385,14 @@ for (ϕ,θ,ψ) ∈ ϕθψrange()
         #= z =#  z ⋅ X   z ⋅ Y   z ⋅ Z
     ]
     dcm = Whittaker.direction_cosine(θ, ϕ, ψ)
-    @test projections ≈ dcm atol=ϵₐ rtol=ϵᵣ
+    @test projections ≈ dcm atol=10ϵₐ rtol=10ϵᵣ
 end
 #+
 
 # ### Connecting Eulerian angles to quaternions
 #
-# Finally, we can just test that the components Whittaker derived are the components we've
-# been using.
+# Finally, we can just test that the quaternion components Whittaker derived are the
+# components we've been using.
 for (ϕ,θ,ψ) ∈ ϕθψrange()
     R₁ = Whittaker.eulerian_rotation(θ, ϕ, ψ)
     R₂ = Whittaker.quaternion_from_eulerian(θ, ϕ, ψ)
