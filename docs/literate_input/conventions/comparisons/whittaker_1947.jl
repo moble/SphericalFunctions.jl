@@ -374,6 +374,7 @@ for (ϕ,θ,ψ) ∈ ϕθψrange()
     dcm = Whittaker.direction_cosine(θ, ϕ, ψ)
     @test projections ≈ dcm atol=ϵₐ rtol=ϵᵣ
 end
+#+
 
 # ### Connecting Eulerian angles to quaternions
 #
