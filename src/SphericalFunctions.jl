@@ -11,7 +11,7 @@ using Quaternionic: Quaternionic, Rotor, from_spherical_coordinates,
 using StaticArrays: @SVector
 using SpecialFunctions, DoubleFloats
 using LoopVectorization: @turbo
-using Base.Threads: @threads, nthreads
+using Base.Threads: @threads, threadpoolsize
 
 const MachineFloat = Union{Float16, Float32, Float64}
 
