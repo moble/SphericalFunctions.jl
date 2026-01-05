@@ -1,18 +1,37 @@
-# See docs/src/developments/index.md for details of how to run tests with this script.
+# See docs/src/development/index.md for details of how to run tests with this script.
 
 using TestItemRunner
 using ArgParse
 
 function parse_commandline()
-    settings = ArgParseSettings()
+    settings = ArgParseSettings(
+        description = """Run selected tests from the SphericalFunctions.jl test suite.
+        
+        \ua0
+
+        See docs/src/development/index.md for details of how to run tests with this script.
+
+        \ua0
+        
+        The RUN and SKIP arguments may be names of individual tests (in quotes if there are
+        spaces), tags (which must be prefixed by `:`) that are given in the `@testitem`, or
+        files (which must end with `.jl`).  Note that SKIP takes precedence over RUN if both
+        are specified; a test matching both a run and a skip filter will be skipped.  Any
+        test with the `:skipci` tag will be skipped whenever the environment variable `CI`
+        is set to "true" (which is the case on, e.g., GitHub Actions).
+        """,
+        usage = "julia test/runtests.jl [-h] [RUN...] [--skip SKIP...]",
+    )
     @add_arg_table! settings begin
         # Collect everything before the optional `--skip`
         "run"
             nargs    = '*'
+            help = "names, tags, or files to run"
         # Collect everything after the optional `--skip`
         "--skip"
             nargs    = '*'
             default  = String[]
+            help = "names, tags, or files to skip"
     end
     parsed_args = parse_args(settings)
     run_files = Tuple(Regex(s) for s ∈ parsed_args["run"] if endswith(s, ".jl"))
