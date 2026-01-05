@@ -5,11 +5,12 @@ md"""
 
     Whittaker consolidated conventions that are still used by physicists today.  That
     includes a right-handed orthogonal coordinate system labeled ``(x, y, z)``; "Eulerian
-    angles" that he labels ``(θ, ϕ, ψ)``, but which we would label ``(ϕ, θ, ψ)``; the
-    resulting spherical coordinates as we now use them, with ``θ`` being colatitude, ``ϕ``
-    being the azimuthal angle from the ``x``-axis, and ``ψ=0``; and the standard quaternion
-    basis elements ``(i, j, k)``, with rotation of a vector ``v`` by a quaternion ``q`` is
-    given by ``q v q⁻¹``.
+    angles" that he labels ``(θ, ϕ, ψ)`` but which we would label ``(ϕ, θ, ψ)``, meaning
+    that we use the same symbols for the same angles, but in different orders; the resulting
+    spherical coordinates as we now use them, with ``θ`` being colatitude, ``ϕ`` being the
+    azimuthal angle from the ``x``-axis, and ``ψ=0``; and the standard quaternion basis
+    elements ``(i, j, k)``, with rotation of a vector ``v`` by a quaternion ``q`` is given
+    by ``q v q⁻¹``.
 
 !!! warning
 
@@ -380,7 +381,7 @@ end
 # been using.
 for (ϕ,θ,ψ) ∈ ϕθψrange()
     R₁ = Whittaker.eulerian_rotation(θ, ϕ, ψ)
-    R₂ = quaternion_from_eulerian(θ, ϕ, ψ)
+    R₂ = Whittaker.quaternion_from_eulerian(θ, ϕ, ψ)
     @test R₁ ≈ R₂ atol=ϵₐ rtol=ϵᵣ
 end
 
