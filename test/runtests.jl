@@ -1,5 +1,8 @@
 # See docs/src/development/index.md for details of how to run tests with this script.
 
+# This is to ensure that, even run as a script, Ctrl-C will actually interrupt the tests.
+Base.exit_on_sigint(false)
+
 using TestItemRunner
 using ArgParse
 
