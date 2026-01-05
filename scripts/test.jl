@@ -1,6 +1,6 @@
 # Call this from the top-level directory as
 #   julia -t auto scripts/test.jl
-# See docs/src/developments/index.md for more information.
+# See docs/src/development/index.md for more information.
 
 import Dates
 println("Running tests starting at ", Dates.format(Dates.now(), "HH:MM:SS"), ".")
