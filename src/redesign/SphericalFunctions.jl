@@ -1,10 +1,3 @@
-import Quaternionic
-import TestItems: @testitem, @testsnippet
-import FixedSizeArrays: FixedSizeArrayDefault, FixedSizeVectorDefault, FixedSizeArray,
-    FixedSizeVector
-
-include("wigner/wigner.jl")
-
 
 # function WignerD(R::Quaternionic.Rotor, ℓₘₐₓ::IT, m′ₘₐₓ::IT=ℓₘₐₓ) where {IT}
 #     NT = complex(Quaternionic.basetype(R))

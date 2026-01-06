@@ -1,3 +1,5 @@
+TODO: Redesign API
+
 src/
 ├── SphericalFunctions.jl
 ├── utilities
