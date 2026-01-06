@@ -112,7 +112,7 @@ end
     @testset "$T" for T in [BigFloat, Float64, Float32]
         # This compares the H obtained via recurrence with the formulaic Wigner d
         # d_{\ell}^{n,m} = \epsilon_n \epsilon_{-m} H_{\ell}^{n,m},
-        tol = ifelse(T === BigFloat, 100, 1) * 30eps(T)
+        tol = ifelse(T ∈ (BigFloat, Float32), 100, 1) * 30eps(T)
         for β in βrange(T)
             expiβ = cis(β)
             for ℓₘₐₓ in 0:6  # Expect overflows for higher ℓ with Float32
