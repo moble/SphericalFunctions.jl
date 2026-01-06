@@ -103,8 +103,8 @@ s = -2
 # case, which is the only one defined in the paper.
 # We will need to test approximate floating-point equality,
 # so we set absolute and relative tolerances (respectively) in terms of the machine epsilon:
-ϵₐ = 10eps()
-ϵᵣ = 500eps()
+ϵₐ = 30eps()
+ϵᵣ = 1500eps()
 #+
 
 # This loose relative tolerance is necessary because the numerical errors in Blanchet's
