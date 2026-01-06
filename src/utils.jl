@@ -26,6 +26,8 @@ Base.parent(M::OffsetMat) = M.parent
 #@propagate_inbounds Base.getindex(M::OffsetMat, ::Colon, j::Int) = parent(M)[:, j-offset2(M)]
 
 
+# Note that the loggamma and logbinomial functions below are not used directly in the
+# package, but are used in sqrtbinomial, which *is* used.
 loggamma(a, ::Type{T}) where {T<:DoubleFloats.MultipartFloat} = DoubleFloats.loggamma(T(a))
 loggamma(a, ::Type{T}) where T = SpecialFunctions.loggamma(T(a))
 function logbinomial(n::T, k::T, S=float(T)) where {T<:Integer}
@@ -38,7 +40,10 @@ function logbinomial(n::T, k::T, S=float(T)) where {T<:Integer}
     if k == 1
         return log(S(n))
     else
-        return -log1p(S(n)) - loggamma(n - k + one(T), S) - loggamma(k + one(T), S) + loggamma(n + 2one(T), S)
+        return (
+            -log1p(S(n)) - loggamma(n - k + one(T), S)
+            - loggamma(k + one(T), S) + loggamma(n + 2one(T), S)
+        )
     end
 end
 
