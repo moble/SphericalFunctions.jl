@@ -13,7 +13,7 @@ do a little better with a specialized routine.
 
 ```@autodocs
 Modules = [SphericalFunctions]
-Pages   = ["complex_powers.jl"]
+Pages   = ["utilities/complex_powers.jl"]
 Order   = [:module, :type, :constant, :function, :macro]
 ```
 
@@ -25,8 +25,8 @@ data, we mean anything indexed like Wigner's ``\mathfrak{D}`` matrices, or
 special subsets of them, like the ``H`` matrices.
 
 ```@autodocs
-Modules = [SphericalFunctions]
-Pages   = ["indexing.jl", "wigner_matrices/indexing.jl", "wigner_matrices/Hrecursions.jl"]
+Modules = [SphericalFunctions, SphericalFunctions.Deprecated]
+Pages   = ["deprecated/indexing.jl"]
 Order   = [:module, :type, :constant, :function, :macro]
 ```
 
@@ -40,7 +40,7 @@ methods.  Here, we collect any specialized methods that help us beat the limits.
 
 ```@autodocs
 Modules = [SphericalFunctions]
-Pages   = ["utils.jl"]
+Pages   = ["utilities/utils.jl"]
 ```
 
 

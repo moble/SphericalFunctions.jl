@@ -1,5 +1,11 @@
 
 ```@autodocs
-Modules = [SphericalFunctions.Redesign]
-Pages   = ["redesign/SphericalFunctions.jl", "redesign/recurrence.jl", "redesign/WignerMatrix.jl", "redesign/WignerMatrices.jl"]
+Modules = [SphericalFunctions]
+Pages   = [
+	"SphericalFunctions.jl",
+	"ssht/ssht.jl",
+	"wigner/recurrence.jl",
+	"wigner/wigner_matrix.jl",
+	"wigner/wigner_matrices.jl",
+]
 ```

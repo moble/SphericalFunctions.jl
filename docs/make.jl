@@ -27,13 +27,19 @@ bib = CitationBibliography(
 )
 
 using SphericalFunctions
-using SphericalFunctions: SSHTDirect, SSHTMinimal, SSHTRS
-DocMeta.setdocmeta!(SphericalFunctions, :DocTestSetup, :(using SphericalFunctions); recursive=true)
+using SphericalFunctions.Deprecated
+
+DocMeta.setdocmeta!(
+    SphericalFunctions,
+    :DocTestSetup,
+    :(using SphericalFunctions; using SphericalFunctions.Deprecated);
+    recursive=true,
+)
 
 makedocs(
     plugins=[bib],
     sitename="SphericalFunctions.jl",
-    modules = [SphericalFunctions],
+    modules = [SphericalFunctions, SphericalFunctions.Deprecated],
     format = Documenter.HTML(
         prettyurls = !("local" in ARGS),  # Use clean URLs, unless built as a "local" build
         edit_link = "main",  # Link out to "main" branch on github

@@ -64,7 +64,7 @@ f̃ = [mode_weight(ℓ, m) for ℓ ∈ abs(s):ℓₘₐₓ for m ∈ -ℓ:ℓ]
 transformation will be performed repeatedly, it can be very efficient
 to pre-compute the matrix ``𝒯``, and capitalize on the impressive
 efficiency of linear-algebra libraries to perform the transformation.
-And indeed, this is the approach taken by the [`SSHTDirect`](@ref)
+And indeed, this is the approach taken by the [`SSHTDirect`](@ref SphericalFunctions.Deprecated.SSHTDirect)
 method.
 
 However, we must consider the memory requirements of this approach.
@@ -170,8 +170,8 @@ advantages and disadvantages:
 ## `SSHT` objects
 
 ```@autodocs
-Modules = [SphericalFunctions]
-Pages   = ["ssht.jl", "ssht/direct.jl", "ssht/minimal.jl", "ssht/rs.jl"]
+Modules = [SphericalFunctions, SphericalFunctions.Deprecated]
+Pages   = ["deprecated/ssht.jl", "deprecated/ssht/direct.jl", "deprecated/ssht/minimal.jl", "deprecated/ssht/rs.jl"]
 ```
 
 ## Pixelizations
@@ -234,7 +234,7 @@ The various pixelizations may be computed as follows:
 
 ```@autodocs
 Modules = [SphericalFunctions]
-Pages   = ["pixelizations.jl"]
+Pages   = ["utilities/pixelizations.jl"]
 ```
 
 
@@ -247,6 +247,6 @@ corresponding pixelizations:
 
 ```@autodocs
 Modules = [SphericalFunctions]
-Pages   = ["weights.jl"]
+Pages   = ["utilities/weights.jl"]
 Order   = [:module, :type, :constant, :function, :macro]
 ```
