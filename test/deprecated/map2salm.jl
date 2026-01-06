@@ -2,6 +2,7 @@
 # test map2salm on Float16
 
 @testitem "map2salm" setup=[Utilities] begin
+    import SphericalFunctions: Deprecated
     for T in [BigFloat, Float64, Float32]
         # These test the ability of map2salm to precisely decompose the results of `sYlm`.
         ℓmax = 7
@@ -14,12 +15,12 @@
                     for m in -ℓ:ℓ
                         f = mapslices(
                             ϕθ -> sYlm(s, ℓ, m, ϕθ[2], ϕθ[1]),
-                            phi_theta(Nφ, Nϑ, T),
+                            Deprecated.phi_theta(Nφ, Nϑ, T),
                             dims=[3]
                         )
-                        computed = map2salm(f, s, ℓmax)
+                        computed = Deprecated.map2salm(f, s, ℓmax)
                         expected = zeros(Complex{T}, size(computed))
-                        expected[SphericalFunctions.Yindex(ℓ, m, ℓmin)] = one(T)
+                        expected[Deprecated.Yindex(ℓ, m, ℓmin)] = one(T)
                         if ≉(computed, expected, atol=30eps(T), rtol=30eps(T))
                             @show T
                             @show ℓmax
@@ -36,8 +37,8 @@
                         end
                         @test computed ≈ expected atol=30eps(T) rtol=30eps(T)
 
-                        plan = plan_map2salm(f, s, ℓmax)
-                        computed2 = map2salm(f, plan)
+                        plan = Deprecated.plan_map2salm(f, s, ℓmax)
+                        computed2 = Deprecated.map2salm(f, plan)
                         @test array_equal(computed, computed2)
                     end
                 end

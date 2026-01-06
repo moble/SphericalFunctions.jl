@@ -48,6 +48,8 @@ usually be defined in separate C headers.
 using TestItems: @testitem  #hide
 @testitem "LALSuite conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
 
+import SphericalFunctions: Deprecated
+
 module LALSuite
 
 using Printf: @sprintf
@@ -175,7 +177,7 @@ s = -2
 for (θ, ϕ) ∈ θϕrange()
     for (ℓ, m) ∈ ℓmrange(abs(s), ℓₘₐₓ)
         @test LALSuite.XLALSpinWeightedSphericalHarmonic(θ, ϕ, s, ℓ, m) ≈
-            SphericalFunctions.Y(s, ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+            Deprecated.Y(s, ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
@@ -189,7 +191,7 @@ end
 for β ∈ βrange()
     for (ℓ, m′, m) ∈ ℓm′mrange(ℓₘₐₓ)
         @test LALSuite.XLALWignerdMatrix(ℓ, m′, m, β) ≈
-            SphericalFunctions.d(ℓ, m′, m, β) atol=ϵₐ rtol=ϵᵣ
+            Deprecated.d(ℓ, m′, m, β) atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
@@ -203,7 +205,7 @@ end
 for (α,β,γ) ∈ αβγrange()
     for (ℓ, m′, m) ∈ ℓm′mrange(ℓₘₐₓ)
         @test LALSuite.XLALWignerDMatrix(ℓ, m′, m, α, β, γ) ≈
-            conj(SphericalFunctions.D(ℓ, m′, m, α, β, γ)) atol=ϵₐ rtol=ϵᵣ
+            conj(Deprecated.D(ℓ, m′, m, α, β, γ)) atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+

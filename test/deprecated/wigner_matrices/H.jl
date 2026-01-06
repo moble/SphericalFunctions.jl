@@ -1,16 +1,17 @@
 @testitem "H(0)" begin
+    import SphericalFunctions: Deprecated
     @testset "$T" for T in [BigFloat, Float64, Float32]
         # We have H_{n}^{m′,m}(0) = (-1)^m′ δ_{m′,m}
         let β = zero(T)
             expiβ = cis(β)
             for ℓₘₐₓ in 0:6  # Expect overflows for higher ℓ with Float32
                 for m′ₘₐₓ in 0:ℓₘₐₓ
-                    Hw = fill(T(NaN), WignerHsize(ℓₘₐₓ, m′ₘₐₓ))
-                    H!(Hw, expiβ, ℓₘₐₓ, m′ₘₐₓ, H_recursion_coefficients(ℓₘₐₓ, T))
+                    Hw = fill(T(NaN), Deprecated.WignerHsize(ℓₘₐₓ, m′ₘₐₓ))
+                    Deprecated.H!(Hw, expiβ, ℓₘₐₓ, m′ₘₐₓ, Deprecated.H_recursion_coefficients(ℓₘₐₓ, T))
                     for n in 0:ℓₘₐₓ
                         for m′ in -min(n, m′ₘₐₓ):min(n, m′ₘₐₓ)
                             for m in abs(m′):n
-                                H_rec = Hw[WignerHindex(n, m′, m, m′ₘₐₓ)]
+                                H_rec = Hw[Deprecated.WignerHindex(n, m′, m, m′ₘₐₓ)]
                                 if m′ == m
                                     @test H_rec ≈ T(-1)^m′ atol=eps(T)
                                 else
@@ -26,18 +27,19 @@
 end
 
 @testitem "H(π)" begin
+    import SphericalFunctions: Deprecated
     @testset "$T" for T in [BigFloat, Float64, Float32]
         # We have H_{n}^{m′,m}(0) = (-1)^m′ δ_{m′,m}
         let β = T(π)
             expiβ = cis(β)
             for ℓₘₐₓ in 0:6  # Expect overflows for higher ℓ with Float32
                 for m′ₘₐₓ in 0:ℓₘₐₓ
-                    Hw = fill(T(NaN), WignerHsize(ℓₘₐₓ, m′ₘₐₓ))
-                    H!(Hw, expiβ, ℓₘₐₓ, m′ₘₐₓ, H_recursion_coefficients(ℓₘₐₓ, T))
+                    Hw = fill(T(NaN), Deprecated.WignerHsize(ℓₘₐₓ, m′ₘₐₓ))
+                    Deprecated.H!(Hw, expiβ, ℓₘₐₓ, m′ₘₐₓ, Deprecated.H_recursion_coefficients(ℓₘₐₓ, T))
                     for n in 0:ℓₘₐₓ
                         for m′ in -min(n, m′ₘₐₓ):min(n, m′ₘₐₓ)
                             for m in abs(m′):n
-                                H_rec = Hw[WignerHindex(n, m′, m, m′ₘₐₓ)]
+                                H_rec = Hw[Deprecated.WignerHindex(n, m′, m, m′ₘₐₓ)]
                                 if m′ == -m
                                     @test H_rec ≈ T(-1)^(n+m′) atol=eps(T(π))
                                 else
@@ -53,6 +55,7 @@ end
 end
 
 @testitem "Compare H to explicit d" setup=[ExplicitWignerMatrices,Utilities] begin
+    import SphericalFunctions: Deprecated
     @testset "$T" for T in [BigFloat, Float64, Float32]
         # This compares the H obtained via recurrence with the explicit Wigner d
         # d_{\ell}^{n,m} = \epsilon_n \epsilon_{-m} H_{\ell}^{n,m},
@@ -60,13 +63,13 @@ end
             expiβ = cis(β)
             for ℓₘₐₓ in 0:2  # 2 is the max explicitly coded ℓ
                 for m′ₘₐₓ in 0:ℓₘₐₓ
-                    Hw = fill(T(NaN), WignerHsize(ℓₘₐₓ, m′ₘₐₓ))
-                    H!(Hw, expiβ, ℓₘₐₓ, m′ₘₐₓ, H_recursion_coefficients(ℓₘₐₓ, T))
+                    Hw = fill(T(NaN), Deprecated.WignerHsize(ℓₘₐₓ, m′ₘₐₓ))
+                    Deprecated.H!(Hw, expiβ, ℓₘₐₓ, m′ₘₐₓ, Deprecated.H_recursion_coefficients(ℓₘₐₓ, T))
                     for n in 0:ℓₘₐₓ
                         for m′ in -min(n, m′ₘₐₓ):min(n, m′ₘₐₓ)
                             for m in -n:n
                                 d_expl = ExplicitWignerMatrices.d_explicit(n, m′, m, expiβ)
-                                d_rec = epsilon(m′) * epsilon(-m) * Hw[WignerHindex(n, m′, m, m′ₘₐₓ)]
+                                d_rec = epsilon(m′) * epsilon(-m) * Hw[Deprecated.WignerHindex(n, m′, m, m′ₘₐₓ)]
                                 @test d_rec ≈ d_expl atol=30eps(T) rtol=30eps(T)
                             end
                         end
@@ -105,6 +108,7 @@ end
 end
 
 @testitem "Compare H to formulaic d" setup=[ExplicitWignerMatrices,Utilities] begin
+    import SphericalFunctions: Deprecated
     @testset "$T" for T in [BigFloat, Float64, Float32]
         # This compares the H obtained via recurrence with the formulaic Wigner d
         # d_{\ell}^{n,m} = \epsilon_n \epsilon_{-m} H_{\ell}^{n,m},
@@ -113,13 +117,13 @@ end
             expiβ = cis(β)
             for ℓₘₐₓ in 0:6  # Expect overflows for higher ℓ with Float32
                 for m′ₘₐₓ in 0:ℓₘₐₓ
-                    Hw = fill(T(NaN), WignerHsize(ℓₘₐₓ, m′ₘₐₓ))
-                    H!(Hw, expiβ, ℓₘₐₓ, m′ₘₐₓ, H_recursion_coefficients(ℓₘₐₓ, T))
+                    Hw = fill(T(NaN), Deprecated.WignerHsize(ℓₘₐₓ, m′ₘₐₓ))
+                    Deprecated.H!(Hw, expiβ, ℓₘₐₓ, m′ₘₐₓ, Deprecated.H_recursion_coefficients(ℓₘₐₓ, T))
                     for n in 0:ℓₘₐₓ
                         for m′ in -min(n, m′ₘₐₓ):min(n, m′ₘₐₓ)
                             for m in -n:n
                                 d_form = ExplicitWignerMatrices.d_formula(n, m′, m, expiβ)
-                                d_rec = epsilon(m′) * epsilon(-m) * Hw[WignerHindex(n, m′, m, m′ₘₐₓ)]
+                                d_rec = epsilon(m′) * epsilon(-m) * Hw[Deprecated.WignerHindex(n, m′, m, m′ₘₐₓ)]
                                 @test d_rec ≈ d_form atol=tol rtol=tol
                             end
                         end

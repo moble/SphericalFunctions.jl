@@ -115,6 +115,7 @@ end  # @testmodule TorresDelCastillo
 @testitem "TorresDelCastillo conventions" setup=[Utilities, TorresDelCastillo] begin
     using Random
     using Quaternionic: from_spherical_coordinates
+    using SphericalFunctions: Deprecated
 
     Random.seed!(1234)
     const T = Float64
@@ -127,7 +128,7 @@ end  # @testmodule TorresDelCastillo
     for θ ∈ βrange(T)
         for ϕ ∈ αrange(T)
             for s ∈ -ℓₘₐₓ:ℓₘₐₓ
-                Y₁ = ₛ𝐘(s, ℓₘₐₓ, T, [from_spherical_coordinates(θ, ϕ)])[1,:]
+                Y₁ = Deprecated.ₛ𝐘(s, ℓₘₐₓ, T, [from_spherical_coordinates(θ, ϕ)])[1,:]
                 Y₂ = [Y(s, ℓ, m, θ, ϕ) for ℓ ∈ abs(s):ℓₘₐₓ for m ∈ -ℓ:ℓ]
                 @test Y₁ ≈ Y₂ atol=ϵₐ rtol=ϵᵣ
             end
@@ -139,7 +140,7 @@ end  # @testmodule TorresDelCastillo
         for α ∈ αrange(T)
             for β ∈ βrange(T)
                 for γ ∈ γrange(T)
-                    D = D_matrices(α, β, γ, ℓₘₐₓ)
+                    D = Deprecated.D_matrices(α, β, γ, ℓₘₐₓ)
                     i = 1
                     for j in 0:ℓₘₐₓ
                         for m′ in -j:j

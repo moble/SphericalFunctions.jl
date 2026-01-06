@@ -111,7 +111,7 @@ s = -2
 # explicit expressions grow rapidly with ``\ell``.
 for (θ, ϕ) ∈ θϕrange()
     for (ℓ, m) ∈ ℓmrange(abs(s), ℓₘₐₓ)
-        @test Blanchet.Yˡᵐ₋₂(ℓ, m, θ, ϕ) ≈ SphericalFunctions.Y(s, ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+        @test Blanchet.Yˡᵐ₋₂(ℓ, m, θ, ϕ) ≈ SphericalFunctions.Deprecated.Y(s, ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+

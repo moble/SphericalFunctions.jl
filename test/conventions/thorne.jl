@@ -56,6 +56,7 @@ end  # @testmodule Thorne
 @testitem "Thorne conventions" setup=[Utilities, Thorne] begin
     using Random
     using Quaternionic: from_spherical_coordinates
+    using SphericalFunctions: Deprecated
 
     Random.seed!(1234)
     const T = Float64
@@ -76,7 +77,7 @@ end  # @testmodule Thorne
 
             # Compare to SphericalFunctions
             let s=0
-                Y = ₛ𝐘(s, ℓₘₐₓ, T, [from_spherical_coordinates(θ, ϕ)])
+                Y = Deprecated.ₛ𝐘(s, ℓₘₐₓ, T, [from_spherical_coordinates(θ, ϕ)])
                 i = 1
                 for ℓ in 0:ℓₘₐₓ
                     for m in -ℓ:ℓ

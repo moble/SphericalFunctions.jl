@@ -272,6 +272,7 @@ end  # @testmodule Varshalovich
 @testitem "Varshalovich conventions" setup=[Utilities, Varshalovich] begin
     using Random
     using Quaternionic: from_spherical_coordinates
+    using SphericalFunctions: Deprecated
 
     Random.seed!(1234)
     const 𝒾 = im
@@ -290,7 +291,7 @@ end  # @testmodule Varshalovich
                 end
 
                 for γ ∈ γrange(T, n)
-                    D = D_matrices(α, β, γ, ℓₘₐₓ)
+                    D = Deprecated.D_matrices(α, β, γ, ℓₘₐₓ)
                     i = 1
                     for j in 0:ℓₘₐₓ
                         for m′ in -j:j

@@ -1,4 +1,5 @@
 @testitem "Associated Legendre Functions" setup=[Utilities] begin
+    import SphericalFunctions: Deprecated
     using OffsetArrays
 
     nmax = 1_000
@@ -8,17 +9,17 @@
         ϵ = eps(T)
         P̄ = fill(T(NaN), min_length)
         P̄′ = Vector{T}(undef, min_length)
-        recursion_coefficients = ALFRecursionCoefficients(nmax, T)
+        recursion_coefficients = Deprecated.ALFRecursionCoefficients(nmax, T)
 
         for β in βrange(T)
             expiβ = cis(β)
 
             # Make sure we're checking the size of P̄ against nmax
-            @test_throws ArgumentError ALFcompute!(P̄, expiβ, nmax+1, recursion_coefficients)
+            @test_throws ArgumentError Deprecated.ALFcompute!(P̄, expiβ, nmax+1, recursion_coefficients)
 
-            ALFcompute!(P̄, expiβ, nmax, recursion_coefficients)
-            ALFcompute!(P̄′, expiβ, nmax)
-            P̄″ = ALFcompute(expiβ, nmax)
+            Deprecated.ALFcompute!(P̄, expiβ, nmax, recursion_coefficients)
+            Deprecated.ALFcompute!(P̄′, expiβ, nmax)
+            P̄″ = Deprecated.ALFcompute(expiβ, nmax)
             @test eltype(P̄″) === eltype(P̄)
 
             offset = -1

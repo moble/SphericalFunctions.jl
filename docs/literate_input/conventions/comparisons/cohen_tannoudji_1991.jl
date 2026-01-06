@@ -119,8 +119,8 @@ end  # module CohenTannoudji
 # are singular at the poles, so we avoid evaluating there.
 for (θ, ϕ) ∈ θϕrange(; avoid_poles=ϵₐ/40)
     for (ℓ, m) ∈ ℓmrange(ℓₘₐₓ)
-        @test CohenTannoudji.Y₁(ℓ, m, θ, ϕ) ≈ SphericalFunctions.Y(ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
-        @test CohenTannoudji.Y₂(ℓ, m, θ, ϕ) ≈ SphericalFunctions.Y(ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+        @test CohenTannoudji.Y₁(ℓ, m, θ, ϕ) ≈ SphericalFunctions.Deprecated.Y(ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+        @test CohenTannoudji.Y₂(ℓ, m, θ, ϕ) ≈ SphericalFunctions.Deprecated.Y(ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+

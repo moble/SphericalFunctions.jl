@@ -134,7 +134,7 @@ sₘₐₓ = 2
 # normalization differences, which are the most likely source of error.
 for (θ, ϕ) ∈ θϕrange()
     for (s, ℓ, m) ∈ sℓmrange(ℓₘₐₓ, sₘₐₓ)
-        @test NINJA.ₛYₗₘ(s, ℓ, m, θ, ϕ) ≈ SphericalFunctions.Y(s, ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+        @test NINJA.ₛYₗₘ(s, ℓ, m, θ, ϕ) ≈ SphericalFunctions.Deprecated.Y(s, ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
@@ -142,7 +142,7 @@ end
 # Finally, we compare the Wigner ``d`` matrix to the `SphericalFunctions` package.
 for ι ∈ θrange()
     for (ℓ, m′, m) ∈ ℓm′mrange(ℓₘₐₓ)
-        @test NINJA.d(ℓ, m′, m, ι) ≈ SphericalFunctions.d(ℓ, m′, m, ι) atol=ϵₐ rtol=ϵᵣ
+        @test NINJA.d(ℓ, m′, m, ι) ≈ SphericalFunctions.Deprecated.d(ℓ, m′, m, ι) atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+

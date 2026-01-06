@@ -149,6 +149,7 @@ end  # @testmodule Sakurai
 @testitem "Sakurai conventions" setup=[Utilities, Sakurai] begin
     using Random
     using Quaternionic: from_spherical_coordinates
+    using SphericalFunctions: Deprecated
 
     Random.seed!(1234)
     const T = Float64
@@ -179,7 +180,7 @@ end  # @testmodule Sakurai
 
             # Compare to SphericalFunctions
             let s=0
-                Y = ₛ𝐘(s, ℓₘₐₓ, T, [from_spherical_coordinates(θ, ϕ)])
+                Y = Deprecated.ₛ𝐘(s, ℓₘₐₓ, T, [from_spherical_coordinates(θ, ϕ)])
                 i = 1
                 for ℓ in 0:ℓₘₐₓ
                     for m in -ℓ:ℓ
@@ -196,7 +197,7 @@ end  # @testmodule Sakurai
         for α ∈ αrange(T)
             for β ∈ βrange(T)
                 for γ ∈ γrange(T)
-                    D = D_matrices(α, β, γ, ℓₘₐₓ)
+                    D = Deprecated.D_matrices(α, β, γ, ℓₘₐₓ)
                     i = 1
                     for j in 0:ℓₘₐₓ
                         for m′ in -j:j
