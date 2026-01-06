@@ -249,6 +249,6 @@ Similarly ``\bar{\eth}`` — and ``R_\pm`` of course — obey this more
 ## Docstrings
 
 ```@autodocs
-Modules = [SphericalFunctions]
-Pages   = ["operators.jl"]
+Modules = [SphericalFunctions, SphericalFunctions.Deprecated]
+Pages   = ["deprecated/operators.jl"]
 ```

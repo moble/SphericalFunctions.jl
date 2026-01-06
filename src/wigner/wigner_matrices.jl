@@ -105,7 +105,7 @@ end
 
 
 # @testitem "Test WignerDsize" setup=[WignerDUtilities] begin
-#     import SphericalFunctions.Redesign: WignerDsize
+#     import SphericalFunctions: WignerDsize
 
 #     for ℓₘₐₓ ∈ 0:8
 #         @test WignerDsize(ℓₘₐₓ, 0, 0) == ℓₘₐₓ + 1
@@ -194,7 +194,7 @@ end
 
 
 # @testitem "Test WignerDMatrices index" setup=[WignerDUtilities] begin
-#     import SphericalFunctions.Redesign: WignerDMatrices, index
+#     import SphericalFunctions: WignerDMatrices, index
 
 #     for ℓₘₐₓ ∈ 0:8
 #         for mₘₐₓ ∈ 0:ℓₘₐₓ
@@ -248,7 +248,7 @@ end
 
 
 # @testitem "Test WignerDMatrices indices" setup=[WignerDUtilities] begin
-#     import SphericalFunctions.Redesign: WignerDMatrices, index
+#     import SphericalFunctions: WignerDMatrices, index
 
 #     for ℓₘₐₓ ∈ 0:8
 #         for mₘₐₓ ∈ 0:ℓₘₐₓ

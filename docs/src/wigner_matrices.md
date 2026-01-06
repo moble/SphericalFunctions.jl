@@ -1,5 +1,9 @@
 # Wigner's ``𝔇`` and ``d`` matrices
 
+```@meta
+CurrentModule = SphericalFunctions.Deprecated
+```
+
 Wigner's ``𝔇`` matrices — and to a lesser extent, the related ``d`` matrices —
 are extremely important in the theory of rotations.  Each element is, itself, a
 special function of the rotation group: in particular, an eigenfunction of [the
@@ -14,6 +18,7 @@ The actual computations can be done with the [`D_matrices`](@ref) function:
 ```julia
 using Quaternionic
 using SphericalFunctions
+using SphericalFunctions.Deprecated
 
 R = randn(RotorF64)
 ℓₘₐₓ = 8
@@ -47,6 +52,7 @@ which can be computed directly in some cases), and the output is real-valued:
 ```julia
 using Quaternionic
 using SphericalFunctions
+using SphericalFunctions.Deprecated
 
 β = π * rand(Float64)
 ℓₘₐₓ = 8

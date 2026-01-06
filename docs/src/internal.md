@@ -11,7 +11,7 @@ harmonics ``{}_{s}Y_{\ell,m}``, as well as `map2salm` functions.
 
 ```@autodocs
 Modules = [SphericalFunctions]
-Pages   = ["Hrecursion.jl"]
+Pages   = ["deprecated/Hrecursion.jl"]
 ```
 
 Internally, the ``H`` recursion relies on calculation of the Associated Legendre
@@ -19,15 +19,15 @@ Functions (ALFs), which can also be called on their own:
 
 ```@autodocs
 Modules = [SphericalFunctions]
-Pages   = ["associated_legendre.jl"]
+Pages   = ["deprecated/associated_legendre.jl"]
 ```
 
 The function ``{}_{s}\lambda_{\ell,m}`` is defined as essentially ``{}_{s}Y_{\ell,0}``, and is important internally for computing the ALFs.  We have some important utilities for computing it:
 
 ```@docs
-SphericalFunctions.λ_recursion_initialize
-SphericalFunctions.λ_iterator
-SphericalFunctions.AlternatingCountdown
+SphericalFunctions.Deprecated.λ_recursion_initialize
+SphericalFunctions.Deprecated.λ_iterator
+SphericalFunctions.Deprecated.AlternatingCountdown
 ```
 
 
@@ -36,26 +36,26 @@ SphericalFunctions.AlternatingCountdown
 
 Various `d`, `D`, and `sYlm` functions are important in the main API.  Their
 names and signatures have been tweaked from older versions of this package.  The
-only one with remaining documentation is [`ₛ𝐘`](@ref), which could probably be
-replaced by [`sYlm_values`](@ref), except that the default pixelization is
+only one with remaining documentation is [`ₛ𝐘`](@ref SphericalFunctions.Deprecated.ₛ𝐘), which could probably be
+replaced by [`sYlm_values`](@ref SphericalFunctions.Deprecated.sYlm_values), except that the default pixelization is
 [`golden_ratio_spiral_rotors`](@ref), which makes it very convenient for
-interacting with [`SSHT`](@ref).
+interacting with [`SSHT`](@ref SphericalFunctions.Deprecated.SSHT).
 
 ```@docs
-ₛ𝐘
-SphericalFunctions.Y
-SphericalFunctions.d
-SphericalFunctions.D
+SphericalFunctions.Deprecated.ₛ𝐘
+SphericalFunctions.Deprecated.Y
+SphericalFunctions.Deprecated.d
+SphericalFunctions.Deprecated.D
 ```
 
 
 # Transformation
 
-The newer [`SSHT`](@ref) interface is more efficient for most purposes, but this
+The newer [`SSHT`](@ref SphericalFunctions.Deprecated.SSHT) interface is more efficient for most purposes, but this
 package used to use functions named `map2salm`, which is still present, but may
 be deprecated.
 
 ```@autodocs
-Modules = [SphericalFunctions]
-Pages   = ["map2salm.jl"]
+Modules = [SphericalFunctions, SphericalFunctions.Deprecated]
+Pages   = ["deprecated/map2salm.jl"]
 ```

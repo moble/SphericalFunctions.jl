@@ -1,5 +1,9 @@
 # ``{}_{s}Y_{\ell,m}`` functions
 
+```@meta
+CurrentModule = SphericalFunctions.Deprecated
+```
+
 The spin-weighted spherical harmonics are an [important set of functions defined
 on](@cite Boyle_2016) the rotation group ``𝐒𝐎(3)``, or more generally, the
 spin group ``𝐒𝐩𝐢𝐧(3)`` that covers it.  They are eigenfunctions of [the
@@ -22,6 +26,7 @@ matrices](@ref):
 ```julia
 using Quaternionic
 using SphericalFunctions
+using SphericalFunctions.Deprecated
 
 R = randn(RotorF64)
 ℓₘₐₓ = 8
