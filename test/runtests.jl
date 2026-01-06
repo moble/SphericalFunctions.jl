@@ -67,8 +67,8 @@ function filter(testitem)
     end
 
     for skip ∈ skip_tags
-        if tag ∈ tags
-            @info "Skipping test '$name' tagged '$tag' due to skip filter."
+        if skip ∈ tags
+            @info "Skipping test '$name' tagged '$skip' due to skip filter."
             return false
         end
     end

@@ -104,6 +104,7 @@ end # @testmodule Wigner
 @testitem "Wigner conventions" setup=[Utilities, Wigner] begin
     using Random
     using Quaternionic: from_spherical_coordinates
+    using SphericalFunctions: Deprecated
 
     Random.seed!(1234)
     const T = Float64
@@ -116,7 +117,7 @@ end # @testmodule Wigner
         for α ∈ αrange(T)
             for β ∈ βrange(T)
                 for γ ∈ γrange(T)
-                    D = D_matrices(α, β, γ, ℓₘₐₓ)
+                    D = Deprecated.D_matrices(α, β, γ, ℓₘₐₓ)
                     i = 1
                     for j in 0:ℓₘₐₓ
                         for m′ in -j:j

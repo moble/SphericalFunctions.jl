@@ -1,5 +1,5 @@
 @testitem "HWedge" setup=[EncodeDecode] begin
-    using SphericalFunctions.Redesign: HWedge, HWedge_size, Nᵣ, ℓ, ℓₘᵢₙ, m′ₘᵢₙ, m′ₘₐₓ
+    using SphericalFunctions: HWedge, HWedge_size, Nᵣ, ℓ, ℓₘᵢₙ, m′ₘᵢₙ, m′ₘₐₓ
     using .EncodeDecode: encode, decode
 
     # We will fill the HWedge with integers that encode their indices.  By iterating over

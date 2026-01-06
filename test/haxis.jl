@@ -1,5 +1,5 @@
 @testitem "HAxis" setup=[EncodeDecode] begin
-    using SphericalFunctions.Redesign: HAxis, Nᵣ, ℓ, ℓₘᵢₙ, maxℓ, m′ₘᵢₙ, m′ₘₐₓ, mₘᵢₙ, mₘₐₓ
+    using SphericalFunctions: HAxis, Nᵣ, ℓ, ℓₘᵢₙ, maxℓ, m′ₘᵢₙ, m′ₘₐₓ, mₘᵢₙ, mₘₐₓ
     using .EncodeDecode: encode, decode
 
     # HAxis stores only the m′=ℓₘᵢₙ axis (0 or 1/2), with m ranging from ℓₘᵢₙ to ℓₘₐₓ.

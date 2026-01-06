@@ -1,15 +1,9 @@
-module Redesign
-
 import Quaternionic
 import TestItems: @testitem, @testsnippet
-import FixedSizeArrays: FixedSizeArrayDefault, FixedSizeVectorDefault,  FixedSizeArray,
+import FixedSizeArrays: FixedSizeArrayDefault, FixedSizeVectorDefault, FixedSizeArray,
     FixedSizeVector
 
-# TODO: remove once this moves to SphericalFunctions proper
-import SphericalFunctions: ComplexPowers
-
-
-include("Wigner/wigner.jl")
+include("wigner/wigner.jl")
 
 
 # function WignerD(R::Quaternionic.Rotor, ℓₘₐₓ::IT, m′ₘₐₓ::IT=ℓₘₐₓ) where {IT}
@@ -26,5 +20,3 @@ include("Wigner/wigner.jl")
 # function WignerD!(D::WignerDMatrices{Complex{FT}}, R::Quaternionic.Rotor{FT}) where {FT}
 #     error("WignerD! is not yet implemented")
 # end
-
-end  # module Redesign

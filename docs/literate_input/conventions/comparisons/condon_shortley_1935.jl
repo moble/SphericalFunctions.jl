@@ -187,7 +187,7 @@ end
 # normalization differences, which are the most likely source of error.
 for (θ, ϕ) ∈ θϕrange(; avoid_poles=ϵₐ/40)
     for (ℓ, m) ∈ ℓmrange(ℓₘₐₓ)
-        @test CondonShortley.𝜙(ℓ, m, θ, ϕ) ≈ SphericalFunctions.Y(ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+        @test CondonShortley.𝜙(ℓ, m, θ, ϕ) ≈ SphericalFunctions.Deprecated.Y(ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+

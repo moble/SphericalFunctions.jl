@@ -355,7 +355,7 @@ end
 
 
 @testitem "WignerMatrix" begin
-    import SphericalFunctions.Redesign: WignerDMatrix, WignerdMatrix,
+    import SphericalFunctions: WignerDMatrix, WignerdMatrix,
         parent, ell, mpmax, mpmin, mmax, mmin, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, ℓₘᵢₙ
 
     # Check that mixed-up types throw an error

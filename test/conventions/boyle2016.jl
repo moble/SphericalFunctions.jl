@@ -144,6 +144,7 @@ end # @testmodule Boyle2016
 
 
 @testitem "WignerDElement" setup=[Boyle2016] begin
+    import SphericalFunctions: Deprecated
     using Quaternionic
     using Random
     Random.seed!(1234)
@@ -172,9 +173,9 @@ end # @testmodule Boyle2016
         for R ∈ (R′, conj(R′))
             𝔇1 = [
                 Boyle2016.WignerDElement(R, ℓ, m′, m)
-                for (ℓ, m′, m) ∈ eachrow(SphericalFunctions.WignerDrange(ℓₘₐₓ))
+                for (ℓ, m′, m) ∈ eachrow(Deprecated.WignerDrange(ℓₘₐₓ))
             ]
-            𝔇2 = D_matrices(R, ℓₘₐₓ)
+            𝔇2 = Deprecated.D_matrices(R, ℓₘₐₓ)
             @test 𝔇1 ≈ 𝔇2
         end
     end

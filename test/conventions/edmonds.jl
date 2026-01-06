@@ -117,6 +117,7 @@ end  # @testmodule Edmonds
 @testitem "Edmonds conventions" setup=[Utilities, Edmonds] begin
     using Random
     using Quaternionic: from_spherical_coordinates
+    using SphericalFunctions: Deprecated
 
     Random.seed!(1234)
     const T = Float64
@@ -142,7 +143,7 @@ end  # @testmodule Edmonds
 
             # Compare to SphericalFunctions
             let s=0
-                Y = ₛ𝐘(s, ℓₘₐₓ, T, [from_spherical_coordinates(θ, ϕ)])
+                Y = Deprecated.ₛ𝐘(s, ℓₘₐₓ, T, [from_spherical_coordinates(θ, ϕ)])
                 i = 1
                 for ℓ in 0:ℓₘₐₓ
                     for m in -ℓ:ℓ
@@ -163,7 +164,7 @@ end  # @testmodule Edmonds
                 end
 
                 for γ ∈ γrange(T)
-                    D = D_matrices(α, β, γ, ℓₘₐₓ)
+                    D = Deprecated.D_matrices(α, β, γ, ℓₘₐₓ)
                     i = 1
                     for j in 0:ℓₘₐₓ
                         for m′ in -j:j

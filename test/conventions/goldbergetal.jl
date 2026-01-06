@@ -112,6 +112,7 @@ end  # @testmodule GoldbergEtAl
 @testitem "GoldbergEtAl conventions" setup=[Utilities, GoldbergEtAl] begin
     using Random
     using Quaternionic: from_spherical_coordinates
+    using SphericalFunctions: Deprecated
 
     Random.seed!(1234)
     const T = Float64
@@ -135,7 +136,7 @@ end  # @testmodule GoldbergEtAl
 
             # Compare to SphericalFunctions Y
             for s ∈ -ℓₘₐₓ:ℓₘₐₓ
-                Y₁ = ₛ𝐘(s, ℓₘₐₓ, T, [from_spherical_coordinates(θ, ϕ)])[1,:]
+                Y₁ = Deprecated.ₛ𝐘(s, ℓₘₐₓ, T, [from_spherical_coordinates(θ, ϕ)])[1,:]
                 Y₂ = [(-1)^m * Y(s, ℓ, m, θ, ϕ) for ℓ ∈ abs(s):ℓₘₐₓ for m ∈ -ℓ:ℓ]
                 @test Y₁ ≈ Y₂ atol=ϵₐ rtol=ϵᵣ
             end
@@ -147,7 +148,7 @@ end  # @testmodule GoldbergEtAl
         for α ∈ αrange(T)
             for β ∈ βrange(T)
                 for γ ∈ γrange(T)
-                    D = D_matrices(α, β, γ, ℓₘₐₓ)
+                    D = Deprecated.D_matrices(α, β, γ, ℓₘₐₓ)
                     i = 1
                     for j in 0:ℓₘₐₓ
                         for m′ in -j:j
