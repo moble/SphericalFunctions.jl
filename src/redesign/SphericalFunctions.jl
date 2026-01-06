@@ -5,11 +5,11 @@ import TestItems: @testitem, @testsnippet
 import FixedSizeArrays: FixedSizeArrayDefault, FixedSizeVectorDefault,  FixedSizeArray,
     FixedSizeVector
 
-# TEMPORARY!!!!  Should be able to remove once this moves to SphericalFunctions proper
+# TODO: remove once this moves to SphericalFunctions proper
 import SphericalFunctions: ComplexPowers
 
 
-include("wigner/wigner.jl")
+include("Wigner/wigner.jl")
 
 
 # function WignerD(R::Quaternionic.Rotor, ℓₘₐₓ::IT, m′ₘₐₓ::IT=ℓₘₐₓ) where {IT}
