@@ -26,6 +26,9 @@ export complex_powers, complex_powers!, ComplexPowers
 include("utilities/weights.jl")
 export fejer1, fejer2, clenshaw_curtis
 
+include("utilities/operators.jl")
+export L², Lz, L₊, L₋, R², Rz, R₊, R₋, ð, ð̄
+
 include("wigner/wigner.jl")
 export AbstractWignerMatrix, WignerMatrix, WignerDMatrix, WignerdMatrix
 export WignerCalculator, WignerDCalculator, WignerdCalculator, WignerHCalculator

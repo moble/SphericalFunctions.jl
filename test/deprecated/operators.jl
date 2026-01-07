@@ -224,8 +224,8 @@ end
         @testset "$ℓₘₐₓ" for ℓₘₐₓ ∈ 4:7
             for s in -3:3
                 let ℓₘᵢₙ = 0
-                    for Oᵢ ∈ [Deprecated.Lz, Deprecated.L₊, Deprecated.L₋, Deprecated.Rz, Deprecated.R₊, Deprecated.R₋]
-                        for O² ∈ [Deprecated.L², Deprecated.R²]
+                    for Oᵢ ∈ [Lz, L₊, L₋, Rz, R₊, R₋]
+                        for O² ∈ [L², R²]
                             let O²=O²(s, ℓₘᵢₙ, ℓₘₐₓ, T),
                                 Oᵢ=Oᵢ(s, ℓₘᵢₙ, ℓₘₐₓ, T)
                                 # [O², Oᵢ] = 0
@@ -233,9 +233,9 @@ end
                             end
                         end
                     end
-                    let Lz=Array(Deprecated.Lz(s, ℓₘᵢₙ, ℓₘₐₓ, T)),
-                        L₊=Array(Deprecated.L₊(s, ℓₘᵢₙ, ℓₘₐₓ, T)),
-                        L₋=Array(Deprecated.L₋(s, ℓₘᵢₙ, ℓₘₐₓ, T))
+                    let Lz=Array(Lz(s, ℓₘᵢₙ, ℓₘₐₓ, T)),
+                        L₊=Array(L₊(s, ℓₘᵢₙ, ℓₘₐₓ, T)),
+                        L₋=Array(L₋(s, ℓₘᵢₙ, ℓₘₐₓ, T))
                         # [Lz, L₊] = L₊
                         @test Lz*L₊ - L₊*Lz ≈ L₊ atol=ϵ rtol=ϵ
                         # [Lz, L₋] = -L₋
@@ -246,39 +246,39 @@ end
                     let
                         # [Rz, R₊] = R₊
                         @test (
-                            Deprecated.Rz(s-1, ℓₘᵢₙ, ℓₘₐₓ, T)*Deprecated.R₊(s, ℓₘᵢₙ, ℓₘₐₓ, T)
-                            - Deprecated.R₊(s, ℓₘᵢₙ, ℓₘₐₓ, T)*Deprecated.Rz(s, ℓₘᵢₙ, ℓₘₐₓ, T)
-                            ≈ Deprecated.R₊(s, ℓₘᵢₙ, ℓₘₐₓ, T)
+                            Rz(s-1, ℓₘᵢₙ, ℓₘₐₓ, T)*R₊(s, ℓₘᵢₙ, ℓₘₐₓ, T)
+                            - R₊(s, ℓₘᵢₙ, ℓₘₐₓ, T)*Rz(s, ℓₘᵢₙ, ℓₘₐₓ, T)
+                            ≈ R₊(s, ℓₘᵢₙ, ℓₘₐₓ, T)
                         ) atol=ϵ rtol=ϵ
                         # [Rz, R₋] = -R₋
                         @test (
-                            Deprecated.Rz(s+1, ℓₘᵢₙ, ℓₘₐₓ, T)*Deprecated.R₋(s, ℓₘᵢₙ, ℓₘₐₓ, T)
-                            - Deprecated.R₋(s, ℓₘᵢₙ, ℓₘₐₓ, T)*Deprecated.Rz(s, ℓₘᵢₙ, ℓₘₐₓ, T)
-                            ≈ -Deprecated.R₋(s, ℓₘᵢₙ, ℓₘₐₓ, T)
+                            Rz(s+1, ℓₘᵢₙ, ℓₘₐₓ, T)*R₋(s, ℓₘᵢₙ, ℓₘₐₓ, T)
+                            - R₋(s, ℓₘᵢₙ, ℓₘₐₓ, T)*Rz(s, ℓₘᵢₙ, ℓₘₐₓ, T)
+                            ≈ -R₋(s, ℓₘᵢₙ, ℓₘₐₓ, T)
                         ) atol=ϵ rtol=ϵ
                         # [R₊, R₋] = 2Rz
                         @test (
-                            Deprecated.R₊(s+1, ℓₘᵢₙ, ℓₘₐₓ, T)*Deprecated.R₋(s, ℓₘᵢₙ, ℓₘₐₓ, T)
-                            - Deprecated.R₋(s-1, ℓₘᵢₙ, ℓₘₐₓ, T)*Deprecated.R₊(s, ℓₘᵢₙ, ℓₘₐₓ, T)
-                            ≈ 2Deprecated.Rz(s, ℓₘᵢₙ, ℓₘₐₓ, T)
+                            R₊(s+1, ℓₘᵢₙ, ℓₘₐₓ, T)*R₋(s, ℓₘᵢₙ, ℓₘₐₓ, T)
+                            - R₋(s-1, ℓₘᵢₙ, ℓₘₐₓ, T)*R₊(s, ℓₘᵢₙ, ℓₘₐₓ, T)
+                            ≈ 2Rz(s, ℓₘᵢₙ, ℓₘₐₓ, T)
                         ) atol=ϵ rtol=ϵ
                         # [Rz, ð] = -ð
                         @test (
-                            Deprecated.Rz(s+1, ℓₘᵢₙ, ℓₘₐₓ, T)*Deprecated.ð(s, ℓₘᵢₙ, ℓₘₐₓ, T)
-                            - Deprecated.ð(s, ℓₘᵢₙ, ℓₘₐₓ, T)*Deprecated.Rz(s, ℓₘᵢₙ, ℓₘₐₓ, T)
-                            ≈ -Deprecated.ð(s, ℓₘᵢₙ, ℓₘₐₓ, T)
+                            Rz(s+1, ℓₘᵢₙ, ℓₘₐₓ, T)*ð(s, ℓₘᵢₙ, ℓₘₐₓ, T)
+                            - ð(s, ℓₘᵢₙ, ℓₘₐₓ, T)*Rz(s, ℓₘᵢₙ, ℓₘₐₓ, T)
+                            ≈ -ð(s, ℓₘᵢₙ, ℓₘₐₓ, T)
                         ) atol=ϵ rtol=ϵ
                         # [Rz, ð̄] = ð̄
                         @test (
-                            Deprecated.Rz(s-1, ℓₘᵢₙ, ℓₘₐₓ, T)*Deprecated.ð̄(s, ℓₘᵢₙ, ℓₘₐₓ, T)
-                            - Deprecated.ð̄(s, ℓₘᵢₙ, ℓₘₐₓ, T)*Deprecated.Rz(s, ℓₘᵢₙ, ℓₘₐₓ, T)
-                            ≈ Deprecated.ð̄(s, ℓₘᵢₙ, ℓₘₐₓ, T)
+                            Rz(s-1, ℓₘᵢₙ, ℓₘₐₓ, T)*ð̄(s, ℓₘᵢₙ, ℓₘₐₓ, T)
+                            - ð̄(s, ℓₘᵢₙ, ℓₘₐₓ, T)*Rz(s, ℓₘᵢₙ, ℓₘₐₓ, T)
+                            ≈ ð̄(s, ℓₘᵢₙ, ℓₘₐₓ, T)
                         ) atol=ϵ rtol=ϵ
                         # [ð, ð̄] = 2Rz
                         @test (
-                            Deprecated.ð(s-1, ℓₘᵢₙ, ℓₘₐₓ, T)*Deprecated.ð̄(s, ℓₘᵢₙ, ℓₘₐₓ, T)
-                            -Deprecated.ð̄(s+1, ℓₘᵢₙ, ℓₘₐₓ, T)*Deprecated.ð(s, ℓₘᵢₙ, ℓₘₐₓ, T)
-                            ≈ 2Deprecated.Rz(s, ℓₘᵢₙ, ℓₘₐₓ, T)
+                            ð(s-1, ℓₘᵢₙ, ℓₘₐₓ, T)*ð̄(s, ℓₘᵢₙ, ℓₘₐₓ, T)
+                            -ð̄(s+1, ℓₘᵢₙ, ℓₘₐₓ, T)*ð(s, ℓₘᵢₙ, ℓₘₐₓ, T)
+                            ≈ 2Rz(s, ℓₘᵢₙ, ℓₘₐₓ, T)
                         ) atol=ϵ rtol=ϵ
                     end
                 end
@@ -296,25 +296,25 @@ end
         for s ∈ -3:3
             for ℓₘₐₓ ∈ 4:7
                 for ℓₘᵢₙ ∈ 0:min(abs(s)+1, ℓₘₐₓ)
-                    let L²=Deprecated.L²(s, ℓₘᵢₙ, ℓₘₐₓ, T),
-                        Lz=Deprecated.Lz(s, ℓₘᵢₙ, ℓₘₐₓ, T),
-                        L₊=Deprecated.L₊(s, ℓₘᵢₙ, ℓₘₐₓ, T),
-                        L₋=Deprecated.L₋(s, ℓₘᵢₙ, ℓₘₐₓ, T)
+                    let L²=L²(s, ℓₘᵢₙ, ℓₘₐₓ, T),
+                        Lz=Lz(s, ℓₘᵢₙ, ℓₘₐₓ, T),
+                        L₊=L₊(s, ℓₘᵢₙ, ℓₘₐₓ, T),
+                        L₋=L₋(s, ℓₘᵢₙ, ℓₘₐₓ, T)
                         L1 = L²
                         L2 = (L₊*L₋ .+ L₋*L₊ .+ 2Lz*Lz)/2
                         @test L1 ≈ L2 atol=ϵ rtol=ϵ
                     end
-                    let L²=Deprecated.L²(s, ℓₘᵢₙ, ℓₘₐₓ, T),
-                        R²=Deprecated.R²(s, ℓₘᵢₙ, ℓₘₐₓ, T)
+                    let L²=L²(s, ℓₘᵢₙ, ℓₘₐₓ, T),
+                        R²=R²(s, ℓₘᵢₙ, ℓₘₐₓ, T)
                         @test L² ≈ R² atol=ϵ rtol=ϵ
                     end
                     let
                         # R² = (2Rz² + R₊R₋ + R₋R₊)/2
-                        R1 = Deprecated.R²(s, ℓₘᵢₙ, ℓₘₐₓ, T)
+                        R1 = R²(s, ℓₘᵢₙ, ℓₘₐₓ, T)
                         R2 = T.(Array(
-                            Deprecated.R₊(s+1, ℓₘᵢₙ, ℓₘₐₓ, T) * Deprecated.R₋(s, ℓₘᵢₙ, ℓₘₐₓ, T)
-                            .+ Deprecated.R₋(s-1, ℓₘᵢₙ, ℓₘₐₓ, T) * Deprecated.R₊(s, ℓₘᵢₙ, ℓₘₐₓ, T)
-                            .+ 2Deprecated.Rz(s, ℓₘᵢₙ, ℓₘₐₓ, T) * Deprecated.Rz(s, ℓₘᵢₙ, ℓₘₐₓ, T)
+                            R₊(s+1, ℓₘᵢₙ, ℓₘₐₓ, T) * R₋(s, ℓₘᵢₙ, ℓₘₐₓ, T)
+                            .+ R₋(s-1, ℓₘᵢₙ, ℓₘₐₓ, T) * R₊(s, ℓₘᵢₙ, ℓₘₐₓ, T)
+                            .+ 2Rz(s, ℓₘᵢₙ, ℓₘₐₓ, T) * Rz(s, ℓₘᵢₙ, ℓₘₐₓ, T)
                         ) / 2)
                         @test R1 ≈ R2 atol=ϵ rtol=ϵ
                     end
@@ -342,11 +342,11 @@ end
                         for m in -ℓ:ℓ
                             Y[:] .= zero(T)
                             Y[Deprecated.Yindex(ℓ, m, ℓₘᵢₙ)] = one(T)
-                            ðY = 𝒯₊ * (Deprecated.ð(s, ℓₘᵢₙ, ℓₘₐₓ, T) * Y)[i₊:end]
+                            ðY = 𝒯₊ * (ð(s, ℓₘᵢₙ, ℓₘₐₓ, T) * Y)[i₊:end]
                             Y₊ = 𝒯₊ * Y[i₊:end]
                             c₊ = ℓ < abs(s+1) ? zero(T) : √T((ℓ-s)*(ℓ+s+1))
                             @test ðY ≈ c₊ * Y₊ atol=ϵ rtol=ϵ
-                            ð̄Y = 𝒯₋ * (Deprecated.ð̄(s, ℓₘᵢₙ, ℓₘₐₓ, T) * Y)[i₋:end]
+                            ð̄Y = 𝒯₋ * (ð̄(s, ℓₘᵢₙ, ℓₘₐₓ, T) * Y)[i₋:end]
                             Y₋ = 𝒯₋ * Y[i₋:end]
                             c₋ = ℓ < abs(s-1) ? zero(T) : -√T((ℓ+s)*(ℓ-s+1))
                             @test ð̄Y ≈ c₋ * Y₋ atol=ϵ rtol=ϵ
