@@ -49,14 +49,14 @@ makedocs(
     ),
     pages = [
         "index.md",
-        "wigner_matrices.md",
-        "sYlm.md",
-        "transformations.md",
-        "operators.md",
-        "utilities.md",
-        "API" => [
-            "internal.md",
-            "functions.md",
+        "Background" => [
+        ],
+        "Interface" => [
+            "interface/wigner_matrices.md",
+            "interface/sYlm.md",
+            "interface/transformations.md",
+            "interface/operators.md",
+            "interface/utilities.md",
         ],
         "Conventions" => [
             "conventions/summary.md",
@@ -76,6 +76,10 @@ makedocs(
                 sort(readdir(joinpath(docs_src_dir, "conventions", "calculations")))
             ),
         ],
+        "API" => [
+            "api/internal.md",
+            "api/functions.md",
+        ],
         "Notes" => map(
             s -> joinpath("notes", s),
             sort(readdir(joinpath(docs_src_dir, "notes")))
@@ -83,6 +87,9 @@ makedocs(
         "Development" => [
             "development/index.md",
             "development/literate_testitems.md",
+        ],
+        "Deprecated" => [
+            "deprecated/index.md",
         ],
         "References" => "references.md",
     ],
