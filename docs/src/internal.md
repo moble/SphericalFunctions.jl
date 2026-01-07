@@ -10,7 +10,7 @@ needed for Wigner's ``d`` and ``𝔇`` matrices, and the spin-weighted spherical
 harmonics ``{}_{s}Y_{\ell,m}``, as well as `map2salm` functions.
 
 ```@autodocs
-Modules = [SphericalFunctions]
+Modules = [SphericalFunctions.Deprecated]
 Pages   = ["deprecated/Hrecursion.jl"]
 ```
 
@@ -18,7 +18,7 @@ Internally, the ``H`` recursion relies on calculation of the Associated Legendre
 Functions (ALFs), which can also be called on their own:
 
 ```@autodocs
-Modules = [SphericalFunctions]
+Modules = [SphericalFunctions.Deprecated]
 Pages   = ["deprecated/associated_legendre.jl"]
 ```
 

@@ -80,3 +80,15 @@ d_matrices!
 d_prep
 d_iterator
 ```
+
+
+## Workspaces
+
+```@meta
+CurrentModule = SphericalFunctions
+```
+
+```@docs
+HWedge
+HAxis
+```
