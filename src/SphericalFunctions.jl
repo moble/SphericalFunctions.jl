@@ -6,8 +6,8 @@ using Quaternionic: Quaternionic, from_spherical_coordinates
 using StaticArrays: @SVector
 using SpecialFunctions
 using DoubleFloats
-using FixedSizeArrays: FixedSizeArrayDefault, FixedSizeVectorDefault, FixedSizeArray,
-    FixedSizeVector
+using LinearAlgebra: Diagonal, Bidiagonal
+using FixedSizeArrays: FixedSizeVectorDefault, FixedSizeVector
 
 
 # Base.Math.IEEEFloat is not public API, so we just define our own
