@@ -154,10 +154,10 @@ end
 
 Cover the sphere 𝕊² with pixels given by the [DriscollHealy_1994](@citet) equiangular grid:
 
-> Let ``f(\theta, \phi)`` be a band-limited function such that ``\hat{f}(l, m) = 0`` for ``l
-> ≥ b``.  We sample the function at the equiangular grid of points ``(\theta_i, \phi_j)``,
-> ``i = 0, \ldots, 2b-1``, ``j = 0, \ldots, 2b-1``, where ``\theta_i = \pi i/2b`` and
-> ``\phi_j = \pi j/b``.
+> Let ``f(θ, ϕ)`` be a band-limited function such that ``\hat{f}(l, m) = 0`` for ``l
+> ≥ b``.  We sample the function at the equiangular grid of points ``(θ_i, ϕ_j)``,
+> ``i = 0, \ldots, 2b-1``, ``j = 0, \ldots, 2b-1``, where ``θ_i = \pi i/2b`` and
+> ``ϕ_j = \pi j/b``.
 
 The returned quantity is a vector of 2-SVectors providing the spherical coordinates of each
 pixel.  See also [`driscoll_healy_rotors`](@ref) for the corresponding `Rotor`s.
@@ -201,11 +201,11 @@ driscoll_healy_rotors(ℓₘₐₓ, ::Type{T}=Float64) where T = driscoll_healy_
 
 Cover the sphere 𝕊² with pixels given by the [McEwenWiaux_2011](@citet) equiangular grid:
 
-> We adopt an equiangular sampling of the sphere with sample positions given by ``\theta_t =
+> We adopt an equiangular sampling of the sphere with sample positions given by ``θ_t =
 > \frac{\pi(2t+1)}{2ℓ_{\max}-1}``, where ``t ∈ \{0, 1, \dotsc, ℓ_\mathrm{max}-1\}``
-> and ``\phi_p = \frac{2 \pi p}{2ℓ_\mathrm{max}-1}``, where ``p ∈ \{0, 1, \dotsc,
-> 2ℓ_\mathrm{max}-2\}``.  In order to extend the ``\theta`` domain to ``[0, 2\pi)`` we
-> simply extend the domain of the ``\theta`` index to include ``\{ℓ_\mathrm{max},
+> and ``ϕ_p = \frac{2 \pi p}{2ℓ_\mathrm{max}-1}``, where ``p ∈ \{0, 1, \dotsc,
+> 2ℓ_\mathrm{max}-2\}``.  In order to extend the ``θ`` domain to ``[0, 2\pi)`` we
+> simply extend the domain of the ``θ`` index to include ``\{ℓ_\mathrm{max},
 > ℓ_\mathrm{max}+1, \dotsc, 2ℓ_\mathrm{max}-1\}``.
 
 !!! note

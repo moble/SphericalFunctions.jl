@@ -22,7 +22,7 @@ import .NaiveFactorials: ❗
 Eq. (3.9) of [Goldberg et al.](@cite GoldbergEtAl_1967),
 implementing
 ```math
-    D^j_{m',m}(\alpha, \beta, \gamma).
+    D^j_{m',m}(α, β, γ).
 ```
 """
 function D(j, m′, m, α, β, γ)
@@ -63,7 +63,7 @@ end
 
 Eq. (3.1) of [Goldberg et al.](@cite GoldbergEtAl_1967), implementing
 ```math
-    {}_sY_{ℓ,m}(\theta, \phi).
+    {}_sY_{ℓ,m}(θ, ϕ).
 ```
 
 Note that there is a difference in conventions between the ``Y`` of Goldberg et al. and

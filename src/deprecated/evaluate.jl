@@ -14,7 +14,7 @@ using Quaternionic: Quaternionic, AbstractQuaternion, to_euler_phases
     d_matrices(β, ℓₘₐₓ)
     d_matrices(expiβ, ℓₘₐₓ)
 
-Compute Wigner's ``d^{(ℓ)}`` matrices with elements ``d^{(ℓ)}_{m',m}(\beta)`` for all
+Compute Wigner's ``d^{(ℓ)}`` matrices with elements ``d^{(ℓ)}_{m',m}(β)`` for all
 ``ℓ \leq ℓ_\mathrm{max}``.  The ``d`` matrices are sometimes called the "reduced"
 Wigner matrices, in contrast to the full ``𝔇`` matrices.
 
@@ -35,7 +35,7 @@ d_matrices(β::Real, ℓₘₐₓ) = d_matrices(cis(β), ℓₘₐₓ)
     d_matrices!(d, β, ℓₘₐₓ)
     d_matrices!(d, expiβ, ℓₘₐₓ)
 
-Compute Wigner's ``d^{(ℓ)}`` matrices with elements ``d^{(ℓ)}_{m',m}(\beta)`` for all
+Compute Wigner's ``d^{(ℓ)}`` matrices with elements ``d^{(ℓ)}_{m',m}(β)`` for all
 ``ℓ \leq ℓ_\mathrm{max}``.  The ``d`` matrices are sometimes called the "reduced"
 Wigner matrices, in contrast to the full ``𝔇`` matrices.
 
@@ -200,7 +200,7 @@ end
     D_matrices(R, ℓₘₐₓ)
     D_matrices(α, β, γ, ℓₘₐₓ)
 
-Compute Wigner's 𝔇 matrices ``𝔇^{(ℓ)}_{m',m}(\beta)`` for all ``ℓ \leq
+Compute Wigner's 𝔇 matrices ``𝔇^{(ℓ)}_{m',m}(β)`` for all ``ℓ \leq
 ℓ_\mathrm{max}``.
 
 See [`D_matrices!`](@ref) for details about the input and output values.
@@ -230,7 +230,7 @@ end
     D_matrices!(D, R, ℓₘₐₓ)
     D_matrices!(D, α, β, γ, ℓₘₐₓ)
 
-Compute Wigner's 𝔇 matrices ``𝔇^{(ℓ)}_{m',m}(\beta)`` for all ``ℓ \leq
+Compute Wigner's 𝔇 matrices ``𝔇^{(ℓ)}_{m',m}(β)`` for all ``ℓ \leq
 ℓ_\mathrm{max}``.
 
 In all cases, the result is returned in a 1-dimensional array ordered as
@@ -656,7 +656,7 @@ package's spherical harmonics and other references' more clear.  It is inefficie
 terms of memory and computation time, and should generally not be used in production code.
 
 Computes a single (complex) value of the spherical harmonic ``(ℓ, m)`` at the given
-spherical coordinate ``(\theta, \phi)``.
+spherical coordinate ``(θ, ϕ)``.
 """
 function Y(s::Int, ℓ::Int, m::Int, θ, ϕ)
     θ, ϕ = promote(θ, ϕ)

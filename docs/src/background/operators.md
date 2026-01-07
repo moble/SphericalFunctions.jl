@@ -116,7 +116,7 @@ The commutator relations for ``L`` are consistent — except for the
 differing use of ``\hbar`` — with the usual relations from quantum
 mechanics:
 ```math
-\left[ L_j, L_k \right] = i \hbar \sum_{l=1}^{3} \varepsilon_{jkl} L_l.
+\left[ L_j, L_k \right] = i \hbar \sum_{l=1}^{3} ε_{jkl} L_l.
 ```
 Here, ``j``, ``k``, and ``l`` are indices that run from 1 to 3, and
 index the set of basis vectors ``(\hat{x}, \hat{y}, \hat{z})``.  If we
@@ -124,7 +124,7 @@ represent an arbitrary basis vector as ``\hat{e}_j``, then the
 quaternion commutator ``[a,b]`` in the expression for ``[L_a, L_b]``
 becomes
 ```math
-[\hat{e}_j, \hat{e}_k] = 2 \sum_{l=1}^{3} \varepsilon_{jkl} \hat{e}_l.
+[\hat{e}_j, \hat{e}_k] = 2 \sum_{l=1}^{3} ε_{jkl} \hat{e}_l.
 ```
 Plugging this into the general expression ``[L_a, L_b] = \frac{i}{2}
 L_{[a,b]}``, we obtain (up to the factor of ``\hbar``) the version
@@ -204,7 +204,7 @@ function ``f`` under the action of this operator:[^2]
 &=
 \sum_{ℓ',m'} f_{ℓ',m'}\, \sqrt{(ℓ'-m')(ℓ'+m'+1)} \int {}_{s}Y_{ℓ',m'+1}(R)\, {}_{s}\bar{Y}_{ℓ,m}(R)\, dR \\
 &=
-\sum_{ℓ',m'} f_{ℓ',m'}\, \sqrt{(ℓ'-m')(ℓ'+m'+1)} \delta_{ℓ,ℓ'} \delta_{m,m'+1} \\
+\sum_{ℓ',m'} f_{ℓ',m'}\, \sqrt{(ℓ'-m')(ℓ'+m'+1)} δ_{ℓ,ℓ'} δ_{m,m'+1} \\
 &=
 f_{ℓ,m-1}\, \sqrt{(ℓ-m+1)(ℓ+m)}
 \end{aligned}
@@ -238,7 +238,7 @@ present for the spin-raising and -lowering operators:
 &=
 \sum_{ℓ',m'} f_{ℓ',m'}\, \sqrt{(ℓ'-s)(ℓ'+s+1)} \int {}_{s+1}Y_{ℓ',m'}(R)\, {}_{s+1}\bar{Y}_{ℓ,m}(R)\, dR \\
 &=
-\sum_{ℓ',m'} f_{ℓ',m'}\, \sqrt{(ℓ'-s)(ℓ'+s+1)} \delta_{ℓ,ℓ'} \delta_{m,m'} \\
+\sum_{ℓ',m'} f_{ℓ',m'}\, \sqrt{(ℓ'-s)(ℓ'+s+1)} δ_{ℓ,ℓ'} δ_{m,m'} \\
 &=
 f_{ℓ,m}\, \sqrt{(ℓ-s)(ℓ+s+1)}
 \end{aligned}

@@ -23,15 +23,15 @@ has slowly growing errors through ``L = 4096``.
 The EKKM analysis looks like the following (with some notational
 changes).  We begin by defining
 ```math
-  {}_{s}\tilde{f}_{\theta}(m) := \int_0^{2\pi} {}_sf(\theta, \phi)\, e^{-im\phi}\, d\phi.
+  {}_{s}\tilde{f}_{θ}(m) := \int_0^{2\pi} {}_sf(θ, ϕ)\, e^{-imϕ}\, dϕ.
 ```
 We will denote the vector of these quantities for all values of
-``\theta`` as ``{}_{s}\tilde{𝐟}_m``.  Inserting the
-``{}_sY_{ℓ,m}`` expansion for ``{}_sf(\theta, \phi)``, and
+``θ`` as ``{}_{s}\tilde{𝐟}_m``.  Inserting the
+``{}_sY_{ℓ,m}`` expansion for ``{}_sf(θ, ϕ)``, and
 performing the integration using orthogonality of complex
 exponentials, we can find that
 ```math
-  {}_{s}\tilde{f}_{\theta}(m) = (-1)^s\, 2\pi \sum_{ℓ=\Delta}^L \sqrt{\frac{2ℓ+1}{4\pi}}\, d_{m,-s}^{ℓ}(\theta)\, {}_sf_{ℓ,m}.
+  {}_{s}\tilde{f}_{θ}(m) = (-1)^s\, 2\pi \sum_{ℓ=\Delta}^L \sqrt{\frac{2ℓ+1}{4\pi}}\, d_{m,-s}^{ℓ}(θ)\, {}_sf_{ℓ,m}.
 ```
 Now, denoting the vector of ``{}_sf_{ℓ,m}`` for all values of
 ``ℓ`` as ``{}_s𝐟_m``, we can write this as a matrix-vector
@@ -56,26 +56,26 @@ additional sum over ``|m'|>|m|``.  Or perhaps more precisely, the
 first equation isn't actually what we implement.  It should look more
 like this:
 ```math
-  {}_{s}\tilde{f}_{j}(m) := \sum_{k=0}^{2j} {}_sf(\theta_j, \phi_k)\, e^{-im\phi_k}\, \Delta \phi,
+  {}_{s}\tilde{f}_{j}(m) := \sum_{k=0}^{2j} {}_sf(θ_j, ϕ_k)\, e^{-imϕ_k}\, \Delta ϕ,
 ```
-where ``\phi_k = \frac{2\pi k}{2j+1}``, and ``\Delta \phi =
+where ``ϕ_k = \frac{2\pi k}{2j+1}``, and ``\Delta ϕ =
 \frac{2\pi}{2j+1}``.  (Recall the subtle notational distinction common
 in time-frequency analysis that ``\tilde{s}(t_j) = \Delta t
 \tilde{s}_j``, which would suggest we use ``{}_{s}\tilde{f}_{j}(m) =
-\Delta \phi\, {}_{s}\tilde{f}_{j,m}``.)  Next, we can insert the
-expansion for ``{}_sf(\theta, \phi)``:
+\Delta ϕ\, {}_{s}\tilde{f}_{j,m}``.)  Next, we can insert the
+expansion for ``{}_sf(θ, ϕ)``:
 
 ```math
 \begin{aligned}
     {}_{s}\tilde{f}_{j}(m)
-    &= \sum_{k=0}^{2j} \sum_{ℓ,m'} {}_sf_{ℓ,m'}\, {}_sY_{ℓ,m'}(\theta_j, \phi_k)\, e^{-im\phi_k}\, \Delta \phi \\
-    &= \sum_{k=0}^{2j} \sum_{ℓ,m'} {}_sf_{ℓ,m'}\, (-1)^{s}\, \sqrt{\frac{2ℓ+1}{4\pi}}\, d_{ℓ}^{m',-s}(\theta_j) e^{i m' \phi_k}\, e^{-im\phi_k}\, \frac{2\pi}{2j+1} \\
-    &= (-1)^{s}\, \frac{2\pi}{2j+1} \sum_{ℓ,m'} {}_sf_{ℓ,m'}\, \sqrt{\frac{2ℓ+1}{4\pi}}\, d_{ℓ}^{m',-s}(\theta_j) \sum_{k=0}^{2j}e^{i (m'-m) \phi_k}.
+    &= \sum_{k=0}^{2j} \sum_{ℓ,m'} {}_sf_{ℓ,m'}\, {}_sY_{ℓ,m'}(θ_j, ϕ_k)\, e^{-imϕ_k}\, \Delta ϕ \\
+    &= \sum_{k=0}^{2j} \sum_{ℓ,m'} {}_sf_{ℓ,m'}\, (-1)^{s}\, \sqrt{\frac{2ℓ+1}{4\pi}}\, d_{ℓ}^{m',-s}(θ_j) e^{i m' ϕ_k}\, e^{-imϕ_k}\, \frac{2\pi}{2j+1} \\
+    &= (-1)^{s}\, \frac{2\pi}{2j+1} \sum_{ℓ,m'} {}_sf_{ℓ,m'}\, \sqrt{\frac{2ℓ+1}{4\pi}}\, d_{ℓ}^{m',-s}(θ_j) \sum_{k=0}^{2j}e^{i (m'-m) ϕ_k}.
 \end{aligned}
 ```
 We can evaluate this last sum easily:
 ```math
-  \sum_{k=0}^{2j}e^{i (m'-m) \phi_k} = \begin{cases}
+  \sum_{k=0}^{2j}e^{i (m'-m) ϕ_k} = \begin{cases}
     2j+1 & m'-m = n(2j+1)\ \mathrm{for}\ n\in\mathbb{Z}, \\
     0 & \mathrm{otherwise}.
   \end{cases}
@@ -84,7 +84,7 @@ This allows us to simplify as
 
 ```math
 \begin{aligned}
-    {}_{s}\tilde{f}_{j}(m) = (-1)^{s}\, 2\pi \sum_{ℓ,m'} {}_sf_{ℓ,m'}\, \sqrt{\frac{2ℓ+1}{4\pi}}\, d_{ℓ}^{m',-s}(\theta_j),
+    {}_{s}\tilde{f}_{j}(m) = (-1)^{s}\, 2\pi \sum_{ℓ,m'} {}_sf_{ℓ,m'}\, \sqrt{\frac{2ℓ+1}{4\pi}}\, d_{ℓ}^{m',-s}(θ_j),
 \end{aligned}
 ```
 where ``m'`` ranges over ``m + n(2j+1)`` for all ``n\in \mathbb{Z}`` such that ``|m + n(2j+1)| \leq ℓ``
@@ -136,7 +136,7 @@ structure to solve the linear equation in a more piecewise fashion,
 with fairly low memory overhead.  Essentially, we start with the
 highest-``|k|`` values, and solve for the corresponding
 highest-``|m|`` values.  Those harmonics will alias to other
-frequencies in ``\theta_j`` rings with ``j < |k|``.  But crucially, we
+frequencies in ``θ_j`` rings with ``j < |k|``.  But crucially, we
 know *how* they alias, and can simply remove them from the Fourier
 transforms of those rings.  We then repeat, solving for the
 next-highest ``|k|`` values, and so on.

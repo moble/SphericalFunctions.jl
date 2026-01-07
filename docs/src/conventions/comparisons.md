@@ -25,7 +25,7 @@ actually used by any of these sources:
 * Spin-weighted spherical harmonics
   - Behavior under rotation
 * Wigner D-matrices
-  - Representation à la $\langle ℓ, m' | e^{-i \alpha J_z} e^{-i \beta J_y} e^{-i \gamma J_z} | ℓ, m \rangle$
+  - Representation à la $\langle ℓ, m' | e^{-i α J_z} e^{-i β J_y} e^{-i γ J_z} | ℓ, m \rangle$
   - Rotation of spherical harmonics
   - Order of indices
   - Conjugation
@@ -74,47 +74,47 @@ The upshot is that his definition agrees with ours, though he uses the
 "active" definition style.  That is, the rotations are to be performed
 successively in order:
 
-> 1. A rotation ``\alpha(0 \leq \alpha < 2\pi)`` about the ``z``-axis,
+> 1. A rotation ``α(0 \leq α < 2\pi)`` about the ``z``-axis,
 >    bringing the frame of axes from the initial position ``S`` into
 >    the position ``S'``.  The axis of this rotation is commonly
 >    called the *vertical*.
 >
-> 2. A rotation ``\beta(0 \leq \beta < \pi)`` about the ``y``-axis of
+> 2. A rotation ``β(0 \leq β < \pi)`` about the ``y``-axis of
 >    the frame ``S'``, called the *line of nodes*.  Note that its
 >    position is in general different from the initial position of the
 >    ``y``-axis of the frame ``S``. The resulting position of the
 >    frame of axes is symbolized by ``S''``.
 >
-> 3. A rotation ``\gamma(0 \leq \gamma < 2\pi)`` about the ``z``-axis
+> 3. A rotation ``γ(0 \leq γ < 2\pi)`` about the ``z``-axis
 >    of the frame of axes ``S''``, called the *figure axis*; the
 >    position of this axis depends on the previous rotations
->    ``\alpha`` and ``\beta``.  The final position of the frame is
+>    ``α`` and ``β``.  The final position of the frame is
 >    symbolized by ``S'''``.
 
 I would simply write the "``y``-axis of the frame ``S'``" as ``y'``,
 and so on.  In quaternionic language, I would write these rotations as
-``\exp[\gamma 𝐤''/2]\, \exp[\beta 𝐣'/2]\, \exp[\alpha 𝐤/2]``.  But
+``\exp[γ 𝐤''/2]\, \exp[β 𝐣'/2]\, \exp[α 𝐤/2]``.  But
 we also have
 ```math
-\exp[\beta 𝐣'/2] = \exp[\alpha 𝐤/2]\, \exp[\beta 𝐣/2]\, \exp[-\alpha 𝐤/2]
+\exp[β 𝐣'/2] = \exp[α 𝐤/2]\, \exp[β 𝐣/2]\, \exp[-α 𝐤/2]
 ```
-so we can just swap the ``\alpha`` rotation with the ``\beta``
+so we can just swap the ``α`` rotation with the ``β``
 rotation while dropping the prime from ``𝐣'``.  We can do a similar
-trick swapping the ``\alpha`` and ``\beta`` rotations with the
-``\gamma`` rotation while dropping the double prime from ``𝐤''``.
+trick swapping the ``α`` and ``β`` rotations with the
+``γ`` rotation while dropping the double prime from ``𝐤''``.
 That is, an easy calculation shows that
 ```math
-\exp[\gamma 𝐤''/2]\, \exp[\beta 𝐣'/2]\, \exp[\alpha 𝐤/2]
+\exp[γ 𝐤''/2]\, \exp[β 𝐣'/2]\, \exp[α 𝐤/2]
 =
-\exp[\alpha 𝐤/2]\, \exp[\beta 𝐣/2]\, \exp[\gamma 𝐤/2],
+\exp[α 𝐤/2]\, \exp[β 𝐣/2]\, \exp[γ 𝐤/2],
 ```
 which is precisely our definition.
 
 The spherical coordinates are implicitly defined by this statement:
 
-> It should be noted that the polar coordinates ``\varphi, \theta``
+> It should be noted that the polar coordinates ``φ, θ``
 > with respect to the original frame ``S`` of the ``z``-axis in its
-> final position are identical with the Euler angles ``\alpha, \beta``
+> final position are identical with the Euler angles ``α, β``
 > respectively.
 
 Again, this agrees with our definition.
@@ -124,18 +124,18 @@ His expression for the angular-momentum operator in Euler angles — Eq.
 ```math
 \begin{aligned}
 L_x &= -i \hbar \left\{
-    -\frac{\cos\alpha}{\tan\beta} \frac{\partial} {\partial \alpha}
-    - \sin\alpha \frac{\partial} {\partial \beta}
-    + \frac{\cos\alpha}{\sin\beta} \frac{\partial} {\partial \gamma}
+    -\frac{\cos α}{\tan β} \frac{\partial} {\partial α}
+    - \sin α \frac{\partial} {\partial β}
+    + \frac{\cos α}{\sin β} \frac{\partial} {\partial γ}
 \right\},
 \\
 L_y &= -i \hbar \left\{
-    -\frac{\sin\alpha}{\tan\beta} \frac{\partial} {\partial \alpha}
-    + \cos\alpha \frac{\partial} {\partial \beta}
-    +\frac{\sin\alpha}{\sin\beta} \frac{\partial} {\partial \gamma}
+    -\frac{\sin α}{\tan β} \frac{\partial} {\partial α}
+    + \cos α \frac{\partial} {\partial β}
+    +\frac{\sin α}{\sin β} \frac{\partial} {\partial γ}
 \right\},
 \\
-L_z &= -i \hbar \frac{\partial} {\partial \alpha}.
+L_z &= -i \hbar \frac{\partial} {\partial α}.
 \end{aligned}
 ```
 (The corresponding restriction to spherical coordinates also precisely
@@ -144,10 +144,10 @@ agrees with our results, with the extra factor of ``\hbar``.)
 Unfortunately, there is disagreement over the definition of the
 Wigner D-matrices.  In Eq. (4.1.12) he defines
 ```math
-𝒟_{\alpha \beta \gamma} =
-\exp\big( \frac{i\alpha}{\hbar} J_z\big)
-\exp\big( \frac{i\beta}{\hbar} J_y\big)
-\exp\big( \frac{i\gamma}{\hbar} J_z\big),
+𝒟_{α β γ} =
+\exp\big( \frac{iα}{\hbar} J_z\big)
+\exp\big( \frac{iβ}{\hbar} J_y\big)
+\exp\big( \frac{iγ}{\hbar} J_z\big),
 ```
 which is the *conjugate* of most other definitions.
 
@@ -167,45 +167,45 @@ Y_{ℓ,m}(x') = \sum_{m'} Y_{ℓ,m'}(x) D^{ℓ}_{m',m}\left( R^{-1} \right).
 ```
 They then define the Euler angles as we do, and write [Eq. (3.4)]
 ```math
-D^{ℓ}_{m', m}(\alpha, \beta, \gamma)
+D^{ℓ}_{m', m}(α, β, γ)
 \equiv
-D^{ℓ}_{m', m}\left( R(\alpha \beta \gamma)^{-1} \right)
+D^{ℓ}_{m', m}\left( R(α β γ)^{-1} \right)
 =
-e^{i m' \gamma} d^{ℓ}_{m', m}(\beta) e^{i m \alpha}.
+e^{i m' γ} d^{ℓ}_{m', m}(β) e^{i m α}.
 ```
 Finally, they derive [Eq. (3.9)]
 ```math
-D^{j}_{m', m}(\alpha, \beta, \gamma)
+D^{j}_{m', m}(α, β, γ)
 =
 \left[\frac{(j+m)!(j-m)!}{(j+m')!(j-m')!}\right]^{1/2}
-(\sin \frac{1}{2}\beta)^{2j}
+(\sin \frac{1}{2}β)^{2j}
 \sum_r \binom{j+m'}{r} \binom{j-m'}{r-m-m'}
 (-1)^{j+m'-r}
-e^{im\alpha}
-(\cot \tfrac{1}{2}\beta)^{2r-m-m'}
-e^{im'\gamma}.
+e^{imα}
+(\cot \tfrac{1}{2}β)^{2r-m-m'}
+e^{im'γ}.
 ```
 
 Equation (3.11) naturally extends to
 ```math
-  {}_sY_{ℓ, m}(\theta, \phi, \gamma)
+  {}_sY_{ℓ, m}(θ, ϕ, γ)
   =
   \left[ \left(2ℓ+1\right) / 4\pi \right]^{1/2}
-  D^{ℓ}_{-s,m}(\phi, \theta, \gamma),
+  D^{ℓ}_{-s,m}(ϕ, θ, γ),
 ```
-where Eq. (3.4) also shows that ``D^{ℓ}_{m', m}(\alpha, \beta,
-\gamma) = D^{ℓ}_{m', m}(\alpha, \beta, 0) e^{i m' \gamma}``,
+where Eq. (3.4) also shows that ``D^{ℓ}_{m', m}(α, β,
+γ) = D^{ℓ}_{m', m}(α, β, 0) e^{i m' γ}``,
 so we have
 ```math
-  {}_sY_{ℓ, m}(\theta, \phi, \gamma)
+  {}_sY_{ℓ, m}(θ, ϕ, γ)
   =
-  {}_sY_{ℓ, m}(\theta, \phi)\, e^{-i s \gamma}.
+  {}_sY_{ℓ, m}(θ, ϕ)\, e^{-i s γ}.
 ```
 This is the most natural extension of the standard spin-weighted
 spherical harmonics to ``\mathrm{Spin}(3)``.  In particular, the
-spin-weight operator is ``i \partial_\gamma``, which suggests that it
+spin-weight operator is ``i \partial_γ``, which suggests that it
 will be most natural to choose the sign of ``R_𝐮`` so that ``R_z = i
-\partial_\gamma``.
+\partial_γ``.
 
 
 ## Griffiths (1995)
@@ -228,27 +228,27 @@ P_{ℓ}(x)
 ```
 Then, (4.32) gives the spherical harmonics as
 ```math
-Y_{ℓ}^{m}(\theta, \phi)
+Y_{ℓ}^{m}(θ, ϕ)
 =
-\epsilon
+ϵ
 \sqrt{\frac{2ℓ+1}{4\pi} \frac{(ℓ-|m|)!}{(ℓ+|m|)!}}
-e^{im\phi} P_{ℓ}^{m}(\cos\theta),
+e^{imϕ} P_{ℓ}^{m}(\cos θ),
 ```
-where ``\epsilon = (-1)^m`` for ``m\geq 0`` and ``\epsilon = 1`` for
+where ``ϵ = (-1)^m`` for ``m\geq 0`` and ``ϵ = 1`` for
 ``m\leq 0``.  In Table 4.2, he explicitly lists the first few
 spherical harmonics:
 ```math
 \begin{aligned}
   Y_{0}^{0} &= \left(\frac{1}{4\pi}\right)^{1/2},\\
-  Y_{1}^{0} &= \left(\frac{3}{4\pi}\right)^{1/2} \cos\theta,\\
-  Y_{1}^{\pm 1} &= \mp \left(\frac{3}{8\pi}\right)^{1/2} \sin\theta e^{\pm i\phi},\\
-  Y_{2}^{0} &= \left(\frac{5}{16\pi}\right)^{1/2} \left(3\cos^2\theta - 1\right),\\
-  Y_{2}^{\pm 1} &= \mp \left(\frac{15}{8\pi}\right)^{1/2} \sin\theta \cos\theta e^{\pm i\phi},\\
-  Y_{2}^{\pm 2} &= \left(\frac{15}{32\pi}\right)^{1/2} \sin^2\theta e^{\pm 2i\phi},\\
-  Y_{3}^{0} &= \left(\frac{7}{16\pi}\right)^{1/2} \left(5\cos^3\theta - 3\cos\theta\right),\\
-  Y_{3}^{\pm 1} &= \mp \left(\frac{21}{64\pi}\right)^{1/2} \sin\theta \left(5\cos^2\theta - 1\right) e^{\pm i\phi},\\
-  Y_{3}^{\pm 2} &= \left(\frac{105}{32\pi}\right)^{1/2} \sin^2\theta \cos\theta e^{\pm 2i\phi},\\
-  Y_{3}^{\pm 3} &= \mp \left(\frac{35}{64\pi}\right)^{1/2} \sin^3\theta e^{\pm 3i\phi}.
+  Y_{1}^{0} &= \left(\frac{3}{4\pi}\right)^{1/2} \cos θ,\\
+  Y_{1}^{\pm 1} &= \mp \left(\frac{3}{8\pi}\right)^{1/2} \sin θ e^{\pm iϕ},\\
+  Y_{2}^{0} &= \left(\frac{5}{16\pi}\right)^{1/2} \left(3\cos^2θ - 1\right),\\
+  Y_{2}^{\pm 1} &= \mp \left(\frac{15}{8\pi}\right)^{1/2} \sin θ \cos θ e^{\pm iϕ},\\
+  Y_{2}^{\pm 2} &= \left(\frac{15}{32\pi}\right)^{1/2} \sin^2θ e^{\pm 2iϕ},\\
+  Y_{3}^{0} &= \left(\frac{7}{16\pi}\right)^{1/2} \left(5\cos^3θ - 3\cos θ\right),\\
+  Y_{3}^{\pm 1} &= \mp \left(\frac{21}{64\pi}\right)^{1/2} \sin θ \left(5\cos^2θ - 1\right) e^{\pm iϕ},\\
+  Y_{3}^{\pm 2} &= \left(\frac{105}{32\pi}\right)^{1/2} \sin^2θ \cos θ e^{\pm 2iϕ},\\
+  Y_{3}^{\pm 3} &= \mp \left(\frac{35}{64\pi}\right)^{1/2} \sin^3θ e^{\pm 3iϕ}.
 \end{aligned}
 ```
 In Eqs. (4.127)—(4.129), he gives the angular-momentum operators in
@@ -256,14 +256,14 @@ terms of spherical coordinates:
 ```math
 \begin{aligned}
 L_x &= \frac{\hbar}{i} \left(
-    -\sin\phi \frac{\partial} {\partial \theta}
-    - \cos\phi \cot\theta \frac{\partial} {\partial \phi}
+    -\sin ϕ \frac{\partial} {\partial θ}
+    - \cos ϕ \cot θ \frac{\partial} {\partial ϕ}
 \right), \\
 L_y &= \frac{\hbar}{i} \left(
-    \cos\phi \frac{\partial} {\partial \theta}
-    - \sin\phi \cot\theta \frac{\partial} {\partial \phi}
+    \cos ϕ \frac{\partial} {\partial θ}
+    - \sin ϕ \cot θ \frac{\partial} {\partial ϕ}
 \right), \\
-L_z &= -i \hbar \frac{\partial} {\partial \phi}.
+L_z &= -i \hbar \frac{\partial} {\partial ϕ}.
 \end{aligned}
 ```
 
@@ -277,13 +277,13 @@ L_z &= -i \hbar \frac{\partial} {\partial \phi}.
 [LeBellac_2006](@citet) (with Foreword by Cohen-Tannoudji) takes an
 odd approach, defining [Eq. (10.32)]
 ```math
-D^{(j)}_{m', m} \left[ ℛ(\theta, \phi) \right]
+D^{(j)}_{m', m} \left[ ℛ(θ, ϕ) \right]
 =
-\langle j, m' | e^{-i\phi J_z} e^{-i\theta J_y} | j, m \rangle,
+\langle j, m' | e^{-iϕ J_z} e^{-iθ J_y} | j, m \rangle,
 ```
-but later allowing that ``e^{-i \psi J_z}`` usually goes on the
-right-hand side of the others, in which case ``D^{(j)}(\theta, \phi)
-\to D^{(j)}(\phi, \theta, \psi)``.  Figure 10.1 shows that the
+but later allowing that ``e^{-i ψ J_z}`` usually goes on the
+right-hand side of the others, in which case ``D^{(j)}(θ, ϕ)
+\to D^{(j)}(ϕ, θ, ψ)``.  Figure 10.1 shows that the
 spherical coordinates are standard (physicist's) coordinates.
 
 Equation (10.65) shows the rotation law:
@@ -295,9 +295,9 @@ Y_{ℓ}^{m}\left( ℛ^{-1} \hat{r} \right)
 and Eq. (10.66) relates the spherical harmonics to the Wigner
 D-matrices:
 ```math
-D^{(ℓ)}_{m, 0}(\theta, \phi)
+D^{(ℓ)}_{m, 0}(θ, ϕ)
 =
-\sqrt{\frac{4\pi}{2ℓ+1}} \left[Y_{ℓ}^{m}(\theta, \phi)\right]^\ast.
+\sqrt{\frac{4\pi}{2ℓ+1}} \left[Y_{ℓ}^{m}(θ, ϕ)\right]^\ast.
 ```
 
 
@@ -331,10 +331,10 @@ expressions in terms of Euler angles.
 We can find conventions at [this
 page](https://reference.wolfram.com/language/ref/WignerD.html).
 
-> The Wolfram Language uses phase conventions where ``D^j_{m_1, m_2}(\psi, \theta, \phi) = \exp(i m_1 \psi + i m_2 \phi) D^j_{m_1, m_2}(0, \theta, 0)``.
+> The Wolfram Language uses phase conventions where ``D^j_{m_1, m_2}(ψ, θ, ϕ) = \exp(i m_1 ψ + i m_2 ϕ) D^j_{m_1, m_2}(0, θ, 0)``.
 
-> `WignerD[{1, 0, 1}, ψ, θ, ϕ]` = ``-\sqrt{2} e^{i \phi} \cos\frac{\theta}{2}
-> \sin\frac{\theta}{2}``
+> `WignerD[{1, 0, 1}, ψ, θ, ϕ]` = ``-\sqrt{2} e^{i ϕ} \cos\frac{θ}{2}
+> \sin\frac{θ}{2}``
 
 > `WignerD[{𝓁, 0, m}, θ, ϕ] == Sqrt[(4 π)/(2 𝓁 + 1)] SphericalHarmonicY[𝓁, m, θ, ϕ]`
 
@@ -342,7 +342,7 @@ page](https://reference.wolfram.com/language/ref/WignerD.html).
 > ϕ]]`
 
 
-> For ``ℓ \geq 0``, ``Y_ℓ^m = \sqrt{(2ℓ+1)/(4\pi)} \sqrt{(ℓ-m)! / (ℓ+m)!}  P_ℓ^m(\cos \theta) e^{im\phi}`` where ``P_ℓ^m`` is the associated Legendre function.
+> For ``ℓ \geq 0``, ``Y_ℓ^m = \sqrt{(2ℓ+1)/(4\pi)} \sqrt{(ℓ-m)! / (ℓ+m)!}  P_ℓ^m(\cos θ) e^{imϕ}`` where ``P_ℓ^m`` is the associated Legendre function.
 
 > The associated Legendre polynomials are defined by ``P_n^m(x) = (-1)^m (1-x^2)^{m/2}(d^m/dx^m)P_n(x)`` where ``P_n(x)`` is the Legendre polynomial.
 
@@ -358,16 +358,16 @@ In their 1966 paper, [Newman_1966](@citet), Newman and Penrose first
 introduced the spin-weighted spherical harmonics, ``{}_sY_{ℓ m}``.
 They use the standard (physicists') convention for spherical
 coordinates and introduce the stereographic coordinate ``\zeta =
-e^{i\phi} \cot\frac{\theta}{2}``.  They define the spin-raising
+e^{iϕ} \cot\frac{θ}{2}``.  They define the spin-raising
 operator ``\eth`` acting on a function of spin weight ``s`` as
 ```math
 \eth \eta
 =
--\left(\sin\theta\right)^s
+-\left(\sin θ\right)^s
 \left\{
-    \frac{\partial}{\partial\theta}
-    + \frac{i}{\sin\theta} \frac{\partial}{\partial\phi}
-\right\} \left\{\left(\sin\theta\right)^{-s} \eta\right\},
+    \frac{\partial}{\partial θ}
+    + \frac{i}{\sin θ} \frac{\partial}{\partial ϕ}
+\right\} \left\{\left(\sin θ\right)^{-s} \eta\right\},
 ```
 They then compute
 ```math
@@ -388,49 +388,49 @@ basis vector ``m^\mu`` to the coordinates.
 > orthogonal tangent vectors (of length ``2^{-1/2}``) at each point of
 > the surface. [...] If spherical polar coordinates are used, a
 > natural choice for ``m^\mu`` is to make ``\Re(m^\mu)`` and
-> ``\Im(m^\mu)`` tangential, respectively, to the curves ``\phi =
-> \mathrm{const}`` and ``\theta = \mathrm{const}.``
+> ``\Im(m^\mu)`` tangential, respectively, to the curves ``ϕ =
+> \mathrm{const}`` and ``θ = \mathrm{const}.``
 
 The ambiguity is in the sign implied by "tangential", but the natural
 choice is to assume they mean that the components are *positive*
-multiples of ``\partial_\theta`` and ``\partial_\phi`` respectively,
+multiples of ``\partial_θ`` and ``\partial_ϕ`` respectively,
 in which case we have
 ```math
 m^\mu = \frac{1}{\sqrt{2}}
-\left[ \partial_\theta + i \csc\theta \partial_\phi \right].
+\left[ \partial_θ + i \csc θ \partial_ϕ \right].
 ```
 They define the spin weight in terms of behavior of a quantity under
 rotation of ``m^\mu`` in its own plane as
 ```math
 (m^\mu)'
 =
-e^{i\psi} m^\mu
+e^{iψ} m^\mu
 =
 \frac{1}{\sqrt{2}}
 \left[ 
-  \left(\cos\psi\partial_\theta - \sin\psi\csc\theta \partial_\phi\right)
-  + i \left(\cos\psi\csc\theta \partial_\phi + \sin\psi\partial_\theta\right)
+  \left(\cos ψ\partial_θ - \sin ψ\csc θ \partial_ϕ\right)
+  + i \left(\cos ψ\csc θ \partial_ϕ + \sin ψ\partial_θ\right)
 \right].
 ```
-Raising the spherical coordinates ``(\theta, \phi)`` to Euler angles
-``(\phi, \theta, -\psi)``, we see that the rotor ``R_{\phi, \theta,
--\psi}`` rotates the ``𝐳`` basis vector to the point ``(\theta,
-\phi)``, and it rotates ``(𝐱 + i 𝐲) / \sqrt{2}`` onto ``(m^\mu)'``.
+Raising the spherical coordinates ``(θ, ϕ)`` to Euler angles
+``(ϕ, θ, -ψ)``, we see that the rotor ``R_{ϕ, θ,
+-ψ}`` rotates the ``𝐳`` basis vector to the point ``(θ,
+ϕ)``, and it rotates ``(𝐱 + i 𝐲) / \sqrt{2}`` onto ``(m^\mu)'``.
 Under this rotation, a quantity ``\eta`` has spin weight ``s`` if it
 transforms as
 ```math
-\eta' = e^{i s \psi} \eta.
+\eta' = e^{i s ψ} \eta.
 ```
 Now, supposing that these quantities are functions of Euler angles, we
 can write
 ```math
-\eta(\phi, \theta, -\psi) = e^{i s \psi} \eta(\phi, \theta, 0),
+\eta(ϕ, θ, -ψ) = e^{i s ψ} \eta(ϕ, θ, 0),
 ```
 or
 ```math
-\eta(\phi, \theta, \gamma) = e^{-i s \gamma} \eta(\phi, \theta, 0).
+\eta(ϕ, θ, γ) = e^{-i s γ} \eta(ϕ, θ, 0).
 ```
-Thus, the operator with eigenvalue ``s`` is ``i \partial_\gamma``.
+Thus, the operator with eigenvalue ``s`` is ``i \partial_γ``.
 
 
 ## NINJA
@@ -454,51 +454,51 @@ Thus, the operator with eigenvalue ``s`` is ``i \partial_\gamma``.
 [Shankar_1994](@citet) writes in Eq. (12.5.35) the spherical harmonics
 as
 ```math
-Y_{ℓ}^{m}(\theta, \phi)
+Y_{ℓ}^{m}(θ, ϕ)
 =
 (-1)^ℓ
 \left[ \frac{(2ℓ+1)!}{4\pi} \right]^{1/2}
 \frac{1}{2^ℓ ℓ!}
 \left[ \frac{(ℓ+m)!}{(2ℓ)!(ℓ-m)!} \right]^{1/2}
-e^{i m \phi}
-(\sin \theta)^{-m}
-\frac{d^{ℓ-m}}{d(\cos\theta)^{ℓ-m}}
-(\sin\theta)^{2ℓ}
+e^{i m ϕ}
+(\sin θ)^{-m}
+\frac{d^{ℓ-m}}{d(\cos θ)^{ℓ-m}}
+(\sin θ)^{2ℓ}
 ```
 for ``m \geq 0``, with (12.5.40) giving the expression
 ```math
-Y_{ℓ}^{-m}(\theta, \phi)
+Y_{ℓ}^{-m}(θ, ϕ)
 =
-(-1)^m \left( Y_{ℓ}^{m}(\theta, \phi) \right)^\ast.
+(-1)^m \left( Y_{ℓ}^{m}(θ, ϕ) \right)^\ast.
 ```
 The angular-momentum operators are given below (12.5.27) as
 ```math
 \begin{aligned}
 L_x &= i \hbar \left(
-    \sin\phi \frac{\partial} {\partial \theta}
-    + \cos\phi \cot\theta \frac{\partial} {\partial \phi}
+    \sin ϕ \frac{\partial} {\partial θ}
+    + \cos ϕ \cot θ \frac{\partial} {\partial ϕ}
 \right),
 \\
 L_y &= i \hbar \left(
-    -\cos\phi \frac{\partial} {\partial \theta}
-    + \sin\phi \cot\theta \frac{\partial} {\partial \phi}
+    -\cos ϕ \frac{\partial} {\partial θ}
+    + \sin ϕ \cot θ \frac{\partial} {\partial ϕ}
 \right),
 \\
-L_z &= -i \hbar \frac{\partial} {\partial \phi}.
+L_z &= -i \hbar \frac{\partial} {\partial ϕ}.
 \end{aligned}
 ```
 In Exercise 12.5.7, the rotation operator is defined by
 ```math
-U\left[ R(\alpha, \beta, \gamma) \right]
+U\left[ R(α, β, γ) \right]
 =
-e^{-i \alpha J_z/\hbar}
-e^{-i \beta J_y/\hbar}
-e^{-i \gamma J_z/\hbar},
+e^{-i α J_z/\hbar}
+e^{-i β J_y/\hbar}
+e^{-i γ J_z/\hbar},
 ```
 That ``U`` becomes a ``D^{(j)}`` when the operator is acting on the
 states ``|j, m\rangle`` for a given ``j``.  Thus, while Shankar never
 actually uses notation like ``D^{(j)}_{m', m}``, he does talk about
-``\langle j, m' | D^{(j)}\left[ R(\alpha, \beta, \gamma) \right] | j,
+``\langle j, m' | D^{(j)}\left[ R(α, β, γ) \right] | j,
 m \rangle``.
 
 
@@ -513,21 +513,21 @@ Specifically, the
 [source](https://github.com/sympy/sympy/blob/b4ce69ad5d40e4e545614b6c76ca9b0be0b98f0b/sympy/physics/wigner.py#L1136-L1191)
 cites [Edmonds_2016](@citet) when defining
 ```math
-𝒟_{\alpha \beta \gamma} =
-\exp\big( \frac{i\alpha}{\hbar} J_z\big)
-\exp\big( \frac{i\beta}{\hbar} J_y\big)
-\exp\big( \frac{i\gamma}{\hbar} J_z\big).
+𝒟_{α β γ} =
+\exp\big( \frac{iα}{\hbar} J_z\big)
+\exp\big( \frac{iβ}{\hbar} J_y\big)
+\exp\big( \frac{iγ}{\hbar} J_z\big).
 ```
 But that is an incorrect copy of Edmonds' Eq. (4.1.9), in which the
-``\alpha`` and ``\gamma`` on the right-hand side are swapped.  The
+``α`` and ``γ`` on the right-hand side are swapped.  The
 code also implements D in the `wigner_d` function as (essentially)
 ```python
 exp(I*mprime*alpha)*d[i, j]*exp(I*m*gamma)
 ```
 even though the actual equation Eq. (4.1.12) of Edmonds says
 ```math
-\mathscr{D}^{(j)}_{m' m}(\alpha \beta \gamma) =
-\exp i m' \gamma d^{(j)}_{m' m}(\alpha, \beta) \exp(i m \alpha).
+\mathscr{D}^{(j)}_{m' m}(α β γ) =
+\exp i m' γ d^{(j)}_{m' m}(α, β) \exp(i m α).
 ```
 The ``d`` matrix appears to be implemented consistently with Edmonds,
 and thus not affected.
@@ -555,9 +555,9 @@ D-matrix to satisfy [Eq. (2.45)]
 ```
 Including the arguments to the spherical harmonics, this becomes
 ```math
-Y_{l,m}\big(ℛ^{-1} R_{\theta, \phi}\big)
+Y_{l,m}\big(ℛ^{-1} R_{θ, ϕ}\big)
 =
-\sum_{m} D^l_{m',m}(ℛ) Y_{l,m'}\big(R_{\theta, \phi}\big).
+\sum_{m} D^l_{m',m}(ℛ) Y_{l,m'}\big(R_{θ, ϕ}\big).
 ```
 In this form, we have [Eq. (2.46)]
 ```math
@@ -567,31 +567,31 @@ D^l_{m'',m}(ℛ_1 ℛ_2)
 ```
 He computes [Eq. (2.53)]
 ```math
-D^l_{m',m}(\phi, \theta, \chi)
+D^l_{m',m}(ϕ, θ, \chi)
 =
-e^{-i m' \phi} d^l_{m',m}(\theta) e^{-i m \chi},
+e^{-i m' ϕ} d^l_{m',m}(θ) e^{-i m \chi},
 ```
 where the ``d`` matrix is given by
 ```math
-d^l_{m',m}(\theta)
+d^l_{m',m}(θ)
 =
 \sqrt{(l+m)!(l-m)!(l+m')!(l-m')!}
 \sum_{k} \frac{
   (-1)^k
-  (\sin \tfrac{1}{2} \theta)^{m-m'+2k}
-  (\cos \tfrac{1}{2} \theta)^{2l-m+m'-2k}
+  (\sin \tfrac{1}{2} θ)^{m-m'+2k}
+  (\cos \tfrac{1}{2} θ)^{2l-m+m'-2k}
 } {
   k!(l+m'-k)!(l-m-k)!(m-m'+k)!
 },
 ```
 and the spin-weighted spherical harmonic is related to ``D`` by
 ```math
-{}_{s}Y_{j,m}(\theta, \phi)
+{}_{s}Y_{j,m}(θ, ϕ)
 =
 (-1)^m
 \sqrt{\frac{2j+1}{4\pi}}
-d^j_{-m,s}(\theta)
-e^{i m \phi}.
+d^j_{-m,s}(θ)
+e^{i m ϕ}.
 ```
 
 
@@ -602,11 +602,11 @@ definitions related to the rotation matrix by previous authors.
 
 Eq. 1.4.(31) defines the operator
 ```math
-\hat{D}(\alpha, \beta, \gamma)
+\hat{D}(α, β, γ)
 =
-e^{-i\alpha \hat{J}_z}
-e^{-i\beta \hat{J}_y}
-e^{-i\gamma \hat{J}_z},
+e^{-iα \hat{J}_z}
+e^{-iβ \hat{J}_y}
+e^{-iγ \hat{J}_z},
 ```
 where the ``\hat{J}`` operators are defined in 
 
@@ -617,25 +617,25 @@ where the ``\hat{J}`` operators are defined in
 > 
 > A transformation of an arbitrary wave function ``\Psi`` under
 > rotation of the coordinate system through an infinitesimal angle
-> ``\delta \omega`` about an axis ``𝐧`` may be written as
+> ``δ \omega`` about an axis ``𝐧`` may be written as
 > ```math
-> \Psi \to \Psi' = \left(1 - i \delta \omega 𝐧 \cdot \hat{J} \right)\Psi,
+> \Psi \to \Psi' = \left(1 - i δ \omega 𝐧 \cdot \hat{J} \right)\Psi,
 > ```
 > where ``\hat{J}`` is the total angular momentum operator.
 
 Eq. 4.1.(1) defines the Wigner D-functions according to
 ```math
-\langle J M | \hat{D}(\alpha, \beta, \gamma) | J' M' \rangle
+\langle J M | \hat{D}(α, β, γ) | J' M' \rangle
 =
-\delta_{J J'} D^J_{M M'}(\alpha, \beta, \gamma).
+δ_{J J'} D^J_{M M'}(α, β, γ).
 ```
 Eq. 4.3.(1) states
 ```math
-D^J_{M M'}(\alpha, \beta, \gamma)
+D^J_{M M'}(α, β, γ)
 =
-e^{-i M \alpha}
-d^J_{M M'}(\beta)
-e^{-i M' \gamma}
+e^{-i M α}
+d^J_{M M'}(β)
+e^{-i M' γ}
 ```
 
 
@@ -661,24 +661,24 @@ angular momentum of the rigid symmetric top.  They then give in Eq.
 non-rotating (lab-fixed) system" as
 ```math
 \begin{gather}
-  \hat{J}_{\pm 1} = \frac{i}{\sqrt{2}} e^{\pm i \alpha} \left[
-    \mp \cot\beta \frac{\partial}{\partial \alpha}
-    + i \frac{\partial}{\partial \beta}
-    \pm \frac{1}{\sin\beta} \frac{\partial}{\partial \gamma}
+  \hat{J}_{\pm 1} = \frac{i}{\sqrt{2}} e^{\pm i α} \left[
+    \mp \cot β \frac{\partial}{\partial α}
+    + i \frac{\partial}{\partial β}
+    \pm \frac{1}{\sin β} \frac{\partial}{\partial γ}
   \right] \\
-  \hat{J}_0 = - i \frac{\partial}{\partial \alpha},
+  \hat{J}_0 = - i \frac{\partial}{\partial α},
 \end{gather}
 ```
 and "contravariant components of ``\hat{𝐉}`` in the rotating
 (body-fixed) system" as
 ```math
 \begin{gather}
-  \hat{J}'^{\pm 1} = \frac{i}{\sqrt{2}} e^{\mp i \gamma} \left[
-    \pm \cot\beta \frac{\partial}{\partial \gamma}
-    + i \frac{\partial}{\partial \beta}
-    \mp \frac{1}{\sin\beta} \frac{\partial}{\partial \alpha}
+  \hat{J}'^{\pm 1} = \frac{i}{\sqrt{2}} e^{\mp i γ} \left[
+    \pm \cot β \frac{\partial}{\partial γ}
+    + i \frac{\partial}{\partial β}
+    \mp \frac{1}{\sin β} \frac{\partial}{\partial α}
   \right] \\
-  \hat{J}'^0 = - i \frac{\partial}{\partial \gamma}.
+  \hat{J}'^0 = - i \frac{\partial}{\partial γ}.
 \end{gather}
 ```
 (Note the prime in the last two equations.)  We can expand these in
@@ -689,46 +689,46 @@ covariant components:
   \hat{J}_{x}
   &= -\frac{1}{\sqrt{2}} \left( \hat{J}_{+1} - \hat{J}_{-1} \right) \\
   % &= -\frac{1}{\sqrt{2}} \left( 
-  %   \frac{i}{\sqrt{2}} e^{i \alpha} \left[
-  %     - \cot\beta \frac{\partial}{\partial \alpha}
-  %     + i \frac{\partial}{\partial \beta}
-  %     + \frac{1}{\sin\beta} \frac{\partial}{\partial \gamma}
+  %   \frac{i}{\sqrt{2}} e^{i α} \left[
+  %     - \cot β \frac{\partial}{\partial α}
+  %     + i \frac{\partial}{\partial β}
+  %     + \frac{1}{\sin β} \frac{\partial}{\partial γ}
   %   \right]
   %   -
-  %   \frac{i}{\sqrt{2}} e^{-i \alpha} \left[
-  %     + \cot\beta \frac{\partial}{\partial \alpha}
-  %     + i \frac{\partial}{\partial \beta}
-  %     - \frac{1}{\sin\beta} \frac{\partial}{\partial \gamma}
+  %   \frac{i}{\sqrt{2}} e^{-i α} \left[
+  %     + \cot β \frac{\partial}{\partial α}
+  %     + i \frac{\partial}{\partial β}
+  %     - \frac{1}{\sin β} \frac{\partial}{\partial γ}
   %   \right]
   % \right) \\
   &= i\left[ 
-      \frac{\cos\alpha}{\tan\beta} \frac{\partial}{\partial \alpha}
-      + \sin\alpha \frac{\partial}{\partial \beta}
-      - \frac{\cos\alpha}{\sin\beta} \frac{\partial}{\partial \gamma}
+      \frac{\cos α}{\tan β} \frac{\partial}{\partial α}
+      + \sin α \frac{\partial}{\partial β}
+      - \frac{\cos α}{\sin β} \frac{\partial}{\partial γ}
   \right] \\
   \hat{J}_{y}
   &= -\frac{1}{i\sqrt{2}} \left( \hat{J}_{+1} + \hat{J}_{-1} \right) \\
   % &= -\frac{1}{i\sqrt{2}} \left( 
-  %   \frac{i}{\sqrt{2}} e^{i \alpha} \left[
-  %     - \cot\beta \frac{\partial}{\partial \alpha}
-  %     + i \frac{\partial}{\partial \beta}
-  %     + \frac{1}{\sin\beta} \frac{\partial}{\partial \gamma}
+  %   \frac{i}{\sqrt{2}} e^{i α} \left[
+  %     - \cot β \frac{\partial}{\partial α}
+  %     + i \frac{\partial}{\partial β}
+  %     + \frac{1}{\sin β} \frac{\partial}{\partial γ}
   %   \right]
   %   +
-  %   \frac{i}{\sqrt{2}} e^{-i \alpha} \left[
-  %     + \cot\beta \frac{\partial}{\partial \alpha}
-  %     + i \frac{\partial}{\partial \beta}
-  %     - \frac{1}{\sin\beta} \frac{\partial}{\partial \gamma}
+  %   \frac{i}{\sqrt{2}} e^{-i α} \left[
+  %     + \cot β \frac{\partial}{\partial α}
+  %     + i \frac{\partial}{\partial β}
+  %     - \frac{1}{\sin β} \frac{\partial}{\partial γ}
   %   \right]
   % \right) \\
   &= i \left[
-      \frac{\sin\alpha}{\tan\beta} \frac{\partial}{\partial \alpha}
-      - \cos\alpha \frac{\partial}{\partial \beta}
-      - \frac{\sin\alpha}{\sin\beta} \frac{\partial}{\partial \gamma}
+      \frac{\sin α}{\tan β} \frac{\partial}{\partial α}
+      - \cos α \frac{\partial}{\partial β}
+      - \frac{\sin α}{\sin β} \frac{\partial}{\partial γ}
   \right] \\
   \hat{J}_{z}
   &= \hat{J}_{0} \\
-  &= -i \frac{\partial}{\partial \alpha}
+  &= -i \frac{\partial}{\partial α}
 \end{aligned}
 ```
 We can compare these to the [Full expressions on ``𝕊³``]() `@ref`, and find
@@ -741,46 +741,46 @@ Next, the contravariant components:
   \hat{J}'_{x}
   &= -\frac{1}{\sqrt{2}} \left( \hat{J}'^{+1} - \hat{J}'^{-1} \right) \\
   % &= -\frac{1}{\sqrt{2}} \left(
-  %   \frac{i}{\sqrt{2}} e^{- i \gamma} \left[
-  %     + \cot\beta \frac{\partial}{\partial \gamma}
-  %     + i \frac{\partial}{\partial \beta}
-  %     - \frac{1}{\sin\beta} \frac{\partial}{\partial \alpha}
+  %   \frac{i}{\sqrt{2}} e^{- i γ} \left[
+  %     + \cot β \frac{\partial}{\partial γ}
+  %     + i \frac{\partial}{\partial β}
+  %     - \frac{1}{\sin β} \frac{\partial}{\partial α}
   %   \right]
   %   -
-  %   \frac{i}{\sqrt{2}} e^{+ i \gamma} \left[
-  %     - \cot\beta \frac{\partial}{\partial \gamma}
-  %     + i \frac{\partial}{\partial \beta}
-  %     + \frac{1}{\sin\beta} \frac{\partial}{\partial \alpha}
+  %   \frac{i}{\sqrt{2}} e^{+ i γ} \left[
+  %     - \cot β \frac{\partial}{\partial γ}
+  %     + i \frac{\partial}{\partial β}
+  %     + \frac{1}{\sin β} \frac{\partial}{\partial α}
   %   \right]
   % \right) \\
   &= -i \left(
-      \frac{\cos\gamma}{\tan\beta} \frac{\partial}{\partial \gamma}
-      + \sin\gamma \frac{\partial}{\partial \beta}
-      - \frac{\cos\gamma}{\sin\beta} \frac{\partial}{\partial \alpha}
+      \frac{\cos γ}{\tan β} \frac{\partial}{\partial γ}
+      + \sin γ \frac{\partial}{\partial β}
+      - \frac{\cos γ}{\sin β} \frac{\partial}{\partial α}
   \right) \\
   \hat{J}'_{y}
   &= \frac{1}{i\sqrt{2}} \left( \hat{J}'^{+1} + \hat{J}'^{-1} \right) \\
   % &= \frac{1}{i\sqrt{2}} \left(
-  %   \frac{i}{\sqrt{2}} e^{-i \gamma} \left[
-  %     + \cot\beta \frac{\partial}{\partial \gamma}  
-  %     + i \frac{\partial}{\partial \beta}
-  %     - \frac{1}{\sin\beta} \frac{\partial}{\partial \alpha}
+  %   \frac{i}{\sqrt{2}} e^{-i γ} \left[
+  %     + \cot β \frac{\partial}{\partial γ}  
+  %     + i \frac{\partial}{\partial β}
+  %     - \frac{1}{\sin β} \frac{\partial}{\partial α}
   %   \right]
   %   +
-  %   \frac{i}{\sqrt{2}} e^{+ i \gamma} \left[
-  %     - \cot\beta \frac{\partial}{\partial \gamma}
-  %     + i \frac{\partial}{\partial \beta}
-  %     + \frac{1}{\sin\beta} \frac{\partial}{\partial \alpha}
+  %   \frac{i}{\sqrt{2}} e^{+ i γ} \left[
+  %     - \cot β \frac{\partial}{\partial γ}
+  %     + i \frac{\partial}{\partial β}
+  %     + \frac{1}{\sin β} \frac{\partial}{\partial α}
   %   \right]
   % \right) \\
   &= -i \left(
-      \frac{\sin\gamma}{\tan\beta} \frac{\partial}{\partial \gamma}
-      - \cos\gamma \frac{\partial}{\partial \beta}
-      - \frac{\sin\gamma}{\sin\beta} \frac{\partial}{\partial \alpha}
+      \frac{\sin γ}{\tan β} \frac{\partial}{\partial γ}
+      - \cos γ \frac{\partial}{\partial β}
+      - \frac{\sin γ}{\sin β} \frac{\partial}{\partial α}
   \right) \\
   \hat{J}'_{z}
   &= \hat{J}'^{0} \\
-  &= -i \frac{\partial}{\partial \gamma}
+  &= -i \frac{\partial}{\partial γ}
 \end{aligned}
 ```
 Unfortunately, while we have agreement on ``\hat{J}'^{y} = R_y``, we
@@ -809,11 +809,11 @@ Spin-weighted spherical harmonics
 
 Defining the operator
 ```math
-ℛ(\alpha,\beta,\gamma) = e^{-i\alpha J_z}e^{-i\beta J_y}e^{-i\gamma J_z},
+ℛ(α,β,γ) = e^{-iα J_z}e^{-iβ J_y}e^{-iγ J_z},
 ```
 [Wikipedia expresses the Wigner D-matrix](https://en.wikipedia.org/wiki/Wigner_D-matrix#Definition_of_the_Wigner_D-matrix) as
 ```math
-D^j_{m'm}(\alpha,\beta,\gamma) \equiv \langle jm' | ℛ(\alpha,\beta,\gamma)| jm \rangle =e^{-im'\alpha } d^j_{m'm}(\beta)e^{-i m\gamma}.
+D^j_{m'm}(α,β,γ) \equiv \langle jm' | ℛ(α,β,γ)| jm \rangle =e^{-im'α } d^j_{m'm}(β)e^{-i mγ}.
 ```
 
 
@@ -833,7 +833,7 @@ In Appendix B.1, we find that the spherical coordinates are related to
 Cartesian coordinates in the usual (physicist's) way.  Equation
 (5.132) gives the angular-momentum operator
 ```math
-\hat{L}_z = -i \hbar \frac{\partial}{\partial \varphi},
+\hat{L}_z = -i \hbar \frac{\partial}{\partial φ},
 ```
 which agrees with [our expression](@ref "``L`` operators in spherical
 coordinates").  This is followed by equation (5.134):
@@ -842,9 +842,9 @@ coordinates").  This is followed by equation (5.134):
 =
 \hat{L}_x \pm i \hat{L}_y
 =
-\pm \hbar e^{\pm i\varphi} \left(
-  \frac{\partial}{\partial \theta}
-  \pm i \cot\theta \frac{\partial}{\partial \varphi}
+\pm \hbar e^{\pm iφ} \left(
+  \frac{\partial}{\partial θ}
+  \pm i \cot θ \frac{\partial}{\partial φ}
 \right),
 ```
 which also agrees with [our results.](@ref "``L_{\pm}`` operators in
@@ -852,77 +852,77 @@ spherical coordinates")
 
 Equation (5.180) gives the spherical harmonics as
 ```math
-Y_{l, m}(\theta, \varphi)
+Y_{l, m}(θ, φ)
 =
 \frac{(-1)^l}{2^l l!}
 \sqrt{\frac{2l+1}{4\pi} \frac{(l+m)!}{(l-m)!}}
-e^{im\varphi}
-\frac{1}{\sin^m \theta}
-\frac{d^{l-m}}{d(\cos\theta)^{l-m}}
-(\sin \theta)^{2l}.
+e^{imφ}
+\frac{1}{\sin^m θ}
+\frac{d^{l-m}}{d(\cos θ)^{l-m}}
+(\sin θ)^{2l}.
 ```
 
-Section 7.2.1 denotes by ``\hat{R}_z(\delta \phi)`` the
+Section 7.2.1 denotes by ``\hat{R}_z(δ ϕ)`` the
 
 > rotation of the coordinates of a *spinless* particle over an
-> *infinitesimal* angle ``\delta \phi`` about the ``z``-axis
+> *infinitesimal* angle ``δ ϕ`` about the ``z``-axis
 
 and shows its action [Eq. (7.16)]
 ```math
-\hat{R}_z (\delta \phi) \psi(r, \theta, \phi)
+\hat{R}_z (δ ϕ) ψ(r, θ, ϕ)
 =
-\psi(r, \theta, \phi - \delta \phi).
+ψ(r, θ, ϕ - δ ϕ).
 ```
 
-> We may generalize this relation to a rotation of angle ``\delta
-> \phi`` about an arbitrary axis whose direction is given by the unit
+> We may generalize this relation to a rotation of angle ``δ
+> ϕ`` about an arbitrary axis whose direction is given by the unit
 > vector ``\vec{n}``:
 
 ```math
-\hat{R}(\delta \phi)
+\hat{R}(δ ϕ)
 =
-1 - \frac{i}{\hbar} \delta \phi \vec{n} \cdot \hat{\vec{L}}.
+1 - \frac{i}{\hbar} δ ϕ \vec{n} \cdot \hat{\vec{L}}.
 ```
 This extends to finite rotation by defining the operator [Eq. (7.48)]
 ```math
-\hat{R}(\alpha, \beta, \gamma)
+\hat{R}(α, β, γ)
 =
-e^{-i\alpha J_z / \hbar} e^{-i\beta J_y / \hbar} e^{-i\gamma J_z / \hbar}.
+e^{-iα J_z / \hbar} e^{-iβ J_y / \hbar} e^{-iγ J_z / \hbar}.
 ```
 Equation (7.52) then defines
 ```math
-D^{(j)}_{m', m}(\alpha, \beta, \gamma)
+D^{(j)}_{m', m}(α, β, γ)
 =
-\langle j, m' | \hat{R}(\alpha, \beta, \gamma) | j, m \rangle,
+\langle j, m' | \hat{R}(α, β, γ) | j, m \rangle,
 ```
 So that [Eq. (7.54)]
 ```math
-D^{(j)}_{m', m}(\alpha, \beta, \gamma)
+D^{(j)}_{m', m}(α, β, γ)
 =
-e^{-i (m' \alpha + m \gamma)} d^{(j)}_{m', m}(\beta),
+e^{-i (m' α + m γ)} d^{(j)}_{m', m}(β),
 ```
 where [Eq. (7.55)]
 ```math
-d^{(j)}_{m', m}(\beta)
+d^{(j)}_{m', m}(β)
 =
-\langle j, m' | e^{-i\beta J_y / \hbar} | j, m \rangle.
+\langle j, m' | e^{-iβ J_y / \hbar} | j, m \rangle.
 ```
 The explicit expression for ``d`` is [Eq. (7.56)]
 ```math
-d^{(j)}_{m', m}(\beta)
+d^{(j)}_{m', m}(β)
 =
 \sum_k (-1)^{k+m'-m}
 \frac{\sqrt{(j+m)!(j-m)!(j+m')!(j-m')!}}
 {(j-m'-k)!(j+m-k)!(k+m'-m)!k!}
-\left(\cos\frac{\beta}{2}\right)^{2j+m-m'-2k}
-\left(\sin\frac{\beta}{2}\right)^{m'-m+2k}.
+\left(\cos\frac{β}{2}\right)^{2j+m-m'-2k}
+\left(\sin\frac{β}{2}\right)^{m'-m+2k}.
 ```
-In Sec. 7.2.6, we find that if the operator ``\hat{R}(\alpha, \beta,
-\gamma)`` rotates a vector pointing in the ``(\theta, \phi)`` to a
-vector pointing in the ``(\theta', \phi')`` direction, then the
+In Sec. 7.2.6, we find that if the operator ``\hat{R}(α, β,
+γ)`` rotates a vector pointing in the ``(θ, ϕ)`` to a
+vector pointing in the ``(θ', ϕ')`` direction, then the
 spherical harmonics transform as [Eq. (7.70)]
 ```math
-Y_{ℓ, m}^\ast (\theta', \phi')
+Y_{ℓ, m}^\ast (θ', ϕ')
 =
-\sum_{m'} D^{(ℓ)}_{m, m'}(\alpha, \beta, \gamma) Y_{ℓ, m'}^\ast (\theta, \phi).
+\sum_{m'} D^{(ℓ)}_{m, m'}(α, β, γ) Y_{ℓ, m'}^\ast (θ, ϕ).
 ```

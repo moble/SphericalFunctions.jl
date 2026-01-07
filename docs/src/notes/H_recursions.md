@@ -5,13 +5,13 @@ which is itself related to the (big) ``𝔇`` matrices and the various spin-weig
 spherical harmonics ``{}_{s}Y_{ℓ,m}`` — via
 
 ```math
-d_{ℓ}^{m',m} = \epsilon_{m'} \epsilon_{-m} H_{ℓ}^{m',m},
+d_{ℓ}^{m',m} = ϵ_{m'} ϵ_{-m} H_{ℓ}^{m',m},
 ```
 
 where
 
 ```math
-\epsilon_k =
+ϵ_k =
   \begin{cases}
     1 & k\leq 0, \\
     (-1)^k & k > 0.
@@ -113,7 +113,7 @@ where the coefficients are given by
   b_n &= \sqrt{\frac{2(n-1)(2n+1)}{n(2n-1)}} \\
   c_{n,m} &= \frac{1}{n} \sqrt{\frac{(n+m)(n-m)(2n+1)}{2n-1}} \\
   d_{n,m} &= \frac{1}{2n} \sqrt{\frac{(n-m)(n-m-1)(2n+1)}{2n-1}} \\
-  e_{n,m} &= \frac{1}{2n} \sqrt{\frac{2}{2-\delta_0^{m-1}}} \sqrt{\frac{(n+m)(n+m-1)(2n+1)}{2n-1}}.
+  e_{n,m} &= \frac{1}{2n} \sqrt{\frac{2}{2-δ_0^{m-1}}} \sqrt{\frac{(n+m)(n+m-1)(2n+1)}{2n-1}}.
 \end{aligned}
 ```
 

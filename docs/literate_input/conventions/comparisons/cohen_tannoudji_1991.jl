@@ -15,29 +15,29 @@ compute the angular-momentum operators as [Eqs.  (D-5)]
 ```math
 \begin{aligned}
 L_x &= i \hbar \left(
-    \sin\phi \frac{\partial} {\partial \theta}
-    + \frac{\cos\phi}{\tan\theta} \frac{\partial} {\partial \phi}
+    \sin ϕ \frac{\partial} {\partial θ}
+    + \frac{\cos ϕ}{\tan θ} \frac{\partial} {\partial ϕ}
 \right),
 \\
 L_y &= i \hbar \left(
-    -\cos\phi \frac{\partial} {\partial \theta}
-    + \frac{\sin\phi}{\tan\theta} \frac{\partial} {\partial \phi}
+    -\cos ϕ \frac{\partial} {\partial θ}
+    + \frac{\sin ϕ}{\tan θ} \frac{\partial} {\partial ϕ}
 \right),
 \\
-L_z &= \frac{\hbar}{i} \frac{\partial} {\partial \phi}.
+L_z &= \frac{\hbar}{i} \frac{\partial} {\partial ϕ}.
 \end{aligned}
 ```
 In Complement ``\mathrm{B}_{\mathrm{VI}}`` they define a rotation operator ``R`` as acting
 on a state such that [Eq. (21)]
 ```math
-\langle 𝐫 | R | \psi \rangle
+\langle 𝐫 | R | ψ \rangle
 =
-\langle \mathscr{R}^{-1} 𝐫 | \psi \rangle.
+\langle \mathscr{R}^{-1} 𝐫 | ψ \rangle.
 ```
-For an infinitesimal rotation through angle ``d\alpha`` about the axis ``𝐮``, he
+For an infinitesimal rotation through angle ``dα`` about the axis ``𝐮``, he
 shows [Eq. (49)]
 ```math
-R_{𝐮}(d\alpha) = 1 - \frac{i}{\hbar} d\alpha 𝐋.𝐮.
+R_{𝐮}(dα) = 1 - \frac{i}{\hbar} dα 𝐋.𝐮.
 ```
 
 
@@ -60,11 +60,11 @@ import ..ConventionsUtilities: 𝒾, ❗, dʲsin²ᵏθdcosθʲ
 # They derive the spherical harmonics in two ways and get two different, but equivalent,
 # expressions in Complement ``\mathrm{A}_{\mathrm{VI}}``.  The first is Eq. (26)
 # ```math
-# Y_{l}^{m}(\theta, \phi)
+# Y_{l}^{m}(θ, ϕ)
 # =
 # \frac{(-1)^l}{2^l l!} \sqrt{\frac{(2l+1)}{4\pi} \frac{(l+m)!}{(l-m)!}}
-# e^{i m \phi} (\sin \theta)^{-m}
-# \frac{d^{l-m}}{d(\cos \theta)^{l-m}} (\sin \theta)^{2l},
+# e^{i m ϕ} (\sin θ)^{-m}
+# \frac{d^{l-m}}{d(\cos θ)^{l-m}} (\sin θ)^{2l},
 # ```
 function Y₁(l, m, θ::T, ϕ::T) where {T<:Real}
     (
@@ -78,11 +78,11 @@ end
 
 # while the second is Eq. (30)
 # ```math
-# Y_{l}^{m}(\theta, \phi)
+# Y_{l}^{m}(θ, ϕ)
 # =
 # \frac{(-1)^{l+m}}{2^l l!} \sqrt{\frac{(2l+1)}{4\pi} \frac{(l-m)!}{(l+m)!}}
-# e^{i m \phi} (\sin \theta)^m
-# \frac{d^{l+m}}{d(\cos \theta)^{l+m}} (\sin \theta)^{2l}.
+# e^{i m ϕ} (\sin θ)^m
+# \frac{d^{l+m}}{d(\cos θ)^{l+m}} (\sin θ)^{2l}.
 # ```
 function Y₂(l, m, θ::T, ϕ::T) where {T<:Real}
     (

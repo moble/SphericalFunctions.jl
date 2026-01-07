@@ -19,14 +19,14 @@ We use standard right-handed Cartesian coordinates ``(x, y, z)`` and
 unit basis vectors ``(𝐱, 𝐲, 𝐳)``.
 
 ## Spherical coordinates
-We define spherical coordinates ``(r, \theta, \phi)`` and unit basis
-vectors ``(𝐧, \boldsymbol{\theta}, \boldsymbol{\phi})``.  The "polar
-angle" ``\theta \in [0, \pi]`` measures the angle between the
+We define spherical coordinates ``(r, θ, ϕ)`` and unit basis
+vectors ``(𝐧, \boldsymbol{θ}, \boldsymbol{ϕ})``.  The "polar
+angle" ``θ \in [0, \pi]`` measures the angle between the
 specified direction and the positive ``𝐳`` axis.  The "azimuthal
-angle" ``\phi \in [0, 2\pi)`` measures the angle between the
+angle" ``ϕ \in [0, 2\pi)`` measures the angle between the
 projection of the specified direction onto the ``𝐱``-``𝐲`` plane and
 the positive ``𝐱`` axis, with the positive ``𝐲`` axis corresponding
-to the positive angle ``\phi = \pi/2``.
+to the positive angle ``ϕ = \pi/2``.
 
 ## Quaternions
 A quaternion is written ``𝐐 = W + X𝐢 + Y𝐣 + Z𝐤``, where ``𝐢^2 =
@@ -45,82 +45,82 @@ vectors as if they were quaternions, and vice versa.
 A rotation represented by the unit quaternion ``𝐑`` acts on a vector
 ``𝐯`` as ``𝐑\, 𝐯\, 𝐑^{-1}``.  Where relevant, rotations will be
 assumed to be right-handed, so that a quaternion characterizing the
-rotation through an angle ``\vartheta`` about a unit vector ``𝐮`` can
-be expressed as ``𝐑 = \exp(\vartheta 𝐮/2)``.  Note that ``-𝐑``
+rotation through an angle ``ϑ`` about a unit vector ``𝐮`` can
+be expressed as ``𝐑 = \exp(ϑ 𝐮/2)``.  Note that ``-𝐑``
 would deliver the same *rotation*, which means that the group of unit
 quaternions ``\mathrm{Spin}(3) = \mathrm{SU}(2)`` is a *double cover*
 of the group of rotations ``\mathrm{SO}(3)``.  Nonetheless, ``𝐑`` and
 ``-𝐑`` are distinct quaternions, and represent distinct "spinors".
 
 ## Spherical coordinates as quaternions
-A point on the unit sphere with spherical coordinates ``(\theta,
-\phi)`` can be represented by the unit quaternion
+A point on the unit sphere with spherical coordinates ``(θ,
+ϕ)`` can be represented by the unit quaternion
 ```math
-𝐑_{\theta, \phi}
+𝐑_{θ, ϕ}
 =
-\exp(\phi 𝐤/2)\, \exp(\theta 𝐣/2).
+\exp(ϕ 𝐤/2)\, \exp(θ 𝐣/2).
 ```
 This not only takes the positive ``𝐳`` axis to the specified
 direction, but also takes the ``𝐱`` and ``𝐲`` axes onto the unit
 basis vectors of the spherical coordinate system:
 ```math
 \begin{aligned}
-𝐧 &= 𝐑_{\theta, \phi}\, 𝐳\, 𝐑_{\theta, \phi}^{-1}, \\
-\boldsymbol{\theta} &= 𝐑_{\theta, \phi}\, 𝐱\, 𝐑_{\theta, \phi}^{-1}, \\
-\boldsymbol{\phi} &= 𝐑_{\theta, \phi}\, 𝐲\, 𝐑_{\theta, \phi}^{-1}.
+𝐧 &= 𝐑_{θ, ϕ}\, 𝐳\, 𝐑_{θ, ϕ}^{-1}, \\
+\boldsymbol{θ} &= 𝐑_{θ, ϕ}\, 𝐱\, 𝐑_{θ, ϕ}^{-1}, \\
+\boldsymbol{ϕ} &= 𝐑_{θ, ϕ}\, 𝐲\, 𝐑_{θ, ϕ}^{-1}.
 \end{aligned}
 ```
 
 ## Euler angles (and spherical coordinates)
 Euler angles parametrize a unit quaternion as
 ```math
-𝐑_{\alpha, \beta, \gamma}
+𝐑_{α, β, γ}
 =
-\exp(\alpha 𝐤/2)\, \exp(\beta 𝐣/2)\, \exp(\gamma 𝐤/2).
+\exp(α 𝐤/2)\, \exp(β 𝐣/2)\, \exp(γ 𝐤/2).
 ```
-The angles ``\alpha`` and ``\gamma`` take values in ``[0, 2\pi)``.
-The angle ``\beta`` takes values in ``[0, 2\pi]`` to parametrize the
+The angles ``α`` and ``γ`` take values in ``[0, 2\pi)``.
+The angle ``β`` takes values in ``[0, 2\pi]`` to parametrize the
 group of unit quaternions ``\mathrm{Spin}(3) = \mathrm{SU}(2)``, or in
 ``[0, \pi]`` to parametrize the group of rotations ``\mathrm{SO}(3)``.
 
 By comparison, we can immediately see that spherical coordinates
-``(\theta, \phi)`` can be represented as Euler angles with the
-equivalence ``(\alpha, \beta, \gamma) = (\phi, \theta, 0)``.  In
+``(θ, ϕ)`` can be represented as Euler angles with the
+equivalence ``(α, β, γ) = (ϕ, θ, 0)``.  In
 particular, any function of spherical coordinates can be promoted to a
 function on Euler angles using this identification.
 
 It's worth noting that the action of Euler angles on the Cartesian
 basis is similar to the action of the spherical-coordinate quaternion,
-but rotates the tangent basis ($\boldsymbol{\theta},
-\boldsymbol{\phi}$).  That is, we still have
+but rotates the tangent basis ($\boldsymbol{θ},
+\boldsymbol{ϕ}$).  That is, we still have
 ```math
-𝐧 = 𝐑_{\phi, \theta, \gamma}\, 𝐳\, 𝐑_{\phi, \theta, \gamma}^{-1},
+𝐧 = 𝐑_{ϕ, θ, γ}\, 𝐳\, 𝐑_{ϕ, θ, γ}^{-1},
 ```
 but the action on the ``𝐱`` and ``𝐲`` axes is a little more
-complicated due to the initial rotation by ``\exp(\gamma 𝐤/2)``,
-which is equivalent to a *final* rotation through ``\gamma`` about
+complicated due to the initial rotation by ``\exp(γ 𝐤/2)``,
+which is equivalent to a *final* rotation through ``γ`` about
 ``𝐧``.  It's easier to write this down if we form the combination
 ```math
 𝐦 = \frac{1}{\sqrt{2}} \left(
-    \boldsymbol{\theta} + i \boldsymbol{\phi}
+    \boldsymbol{θ} + i \boldsymbol{ϕ}
 \right),
 ```
 and find that
 ```math
-𝐦 = e^{-i\gamma} 𝐑_{\phi, \theta, \gamma}\, \frac{1}{\sqrt{2}} \left(
+𝐦 = e^{-iγ} 𝐑_{ϕ, θ, γ}\, \frac{1}{\sqrt{2}} \left(
     𝐱 + i 𝐲
-\right)\, 𝐑_{\phi, \theta, \gamma}^{-1}.
+\right)\, 𝐑_{ϕ, θ, γ}^{-1}.
 ```
 
 ## Left and right angular-momentum operators
 For a complex-valued function ``f(𝐑)``, we define two operators, the
 left and right angular-momentum operators:
 ```math
-L_𝐮 f(𝐑) = \left.i \frac{d}{d\epsilon}\right|_{\epsilon=0}
-f\left(e^{-\epsilon 𝐮/2}\, 𝐑\right)
+L_𝐮 f(𝐑) = \left.i \frac{d}{dϵ}\right|_{ϵ=0}
+f\left(e^{-ϵ 𝐮/2}\, 𝐑\right)
 \qquad \text{and} \qquad
-R_𝐮 f(𝐑) = -\left.i \frac{d}{d\epsilon}\right|_{\epsilon=0}
-f\left(𝐑\, e^{-\epsilon 𝐮/2}\right),
+R_𝐮 f(𝐑) = -\left.i \frac{d}{dϵ}\right|_{ϵ=0}
+f\left(𝐑\, e^{-ϵ 𝐮/2}\right),
 ```
 where ``𝐮`` can be any quaternion, though unit pure-vector
 quaternions are the most common.  In particular, ``L`` represents the
@@ -129,32 +129,32 @@ expressions in Euler angles for the basis vectors:
 ```math
 \begin{aligned}
 L_𝐢 &= i \left\{
-    \frac{\cos\alpha}{\tan\beta} \frac{\partial} {\partial \alpha}
-    + \sin\alpha \frac{\partial} {\partial \beta}
-    - \frac{\cos\alpha}{\sin\beta} \frac{\partial} {\partial \gamma}
+    \frac{\cos α}{\tan β} \frac{\partial} {\partial α}
+    + \sin α \frac{\partial} {\partial β}
+    - \frac{\cos α}{\sin β} \frac{\partial} {\partial γ}
 \right\},
 &
 R_𝐢 &= i \left\{
-    -\frac{\cos\gamma}{\sin\beta} \frac{\partial} {\partial \alpha}
-    +\sin\gamma \frac{\partial} {\partial \beta}
-    +\frac{\cos\gamma}{\tan\beta} \frac{\partial} {\partial \gamma}
+    -\frac{\cos γ}{\sin β} \frac{\partial} {\partial α}
+    +\sin γ \frac{\partial} {\partial β}
+    +\frac{\cos γ}{\tan β} \frac{\partial} {\partial γ}
 \right\},
 \\
 L_𝐣 &= i \left\{
-    \frac{\sin\alpha}{\tan\beta} \frac{\partial} {\partial \alpha}
-    - \cos\alpha \frac{\partial} {\partial \beta}
-    -\frac{\sin\alpha}{\sin\beta} \frac{\partial} {\partial \gamma}
+    \frac{\sin α}{\tan β} \frac{\partial} {\partial α}
+    - \cos α \frac{\partial} {\partial β}
+    -\frac{\sin α}{\sin β} \frac{\partial} {\partial γ}
 \right\},
 &
 R_𝐣 &= i \left\{
-    \frac{\sin\gamma}{\sin\beta} \frac{\partial} {\partial \alpha}
-    +\cos\gamma \frac{\partial} {\partial \beta}
-    -\frac{\sin\gamma}{\tan\beta} \frac{\partial} {\partial \gamma}
+    \frac{\sin γ}{\sin β} \frac{\partial} {\partial α}
+    +\cos γ \frac{\partial} {\partial β}
+    -\frac{\sin γ}{\tan β} \frac{\partial} {\partial γ}
 \right\},
 \\
-L_𝐤 &= -i \frac{\partial} {\partial \alpha},
+L_𝐤 &= -i \frac{\partial} {\partial α},
 &
-R_𝐤 &= i \frac{\partial} {\partial \gamma}.
+R_𝐤 &= i \frac{\partial} {\partial γ}.
 \end{aligned}
 ```
 These correspond precisely to the standard expressions for the
@@ -169,29 +169,29 @@ find that
 [L_𝐮, R_𝐯] = 0.
 ```
 Restricting to just the basis vectors, indexed as ``a,b,c``, the first
-of these reduces to ``[L_a, L_b] = i \epsilon_{abc} L_c``, which is
+of these reduces to ``[L_a, L_b] = i ϵ_{abc} L_c``, which is
 precisely the standard result.  We can also lift any function on
 ``𝕊²`` to a function on ``𝕊³`` — or more precisely any function on
 spherical coordinates to a function on the space of Euler angles — by
-the correspondence ``(\theta, \phi) \mapsto (\alpha, \beta, \gamma) =
-(\phi, \theta, 0)``.  We can then express the angular-momentum
+the correspondence ``(θ, ϕ) \mapsto (α, β, γ) =
+(ϕ, θ, 0)``.  We can then express the angular-momentum
 operators in their more common form, in terms of spherical
 coordinates:
 ```math
 L_x = i \left\{
-    \frac{\cos\phi}{\tan\theta} \frac{\partial} {\partial \phi}
-    + \sin\phi \frac{\partial} {\partial \theta}
+    \frac{\cos ϕ}{\tan θ} \frac{\partial} {\partial ϕ}
+    + \sin ϕ \frac{\partial} {\partial θ}
 \right\}
 \qquad
 L_y = i \left\{
-    \frac{\sin\phi}{\tan\theta} \frac{\partial} {\partial \phi}
-    - \cos\phi \frac{\partial} {\partial \theta}
+    \frac{\sin ϕ}{\tan θ} \frac{\partial} {\partial ϕ}
+    - \cos ϕ \frac{\partial} {\partial θ}
 \right\}
 \qquad
-L_z = -i \frac{\partial} {\partial \phi}
+L_z = -i \frac{\partial} {\partial ϕ}
 ```
 The ``R`` operators make less sense for a function of spherical
-coordinates, because of their inherent dependence on ``\gamma.``  We
+coordinates, because of their inherent dependence on ``γ.``  We
 will come back to them, however, when we consider spin-weighted
 functions — which are inherently ill-defined on the 2-sphere, but can
 be interpreted as restrictions of functions on the 3-sphere with this
@@ -205,7 +205,7 @@ package defines the spherical harmonics in terms of Wigner's 𝔇
 matrices, by way of the spin-weighted spherical harmonics, as a
 function of a quaternion:
 ```math
-Y_{l,m}(𝐐) = \sqrt{\frac{2ℓ+1}{4\pi}} e^{im\phi}
+Y_{l,m}(𝐐) = \sqrt{\frac{2ℓ+1}{4\pi}} e^{imϕ}
     D^{(l)}_{m,0}(𝐐),
 ```
 where ``D^{(l)}_{m,0}`` is the Wigner 𝔇 matrix.  This is a
@@ -219,13 +219,13 @@ terms of spherical coordinates, that expression is
 \begin{align}
   Y_{l,m}
   &=
-  \sqrt{\frac{2ℓ+1}{4\pi}} e^{im\phi}
+  \sqrt{\frac{2ℓ+1}{4\pi}} e^{imϕ}
   \sum_{k = k_1}^{k_2}
   \frac{(-1)^k ℓ! [(ℓ+m)!(ℓ-m)!]^{1/2}}
   {(ℓ+m-k)!(ℓ-k)!k!(k-m)!}
   \\ &\qquad \times
-  \left(\cos\left(\frac{\theta}{2}\right)\right)^{2ℓ+m-2k}
-  \left(\sin\left(\frac{\theta}{2}\right)\right)^{2k-m}
+  \left(\cos\left(\frac{θ}{2}\right)\right)^{2ℓ+m-2k}
+  \left(\sin\left(\frac{θ}{2}\right)\right)^{2k-m}
 \end{align}
 ```
 where ``k_1 = \textrm{max}(0, m)`` and ``k_2=\textrm{min}(ℓ+m,
@@ -238,18 +238,18 @@ other sources.
 as
 ```math
 m^\mu = \frac{1}{\sqrt{2}} \left(
-    \boldsymbol{\theta} + i \boldsymbol{\phi}
+    \boldsymbol{θ} + i \boldsymbol{ϕ}
 \right)^\mu
 ```
 and discuss spin weight in terms of the rotation
 ```math
-(m^\mu)' = e^{i\psi} m^\mu,
+(m^\mu)' = e^{iψ} m^\mu,
 ```
 where the tangent basis rotates but we are "keeping the
 coordinates fixed".  They then define a function to have
 spin weight ``s`` if it transforms as
 ```math
-\eta' = e^{is\psi} \eta.
+\eta' = e^{isψ} \eta.
 ```
 Such functions are generally the result of contracting a tensor field
 with some number of ``m^\mu`` and some number of ``\bar{m}^\mu``
@@ -269,25 +269,25 @@ quaternions ``\mathrm{Spin}(3)=\mathrm{SU}(2)``, and frequently
 discuss them in terms of Euler angles.
 
 As we saw [above](@ref "Euler angles (and spherical coordinates)"),
-``m^\mu`` corresponds to the Euler angles ``(\phi, \theta, 0)``, while
-``(m^\mu)'`` corresponds to the Euler angles ``(\phi, \theta,
--\psi)``.  The function, written in terms of Euler angles, becomes
+``m^\mu`` corresponds to the Euler angles ``(ϕ, θ, 0)``, while
+``(m^\mu)'`` corresponds to the Euler angles ``(ϕ, θ,
+-ψ)``.  The function, written in terms of Euler angles, becomes
 ```math
-\eta(\phi, \theta, -\psi) = e^{is\psi} \eta(\phi, \theta, 0),
+\eta(ϕ, θ, -ψ) = e^{isψ} \eta(ϕ, θ, 0),
 ```
 or
 ```math
-\eta(\alpha, \beta, \gamma) = e^{-is\gamma} \eta(\alpha, \beta, 0).
+\eta(α, β, γ) = e^{-isγ} \eta(α, β, 0).
 ```
 This is the crucial definition giving us the behavior of
 spin-weighted functions: they are eigenfunctions of the operator
-``R_z = i \partial_\gamma`` with eigenvalue ``s``.
+``R_z = i \partial_γ`` with eigenvalue ``s``.
 
 We can make this a little less dependent on the choice of Euler
 angles by writing ``\eta`` not as a function of Euler angles, but as
 a function of a quaternion.  We then have
 ```math
-\eta(𝐐\, e^{\gamma 𝐤/2}) = e^{-is\gamma} \eta(𝐐),
+\eta(𝐐\, e^{γ 𝐤/2}) = e^{-isγ} \eta(𝐐),
 ```
 which means that spin-weighted functions are eigenfunctions of the
 operator ``R_𝐤`` with eigenvalue ``s``.
@@ -298,20 +298,20 @@ commutator relations for ``R``:
 ```math
 \begin{aligned}
 \eth \eta &= \left(R_x + i R_y\right)\eta
-    = -\sin^s \theta \left\{
-        \frac{\partial}{\partial \theta}
-        + \frac{i}{\sin\theta} \frac{\partial}{\partial \phi}
-    \right\} \left(\eta \sin^{-s} \theta\right), \\
+    = -\sin^s θ \left\{
+        \frac{\partial}{\partial θ}
+        + \frac{i}{\sin θ} \frac{\partial}{\partial ϕ}
+    \right\} \left(\eta \sin^{-s} θ\right), \\
 \bar{\eth} \eta &= \left(R_x - i R_y\right)\eta
-    = -\sin^s \theta \left\{
-        \frac{\partial}{\partial \theta}
-        - \frac{i}{\sin\theta} \frac{\partial}{\partial \phi}
-    \right\} \left(\eta \sin^{-s} \theta\right).
+    = -\sin^s θ \left\{
+        \frac{\partial}{\partial θ}
+        - \frac{i}{\sin θ} \frac{\partial}{\partial ϕ}
+    \right\} \left(\eta \sin^{-s} θ\right).
 \end{aligned}
 ```
 Here, we have used the full expressions for ``R_x`` and ``R_y``
 given above in terms of Euler angles, replacing the derivatives
-with respect to ``\gamma`` by a factor of ``-i s``, and converting
+with respect to ``γ`` by a factor of ``-i s``, and converting
 the remaining Euler angles to spherical coordinates.  This allows
 us to write them as if they were operators on the 2-sphere, even
 though this is mathematically ill-defined and spin-weighted
@@ -330,7 +330,7 @@ of comparison with other sources.  The expression is
 \begin{align}
   {}_{s}Y_{l,m}
   &=
-  (-1)^s\sqrt{\frac{2ℓ+1}{4\pi}} e^{im\phi}
+  (-1)^s\sqrt{\frac{2ℓ+1}{4\pi}} e^{imϕ}
   \sum_{k = k_1}^{k_2}
   \frac{(-1)^k[(ℓ+m)!(ℓ-m)!(ℓ-s)!(ℓ+s)!]^{1/2}}
   {(ℓ+m-k)!(ℓ+s-k)!k!(k-s-m)!}

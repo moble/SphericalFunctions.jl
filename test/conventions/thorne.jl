@@ -33,7 +33,7 @@ end
 
 Eqs. (2.7) of [Thorne](@cite Thorne_1980), implementing
 ```math
-    Y^{ℓ,m}(\theta, \phi).
+    Y^{ℓ,m}(θ, ϕ).
 ```
 """
 function Y(ℓ, m, θ, ϕ)

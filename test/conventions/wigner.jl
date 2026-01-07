@@ -49,7 +49,7 @@ conjugation of the D function, which is consistent with our convention.
 
 # Eq. (15.8) of [Wigner](@cite Wigner_1959), implementing
 # ```math
-#     D^ℓ_{m',m}(\alpha, \beta, \gamma).
+#     D^ℓ_{m',m}(α, β, γ).
 # ```
 # """
 # function D(ℓ, m′, m, α, β, γ)
@@ -62,7 +62,7 @@ conjugation of the D function, which is consistent with our convention.
 
 Eq. (15.27) of [Wigner](@cite Wigner_1959), implementing
 ```math
-    D^{(j)}(\alpha, \beta, \gamma)_{\mu',\mu}.
+    D^{(j)}(α, β, γ)_{\mu',\mu}.
 ```
 """
 function D(j, μ′, μ, α, β, γ)

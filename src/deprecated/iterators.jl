@@ -266,9 +266,9 @@ This provides initial values for the recursion to find
 values with ``ℓ=m``.
 
 ```math
-{}_{s}\lambda_{ℓ,m}(\theta)
-    := {}_{s}Y_{ℓ,m}(\theta, 0)
-    = (-1)^m\, \sqrt{\frac{2ℓ+1}{4\pi}} d^ℓ_{-m,s}(\theta)
+{}_{s}\lambda_{ℓ,m}(θ)
+    := {}_{s}Y_{ℓ,m}(θ, 0)
+    = (-1)^m\, \sqrt{\frac{2ℓ+1}{4\pi}} d^ℓ_{-m,s}(θ)
 ```
 """
 function λ_recursion_initialize(sin½θ::T, cos½θ::T, s, ℓ, m) where T
