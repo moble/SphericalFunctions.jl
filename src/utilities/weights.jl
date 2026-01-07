@@ -68,7 +68,7 @@ function fejer2(n, ::Type{T}) where {T<:AbstractFloat}
     w[2:end]
 end
 
-function fejer2(n, ::Type{T}=Float64) where {T<:MachineFloat}
+function fejer2(n, ::Type{T}=Float64) where {T<:IEEEFloat}
     # Specialized to "machine" floats; significant reduction in memory and increase in speed
     v = Vector{T}(undef, (n+1)÷2 + 1)
     @inbounds begin
@@ -122,7 +122,7 @@ function clenshaw_curtis(n, ::Type{T}) where {T<:AbstractFloat}
     [w; w[1]]
 end
 
-function clenshaw_curtis(n, ::Type{T}=Float64) where {T<:MachineFloat}
+function clenshaw_curtis(n, ::Type{T}=Float64) where {T<:IEEEFloat}
     # Specialized to "machine" floats; significant reduction in memory and increase in speed
     nmod2 = mod(n-1, 2)
     w₀ᶜᶜ = inv(T((n-1)^2 - 1 + nmod2))

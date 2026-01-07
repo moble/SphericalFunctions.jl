@@ -13,7 +13,7 @@ using LoopVectorization: @turbo
 using Base.Threads: @threads, threadpoolsize
 
 # Pull in shared utility functionality from the parent module (code lives in `src/utilities/`).
-using ..SphericalFunctions: MachineFloat
+using ..SphericalFunctions: IEEEFloat
 using ..SphericalFunctions: OffsetVec, OffsetMat, offset
 using ..SphericalFunctions: sqrtbinomial
 using ..SphericalFunctions: golden_ratio_spiral_pixels, golden_ratio_spiral_rotors
