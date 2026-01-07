@@ -2,7 +2,7 @@
     map2salm(map, spin, ℓmax)
     map2salm(map, plan)
 
-Transform `map` values sampled on the sphere to ``{}_sa_{\ell, m}`` modes.
+Transform `map` values sampled on the sphere to ``{}_sa_{ℓ, m}`` modes.
 
 The `map` array should have size Nφ along its first dimension and Nϑ along its second; any
 number of dimensions may follow.  The `spin` must be entered explicitly, and `ℓmax` is the
@@ -28,7 +28,7 @@ end
     map2salm!(salm, map, spin, ℓmax)
     map2salm!(salm, map, plan)
 
-Transform `map` values sampled on the sphere to ``{}_sa_{\ell, m}`` modes in place.
+Transform `map` values sampled on the sphere to ``{}_sa_{ℓ, m}`` modes in place.
 
 For details, see [`map2salm`](@ref).
 

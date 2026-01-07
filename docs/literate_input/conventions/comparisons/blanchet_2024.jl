@@ -35,7 +35,7 @@ import ..ConventionsUtilities: 𝒾, ❗
 
 # The ``s=-2`` spin-weighted spherical harmonics are defined in Eq. (184a) as
 # ```math
-#   Y^{l,m}_{-2} = \sqrt{\frac{2l+1}{4\pi}} d^{\ell m}(\theta) e^{im\phi}.
+#   Y^{l,m}_{-2} = \sqrt{\frac{2l+1}{4\pi}} d^{ℓ m}(\theta) e^{im\phi}.
 # ```
 function Yˡᵐ₋₂(l, m, θ::T, ϕ::T) where {T<:Real}
     √((2l + 1) / (4T(π))) * d(l, m, θ) * exp(𝒾 * m * ϕ)
@@ -44,12 +44,12 @@ end
 
 # Immediately following that, in Eq. (184b), we find the definition of the ``d`` function:
 # ```math
-#   d^{\ell m}
+#   d^{ℓ m}
 #   =
 #   \sum_{k = k_1}^{k_2}
 #   \frac{(-)^k}{k!}
-#   e_k^{\ell m}
-#   \left(\cos\frac{\theta}{2}\right)^{2\ell+m-2k-2}
+#   e_k^{ℓ m}
+#   \left(\cos\frac{\theta}{2}\right)^{2ℓ+m-2k-2}
 #   \left(\sin\frac{\theta}{2}\right)^{2k-m+2},
 # ```
 # with ``k_1 = \textrm{max}(0, m-2)`` and ``k_2=\textrm{min}(l+m, l-2)``.
@@ -66,12 +66,12 @@ function d(l, m, θ::T) where {T<:Real}
 end
 #+
 
-# The ``e_k^{\ell m}`` symbol is defined in Eq. (184c) as
+# The ``e_k^{ℓ m}`` symbol is defined in Eq. (184c) as
 # ```math
-#   e_k^{\ell m} = \frac{
-#     \sqrt{(\ell+m)!(\ell-m)!(\ell+2)!(\ell-2)!}
+#   e_k^{ℓ m} = \frac{
+#     \sqrt{(ℓ+m)!(ℓ-m)!(ℓ+2)!(ℓ-2)!}
 #   }{
-#     (k-m+2)!(\ell+m-k)!(\ell-k-2)!
+#     (k-m+2)!(ℓ+m-k)!(ℓ-k-2)!
 #   }.
 # ```
 function eₖˡᵐ(k, l, m)
@@ -95,7 +95,7 @@ end  # module Blanchet
 ℓₘₐₓ = 8
 #+
 
-# because that's the maximum ``\ell`` used for PN results — and that's roughly the limit to
+# because that's the maximum ``ℓ`` used for PN results — and that's roughly the limit to
 # which I'd trust these expressions anyway.  We will also only test the
 s = -2
 #+
@@ -108,7 +108,7 @@ s = -2
 #+
 
 # This loose relative tolerance is necessary because the numerical errors in Blanchet's
-# explicit expressions grow rapidly with ``\ell``.
+# explicit expressions grow rapidly with ``ℓ``.
 for (θ, ϕ) ∈ θϕrange()
     for (ℓ, m) ∈ ℓmrange(abs(s), ℓₘₐₓ)
         @test Blanchet.Yˡᵐ₋₂(ℓ, m, θ, ϕ) ≈ SphericalFunctions.Deprecated.Y(s, ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ

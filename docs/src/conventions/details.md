@@ -25,11 +25,11 @@ unit basis vectors ``(𝐱, 𝐲, 𝐳)``.  Note that these basis vectors
 are assumed to have unit norm, but we omit the hats just to keep the
 notation simple.  Any vector in this space can be written as
 ```math
-\mathbf{v} = v_x \mathbf{𝐱} + v_y \mathbf{𝐲} + v_z \mathbf{𝐳},
+𝐯 = v_x 𝐱 + v_y 𝐲 + v_z 𝐳,
 ```
 in which case the Euclidean norm is given by
 ```math
-\| \mathbf{v} \| = \sqrt{v_x^2 + v_y^2 + v_z^2}.
+\| 𝐯 \| = \sqrt{v_x^2 + v_y^2 + v_z^2}.
 ```
 Equivalently, we can write the components of the Euclidean metric as
 ```math
@@ -78,9 +78,9 @@ g_{i'j'}
 The unit coordinate vectors in spherical coordinates are then
 ```math
 \begin{aligned}
-\mathbf{𝐫} &= \sin\theta \cos\phi \mathbf{𝐱} + \sin\theta \sin\phi \mathbf{𝐲} + \cos\theta \mathbf{𝐳}, \\
-\boldsymbol{\theta} &= \cos\theta \cos\phi \mathbf{𝐱} + \cos\theta \sin\phi \mathbf{𝐲} - \sin\theta \mathbf{𝐳}, \\
-\boldsymbol{\phi} &= -\sin\phi \mathbf{𝐱} + \cos\phi \mathbf{𝐲},
+𝐫 &= \sin\theta \cos\phi 𝐱 + \sin\theta \sin\phi 𝐲 + \cos\theta 𝐳, \\
+\boldsymbol{\theta} &= \cos\theta \cos\phi 𝐱 + \cos\theta \sin\phi 𝐲 - \sin\theta 𝐳, \\
+\boldsymbol{\phi} &= -\sin\phi 𝐱 + \cos\phi 𝐲,
 \end{aligned}
 ```
 where, again, we omit the hats on the unit vectors to keep the
@@ -88,30 +88,30 @@ notation simple.  Conversely, we can express the Cartesian basis
 vectors in terms of the spherical basis vectors as
 ```math
 \begin{aligned}
-\mathbf{𝐱} &= \sin\theta \cos\phi \mathbf{𝐫} + \cos\theta \cos\phi \boldsymbol{\theta} - \sin\phi \boldsymbol{\phi}, 
+𝐱 &= \sin\theta \cos\phi 𝐫 + \cos\theta \cos\phi \boldsymbol{\theta} - \sin\phi \boldsymbol{\phi}, 
 \\
-\mathbf{𝐲} &= \sin\theta \sin\phi \mathbf{𝐫} + \cos\theta \sin\phi \boldsymbol{\theta} + \cos\phi \boldsymbol{\phi},
+𝐲 &= \sin\theta \sin\phi 𝐫 + \cos\theta \sin\phi \boldsymbol{\theta} + \cos\phi \boldsymbol{\phi},
 \\
-\mathbf{𝐳} &= \cos\theta \mathbf{𝐫} - \sin\theta \boldsymbol{\theta}.
+𝐳 &= \cos\theta 𝐫 - \sin\theta \boldsymbol{\theta}.
 \end{aligned}
 ```
 
 One seemingly obvious — but extremely important — fact is that the
 unit basis frame ``(𝐱, 𝐲, 𝐳)`` can be rotated onto
-``(\boldsymbol{\theta}, \boldsymbol{\phi}, \mathbf{r})`` by first
-rotating through the "polar" angle ``\theta`` about the ``\mathbf{y}``
+``(\boldsymbol{\theta}, \boldsymbol{\phi}, 𝐫)`` by first
+rotating through the "polar" angle ``\theta`` about the ``𝐲``
 axis, and then through the "azimuthal" angle ``\phi`` about the
-``\mathbf{z}`` axis.  This becomes important when we consider
+``𝐳`` axis.  This becomes important when we consider
 spin-weighted functions.
 
 Integration in Cartesian coordinates is, of course, trivial as
 ```math
-\int_{\mathbb{R}^3} f\, d^3\mathbf{r} = \int_{-\infty}^{\infty} \int_{-\infty}^{\infty} \int_{-\infty}^{\infty} f\, dx\, dy\, dz.
+\int_{\mathbb{R}^3} f\, d^3𝐫 = \int_{-\infty}^{\infty} \int_{-\infty}^{\infty} \int_{-\infty}^{\infty} f\, dx\, dy\, dz.
 ```
 In spherical coordinates, the integrand involves the square-root of
 the determinant of the metric, so we have
 ```math
-\int_{\mathbb{R}^3} f\, d^3\mathbf{r} = \int_0^\infty \int_0^\pi \int_0^{2\pi} f\, r^2 \sin\theta\, dr\, d\theta\, d\phi.
+\int_{\mathbb{R}^3} f\, d^3𝐫 = \int_0^\infty \int_0^\pi \int_0^{2\pi} f\, r^2 \sin\theta\, dr\, d\theta\, d\phi.
 ```
 Restricting to the unit sphere, and normalizing so that the integral
 of 1 over the sphere is 1, we can simplify this to
@@ -322,7 +322,7 @@ The unit basis vectors in extended Euler coordinates in terms of the
 unit basis vectors in quaternion coordinates are
 ```math
 \begin{aligned}
-\mathbf{𝐑} &= \frac{1}{R} \left(
+𝐑 &= \frac{1}{R} \left(
   \cos \frac{\beta}{2} \cos \frac{\alpha+\gamma}{2} 𝟏
   - \sin \frac{\beta}{2} \sin \frac{\alpha-\gamma}{2} 𝐢
   + \sin \frac{\beta}{2} \cos \frac{\alpha-\gamma}{2} 𝐣
@@ -379,41 +379,41 @@ Z^2 = 1``.  Given this constraint we can, without loss of generality,
 write the quaternion as
 ```math
 𝐑
-= \exp\left(\frac{\rho}{2} \hat{\mathfrak{r}}\right)
-= \cos\frac{\rho}{2} + \sin\frac{\rho}{2}\, \hat{\mathfrak{r}},
+= \exp\left(\frac{\rho}{2} \hat{𝔯}\right)
+= \cos\frac{\rho}{2} + \sin\frac{\rho}{2}\, \hat{𝔯},
 ```
-where ``\rho`` is an angle of rotation and ``\hat{\mathfrak{r}}`` is a
+where ``\rho`` is an angle of rotation and ``\hat{𝔯}`` is a
 unit "pure-vector" quaternion.  We can multiply a vector ``𝐯`` as
 ```math
 𝐑\, 𝐯\, 𝐑^{-1}.
 ```
 Splitting ``𝐯 = 𝐯_⟂ + 𝐯_∥`` into components perpendicular and
-parallel to ``\hat{\mathfrak{r}}``, we see that ``𝐯_∥`` commutes with
+parallel to ``\hat{𝔯}``, we see that ``𝐯_∥`` commutes with
 ``𝐑`` and ``𝐑^{-1}``, while ``𝐯_⟂`` anticommutes with
-``\hat{\mathfrak{r}}``.  To find the full rotation, we expand the
+``\hat{𝔯}``.  To find the full rotation, we expand the
 product:
 ```math
 \begin{aligned}
 𝐑\, 𝐯\, 𝐑^{-1}
 &= 𝐯_∥
-   + \left(\cos\frac{\rho}{2} + \sin\frac{\rho}{2}\, \hat{\mathfrak{r}}\right)
+   + \left(\cos\frac{\rho}{2} + \sin\frac{\rho}{2}\, \hat{𝔯}\right)
      𝐯_⟂
-     \left(\cos\frac{\rho}{2} - \sin\frac{\rho}{2}\, \hat{\mathfrak{r}}\right) \\
+     \left(\cos\frac{\rho}{2} - \sin\frac{\rho}{2}\, \hat{𝔯}\right) \\
 &= 𝐯_∥
-   + \left(\cos\frac{\rho}{2}\, 𝐯_⟂ + \sin\frac{\rho}{2}\, \hat{\mathfrak{r}}\, 𝐯_⟂\right)
-     \left(\cos\frac{\rho}{2} - \sin\frac{\rho}{2}\, \hat{\mathfrak{r}}\right) \\
+   + \left(\cos\frac{\rho}{2}\, 𝐯_⟂ + \sin\frac{\rho}{2}\, \hat{𝔯}\, 𝐯_⟂\right)
+     \left(\cos\frac{\rho}{2} - \sin\frac{\rho}{2}\, \hat{𝔯}\right) \\
 &= 𝐯_∥
-   + \cos^2\frac{\rho}{2}\, 𝐯_⟂ + \sin\frac{\rho}{2}\, \cos\frac{\rho}{2}\, \hat{\mathfrak{r}}\, 𝐯_⟂
-   - \sin\frac{\rho}{2}\, \cos\frac{\rho}{2}\, 𝐯_⟂ \, \hat{\mathfrak{r}} - \sin^2\frac{\rho}{2}\, \hat{\mathfrak{r}}\, 𝐯_⟂\, \hat{\mathfrak{r}} \\
+   + \cos^2\frac{\rho}{2}\, 𝐯_⟂ + \sin\frac{\rho}{2}\, \cos\frac{\rho}{2}\, \hat{𝔯}\, 𝐯_⟂
+   - \sin\frac{\rho}{2}\, \cos\frac{\rho}{2}\, 𝐯_⟂ \, \hat{𝔯} - \sin^2\frac{\rho}{2}\, \hat{𝔯}\, 𝐯_⟂\, \hat{𝔯} \\
 &= 𝐯_∥
-   + \cos^2\frac{\rho}{2}\, 𝐯_⟂ + \sin\frac{\rho}{2}\, \cos\frac{\rho}{2}\, [\hat{\mathfrak{r}}, 𝐯_⟂] - \sin^2\frac{\rho}{2}\, 𝐯_⟂ \\
+   + \cos^2\frac{\rho}{2}\, 𝐯_⟂ + \sin\frac{\rho}{2}\, \cos\frac{\rho}{2}\, [\hat{𝔯}, 𝐯_⟂] - \sin^2\frac{\rho}{2}\, 𝐯_⟂ \\
 &= 𝐯_∥
-   + \cos\rho\, 𝐯_⟂ + \sin\rho\, \hat{\mathfrak{r}}\times 𝐯_⟂
+   + \cos\rho\, 𝐯_⟂ + \sin\rho\, \hat{𝔯}\times 𝐯_⟂
 \end{aligned}
 ```
 The final expression shows that this is precisely what we expect when
 rotating ``𝐯`` through an angle ``\rho`` (in a positive, right-handed
-sense) about the axis ``\hat{\mathfrak{r}}``.
+sense) about the axis ``\hat{𝔯}``.
 
 Note that the presence of two factors of ``𝐑`` in the expression for
 rotating a vector explains two things.  First, it explains why the
@@ -448,7 +448,7 @@ rotated into the plane spanned by the unit basis vectors
 that point.  If ``\gamma = 0`` the rotation is precise, meaning that
 ``𝐱`` is rotated onto ``\boldsymbol{\theta}`` and ``𝐲`` onto
 ``\boldsymbol{\phi}``; if ``\gamma ≠ 0`` then they are rotated within
-that plane by the angle ``\gamma`` about the ``\mathbf{r}`` axis.
+that plane by the angle ``\gamma`` about the ``𝐫`` axis.
 Thus, we identify the spherical coordinates ``(\theta, \phi)`` with
 the Euler angles ``(\alpha, \beta, \gamma) = (\phi, \theta, 0)``.
 
@@ -538,35 +538,35 @@ actions.
 
 We work with functions ``f: A \to \mathbb{C}``, where ``A`` is either
 the group of unit quaternions, or the full algebra of quaternions.
-Any non-zero quaternion can be expressed as ``e^\mathfrak{g}`` for
-some finite quaternion ``\mathfrak{g}``, which is referred to as the
-"generator" of the action of ``e^\mathfrak{g}``.  This can act on a
-function ``f`` by multiplying the argument by ``e^\mathfrak{g}``.
+Any non-zero quaternion can be expressed as ``e^𝔤`` for
+some finite quaternion ``𝔤``, which is referred to as the
+"generator" of the action of ``e^𝔤``.  This can act on a
+function ``f`` by multiplying the argument by ``e^𝔤``.
 However, there is an ambiguity: we could multiply either on the left
 or the right:[^2]
 ```math
-f\left(\mathbf{Q}\right) \mapsto f\left(e^\mathfrak{g} \mathbf{Q}\right)
+f\left(𝐐\right) \mapsto f\left(e^𝔤 𝐐\right)
 \qquad \text{or} \qquad
-f\left(\mathbf{Q}\right) \mapsto f\left(\mathbf{Q} e^\mathfrak{g}\right).
+f\left(𝐐\right) \mapsto f\left(𝐐 e^𝔤\right).
 ```
 There is an additional ambiguity, in that this action rotates the
 *argument* of the function, whereas we will often prefer to think in
 terms of rotating the *function* itself.  For example, our function
 may describe the measurement of some field in a particular coordinate
-system.  Here, the argument ``\mathbf{Q}`` describes a particular
-value of the coordinates, and ``e^\mathfrak{g}`` changes the point
-under consideration.  If, on the other hand ``e^\mathfrak{g}``
+system.  Here, the argument ``𝐐`` describes a particular
+value of the coordinates, and ``e^𝔤`` changes the point
+under consideration.  If, on the other hand ``e^𝔤``
 describes how the field itself is rotated, then we can write the
 rotated field as a function ``f'`` which is related to the original
 function ``f`` by
 ```math
-f'\left(\mathbf{Q}\right) = f\left(e^{-\mathfrak{g}} \mathbf{Q}\right)
+f'\left(𝐐\right) = f\left(e^{-𝔤} 𝐐\right)
 \qquad \text{or} \qquad
-f'\left(\mathbf{Q}\right) = f\left(\mathbf{Q} e^{-\mathfrak{g}}\right).
+f'\left(𝐐\right) = f\left(𝐐 e^{-𝔤}\right).
 ```
 Note that the exponent is negated, because the action of
-``e^\mathfrak{g}`` on the argument is the inverse of the action of
-``e^{-\mathfrak{g}}`` on the function.  This is a general property of
+``e^𝔤`` on the argument is the inverse of the action of
+``e^{-𝔤}`` on the function.  This is a general property of
 the action of a group on a space, and is a consequence of the group
 action being a homomorphism.
 
@@ -583,19 +583,19 @@ f(\theta, \phi) = \sin\theta \sin\phi.
 Recall that we can map the spherical coordinates into the Euler
 angles, and the Euler angles into the quaternion
 ```math
-(\theta, \phi) \mapsto (\phi, \theta, 0) \mapsto \mathbf{Q}
+(\theta, \phi) \mapsto (\phi, \theta, 0) \mapsto 𝐐
 =
-\exp\left(\frac{\phi}{2} \mathbf{k}\right)
-\exp\left(\frac{\theta}{2} \mathbf{j}\right).
+\exp\left(\frac{\phi}{2} 𝐤\right)
+\exp\left(\frac{\theta}{2} 𝐣\right).
 ```
 It is straightforward to see that we can write ``f`` as a function of
-``\mathbf{Q}`` as
+``𝐐`` as
 ```math
-f(\mathbf{Q}) = \left\langle \mathbf{Q}\, \mathbf{k}\, \mathbf{Q}^{-1} \right\rangle_{\mathbf{j}},
+f(𝐐) = \left\langle 𝐐\, 𝐤\, 𝐐^{-1} \right\rangle_{𝐣},
 ```
 where the angle brackets and subscript indicate that we are taking the
-``\mathbf{j}`` component.  That is, ``f`` is the ``y`` component of
-the vector ``\mathbf{z}`` rotated by ``\mathbf{Q}``. 
+``𝐣`` component.  That is, ``f`` is the ``y`` component of
+the vector ``𝐳`` rotated by ``𝐐``. 
 
 Now, we imagine rotating the field by an angle ``\alpha`` in the
 positive sense about the ``z`` axis.  Visualizing the situation, we
@@ -606,40 +606,40 @@ f'(\theta, \phi) = \sin\theta \sin(\phi - \alpha).
 For example, the rotated field evaluated at the point ``(\theta, \phi)
 = (\pi/2, 0)`` along the positive ``x`` axis should correspond to the
 original field evaluated at the point ``(\theta, \phi) = (\pi/2,
--\alpha)``.  This rotation is generated by ``\mathfrak{g} = \alpha
-\mathbf{k} / 2``, which allows us to immediately calculate
+-\alpha)``.  This rotation is generated by ``𝔤 = \alpha
+𝐤 / 2``, which allows us to immediately calculate
 ```math
 \begin{aligned}
-f(e^\mathfrak{g} \mathbf{Q}) &= \sin\theta \sin(\phi + \alpha) &&&
-f(\mathbf{Q} e^\mathfrak{g}) &= \sin\theta \sin\phi \\
-f(e^{-\mathfrak{g}} \mathbf{Q}) &= \sin\theta \sin(\phi - \alpha) &&&
-f(\mathbf{Q} e^{-\mathfrak{g}}) &= \sin\theta \sin\phi.
+f(e^𝔤 𝐐) &= \sin\theta \sin(\phi + \alpha) &&&
+f(𝐐 e^𝔤) &= \sin\theta \sin\phi \\
+f(e^{-𝔤} 𝐐) &= \sin\theta \sin(\phi - \alpha) &&&
+f(𝐐 e^{-𝔤}) &= \sin\theta \sin\phi.
 \end{aligned}
 ```
-Thus, we see that left-multiplication by ``e^{-\mathfrak{g}}``
+Thus, we see that left-multiplication by ``e^{-𝔤}``
 corresponds to rotation of the field while leaving the coordinates
-fixed; left-multiplication by ``e^\mathfrak{g}`` corresponds to
+fixed; left-multiplication by ``e^𝔤`` corresponds to
 rotation of the coordinates while leaving the field fixed; and
 right-multiplication by either doesn't affect this function at all.
 
 Of course, right-multiplication using other choices for
-``\mathfrak{g}`` could certainly have some effect on this function,
-and this choice of ``\mathfrak{g}`` could have an effect on other
+``𝔤`` could certainly have some effect on this function,
+and this choice of ``𝔤`` could have an effect on other
 functions.  Note that right-multiplication can also be interpreted as
 left-multiplication, where the generator itself is rotated by the
 argument to the function.  That is,
 ```math
 \begin{aligned}
-f(\mathbf{Q} e^\mathfrak{g})
-  &= f(\mathbf{Q} e^{\mathfrak{g}} \mathbf{Q}^{-1} \mathbf{Q})
-  = f(e^{\mathfrak{g}'} \mathbf{Q}) \\
-f(\mathbf{Q} e^{-\mathfrak{g}})
-  &= f(\mathbf{Q} e^{-\mathfrak{g}} \mathbf{Q}^{-1} \mathbf{Q})
-  = f(e^{-\mathfrak{g}'} \mathbf{Q}),
+f(𝐐 e^𝔤)
+  &= f(𝐐 e^{𝔤} 𝐐^{-1} 𝐐)
+  = f(e^{𝔤'} 𝐐) \\
+f(𝐐 e^{-𝔤})
+  &= f(𝐐 e^{-𝔤} 𝐐^{-1} 𝐐)
+  = f(e^{-𝔤'} 𝐐),
 \end{aligned}
 ```
-where ``\mathfrak{g}' = \mathbf{Q} \mathfrak{g} \mathbf{Q}^{-1}``.  In
-this example, ``\mathfrak{g}'`` generates a rotation by an angle
+where ``𝔤' = 𝐐 𝔤 𝐐^{-1}``.  In
+this example, ``𝔤'`` generates a rotation by an angle
 ``\alpha`` about the point in question, which leaves that point fixed,
 and since this is a scalar function it has no effect on the value.  Of
 course, we will see below that changing by a phase proportional to
@@ -652,8 +652,8 @@ respect to infinitesimal rotations we apply to the functions
 themselves:
 ```math
 \begin{aligned}
-L_{\mathfrak{g}} f(\mathbf{Q}) &= \lambda \left. \frac{\partial} {\partial \theta} f \left( e^{-\theta \mathfrak{g} / 2} \mathbf{Q} \right) \right|_{\theta=0}, \\
-R_{\mathfrak{g}} f(\mathbf{Q}) &= \rho \left. \frac{\partial} {\partial \theta} f \left( \mathbf{Q} e^{-\theta \mathfrak{g} / 2} \right) \right|_{\theta=0}.
+L_{𝔤} f(𝐐) &= \lambda \left. \frac{\partial} {\partial \theta} f \left( e^{-\theta 𝔤 / 2} 𝐐 \right) \right|_{\theta=0}, \\
+R_{𝔤} f(𝐐) &= \rho \left. \frac{\partial} {\partial \theta} f \left( 𝐐 e^{-\theta 𝔤 / 2} \right) \right|_{\theta=0}.
 \end{aligned}
 ```
 Here, we have introduced the constants ``\lambda`` and ``\rho``
@@ -667,17 +667,17 @@ Note that when composing operators, it is critical to keep track of
 the order of operations, which may look slightly unnatural:
 ```math
 \begin{aligned}
-  L_\mathfrak{g} L_\mathfrak{h} f(\mathbf{Q})
-  % &= \left. \lambda \frac{\partial} {\partial \gamma} f'\left(e^{-\gamma \mathfrak{g} / 2} \mathbf{Q} \right) \right|_{\gamma=0}, \\
-  &= \left. \lambda^2 \frac{\partial} {\partial \gamma} \frac{\partial} {\partial \eta} f\left(e^{-\eta \mathfrak{h} / 2} e^{-\gamma \mathfrak{g} / 2} \mathbf{Q} \right) \right|_{\gamma=\eta=0}, \\
-  R_\mathfrak{g} R_\mathfrak{h} f(\mathbf{Q})
-  % &= \rho \left. \frac{\partial} {\partial \gamma} f' \left( \mathbf{Q} e^{-\gamma \mathfrak{g} / 2} \right) \right|_{\gamma=0} \\
-  &= \left. \rho^2 \frac{\partial} {\partial \gamma} \frac{\partial} {\partial \eta} f\left( \mathbf{Q} e^{-\gamma \mathfrak{g} / 2} e^{-\eta \mathfrak{h} / 2} \right) \right|_{\gamma=\eta=0}.
+  L_𝔤 L_𝔥 f(𝐐)
+  % &= \left. \lambda \frac{\partial} {\partial \gamma} f'\left(e^{-\gamma 𝔤 / 2} 𝐐 \right) \right|_{\gamma=0}, \\
+  &= \left. \lambda^2 \frac{\partial} {\partial \gamma} \frac{\partial} {\partial \eta} f\left(e^{-\eta 𝔥 / 2} e^{-\gamma 𝔤 / 2} 𝐐 \right) \right|_{\gamma=\eta=0}, \\
+  R_𝔤 R_𝔥 f(𝐐)
+  % &= \rho \left. \frac{\partial} {\partial \gamma} f' \left( 𝐐 e^{-\gamma 𝔤 / 2} \right) \right|_{\gamma=0} \\
+  &= \left. \rho^2 \frac{\partial} {\partial \gamma} \frac{\partial} {\partial \eta} f\left( 𝐐 e^{-\gamma 𝔤 / 2} e^{-\eta 𝔥 / 2} \right) \right|_{\gamma=\eta=0}.
 \end{aligned}
 ```
 We can prove the first of these, for example, by defining
-``f'(\mathbf{Q}) = L_\mathfrak{h} f(\mathbf{Q})``, then applying the
-definition of ``L_\mathfrak{g}`` to ``f'(\mathbf{Q})``, and finally
+``f'(𝐐) = L_𝔥 f(𝐐)``, then applying the
+definition of ``L_𝔤`` to ``f'(𝐐)``, and finally
 substituting the definition of ``f'`` back in.  If we failed to use
 the correct order of operations, we would get sign errors when trying
 to evaluate the commutators.
@@ -685,44 +685,44 @@ to evaluate the commutators.
 These operators have some nice properties.  For any scalar ``s``, we have
 ```math
 \begin{aligned}
-L_{s \mathfrak{g}} &= s L_{\mathfrak{g}}, \\
-R_{s \mathfrak{g}} &= s R_{\mathfrak{g}}.
+L_{s 𝔤} &= s L_{𝔤}, \\
+R_{s 𝔤} &= s R_{𝔤}.
 \end{aligned}
 ```
-Given any basis ``\mathbf{e}_n`` for the quaternions, we can use
+Given any basis ``𝐞_n`` for the quaternions, we can use
 the multivariable chain rule to expand the operators in terms of
 components:
 ```math
 \begin{aligned}
-L_{\mathfrak{g}} &= \sum_n g_n\, L_{\mathbf{e}_n}, \\
-R_{\mathfrak{g}} &= \sum_n g_n\, R_{\mathbf{e}_n}.
+L_{𝔤} &= \sum_n g_n\, L_{𝐞_n}, \\
+R_{𝔤} &= \sum_n g_n\, R_{𝐞_n}.
 \end{aligned}
 ```
 This implies that vector addition holds more generally:
 ```math
 \begin{aligned}
-L_{\mathfrak{g} + \mathfrak{h}} &= L_{\mathfrak{g}} + L_{\mathfrak{h}} \\
-R_{\mathfrak{g} + \mathfrak{h}} &= R_{\mathfrak{g}} + R_{\mathfrak{h}}.
+L_{𝔤 + 𝔥} &= L_{𝔤} + L_{𝔥} \\
+R_{𝔤 + 𝔥} &= R_{𝔤} + R_{𝔥}.
 \end{aligned}
 ```
 Moreover, we can show that these operators form a Lie algebra with the
 commutator as the Lie bracket.  That is, we have
 ```math
 \begin{aligned}
-[L_{\mathfrak{g}}, L_{\mathfrak{h}}]
-    &= \frac{\lambda}{2} L_{[\mathfrak{g}, \mathfrak{h}]},
+[L_{𝔤}, L_{𝔥}]
+    &= \frac{\lambda}{2} L_{[𝔤, 𝔥]},
 \\
-[R_{\mathfrak{g}}, R_{\mathfrak{h}}]
-    &= -\frac{\rho}{2} R_{[\mathfrak{g}, \mathfrak{h}]},
+[R_{𝔤}, R_{𝔥}]
+    &= -\frac{\rho}{2} R_{[𝔤, 𝔥]},
 \\
-[L_{\mathfrak{g}}, R_{\mathfrak{h}}] &= 0.
+[L_{𝔤}, R_{𝔥}] &= 0.
 \end{aligned}
 ```
 
-Conventionally, we single out the ``\mathbf{z}`` axis — or
-equivalently the generator ``\mathbf{k} = \mathbf{y}\mathbf{x}`` — as
-a sort of fiducial axis, and ``L_z = L_\mathbf{k}`` and ``R_z =
-R_\mathbf{k}`` as the fiducial operators.  Then, *by definition*,
+Conventionally, we single out the ``𝐳`` axis — or
+equivalently the generator ``𝐤 = 𝐲𝐱`` — as
+a sort of fiducial axis, and ``L_z = L_𝐤`` and ``R_z =
+R_𝐤`` as the fiducial operators.  Then, *by definition*,
 their raising operators ``L_+`` and ``R_+`` and lowering operators
 ``L_-`` and ``R_-`` satisfy 
 ```math
@@ -733,15 +733,15 @@ their raising operators ``L_+`` and ``R_+`` and lowering operators
 ```
 Assuming that the raising and lowering operators can be written as
 linear combinations of the basis operators, these equations imply that
-they have no component proportional ``L_\mathbf{z}``, and that both of
+they have no component proportional ``L_𝐳``, and that both of
 the remaining components must be nonzero.  This actually allows us to
 deduce that ``\lambda^2 = \rho^2 = -1``.  This, in turn, allows us to
 deduce the values of the raising and lowering operators up to an
 overall factor.  Conventionally the factor is chosen so that
 ```math
 \begin{aligned}
-L_\pm &= L_\mathbf{x} \pm i L_\mathbf{y}, \\
-R_\pm &= R_\mathbf{x} \pm i R_\mathbf{y}.
+L_\pm &= L_𝐱 \pm i L_𝐲, \\
+R_\pm &= R_𝐱 \pm i R_𝐲.
 \end{aligned}
 ```
 
@@ -768,9 +768,9 @@ Using these relations, we can actually solve for the constants
   - Show for both the three- and two-spheres
   - Show how they act on functions on the three-sphere
 
-The idea here is to express, e.g., $e^{\theta \mathbf{e}_i /
-2}\mathbf{R}_{\alpha, \beta, \gamma}$ in quaternion components, then
-solve for the new Euler angles $\mathbf{R}_{\alpha', \beta', \gamma'}$
+The idea here is to express, e.g., $e^{\theta 𝐞_i /
+2}𝐑_{\alpha, \beta, \gamma}$ in quaternion components, then
+solve for the new Euler angles $𝐑_{\alpha', \beta', \gamma'}$
 in terms of the quaternion components, where these new angles all
 depend on $\theta$.  We then use the chain rule to express
 $\partial_\theta$ in terms of $\partial_{\alpha'}$, etc., which become
@@ -779,44 +779,44 @@ $\partial_\alpha$, etc., when $\theta=0$.
 
 ```math
 \begin{aligned}
-  L_i f(\mathbf{R}_{\alpha, \beta, \gamma})
+  L_i f(𝐑_{\alpha, \beta, \gamma})
   &=
-  \left. -\mathbf{z} \frac{\partial} {\partial \theta} f \left( e^{\theta \mathbf{e}_i / 2} \mathbf{R}_{\alpha, \beta, \gamma} \right) \right|_{\theta=0} \\
+  \left. -𝐳 \frac{\partial} {\partial \theta} f \left( e^{\theta 𝐞_i / 2} 𝐑_{\alpha, \beta, \gamma} \right) \right|_{\theta=0} \\
   &=
-  \left. -\mathbf{z} \frac{\partial} {\partial \theta} f \left( \mathbf{R}_{\alpha', \beta', \gamma'} \right) \right|_{\theta=0} \\
+  \left. -𝐳 \frac{\partial} {\partial \theta} f \left( 𝐑_{\alpha', \beta', \gamma'} \right) \right|_{\theta=0} \\
   &=
-  \left. -\mathbf{z} \left[ \frac{\partial \alpha'} {\partial \theta}\frac{\partial} {\partial \alpha'} + \frac{\partial \beta'} {\partial \theta}\frac{\partial} {\partial \beta'} + \frac{\partial \gamma'} {\partial \theta}\frac{\partial} {\partial \gamma'} \right] f \left( \mathbf{R}_{\alpha', \beta', \gamma'} \right) \right|_{\theta=0} \\
+  \left. -𝐳 \left[ \frac{\partial \alpha'} {\partial \theta}\frac{\partial} {\partial \alpha'} + \frac{\partial \beta'} {\partial \theta}\frac{\partial} {\partial \beta'} + \frac{\partial \gamma'} {\partial \theta}\frac{\partial} {\partial \gamma'} \right] f \left( 𝐑_{\alpha', \beta', \gamma'} \right) \right|_{\theta=0} \\
   &=
-  -\mathbf{z} \left[ \frac{\partial \alpha'} {\partial \theta}\frac{\partial} {\partial \alpha} + \frac{\partial \beta'} {\partial \theta}\frac{\partial} {\partial \beta} + \frac{\partial \gamma'} {\partial \theta}\frac{\partial} {\partial \gamma} \right]_{\theta=0} f \left( \mathbf{R}_{\alpha, \beta, \gamma} \right) \\
-  K_i f(\mathbf{R}_{\alpha, \beta, \gamma})
+  -𝐳 \left[ \frac{\partial \alpha'} {\partial \theta}\frac{\partial} {\partial \alpha} + \frac{\partial \beta'} {\partial \theta}\frac{\partial} {\partial \beta} + \frac{\partial \gamma'} {\partial \theta}\frac{\partial} {\partial \gamma} \right]_{\theta=0} f \left( 𝐑_{\alpha, \beta, \gamma} \right) \\
+  K_i f(𝐑_{\alpha, \beta, \gamma})
   &=
-  -\mathbf{z} \left[ \frac{\partial \alpha''} {\partial \theta}\frac{\partial} {\partial \alpha} + \frac{\partial \beta''} {\partial \theta}\frac{\partial} {\partial \beta} + \frac{\partial \gamma''} {\partial \theta}\frac{\partial} {\partial \gamma} \right]_{\theta=0} f \left( \mathbf{R}_{\alpha, \beta, \gamma} \right),
+  -𝐳 \left[ \frac{\partial \alpha''} {\partial \theta}\frac{\partial} {\partial \alpha} + \frac{\partial \beta''} {\partial \theta}\frac{\partial} {\partial \beta} + \frac{\partial \gamma''} {\partial \theta}\frac{\partial} {\partial \gamma} \right]_{\theta=0} f \left( 𝐑_{\alpha, \beta, \gamma} \right),
 \end{aligned}
 ```
 
 ```math
 \begin{aligned}
-\mathbf{R}_{\alpha, \beta, \gamma}
+𝐑_{\alpha, \beta, \gamma}
 &=
   R\, \cos\frac{β}{2} \cos\frac{α+γ}{2}
-  -R\, \sin\frac{β}{2} \sin\frac{α-γ}{2} \mathbf{i}
-  + R\, \sin\frac{β}{2} \cos\frac{α-γ}{2} \mathbf{j}
-  + R\, \cos\frac{β}{2} \sin\frac{α+γ}{2} \mathbf{k}.
+  -R\, \sin\frac{β}{2} \sin\frac{α-γ}{2} 𝐢
+  + R\, \sin\frac{β}{2} \cos\frac{α-γ}{2} 𝐣
+  + R\, \cos\frac{β}{2} \sin\frac{α+γ}{2} 𝐤.
 \\
-e^{\theta \mathbf{u} / 2} \mathbf{R}_{\alpha, \beta, \gamma}
-&= \left(\cos\frac{\theta}{2} + \mathbf{u} \sin\frac{\theta}{2}\right) \mathbf{R}_{\alpha, \beta, \gamma}
+e^{\theta 𝐮 / 2} 𝐑_{\alpha, \beta, \gamma}
+&= \left(\cos\frac{\theta}{2} + 𝐮 \sin\frac{\theta}{2}\right) 𝐑_{\alpha, \beta, \gamma}
 \\
 &=
   R\, \cos\frac{\theta}{2} \cos\frac{β}{2} \cos\frac{α+γ}{2}
-  -R\, \cos\frac{\theta}{2} \sin\frac{β}{2} \sin\frac{α-γ}{2} \mathbf{i}
-  + R\, \cos\frac{\theta}{2} \sin\frac{β}{2} \cos\frac{α-γ}{2} \mathbf{j}
-  + R\, \cos\frac{\theta}{2} \cos\frac{β}{2} \sin\frac{α+γ}{2} \mathbf{k}
+  -R\, \cos\frac{\theta}{2} \sin\frac{β}{2} \sin\frac{α-γ}{2} 𝐢
+  + R\, \cos\frac{\theta}{2} \sin\frac{β}{2} \cos\frac{α-γ}{2} 𝐣
+  + R\, \cos\frac{\theta}{2} \cos\frac{β}{2} \sin\frac{α+γ}{2} 𝐤
 \\
 &\quad +
-  R\, \sin\frac{\theta}{2}\cos\frac{β}{2} \cos\frac{α+γ}{2} \mathbf{u}
-  -R\, \sin\frac{\theta}{2}\sin\frac{β}{2} \sin\frac{α-γ}{2} \mathbf{u}\mathbf{i}
-  + R\, \sin\frac{\theta}{2}\sin\frac{β}{2} \cos\frac{α-γ}{2} \mathbf{u}\mathbf{j}
-  + R\, \sin\frac{\theta}{2}\cos\frac{β}{2} \sin\frac{α+γ}{2} \mathbf{u}\mathbf{k}
+  R\, \sin\frac{\theta}{2}\cos\frac{β}{2} \cos\frac{α+γ}{2} 𝐮
+  -R\, \sin\frac{\theta}{2}\sin\frac{β}{2} \sin\frac{α-γ}{2} 𝐮𝐢
+  + R\, \sin\frac{\theta}{2}\sin\frac{β}{2} \cos\frac{α-γ}{2} 𝐮𝐣
+  + R\, \sin\frac{\theta}{2}\cos\frac{β}{2} \sin\frac{α+γ}{2} 𝐮𝐤
 \end{aligned}
 ```
 
@@ -847,7 +847,7 @@ and
 ```
 These imply that the restriction to the space of unit quaternions is
 not harmonic with respect to the Laplacian on the 3-sphere, but is an
-eigenfunction with eigenvalue ``-\ell(\ell+2)``.
+eigenfunction with eigenvalue ``-ℓ(ℓ+2)``.
 
 ```math
 \frac{1}{r^{n-1}} \frac{\partial}{\partial r} \left( r^{n-1} \frac{\partial f}{\partial r} \right)
@@ -870,21 +870,21 @@ eigenfunction with eigenvalue ``-\ell(\ell+2)``.
 +
 \frac{n-1}{r} \frac{\partial f}{\partial r}
 =
-\frac{f}{r^\ell} \frac{\partial^2 r^\ell}{\partial r^2}
+\frac{f}{r^ℓ} \frac{\partial^2 r^ℓ}{\partial r^2}
 +
-\frac{f}{r^\ell} \frac{n-1}{r} \frac{\partial r^\ell}{\partial r}
+\frac{f}{r^ℓ} \frac{n-1}{r} \frac{\partial r^ℓ}{\partial r}
 =
-\ell(\ell-1) \frac{f}{r^\ell} r^{\ell-2}
+ℓ(ℓ-1) \frac{f}{r^ℓ} r^{ℓ-2}
 +
-\ell \frac{f}{r^\ell} \frac{n-1}{r} r^{\ell-1}
+ℓ \frac{f}{r^ℓ} \frac{n-1}{r} r^{ℓ-1}
 =
-\ell(\ell-1) \frac{f}{r^2}
+ℓ(ℓ-1) \frac{f}{r^2}
 +
-\ell (n-1) \frac{f}{r^2}
+ℓ (n-1) \frac{f}{r^2}
 =
-\ell(\ell+n-2) \frac{f}{r^2}
+ℓ(ℓ+n-2) \frac{f}{r^2}
 \to
-\ell(\ell+2) \frac{f}{r^2}
+ℓ(ℓ+2) \frac{f}{r^2}
 ```
 
 Note that [Lee_2012](@citet) points out that there is a sign ambiguity
@@ -909,8 +909,8 @@ functions are preferred to Chebyshev polynomials for the spherical
 harmonics.  They also mention that since the Laplacian measures
 curvature, and spherical harmonics of a given degree have the same
 Laplacian eigenvalue, they all have the same measure of curvature.
-So, for example, the ``\ell = m`` mode varies most rapidly with
-longitude but not at all with latitude, while the ``\ell = 0`` mode
+So, for example, the ``ℓ = m`` mode varies most rapidly with
+longitude but not at all with latitude, while the ``ℓ = 0`` mode
 varies just as rapidly with latitude but not at all with longitude.
 
 [Vasil_2019](@citet) use spin-weighted spherical harmonics to do
@@ -956,37 +956,37 @@ f\left(𝐑\right) - i \epsilon L_𝐮 f\left(𝐑\right).
 ```
 This final expression is precisely equivalent to Sakurai's Eq. (3.1.15):
 ```math
-\mathscr{D}\left(\hat{\mathbf{n}}, d\phi \right)
+\mathscr{D}\left(\hat{𝐧}, d\phi \right)
 =
-1 - i \left( \mathbf{J} \cdot \hat{\mathbf{n}} \right) d\phi.
+1 - i \left( 𝐉 \cdot \hat{𝐧} \right) d\phi.
 ```
 
-Now, we can write the eigenkets of ``L^2`` and ``L_z`` as ``|\ell,
-m\rangle``, where the eigenvalues are ``\ell(\ell+1)`` and ``m``,
+Now, we can write the eigenkets of ``L^2`` and ``L_z`` as ``|ℓ,
+m\rangle``, where the eigenvalues are ``ℓ(ℓ+1)`` and ``m``,
 respectively.  Finally, define the 𝔇 matrix as (Eq. 3.5.42)
 ```math
-𝔇^{(\ell)}_{m',m}(R)
+𝔇^{(ℓ)}_{m',m}(R)
 =
-\langle \ell, m' | 𝔇(R) | \ell, m \rangle.
+\langle ℓ, m' | 𝔇(R) | ℓ, m \rangle.
 ```
 Sakurai notes the important result that (Eq. 3.5.46)
 ```math
-𝔇^{(\ell)}_{m'',m}(R_1\, R_2)
+𝔇^{(ℓ)}_{m'',m}(R_1\, R_2)
 =
-\sum_{m'} 𝔇^{(\ell)}_{m'',m'}(R_1) 𝔇^{(\ell)}_{m',m}(R_2),
+\sum_{m'} 𝔇^{(ℓ)}_{m'',m'}(R_1) 𝔇^{(ℓ)}_{m',m}(R_2),
 ```
 and we can readily find the essential behavior with respect to the
 first and last Euler angles (Eq. 3.5.50):
 ```math
 \begin{aligned}
-𝔇^{(\ell)}_{m',m}(\alpha, \beta, \gamma)
+𝔇^{(ℓ)}_{m',m}(\alpha, \beta, \gamma)
 &=
-\langle \ell, m' |
+\langle ℓ, m' |
     \exp[-iL_z \alpha]\exp[-iL_y \beta]\exp[-iL_z \gamma]
-| \ell, m \rangle \\
+| ℓ, m \rangle \\
 &=
 \exp[-i(m' \alpha+m\gamma)]
-\langle \ell, m' | \exp[-iL_y \beta] | \ell, m \rangle.
+\langle ℓ, m' | \exp[-iL_y \beta] | ℓ, m \rangle.
 \end{aligned}
 ```
 To belabor this point, recall that in general
@@ -1010,9 +1010,9 @@ the first and last operators.
 Now we are left with the middle operator, which we use to define
 ```math
 \begin{aligned}
-d^{(\ell)}_{m',m}(\beta)
+d^{(ℓ)}_{m',m}(\beta)
 &=
-\langle \ell, m' | \exp[-iL_y \beta] | \ell, m \rangle.
+\langle ℓ, m' | \exp[-iL_y \beta] | ℓ, m \rangle.
 \end{aligned}
 ```
 Using
@@ -1034,7 +1034,7 @@ Now, writing ``d_+(X) = [L_+, X]``, Eq. (9) of https://arxiv.org/pdf/1707.03861 
 ```
 The sum will automatically be zero unless ``m+k-j ≤ ℓ`` — which means ``j ≥ m+k-ℓ``
 ```math
-(-L₊)^{k-j}|ℓ,m\rangle = (-1)^{k-j} \sqrt{\frac{(\ell+m+k-j)!}{(\ell+m)!}\,\frac{(\ell-m)!}{(\ell-m-k+j)!}} |ℓ,m+k-j\rangle
+(-L₊)^{k-j}|ℓ,m\rangle = (-1)^{k-j} \sqrt{\frac{(ℓ+m+k-j)!}{(ℓ+m)!}\,\frac{(ℓ-m)!}{(ℓ-m-k+j)!}} |ℓ,m+k-j\rangle
 ```
 
 ``[L₊, L₋] = 2 L_z``
@@ -1077,7 +1077,7 @@ presumably simpler to compute.  See, e.g., Varshalovich's Eq.
   - Representation theory of ``\mathbf{Spin}(3)``
     - Show how the Lie algebra is represented by the angular-momentum operators
     - Show how the Lie group is represented by the Wigner D-matrices
-    - Demonstrate that ``\mathfrak{D}`` is a representation
+    - Demonstrate that ``𝔇`` is a representation
     - Demonstrate its behavior under left and right rotation
     - Demonstrate orthonormality
   - Representation theory of ``\mathbf{SO}(3)``
@@ -1133,12 +1133,12 @@ recursion relations by differentiating solutions of the Helmholtz
 equation ``\nabla^2 \psi + k^2 \psi = 0`` as ``\tfrac{1}{k} \nabla
 \psi``.  More precisely, they differentiate both sides of the equation
 relating one solution to its rotated form — which naturally involves
-Wigner's ``\mathfrak{D}`` matrix.  Using orthogonal basis functions
+Wigner's ``𝔇`` matrix.  Using orthogonal basis functions
 for the solution, this allows them to equate terms on the two sides
 proportional to a given basis function, which leaves them with
-expressions involving sums of only the ``\mathfrak{D}`` matrices and
+expressions involving sums of only the ``𝔇`` matrices and
 some coefficients depending on the indices of the basis functions (and
-hence of ``\mathfrak{D}``) on both sides of the equation.  Since
+hence of ``𝔇``) on both sides of the equation.  Since
 ``\nabla`` is a 3-vector operator, this gives them three relations.
 
 This, of course, is happening in 3-D space, since ``\psi`` is a
@@ -1154,6 +1154,6 @@ moving off of the sphere.  Maybe we'd need to move off of the sphere
 in 4-D space to get comparable results.  Or maybe just use something
 like ``𝐫 ∧ L``, which should also have 3 degrees of freedom.
 
-The SWSHs/``\mathfrak{D}`` functions can be naturally promoted to
+The SWSHs/``𝔇`` functions can be naturally promoted to
 functions not just on the 3-sphere, but also in 4-D space just by
 allowing the quaternions to be non-unit quaternions.

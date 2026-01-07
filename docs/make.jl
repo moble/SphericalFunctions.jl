@@ -50,6 +50,11 @@ makedocs(
     pages = [
         "index.md",
         "Background" => [
+            "background/domain.md",
+            "background/operators.md",
+            "background/wigner_matrices.md",
+            "background/sYlm.md",
+            "background/transformations.md",
         ],
         "Interface" => [
             "interface/wigner_matrices.md",
@@ -91,6 +96,7 @@ makedocs(
         "Deprecated" => [
             "deprecated/index.md",
         ],
+        "index_of_docstrings.md",
         "References" => "references.md",
     ],
     warnonly=true,

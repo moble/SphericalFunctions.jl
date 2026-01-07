@@ -63,7 +63,7 @@ end
 
 Eq. (3.1) of [Goldberg et al.](@cite GoldbergEtAl_1967), implementing
 ```math
-    {}_sY_{\ell,m}(\theta, \phi).
+    {}_sY_{ℓ,m}(\theta, \phi).
 ```
 
 Note that there is a difference in conventions between the ``Y`` of Goldberg et al. and

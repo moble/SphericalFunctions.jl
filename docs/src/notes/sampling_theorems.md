@@ -26,29 +26,29 @@ changes).  We begin by defining
   {}_{s}\tilde{f}_{\theta}(m) := \int_0^{2\pi} {}_sf(\theta, \phi)\, e^{-im\phi}\, d\phi.
 ```
 We will denote the vector of these quantities for all values of
-``\theta`` as ``{}_{s}\tilde{\mathbf{f}}_m``.  Inserting the
-``{}_sY_{\ell,m}`` expansion for ``{}_sf(\theta, \phi)``, and
+``\theta`` as ``{}_{s}\tilde{𝐟}_m``.  Inserting the
+``{}_sY_{ℓ,m}`` expansion for ``{}_sf(\theta, \phi)``, and
 performing the integration using orthogonality of complex
 exponentials, we can find that
 ```math
-  {}_{s}\tilde{f}_{\theta}(m) = (-1)^s\, 2\pi \sum_{\ell=\Delta}^L \sqrt{\frac{2\ell+1}{4\pi}}\, d_{m,-s}^{\ell}(\theta)\, {}_sf_{\ell,m}.
+  {}_{s}\tilde{f}_{\theta}(m) = (-1)^s\, 2\pi \sum_{ℓ=\Delta}^L \sqrt{\frac{2ℓ+1}{4\pi}}\, d_{m,-s}^{ℓ}(\theta)\, {}_sf_{ℓ,m}.
 ```
-Now, denoting the vector of ``{}_sf_{\ell,m}`` for all values of
-``\ell`` as ``{}_s\mathbf{f}_m``, we can write this as a matrix-vector
+Now, denoting the vector of ``{}_sf_{ℓ,m}`` for all values of
+``ℓ`` as ``{}_s𝐟_m``, we can write this as a matrix-vector
 equation:
 ```math
-  {}_{s}\tilde{\mathbf{f}}_m = (-1)^s\, 2\pi\, {}_s\mathbf{d}_{m}\, {}_s\mathbf{f}_m.
+  {}_{s}\tilde{𝐟}_m = (-1)^s\, 2\pi\, {}_s𝐝_{m}\, {}_s𝐟_m.
 ```
-We are effectively measuring the ``{}_{s}\tilde{\mathbf{f}}_m``
-values, we can easily construct the ``{}_s\mathbf{d}_{m}`` matrix, and
-we are seeking the ``{}_s\mathbf{f}_m`` values, so we can just invert
+We are effectively measuring the ``{}_{s}\tilde{𝐟}_m``
+values, we can easily construct the ``{}_s𝐝_{m}`` matrix, and
+we are seeking the ``{}_s𝐟_m`` values, so we can just invert
 this equation to solve for the latter.
 
 
 ## Discretizing the Fourier transform
 
 Now, the only flaw in this analysis is that we have undersampled
-everywhere except ``\ell = L``, which means that the second equation
+everywhere except ``ℓ = L``, which means that the second equation
 (re-expressing the Fourier transforms as a sum using orthogonality of
 complex exponentials) isn't quite right; in general there is some
 folding due to aliasing of higher-frequency modes, so we need an
@@ -68,9 +68,9 @@ expansion for ``{}_sf(\theta, \phi)``:
 ```math
 \begin{aligned}
     {}_{s}\tilde{f}_{j}(m)
-    &= \sum_{k=0}^{2j} \sum_{\ell,m'} {}_sf_{\ell,m'}\, {}_sY_{\ell,m'}(\theta_j, \phi_k)\, e^{-im\phi_k}\, \Delta \phi \\
-    &= \sum_{k=0}^{2j} \sum_{\ell,m'} {}_sf_{\ell,m'}\, (-1)^{s}\, \sqrt{\frac{2\ell+1}{4\pi}}\, d_{\ell}^{m',-s}(\theta_j) e^{i m' \phi_k}\, e^{-im\phi_k}\, \frac{2\pi}{2j+1} \\
-    &= (-1)^{s}\, \frac{2\pi}{2j+1} \sum_{\ell,m'} {}_sf_{\ell,m'}\, \sqrt{\frac{2\ell+1}{4\pi}}\, d_{\ell}^{m',-s}(\theta_j) \sum_{k=0}^{2j}e^{i (m'-m) \phi_k}.
+    &= \sum_{k=0}^{2j} \sum_{ℓ,m'} {}_sf_{ℓ,m'}\, {}_sY_{ℓ,m'}(\theta_j, \phi_k)\, e^{-im\phi_k}\, \Delta \phi \\
+    &= \sum_{k=0}^{2j} \sum_{ℓ,m'} {}_sf_{ℓ,m'}\, (-1)^{s}\, \sqrt{\frac{2ℓ+1}{4\pi}}\, d_{ℓ}^{m',-s}(\theta_j) e^{i m' \phi_k}\, e^{-im\phi_k}\, \frac{2\pi}{2j+1} \\
+    &= (-1)^{s}\, \frac{2\pi}{2j+1} \sum_{ℓ,m'} {}_sf_{ℓ,m'}\, \sqrt{\frac{2ℓ+1}{4\pi}}\, d_{ℓ}^{m',-s}(\theta_j) \sum_{k=0}^{2j}e^{i (m'-m) \phi_k}.
 \end{aligned}
 ```
 We can evaluate this last sum easily:
@@ -84,35 +84,35 @@ This allows us to simplify as
 
 ```math
 \begin{aligned}
-    {}_{s}\tilde{f}_{j}(m) = (-1)^{s}\, 2\pi \sum_{\ell,m'} {}_sf_{\ell,m'}\, \sqrt{\frac{2\ell+1}{4\pi}}\, d_{\ell}^{m',-s}(\theta_j),
+    {}_{s}\tilde{f}_{j}(m) = (-1)^{s}\, 2\pi \sum_{ℓ,m'} {}_sf_{ℓ,m'}\, \sqrt{\frac{2ℓ+1}{4\pi}}\, d_{ℓ}^{m',-s}(\theta_j),
 \end{aligned}
 ```
-where ``m'`` ranges over ``m + n(2j+1)`` for all ``n\in \mathbb{Z}`` such that ``|m + n(2j+1)| \leq \ell``
+where ``m'`` ranges over ``m + n(2j+1)`` for all ``n\in \mathbb{Z}`` such that ``|m + n(2j+1)| \leq ℓ``
 — that is, all ``n\in \mathbb{Z}`` such that
 ```math
-  \left \lceil \frac{-\ell-m}{2j+1} \right \rceil \leq n \leq \left \lfloor \frac{\ell-m}{2j+1} \right \rfloor.
+  \left \lceil \frac{-ℓ-m}{2j+1} \right \rceil \leq n \leq \left \lfloor \frac{ℓ-m}{2j+1} \right \rfloor.
 ```
 
 
 ## Matrix representation
 
-Usually, we would take the sum over ``\ell`` ranging from ``\mathrm{max}(|m|,|s|)`` to ``L``, and the sum
-over ``m'`` ranging over ``m + n(2j+1)`` for all ``n\in \mathbb{Z}`` such that ``|m + n(2j+1)| \leq \ell``.
+Usually, we would take the sum over ``ℓ`` ranging from ``\mathrm{max}(|m|,|s|)`` to ``L``, and the sum
+over ``m'`` ranging over ``m + n(2j+1)`` for all ``n\in \mathbb{Z}`` such that ``|m + n(2j+1)| \leq ℓ``.
 However, we can also consider these sums to range over all possible
-values of ``\ell, m'``, and just set the coefficient to zero whenever
+values of ``ℓ, m'``, and just set the coefficient to zero whenever
 these conditions are not satisfied.  In that case, we can again think
 of this as a (much larger) vector-matrix equation reading
 ```math
-  {}_s\tilde{\mathbf{f}} = (-1)^s\, 2\pi\, {}_s\mathbf{d}\, {}_s\mathbf{f},
+  {}_s\tilde{𝐟} = (-1)^s\, 2\pi\, {}_s𝐝\, {}_s𝐟,
 ```
-where the index on ``{}_s\tilde{\mathbf{f}}`` loops over ``j`` and
-``m``, the index on ``{}_s\mathbf{f}`` loops over ``\ell`` and ``m'``,
-and the indices on ``{}_s\mathbf{d}`` loop over each of those pairs.
+where the index on ``{}_s\tilde{𝐟}`` loops over ``j`` and
+``m``, the index on ``{}_s𝐟`` loops over ``ℓ`` and ``m'``,
+and the indices on ``{}_s𝐝`` loop over each of those pairs.
 
 
 ## De-aliasing
 
-While it is *far* simpler to simply invert the full ``{}_s\mathbf{d}``
+While it is *far* simpler to simply invert the full ``{}_s𝐝``
 matrix, its size scales as ``L^4``, which means that it very quickly
 becomes impractical to store and manipulate the full matrix.  In CMB
 astronomy, for example, it is not uncommon to use ``L`` into the tens

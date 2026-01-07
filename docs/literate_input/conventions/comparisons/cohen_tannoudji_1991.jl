@@ -30,14 +30,14 @@ L_z &= \frac{\hbar}{i} \frac{\partial} {\partial \phi}.
 In Complement ``\mathrm{B}_{\mathrm{VI}}`` they define a rotation operator ``R`` as acting
 on a state such that [Eq. (21)]
 ```math
-\langle \mathbf{r} | R | \psi \rangle
+\langle 𝐫 | R | \psi \rangle
 =
-\langle \mathscr{R}^{-1} \mathbf{r} | \psi \rangle.
+\langle \mathscr{R}^{-1} 𝐫 | \psi \rangle.
 ```
-For an infinitesimal rotation through angle ``d\alpha`` about the axis ``\mathbf{u}``, he
+For an infinitesimal rotation through angle ``d\alpha`` about the axis ``𝐮``, he
 shows [Eq. (49)]
 ```math
-R_{\mathbf{u}}(d\alpha) = 1 - \frac{i}{\hbar} d\alpha \mathbf{L}.\mathbf{u}.
+R_{𝐮}(d\alpha) = 1 - \frac{i}{\hbar} d\alpha 𝐋.𝐮.
 ```
 
 

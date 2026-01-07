@@ -39,7 +39,7 @@
   - Representation theory of ``\mathbf{Spin}(3)``
     - Show how the Lie algebra is represented by the angular-momentum operators
     - Show how the Lie group is represented by the Wigner D-matrices
-    - Demonstrate that ``\mathfrak{D}`` is a representation
+    - Demonstrate that ``𝔇`` is a representation
     - Demonstrate its behavior under left and right rotation
     - Demonstrate orthonormality
   - Representation theory of ``\mathbf{SO}(3)``
@@ -112,8 +112,8 @@ formula for ``Y``.
 Then, we can simply follow Wigner around Eq. (15.21) to derived a
 transformation law in the form
 ```math
-{}_sY_{\ell,m'}(R_{\theta', \phi'}) = \sum_m M_{m',m}(R)
-{}_sY_{\ell,m}(R_{\theta, \phi}),
+{}_sY_{ℓ,m'}(R_{\theta', \phi'}) = \sum_m M_{m',m}(R)
+{}_sY_{ℓ,m}(R_{\theta, \phi}),
 ```
 for some matrix ``M``.  Note that I have written this as if the
 ``{}_sY`` functions are column vectors.  The reason this happens is
@@ -129,7 +129,7 @@ just consider the inverse rotation, so that they can work with the
 conjugate transpose, which is why we see the relative conjugate.
 
 * Since ``Y`` is universal, let's start with that as non-negotiable,
-  and see if we can derive the relationship to ``\mathfrak{D}``.
+  and see if we can derive the relationship to ``𝔇``.
 * ``R_{\theta, \phi}`` is a unit quaternion that rotates the point
   described by Cartesian coordinates (0,0,1) onto the point described
   by spherical coordinates ``(\theta, \phi)``.
@@ -140,20 +140,20 @@ conjugate transpose, which is why we see the relative conjugate.
   for some rotation ``R``.  Now, we just need to interpret ``R``.
 * Again, just textually, it makes the most sense to write
   ```math
-  Y_{\ell,m'}(\theta', \phi') = \sum_m \mathfrak{D}^{(\ell)}_{m',m}(R)
-  Y_{\ell,m}(\theta, \phi),
+  Y_{ℓ,m'}(\theta', \phi') = \sum_m 𝔇^{(ℓ)}_{m',m}(R)
+  Y_{ℓ,m}(\theta, \phi),
   ```
   or, generalizing to spin-weighted spherical harmonics
   ```math
-  {}_{s}Y_{\ell,m'}(R_{\theta', \phi'}) = \sum_m \mathfrak{D}^{(\ell)}_{m',m}(R)
-  {}_{s}Y_{\ell,m}(R_{\theta, \phi}).
+  {}_{s}Y_{ℓ,m'}(R_{\theta', \phi'}) = \sum_m 𝔇^{(ℓ)}_{m',m}(R)
+  {}_{s}Y_{ℓ,m}(R_{\theta, \phi}).
   ```
-* We also have that ``\mathfrak{D}`` obeys the representation
+* We also have that ``𝔇`` obeys the representation
   property, so
   ```math
-  \mathfrak{D}^{(\ell)}_{m',m''}(R_{\theta', \phi'})
-  = \sum_{m} \mathfrak{D}^{(\ell)}_{m',m}(R)
-  \mathfrak{D}^{(\ell)}_{m,m''}(R_{\theta, \phi}).
+  𝔇^{(ℓ)}_{m',m''}(R_{\theta', \phi'})
+  = \sum_{m} 𝔇^{(ℓ)}_{m',m}(R)
+  𝔇^{(ℓ)}_{m,m''}(R_{\theta, \phi}).
   ```
   - There is no reason that I can see to introduce a conjugation
   - The fact that ``m''`` appears on both sides of the equation means
@@ -161,9 +161,9 @@ conjugate transpose, which is why we see the relative conjugate.
     behavior under final rotation to determine the sign.
 
 ```math
-{}_{s}Y_{\ell,m}(R_{\theta, \phi})
+{}_{s}Y_{ℓ,m}(R_{\theta, \phi})
 \propto
-\mathfrak{D}^{(\ell)}_{m,\propto s}(R_{\theta, \phi})
+𝔇^{(ℓ)}_{m,\propto s}(R_{\theta, \phi})
 ```
 
 
@@ -202,7 +202,7 @@ The [Condon-Shortley](@cite CondonShortley_1935) phase convention is a
 choice of phase factors in the definition of the spherical harmonics
 that requires the coefficients in
 ```math
-L_{\pm} |\ell,m\rangle = \alpha^{\pm}_{\ell,m} |\ell, m \pm 1\rangle
+L_{\pm} |ℓ,m\rangle = \alpha^{\pm}_{ℓ,m} |ℓ, m \pm 1\rangle
 ```
 to be real and positive.  The reasoning behind this choice is
 explained more fully in Section 2 of [Ufford and Shortley
@@ -211,16 +211,16 @@ Condon-Shortley phase describes signs chosen in the expression for
 spherical harmonics.  The key expression is Eq. (15) of section 4³
 (page 52) of [Condon-Shortley](@cite CondonShortley_1935):
 ```math
-\Theta(\ell, m) = (-1)^\ell \sqrt{\frac{2\ell+1}{2} \frac{(\ell+m)!}{(\ell-m)!}}
-\frac{1}{2^\ell \ell!} \frac{1}{\sin^m\theta}
-\frac{d^{\ell-m}}{d(\cos\theta)^{\ell-m}} \sin^{2\ell}\theta.
+\Theta(ℓ, m) = (-1)^ℓ \sqrt{\frac{2ℓ+1}{2} \frac{(ℓ+m)!}{(ℓ-m)!}}
+\frac{1}{2^ℓ ℓ!} \frac{1}{\sin^m\theta}
+\frac{d^{ℓ-m}}{d(\cos\theta)^{ℓ-m}} \sin^{2ℓ}\theta.
 ```
 When multiplied by Eq. (5) ``\Phi(m) = e^{im\phi} / \sqrt{2\pi}``,
 this gives the spherical harmonic function.  The right-hand side of
 the expression above is usually immediately replaced by a simpler
 expression using Legendre polynomials, but this just shifts sign
 ambiguity into the definition of the Legendre polynomials.  Instead,
-we can expand the above expression directly for the first few ``\ell``
+we can expand the above expression directly for the first few ``ℓ``
 values and/or use automatic differentiation to actually test their
 original expression as such against the function implemented in this
 package.  The first few values are given in a footnote to Condon and
@@ -274,8 +274,8 @@ conventions for the ``𝔇`` matrices, we need to understand conventions
 for the angular-momentum operators.
 
 There is universal agreement that the angular momentum is defined as
-``\mathbf{L} = \mathbf{x} \times \mathbf{p}``, where ``\mathbf{x}`` is
-the position vector and ``\mathbf{p}`` is the momentum vector.  In
+``𝐋 = 𝐱 \times 𝐩``, where ``𝐱`` is
+the position vector and ``𝐩`` is the momentum vector.  In
 quantum mechanics, there is further agreement that the momentum
 operator becomes ``-i\hbar\nabla``.  Thus, in operator form, the
 angular momentum can be decomposed as
@@ -303,13 +303,13 @@ coefficients.
 I defined these in Eqs. (42) and (43) of [Boyle (2016)](@cite Boyle_2016) as
 ```math
 \begin{aligned}
-L_{j} f(\mathbf{R}) &\colonequals -z \left. \frac{\partial}{\partial \theta}
-f\left(e^{\theta \mathbf{e}_j / 2} \mathbf{R} \right) \right|_{\theta=0}, \\
-K_{j} f(\mathbf{R}) &\colonequals -z \left. \frac{\partial}{\partial \theta}
-f\left(\mathbf{R} e^{\theta \mathbf{e}_j / 2}\right) \right|_{\theta=0},
+L_{j} f(𝐑) &\colonequals -z \left. \frac{\partial}{\partial \theta}
+f\left(e^{\theta 𝐞_j / 2} 𝐑 \right) \right|_{\theta=0}, \\
+K_{j} f(𝐑) &\colonequals -z \left. \frac{\partial}{\partial \theta}
+f\left(𝐑 e^{\theta 𝐞_j / 2}\right) \right|_{\theta=0},
 \end{aligned}
 ```
-where ``\mathbf{e}_j`` is the unit vector in the ``j`` direction.
+where ``𝐞_j`` is the unit vector in the ``j`` direction.
 Surprisingly, I found that [Edmonds](@cite Edmonds_2016) expresses
 essentially the same thing in the equations following his Eq. (4.1.5).
 
@@ -341,46 +341,46 @@ L_z &= -i\hbar \frac{\partial}{\partial\alpha}.
 ## Wigner ``𝔇`` and ``d`` matrices
 
 Wigner's Eqs. (11.18) and (11.19) define the real orthogonal
-transformation ``\mathbf{R}`` by
+transformation ``𝐑`` by
 ```math
 x'_i = R_{ij} x_j
 ```
-and the operator ``\mathbf{P}_{\mathbf{R}}`` to act on a function
+and the operator ``𝐏_{𝐑}`` to act on a function
 ``f`` such that
 ```math
-\mathbf{P}_{\mathbf{R}} f(x'_1, \ldots) = f(x_1, \ldots).
+𝐏_{𝐑} f(x'_1, \ldots) = f(x_1, \ldots).
 ```
 Then, his Eq. (15.5) presumably implies
 ```math
-Y_{\ell,m}(\vartheta', \varphi')
-= \mathbf{P}_{\{\alpha, \beta, \gamma\}} Y_{\ell,m}(\vartheta, \varphi)
-= \sum_{m'} \mathfrak{D}^{(\ell)}(\{\alpha, \beta, \gamma\})_{m',m}
-  Y_{\ell,m'}(\vartheta, \varphi),
+Y_{ℓ,m}(\vartheta', \varphi')
+= 𝐏_{\{\alpha, \beta, \gamma\}} Y_{ℓ,m}(\vartheta, \varphi)
+= \sum_{m'} 𝔇^{(ℓ)}(\{\alpha, \beta, \gamma\})_{m',m}
+  Y_{ℓ,m'}(\vartheta, \varphi),
 ```
 where ``\{\alpha, \beta, \gamma\}`` takes ``(\vartheta, \varphi)`` to
 ``(\vartheta', \varphi')``.  In any case, we can now leave behind this
-``\mathbf{P}`` notation and just look at the beginning and end of the
+``𝐏`` notation and just look at the beginning and end of the
 equation above as the critical relationship in Wigner's notation.
 
 
 Eq. (44b) of [Boyle (2016)](@cite Boyle_2016) says
 ```math
-L_{\pm} \mathfrak{D}^{(\ell)}_{m',m}(\mathbf{R})
-= \sqrt{(\ell \mp m')(\ell \pm m' + 1)} \mathfrak{D}^{(\ell)}_{m' \pm 1, m}(\mathbf{R}).
+L_{\pm} 𝔇^{(ℓ)}_{m',m}(𝐑)
+= \sqrt{(ℓ \mp m')(ℓ \pm m' + 1)} 𝔇^{(ℓ)}_{m' \pm 1, m}(𝐑).
 ```
 while Eq. (21) relates the Wigner D-matrix to the spin-weighted spherical harmonics as
 ```math
-{}_{s}Y_{\ell,m}(\mathbf{R})
-= (-1)^s \sqrt{\frac{2\ell+1}{4\pi}} \mathfrak{D}^{(\ell)}_{m,-s}(\mathbf{R}).
+{}_{s}Y_{ℓ,m}(𝐑)
+= (-1)^s \sqrt{\frac{2ℓ+1}{4\pi}} 𝔇^{(ℓ)}_{m,-s}(𝐑).
 ```
 Plugging the latter into the former, we get
 ```math
-L_{\pm} {}_{s}Y_{\ell,m}(\mathbf{R})
-= \sqrt{(\ell \mp m)(\ell \pm m + 1)} {}_{s}Y_{\ell,m \pm 1}(\mathbf{R}).
+L_{\pm} {}_{s}Y_{ℓ,m}(𝐑)
+= \sqrt{(ℓ \mp m)(ℓ \pm m + 1)} {}_{s}Y_{ℓ,m \pm 1}(𝐑).
 ```
 That is, in our conventions we have
 ```math
-\alpha^{\pm}_{\ell,m} = \sqrt{(\ell \mp m)(\ell \pm m + 1)},
+\alpha^{\pm}_{ℓ,m} = \sqrt{(ℓ \mp m)(ℓ \pm m + 1)},
 ```
 which is always real and positive, and thus consistent with the Condon-Shortley phase
 convention.
@@ -410,17 +410,17 @@ d_{m',m}^{j}(-\beta)     &= d_{m,m'}^{j}(\beta) = (-1)^{m'-m} d_{m',m}^{j}(\beta
 
 ```math
 \begin{gather}
-R = \cos\epsilon + \sin\epsilon\, \hat{\mathfrak{r}} \\
-R𝐯 = \cos\epsilon 𝐯 + \sin\epsilon\, \hat{\mathfrak{r}}𝐯 \\
-R𝐯R^{-1} = (𝐯\cos\epsilon + \sin\epsilon\, \hat{\mathfrak{r}}𝐯)(\cos\epsilon - \sin\epsilon\, \hat{\mathfrak{r}}) \\
-R𝐯R^{-1} = 𝐯\cos^2\epsilon + \sin^2\epsilon\, \hat{\mathfrak{r}}𝐯\hat{\mathfrak{r}}^{-1} + \sin\epsilon \cos\epsilon\, (\hat{\mathfrak{r}}𝐯 - 𝐯\hat{\mathfrak{r}}) \\
+R = \cos\epsilon + \sin\epsilon\, \hat{𝔯} \\
+R𝐯 = \cos\epsilon 𝐯 + \sin\epsilon\, \hat{𝔯}𝐯 \\
+R𝐯R^{-1} = (𝐯\cos\epsilon + \sin\epsilon\, \hat{𝔯}𝐯)(\cos\epsilon - \sin\epsilon\, \hat{𝔯}) \\
+R𝐯R^{-1} = 𝐯\cos^2\epsilon + \sin^2\epsilon\, \hat{𝔯}𝐯\hat{𝔯}^{-1} + \sin\epsilon \cos\epsilon\, (\hat{𝔯}𝐯 - 𝐯\hat{𝔯}) \\
 R𝐯R^{-1} = \begin{cases}
-𝐯 & 𝐯 \hat{\mathfrak{r}} = \hat{\mathfrak{r}}𝐯 \\
-𝐯(\cos^2\epsilon - \sin^2\epsilon) + 2 \sin\epsilon \cos\epsilon\, \frac{[\hat{\mathfrak{r}}, 𝐯]}{2} & 𝐯 \hat{\mathfrak{r}} = -\hat{\mathfrak{r}}𝐯 \\
+𝐯 & 𝐯 \hat{𝔯} = \hat{𝔯}𝐯 \\
+𝐯(\cos^2\epsilon - \sin^2\epsilon) + 2 \sin\epsilon \cos\epsilon\, \frac{[\hat{𝔯}, 𝐯]}{2} & 𝐯 \hat{𝔯} = -\hat{𝔯}𝐯 \\
 \end{cases} \\
 R𝐯R^{-1} = \begin{cases}
-𝐯 & 𝐯 \hat{\mathfrak{r}} = \hat{\mathfrak{r}}𝐯 \\
-\cos2\epsilon 𝐯 + \sin2\epsilon \frac{[\hat{\mathfrak{r}}, 𝐯]}{2} & 𝐯 \hat{\mathfrak{r}} = -\hat{\mathfrak{r}}𝐯 \\
+𝐯 & 𝐯 \hat{𝔯} = \hat{𝔯}𝐯 \\
+\cos2\epsilon 𝐯 + \sin2\epsilon \frac{[\hat{𝔯}, 𝐯]}{2} & 𝐯 \hat{𝔯} = -\hat{𝔯}𝐯 \\
 \end{cases} \\
 \end{gather}
 ```

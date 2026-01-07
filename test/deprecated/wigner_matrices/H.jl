@@ -58,7 +58,7 @@ end
     import SphericalFunctions: Deprecated
     @testset "$T" for T in [BigFloat, Float64, Float32]
         # This compares the H obtained via recurrence with the explicit Wigner d
-        # d_{\ell}^{n,m} = \epsilon_n \epsilon_{-m} H_{\ell}^{n,m},
+        # d_{ℓ}^{n,m} = \epsilon_n \epsilon_{-m} H_{ℓ}^{n,m},
         for β in βrange(T)
             expiβ = cis(β)
             for ℓₘₐₓ in 0:2  # 2 is the max explicitly coded ℓ
@@ -111,7 +111,7 @@ end
     import SphericalFunctions: Deprecated
     @testset "$T" for T in [BigFloat, Float64, Float32]
         # This compares the H obtained via recurrence with the formulaic Wigner d
-        # d_{\ell}^{n,m} = \epsilon_n \epsilon_{-m} H_{\ell}^{n,m},
+        # d_{ℓ}^{n,m} = \epsilon_n \epsilon_{-m} H_{ℓ}^{n,m},
         tol = ifelse(T ∈ (BigFloat, Float32), 100, 1) * 30eps(T)
         for β in βrange(T)
             expiβ = cis(β)

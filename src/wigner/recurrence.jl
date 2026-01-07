@@ -30,7 +30,7 @@ end
 @doc raw"""
     recurrence_step2!(Hˡ, Hˡ⁻¹, sinβ, cosβ)
 
-Compute the values of ``H^{\ell}_{0,m}``, from the values of ``H^{\ell-1}_{0,m}`` for all
+Compute the values of ``H^{ℓ}_{0,m}``, from the values of ``H^{ℓ-1}_{0,m}`` for all
 ``m \geq 0``.
 
 """
@@ -85,7 +85,7 @@ end
 @doc raw"""
     recurrence_step3!(Hˡ, Hˡ⁺¹, sinβ, cosβ)
 
-Compute the values of ``H^{\ell}_{1,m}``, from the values of ``H^{\ell+1}_{0,m}`` for all
+Compute the values of ``H^{ℓ}_{1,m}``, from the values of ``H^{ℓ+1}_{0,m}`` for all
 ``m \geq 0``.
 
 """
@@ -114,8 +114,8 @@ end
 @doc raw"""
     recurrence_step4!(Hˡ, sinβ, cosβ)
 
-Compute the values of ``H^{\ell}_{m'+1,m}``, from the values of ``H^{\ell}_{m',m-1}``,
-``H^{\ell}_{m'-1,m}``, and  ``H^{\ell}_{m',m+1}``, for all ``m' > 1`` and ``m \geq m'``.
+Compute the values of ``H^{ℓ}_{m'+1,m}``, from the values of ``H^{ℓ}_{m',m-1}``,
+``H^{ℓ}_{m'-1,m}``, and  ``H^{ℓ}_{m',m+1}``, for all ``m' > 1`` and ``m \geq m'``.
 
 """
 function recurrence_step4!(
@@ -151,8 +151,8 @@ end
 @doc raw"""
     recurrence_step5!(Hˡ, sinβ, cosβ)
 
-Compute the values of ``H^{\ell}_{m'-1,m}``, from the values of ``H^{\ell}_{m',m-1}``,
-``H^{\ell}_{m'+1,m}``, and  ``H^{\ell}_{m',m+1}``, for all ``m' \leq 0`` and ``m > -m'``.
+Compute the values of ``H^{ℓ}_{m'-1,m}``, from the values of ``H^{ℓ}_{m',m-1}``,
+``H^{ℓ}_{m'+1,m}``, and  ``H^{ℓ}_{m',m+1}``, for all ``m' \leq 0`` and ``m > -m'``.
 
 """
 function recurrence_step5!(

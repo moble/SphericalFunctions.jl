@@ -1,11 +1,11 @@
 # Algorithm for computing ``H`` (redesigned)
 
 The ``H`` array, as given by [Gumerov_2015](@citet), is related to Wigner's (small) ``d`` matrices —
-which is itself related to the (big) ``\mathfrak{D}`` matrices and the various spin-weighted
-spherical harmonics ``{}_{s}Y_{\ell,m}`` — via
+which is itself related to the (big) ``𝔇`` matrices and the various spin-weighted
+spherical harmonics ``{}_{s}Y_{ℓ,m}`` — via
 
 ```math
-d_{\ell}^{m',m} = \epsilon_{m'} \epsilon_{-m} H^{\ell}_{m',m},
+d_{ℓ}^{m',m} = \epsilon_{m'} \epsilon_{-m} H^{ℓ}_{m',m},
 ```
 
 where
@@ -22,16 +22,16 @@ where
 compared to Gumerov and Duraiswami's paper, to be consistent with the
 rest of this documentation.)
 
-``H`` has various advantages over ``d`` and ``\mathfrak{D}``,
+``H`` has various advantages over ``d`` and ``𝔇``,
 including the fact that it can be efficiently and robustly calculated
 via recurrence relations, and the following symmetry relations:
 
 ```math
 \begin{aligned}
-  H_{m', m}^\ell(β) &= H_{m, m'}^\ell(β) \\
-  H_{m', m}^\ell(β) &= H_{-m', -m}^\ell(β) \\
-  H_{m', m}^\ell(β) &= (-1)^{\ell+m+m'} H_{-m', m}^\ell(π - β) \\
-  H_{m', m}^\ell(β) &= (-1)^{m+m'} H_{m', m}^\ell(-β)
+  H_{m', m}^ℓ(β) &= H_{m, m'}^ℓ(β) \\
+  H_{m', m}^ℓ(β) &= H_{-m', -m}^ℓ(β) \\
+  H_{m', m}^ℓ(β) &= (-1)^{ℓ+m+m'} H_{-m', m}^ℓ(π - β) \\
+  H_{m', m}^ℓ(β) &= (-1)^{m+m'} H_{m', m}^ℓ(-β)
 \end{aligned}
 ```
 
@@ -47,7 +47,7 @@ correctly by [Gumerov_2015](@citet).  All equation numbers refer to
 that paper unless otherwise noted.
 
 Because of the symmetries noted above, we only compute ``H_{m',
-m}^\ell`` with ``m ≥ |m'|`` — roughly one quarter of all possible
+m}^ℓ`` with ``m ≥ |m'|`` — roughly one quarter of all possible
 values.  Furthermore, for spin-weighted spherical harmonics of weight
 ``s``, we only need to compute values with ``|m'| ≤ |s|``, which
 constitutes a dramatic savings when ``|s| ≪ ℓₘₐₓ``.
@@ -58,17 +58,17 @@ constitutes a dramatic savings when ``|s| ≪ ℓₘₐₓ``.
 Set ``H^{0}_{0,0}=1``.
 
 
-### Step 2: ``H_{0,m}^{\ell} \to H_{0,m}^{\ell+1}`` for ``m \geq 0``
+### Step 2: ``H_{0,m}^{ℓ} \to H_{0,m}^{ℓ+1}`` for ``m \geq 0``
 
-### Step 3: ``H_{0,m}^{\ell+1} \to H_{1,m}^{\ell}`` for ``m \geq 0``
+### Step 3: ``H_{0,m}^{ℓ+1} \to H_{1,m}^{ℓ}`` for ``m \geq 0``
 
-### Step 4: ``H_{m',m-1}^{\ell}, H_{m'-1,m}^{\ell}, H_{m',m+1}^{\ell} \to H_{m'+1,m}^{\ell}`` for ``m' > 1`` and ``m > m'``
+### Step 4: ``H_{m',m-1}^{ℓ}, H_{m'-1,m}^{ℓ}, H_{m',m+1}^{ℓ} \to H_{m'+1,m}^{ℓ}`` for ``m' > 1`` and ``m > m'``
 
-### Step 5: ``H_{m',m-1}^{\ell}, H_{m'+1,m}^{\ell}, H_{m',m+1}^{\ell} \to H_{m'-1,m}^{\ell}`` for ``m' \leq 0`` and ``m > -m'``
+### Step 5: ``H_{m',m-1}^{ℓ}, H_{m'+1,m}^{ℓ}, H_{m',m+1}^{ℓ} \to H_{m'-1,m}^{ℓ}`` for ``m' \leq 0`` and ``m > -m'``
 
 ### Step 6: Use symmetries to fill in the rest of ``H``
 
-### Step 7: Include phases to obtain ``d`` or ``\mathfrak{D}``
+### Step 7: Include phases to obtain ``d`` or ``𝔇``
 
 
 Compute values ``H^{0,m}_{n}(β)`` for ``m=0,\ldots,n`` and

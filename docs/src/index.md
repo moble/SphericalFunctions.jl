@@ -18,7 +18,7 @@
 
 
 This is a Julia package for evaluating and transforming Wigner's 𝔇
-matrices, and spin-weighted spherical harmonics ``{}_{s}Y_{\ell,m}``
+matrices, and spin-weighted spherical harmonics ``{}_{s}Y_{ℓ,m}``
 (which includes the ordinary scalar spherical harmonics).  Because
 [*both* 𝔇 *and* the harmonics are most correctly considered](@cite
 Boyle_2016) functions on the rotation group ``𝐒𝐎(3)`` — or more

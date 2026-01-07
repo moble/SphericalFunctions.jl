@@ -202,11 +202,11 @@ driscoll_healy_rotors(ℓₘₐₓ, ::Type{T}=Float64) where T = driscoll_healy_
 Cover the sphere 𝕊² with pixels given by the [McEwenWiaux_2011](@citet) equiangular grid:
 
 > We adopt an equiangular sampling of the sphere with sample positions given by ``\theta_t =
-> \frac{\pi(2t+1)}{2\ell_{\max}-1}``, where ``t ∈ \{0, 1, \dotsc, \ell_\mathrm{max}-1\}``
-> and ``\phi_p = \frac{2 \pi p}{2\ell_\mathrm{max}-1}``, where ``p ∈ \{0, 1, \dotsc,
-> 2\ell_\mathrm{max}-2\}``.  In order to extend the ``\theta`` domain to ``[0, 2\pi)`` we
-> simply extend the domain of the ``\theta`` index to include ``\{\ell_\mathrm{max},
-> \ell_\mathrm{max}+1, \dotsc, 2\ell_\mathrm{max}-1\}``.
+> \frac{\pi(2t+1)}{2ℓ_{\max}-1}``, where ``t ∈ \{0, 1, \dotsc, ℓ_\mathrm{max}-1\}``
+> and ``\phi_p = \frac{2 \pi p}{2ℓ_\mathrm{max}-1}``, where ``p ∈ \{0, 1, \dotsc,
+> 2ℓ_\mathrm{max}-2\}``.  In order to extend the ``\theta`` domain to ``[0, 2\pi)`` we
+> simply extend the domain of the ``\theta`` index to include ``\{ℓ_\mathrm{max},
+> ℓ_\mathrm{max}+1, \dotsc, 2ℓ_\mathrm{max}-1\}``.
 
 !!! note
     The `s` argument is not used in this function, but is included for consistency with

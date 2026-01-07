@@ -7,7 +7,7 @@ to be deprecated in the near future.  These are documented here for completeness
 
 The fundamental algorithm is the ``H`` recursion, which is the core computation
 needed for Wigner's ``d`` and ``𝔇`` matrices, and the spin-weighted spherical
-harmonics ``{}_{s}Y_{\ell,m}``, as well as `map2salm` functions.
+harmonics ``{}_{s}Y_{ℓ,m}``, as well as `map2salm` functions.
 
 ```@autodocs
 Modules = [SphericalFunctions.Deprecated]
@@ -22,7 +22,7 @@ Modules = [SphericalFunctions.Deprecated]
 Pages   = ["deprecated/associated_legendre.jl"]
 ```
 
-The function ``{}_{s}\lambda_{\ell,m}`` is defined as essentially ``{}_{s}Y_{\ell,0}``, and is important internally for computing the ALFs.  We have some important utilities for computing it:
+The function ``{}_{s}\lambda_{ℓ,m}`` is defined as essentially ``{}_{s}Y_{ℓ,0}``, and is important internally for computing the ALFs.  We have some important utilities for computing it:
 
 ```@docs
 SphericalFunctions.Deprecated.λ_recursion_initialize
