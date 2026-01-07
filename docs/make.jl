@@ -34,6 +34,7 @@ DocMeta.setdocmeta!(
     :DocTestSetup,
     :(using SphericalFunctions; using SphericalFunctions.Deprecated);
     recursive=true,
+    warn=false,
 )
 
 makedocs(
