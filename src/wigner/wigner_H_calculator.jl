@@ -1,12 +1,13 @@
 struct WignerHCalculator{IT, RT<:Real, ST}
-        h⃗ᵃ::HAxis{IT, RT}
-        h⃗ᵇ::HAxis{IT, RT}
-        Hˡ::HWedge{IT, RT, ST}
-        eⁱᵝ::FixedSizeVectorDefault{Complex{RT}}
-        ℓₘₐₓ::IT
-        m′ₘₐₓ::IT
-        m′ₘᵢₙ::IT
-        swapH::Base.RefValue{Bool}  # h⃗ˡ(w) returns h⃗ᵃ if `false`, otherwise h⃗ᵇ; and vice versa for h⃗ˡ⁺¹(w)
+    h⃗ᵃ::HAxis{IT, RT}
+    h⃗ᵇ::HAxis{IT, RT}
+    Hˡ::HWedge{IT, RT, ST}
+    eⁱᵝ::FixedSizeVectorDefault{Complex{RT}}
+    ℓₘₐₓ::IT
+    m′ₘₐₓ::IT
+    m′ₘᵢₙ::IT
+    swapH::Base.RefValue{Bool}  # h⃗ˡ(w) returns h⃗ᵃ if `false`, otherwise h⃗ᵇ; and vice versa for h⃗ˡ⁺¹(w)
+
     function WignerHCalculator(
         eⁱᵝ::AbstractVector{Complex{RT}}, ℓₘₐₓ::IT, m′ₘₐₓ::IT=ℓₘₐₓ, m′ₘᵢₙ::IT=-ℓₘₐₓ
     ) where {IT, RT<:Real}
