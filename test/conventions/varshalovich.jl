@@ -40,7 +40,7 @@ import .NaiveFactorials: ❗
 
 Eq. 4.3(1) of [Varshalovich](@cite Varshalovich_1988), implementing
 ```math
-    D^{J}_{M,M'}(\alpha, \beta, \gamma).
+    D^{J}_{M,M'}(α, β, γ).
 ```
 
 See also [`d`](@ref) for Varshalovich's version the Wigner d-function.
@@ -55,7 +55,7 @@ end
 
 Eqs. 4.3.1(2) of [Varshalovich](@cite Varshalovich_1988), implementing
 ```math
-    d^{J}_{M,M'}(\beta).
+    d^{J}_{M,M'}(β).
 ```
 
 See also [`D`](@ref) for Varshalovich's version the Wigner D-function.

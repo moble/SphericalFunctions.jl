@@ -19,7 +19,7 @@ import .NaiveFactorials: ❗
 
 Eq. (2.52) of [Torres del Castillo](@cite TorresDelCastillo_2003), implementing
 ```math
-    D^l_{m',m}(\phi, \theta, \chi).
+    D^l_{m',m}(ϕ, θ, \chi).
 ```
 """
 function D(l, m′, m, ϕ, θ, χ)
@@ -47,7 +47,7 @@ end
 The equation following Eq. (2.53) of [Torres del Castillo](@cite TorresDelCastillo_2003),
 implementing
 ```math
-    {}_sY_{j,m}(\theta, \phi).
+    {}_sY_{j,m}(θ, ϕ).
 ```
 """
 function Y(s, j, m, θ, ϕ)
@@ -75,7 +75,7 @@ end
 Second equation below Eq. (2.53) of [Torres del Castillo](@cite TorresDelCastillo_2003),
 implementing
 ```math
-    d^l_{m',m}(\theta).
+    d^l_{m',m}(θ).
 ```
 """
 function d(l, m′, m, θ)

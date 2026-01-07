@@ -166,7 +166,7 @@ axis_angle_rotation(ω, α, β, γ) = exp((ω / 2) * line(α, β, γ))
 # > perpendicular to the plane ``zOZ``, drawn so that if ``OZ`` is directed to the vertical
 # > and the projection of ``Oz`` perpendicular to ``OZ`` is directed to the south, then
 # > ``OK`` is directed to the east.  Denote the angles ``z\hat{O}Z``, ``Y\hat{O}K``,
-# > ``y\hat{O}K`` by ``\theta``, ``\phi``, ``\psi``, respectively: these are known as the
+# > ``y\hat{O}K`` by ``θ``, ``ϕ``, ``ψ``, respectively: these are known as the
 # > three *Eulerian angles* defining the position of the axes ``Oxyz`` with reference to the
 # > axes ``OXYZ``.
 #

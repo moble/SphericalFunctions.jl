@@ -39,12 +39,12 @@ import ..ConventionsUtilities: 𝒾, ❗
 # The spin-weighted spherical harmonics are defined in Eq. (II.7) as
 # ```math
 #   {}^{-s}Y_{l,m} = (-1)^s \sqrt{\frac{2l+1}{4\pi}}
-#   d^{l}_{m,s}(\iota) e^{im\phi}.
+#   d^{l}_{m,s}(\iota) e^{imϕ}.
 # ```
 # Just for convenience, we eliminate the negative sign on the left-hand side:
 # ```math
 #   {}^{s}Y_{l,m} = (-1)^{-s} \sqrt{\frac{2l+1}{4\pi}}
-#   d^{l}_{m,-s}(\iota) e^{im\phi}.
+#   d^{l}_{m,-s}(\iota) e^{imϕ}.
 # ```
 function ₛYₗₘ(s, l, m, ι::T, ϕ::T) where {T<:Real}
     (-1)^(-s) * √((2l + 1) / (4T(π))) * d(l, m, -s, ι) * exp(𝒾 * m * ϕ)
@@ -84,11 +84,11 @@ end
 # For reference, several explicit formulas are also provided in Eqs.  (II.9)--(II.13):
 # ```math
 # \begin{aligned}
-#   {}^{-2}Y_{2,2} &= \sqrt{\frac{5}{64\pi}} (1+\cos\iota)^2 e^{2i\phi},\\
-#   {}^{-2}Y_{2,1} &= \sqrt{\frac{5}{16\pi}} \sin\iota (1 + \cos\iota) e^{i\phi},\\
+#   {}^{-2}Y_{2,2} &= \sqrt{\frac{5}{64\pi}} (1+\cos\iota)^2 e^{2iϕ},\\
+#   {}^{-2}Y_{2,1} &= \sqrt{\frac{5}{16\pi}} \sin\iota (1 + \cos\iota) e^{iϕ},\\
 #   {}^{-2}Y_{2,0} &= \sqrt{\frac{15}{32\pi}} \sin^2\iota,\\
-#   {}^{-2}Y_{2,-1} &= \sqrt{\frac{5}{16\pi}} \sin\iota (1 - \cos\iota) e^{-i\phi},\\
-#   {}^{-2}Y_{2,-2} &= \sqrt{\frac{5}{64\pi}} (1-\cos\iota)^2 e^{-2i\phi}.
+#   {}^{-2}Y_{2,-1} &= \sqrt{\frac{5}{16\pi}} \sin\iota (1 - \cos\iota) e^{-iϕ},\\
+#   {}^{-2}Y_{2,-2} &= \sqrt{\frac{5}{64\pi}} (1-\cos\iota)^2 e^{-2iϕ}.
 # \end{aligned}
 # ```
 ₋₂Y₂₂(ι::T, ϕ::T) where {T<:Real} = √(5 / (64T(π))) * (1 + cos(ι))^2 * exp(2𝒾*ϕ)

@@ -12,7 +12,7 @@ up-to-date with the latest developments.
 The spherical coordinates are standard physicists' coordinates, implicitly defined by the
 direction vector below Eq. (188b):
 ```math
-  N_i = \left(\sin\theta\cos\phi, \sin\theta\sin\phi, \cos\theta\right).
+  N_i = \left(\sin θ\cos ϕ, \sin θ\sin ϕ, \cos θ\right).
 ```
 
 
@@ -35,7 +35,7 @@ import ..ConventionsUtilities: 𝒾, ❗
 
 # The ``s=-2`` spin-weighted spherical harmonics are defined in Eq. (184a) as
 # ```math
-#   Y^{l,m}_{-2} = \sqrt{\frac{2l+1}{4\pi}} d^{ℓ m}(\theta) e^{im\phi}.
+#   Y^{l,m}_{-2} = \sqrt{\frac{2l+1}{4\pi}} d^{ℓ m}(θ) e^{imϕ}.
 # ```
 function Yˡᵐ₋₂(l, m, θ::T, ϕ::T) where {T<:Real}
     √((2l + 1) / (4T(π))) * d(l, m, θ) * exp(𝒾 * m * ϕ)
@@ -49,8 +49,8 @@ end
 #   \sum_{k = k_1}^{k_2}
 #   \frac{(-)^k}{k!}
 #   e_k^{ℓ m}
-#   \left(\cos\frac{\theta}{2}\right)^{2ℓ+m-2k-2}
-#   \left(\sin\frac{\theta}{2}\right)^{2k-m+2},
+#   \left(\cos\frac{θ}{2}\right)^{2ℓ+m-2k-2}
+#   \left(\sin\frac{θ}{2}\right)^{2k-m+2},
 # ```
 # with ``k_1 = \textrm{max}(0, m-2)`` and ``k_2=\textrm{min}(l+m, l-2)``.
 function d(l, m, θ::T) where {T<:Real}

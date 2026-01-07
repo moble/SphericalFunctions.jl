@@ -86,9 +86,9 @@ Theorem 2.16 of [Hanson-Yakovlev](@cite HansonYakovlev_2002) says that
 an orthonormal basis of a product of ``L^2`` spaces is given by the
 product of the orthonormal bases of the individual spaces.
 Furthermore, on page 354, they point out that ``\{(1/\sqrt{2\pi})
-e^{im\phi}\}`` is an orthonormal basis of ``L^2(0,2\pi)``, while the
-set ``\{1/c_{n,m} P_n^m(\cos\theta)`` is an orthonormal basis of
-``L^2(0, \pi)`` in the ``\theta`` coordinate.  Therefore, the product
+e^{imϕ}\}`` is an orthonormal basis of ``L^2(0,2\pi)``, while the
+set ``\{1/c_{n,m} P_n^m(\cos θ)`` is an orthonormal basis of
+``L^2(0, \pi)`` in the ``θ`` coordinate.  Therefore, the product
 of these two sets is an orthonormal basis of the product space
 ``L^2\left((0,2\pi) \times (0, \pi)\right)``, which forms a coordinate
 space for ``𝕊²``.  I would probably modify this to point out that
@@ -97,10 +97,10 @@ out that you can throw on another factor of ``𝕊¹`` to cover ``𝕊³``,
 which happens to give us the Wigner D-matrices.
 
 We first define the rotor that takes ``(\hat{x}, \hat{y}, \hat{z})``
-onto ``(\hat{\theta}, \hat{\phi}, \hat{r})``.  Then, we can invert
+onto ``(\hat{θ}, \hat{ϕ}, \hat{r})``.  Then, we can invert
 that, so that given a rotor that specifies such a rotation exactly, we
-can get the spherical coordinates — or specifically ``\sin\theta``,
-``\cos\theta``, and ``\exp(i\phi)``.
+can get the spherical coordinates — or specifically ``\sin θ``,
+``\cos θ``, and ``\exp(iϕ)``.
 
 Then, with the universally agreed-upon ``Y`` as given in terms of
 spherical coordinates, we can rewrite it directly to work with
@@ -112,12 +112,12 @@ formula for ``Y``.
 Then, we can simply follow Wigner around Eq. (15.21) to derived a
 transformation law in the form
 ```math
-{}_sY_{ℓ,m'}(R_{\theta', \phi'}) = \sum_m M_{m',m}(R)
-{}_sY_{ℓ,m}(R_{\theta, \phi}),
+{}_sY_{ℓ,m'}(R_{θ', ϕ'}) = \sum_m M_{m',m}(R)
+{}_sY_{ℓ,m}(R_{θ, ϕ}),
 ```
 for some matrix ``M``.  Note that I have written this as if the
 ``{}_sY`` functions are column vectors.  The reason this happens is
-because I want to write ``R_{\theta', \phi'} = R\, R_{\theta, \phi}``,
+because I want to write ``R_{θ', ϕ'} = R\, R_{θ, ϕ}``,
 rather than swapping the order of the rotations on the right-hand
 side.
 
@@ -130,30 +130,30 @@ conjugate transpose, which is why we see the relative conjugate.
 
 * Since ``Y`` is universal, let's start with that as non-negotiable,
   and see if we can derive the relationship to ``𝔇``.
-* ``R_{\theta, \phi}`` is a unit quaternion that rotates the point
+* ``R_{θ, ϕ}`` is a unit quaternion that rotates the point
   described by Cartesian coordinates (0,0,1) onto the point described
-  by spherical coordinates ``(\theta, \phi)``.
+  by spherical coordinates ``(θ, ϕ)``.
 * Just textually, it makes the most sense to write
   ```math
-  R_{\theta', \phi'} = R\, R_{\theta, \phi}
+  R_{θ', ϕ'} = R\, R_{θ, ϕ}
   ```
   for some rotation ``R``.  Now, we just need to interpret ``R``.
 * Again, just textually, it makes the most sense to write
   ```math
-  Y_{ℓ,m'}(\theta', \phi') = \sum_m 𝔇^{(ℓ)}_{m',m}(R)
-  Y_{ℓ,m}(\theta, \phi),
+  Y_{ℓ,m'}(θ', ϕ') = \sum_m 𝔇^{(ℓ)}_{m',m}(R)
+  Y_{ℓ,m}(θ, ϕ),
   ```
   or, generalizing to spin-weighted spherical harmonics
   ```math
-  {}_{s}Y_{ℓ,m'}(R_{\theta', \phi'}) = \sum_m 𝔇^{(ℓ)}_{m',m}(R)
-  {}_{s}Y_{ℓ,m}(R_{\theta, \phi}).
+  {}_{s}Y_{ℓ,m'}(R_{θ', ϕ'}) = \sum_m 𝔇^{(ℓ)}_{m',m}(R)
+  {}_{s}Y_{ℓ,m}(R_{θ, ϕ}).
   ```
 * We also have that ``𝔇`` obeys the representation
   property, so
   ```math
-  𝔇^{(ℓ)}_{m',m''}(R_{\theta', \phi'})
+  𝔇^{(ℓ)}_{m',m''}(R_{θ', ϕ'})
   = \sum_{m} 𝔇^{(ℓ)}_{m',m}(R)
-  𝔇^{(ℓ)}_{m,m''}(R_{\theta, \phi}).
+  𝔇^{(ℓ)}_{m,m''}(R_{θ, ϕ}).
   ```
   - There is no reason that I can see to introduce a conjugation
   - The fact that ``m''`` appears on both sides of the equation means
@@ -161,9 +161,9 @@ conjugate transpose, which is why we see the relative conjugate.
     behavior under final rotation to determine the sign.
 
 ```math
-{}_{s}Y_{ℓ,m}(R_{\theta, \phi})
+{}_{s}Y_{ℓ,m}(R_{θ, ϕ})
 \propto
-𝔇^{(ℓ)}_{m,\propto s}(R_{\theta, \phi})
+𝔇^{(ℓ)}_{m,\propto s}(R_{θ, ϕ})
 ```
 
 
@@ -202,7 +202,7 @@ The [Condon-Shortley](@cite CondonShortley_1935) phase convention is a
 choice of phase factors in the definition of the spherical harmonics
 that requires the coefficients in
 ```math
-L_{\pm} |ℓ,m\rangle = \alpha^{\pm}_{ℓ,m} |ℓ, m \pm 1\rangle
+L_{\pm} |ℓ,m\rangle = α^{\pm}_{ℓ,m} |ℓ, m \pm 1\rangle
 ```
 to be real and positive.  The reasoning behind this choice is
 explained more fully in Section 2 of [Ufford and Shortley
@@ -212,10 +212,10 @@ spherical harmonics.  The key expression is Eq. (15) of section 4³
 (page 52) of [Condon-Shortley](@cite CondonShortley_1935):
 ```math
 \Theta(ℓ, m) = (-1)^ℓ \sqrt{\frac{2ℓ+1}{2} \frac{(ℓ+m)!}{(ℓ-m)!}}
-\frac{1}{2^ℓ ℓ!} \frac{1}{\sin^m\theta}
-\frac{d^{ℓ-m}}{d(\cos\theta)^{ℓ-m}} \sin^{2ℓ}\theta.
+\frac{1}{2^ℓ ℓ!} \frac{1}{\sin^mθ}
+\frac{d^{ℓ-m}}{d(\cos θ)^{ℓ-m}} \sin^{2ℓ}θ.
 ```
-When multiplied by Eq. (5) ``\Phi(m) = e^{im\phi} / \sqrt{2\pi}``,
+When multiplied by Eq. (5) ``\Phi(m) = e^{imϕ} / \sqrt{2\pi}``,
 this gives the spherical harmonic function.  The right-hand side of
 the expression above is usually immediately replaced by a simpler
 expression using Legendre polynomials, but this just shifts sign
@@ -229,15 +229,15 @@ computation with SymPy):
 ```math
 \begin{aligned}
 \Theta(0,0) &= \sqrt{\frac{1}{2}} \\
-\Theta(1,0) &= \sqrt{\frac{3}{2}} \cos\theta &
-\Theta(1,\pm1) &= \mp \sqrt{\frac{3}{4}} \sin\theta \\
-\Theta(2,0) &= \sqrt{\frac{5}{8}} (2\cos^2\theta - \sin^2\theta) &
-\Theta(2,\pm1) &= \mp \sqrt{\frac{15}{4}} \cos\theta \sin\theta &
-\Theta(2,\pm2) &= \sqrt{\frac{15}{16}} \sin^2\theta \\
-\Theta(3,0) &= \sqrt{\frac{7}{8}} (2\cos^3\theta - 3\cos\theta\sin^2\theta) &
-\Theta(3,\pm1) &= \mp \sqrt{\frac{21}{32}} (4\cos^2\theta\sin\theta - \sin^3\theta) &
-\Theta(3,\pm2) &= \sqrt{\frac{105}{16}} \cos\theta \sin^2\theta &
-\Theta(3,\pm3) &= \mp \sqrt{\frac{35}{32}} \sin^3\theta
+\Theta(1,0) &= \sqrt{\frac{3}{2}} \cos θ &
+\Theta(1,\pm1) &= \mp \sqrt{\frac{3}{4}} \sin θ \\
+\Theta(2,0) &= \sqrt{\frac{5}{8}} (2\cos^2θ - \sin^2θ) &
+\Theta(2,\pm1) &= \mp \sqrt{\frac{15}{4}} \cos θ \sin θ &
+\Theta(2,\pm2) &= \sqrt{\frac{15}{16}} \sin^2θ \\
+\Theta(3,0) &= \sqrt{\frac{7}{8}} (2\cos^3θ - 3\cos θ\sin^2θ) &
+\Theta(3,\pm1) &= \mp \sqrt{\frac{21}{32}} (4\cos^2θ\sin θ - \sin^3θ) &
+\Theta(3,\pm2) &= \sqrt{\frac{105}{16}} \cos θ \sin^2θ &
+\Theta(3,\pm3) &= \mp \sqrt{\frac{35}{32}} \sin^3θ
 \end{aligned}
 ```
 These are tested, along with the results from automatic
@@ -249,7 +249,7 @@ Condon-Shortley phase convention.***
 ## Angular-momentum operators
 
 * First, a couple points about ``-i\hbar``:
-  - The finite transformations look like ``\exp[-i \theta L_j]``, but
+  - The finite transformations look like ``\exp[-i θ L_j]``, but
     the factor of ``i`` introduced here just cancels the one in the
     ``L_j``, and the sign is just chosen to make the result consistent
     with our notion of active or passive transformations.
@@ -258,7 +258,7 @@ Condon-Shortley phase convention.***
   - The factor ``i`` comes from plain functional analysis: We need a
     self-adjoint operator, and ``\partial_x`` by itself is
     anti-self-adjoint (as can be verified by evaluating on ``\langle
-    x' | x \rangle = \delta(x-x')``, which switches sign based on
+    x' | x \rangle = δ(x-x')``, which switches sign based on
     which is being differentiated).  We want self-adjoint operators so
     that we get purely real eigenvalues.  [Van Neerven](@cite
     vanNeerven_2022) cites this in a more rigorous context in his
@@ -289,9 +289,9 @@ L_z &= -i\hbar \left( x \frac{\partial}{\partial y} - y \frac{\partial}{\partial
 We can transform these to use spherical coordinates and obtain
 ```math
 \begin{aligned}
-L_x &= -i\hbar \left( \sin\phi \frac{\partial}{\partial\theta} + \cot\theta \cos\phi \frac{\partial}{\partial\phi} \right), \\
-L_y &= -i\hbar \left( \cos\phi \frac{\partial}{\partial\theta} - \cot\theta \sin\phi \frac{\partial}{\partial\phi} \right), \\
-L_z &= -i\hbar \frac{\partial}{\partial\phi}.
+L_x &= -i\hbar \left( \sin ϕ \frac{\partial}{\partial θ} + \cot θ \cos ϕ \frac{\partial}{\partial ϕ} \right), \\
+L_y &= -i\hbar \left( \cos ϕ \frac{\partial}{\partial θ} - \cot θ \sin ϕ \frac{\partial}{\partial ϕ} \right), \\
+L_z &= -i\hbar \frac{\partial}{\partial ϕ}.
 \end{aligned}
 ```
 The conventions we choose *must* be chosen to agree with these —
@@ -303,10 +303,10 @@ coefficients.
 I defined these in Eqs. (42) and (43) of [Boyle (2016)](@cite Boyle_2016) as
 ```math
 \begin{aligned}
-L_{j} f(𝐑) &\colonequals -z \left. \frac{\partial}{\partial \theta}
-f\left(e^{\theta 𝐞_j / 2} 𝐑 \right) \right|_{\theta=0}, \\
-K_{j} f(𝐑) &\colonequals -z \left. \frac{\partial}{\partial \theta}
-f\left(𝐑 e^{\theta 𝐞_j / 2}\right) \right|_{\theta=0},
+L_{j} f(𝐑) &\colonequals -z \left. \frac{\partial}{\partial θ}
+f\left(e^{θ 𝐞_j / 2} 𝐑 \right) \right|_{θ=0}, \\
+K_{j} f(𝐑) &\colonequals -z \left. \frac{\partial}{\partial θ}
+f\left(𝐑 e^{θ 𝐞_j / 2}\right) \right|_{θ=0},
 \end{aligned}
 ```
 where ``𝐞_j`` is the unit vector in the ``j`` direction.
@@ -315,13 +315,13 @@ essentially the same thing in the equations following his Eq. (4.1.5).
 
 Condon and Shortley's Eq. (1) of section 4³ (page 50) defines
 ```math
-L_z = -i \hbar \frac{\partial}{\partial \phi},
+L_z = -i \hbar \frac{\partial}{\partial ϕ},
 ```
 while Eq. (8) on the following page defines
 ```math
 \begin{aligned}
-L_x + i L_y &= \hbar e^{i\phi} \left( \frac{\partial}{\partial \theta} + i \cot\theta \frac{\partial}{\partial \phi} \right), \\
-L_x - i L_y &= \hbar e^{-i\phi} \left(-\frac{\partial}{\partial \theta} + i \cot\theta \frac{\partial}{\partial \phi} \right).
+L_x + i L_y &= \hbar e^{iϕ} \left( \frac{\partial}{\partial θ} + i \cot θ \frac{\partial}{\partial ϕ} \right), \\
+L_x - i L_y &= \hbar e^{-iϕ} \left(-\frac{\partial}{\partial θ} + i \cot θ \frac{\partial}{\partial ϕ} \right).
 \end{aligned}
 ```
 Note that one is not the conjugate of the other!  This is because of
@@ -331,9 +331,9 @@ the factors of ``-i`` in the definitions of ``L_x`` and ``L_y``.
 operator for a rigid body in Eq. (2.2.2) as
 ```math
 \begin{aligned}
-L_x &= -i\hbar \left(-\cos \alpha \cot\beta \frac{\partial}{\partial\alpha} - \sin\alpha \frac{\partial}{\partial\beta} + \frac{\cos\alpha}{\sin\beta} \frac{\partial}{\partial\gamma} \right), \\
-L_y &= -i\hbar \left(-\sin\alpha \cot\beta \frac{\partial}{\partial \alpha} + \cos\alpha \frac{\partial}{\partial\beta} + \frac{\sin\alpha}{\sin\beta} \frac{\partial}{\partial\gamma} \right), \\
-L_z &= -i\hbar \frac{\partial}{\partial\alpha}.
+L_x &= -i\hbar \left(-\cos α \cot β \frac{\partial}{\partial α} - \sin α \frac{\partial}{\partial β} + \frac{\cos α}{\sin β} \frac{\partial}{\partial γ} \right), \\
+L_y &= -i\hbar \left(-\sin α \cot β \frac{\partial}{\partial α} + \cos α \frac{\partial}{\partial β} + \frac{\sin α}{\sin β} \frac{\partial}{\partial γ} \right), \\
+L_z &= -i\hbar \frac{\partial}{\partial α}.
 \end{aligned}
 ```
 
@@ -352,13 +352,13 @@ and the operator ``𝐏_{𝐑}`` to act on a function
 ```
 Then, his Eq. (15.5) presumably implies
 ```math
-Y_{ℓ,m}(\vartheta', \varphi')
-= 𝐏_{\{\alpha, \beta, \gamma\}} Y_{ℓ,m}(\vartheta, \varphi)
-= \sum_{m'} 𝔇^{(ℓ)}(\{\alpha, \beta, \gamma\})_{m',m}
-  Y_{ℓ,m'}(\vartheta, \varphi),
+Y_{ℓ,m}(ϑ', φ')
+= 𝐏_{\{α, β, γ\}} Y_{ℓ,m}(ϑ, φ)
+= \sum_{m'} 𝔇^{(ℓ)}(\{α, β, γ\})_{m',m}
+  Y_{ℓ,m'}(ϑ, φ),
 ```
-where ``\{\alpha, \beta, \gamma\}`` takes ``(\vartheta, \varphi)`` to
-``(\vartheta', \varphi')``.  In any case, we can now leave behind this
+where ``\{α, β, γ\}`` takes ``(ϑ, φ)`` to
+``(ϑ', φ')``.  In any case, we can now leave behind this
 ``𝐏`` notation and just look at the beginning and end of the
 equation above as the critical relationship in Wigner's notation.
 
@@ -380,7 +380,7 @@ L_{\pm} {}_{s}Y_{ℓ,m}(𝐑)
 ```
 That is, in our conventions we have
 ```math
-\alpha^{\pm}_{ℓ,m} = \sqrt{(ℓ \mp m)(ℓ \pm m + 1)},
+α^{\pm}_{ℓ,m} = \sqrt{(ℓ \mp m)(ℓ \pm m + 1)},
 ```
 which is always real and positive, and thus consistent with the Condon-Shortley phase
 convention.
@@ -388,17 +388,17 @@ convention.
 
 ### Properties
 
-* ``D^j_{m'm}(\alpha,\beta,\gamma) = (-1)^{m'-m} D^j_{-m',-m}(\alpha,\beta,\gamma)^*``
-* ``(-1)^{m'-m}D^{j}_{mm'}(\alpha,\beta,\gamma)=D^{j}_{m'm}(\gamma,\beta,\alpha)``
+* ``D^j_{m'm}(α,β,γ) = (-1)^{m'-m} D^j_{-m',-m}(α,β,γ)^*``
+* ``(-1)^{m'-m}D^{j}_{mm'}(α,β,γ)=D^{j}_{m'm}(γ,β,α)``
 * ``d_{m',m}^{j}=(-1)^{m-m'}d_{m,m'}^{j}=d_{-m,-m'}^{j}``
 
 ```math
 \begin{aligned}
-d_{m',m}^{j}(\pi)        &= (-1)^{j-m}  \delta_{m',-m} \\[6pt]
-d_{m',m}^{j}(\pi-\beta)  &= (-1)^{j+m'}  d_{m',-m}^{j}(\beta)\\[6pt]
-d_{m',m}^{j}(\pi+\beta)  &= (-1)^{j-m}  d_{m',-m}^{j}(\beta)\\[6pt]
-d_{m',m}^{j}(2\pi+\beta) &= (-1)^{2j}    d_{m',m}^{j}(\beta)\\[6pt]
-d_{m',m}^{j}(-\beta)     &= d_{m,m'}^{j}(\beta) = (-1)^{m'-m} d_{m',m}^{j}(\beta)
+d_{m',m}^{j}(\pi)        &= (-1)^{j-m}  δ_{m',-m} \\[6pt]
+d_{m',m}^{j}(\pi-β)  &= (-1)^{j+m'}  d_{m',-m}^{j}(β)\\[6pt]
+d_{m',m}^{j}(\pi+β)  &= (-1)^{j-m}  d_{m',-m}^{j}(β)\\[6pt]
+d_{m',m}^{j}(2\pi+β) &= (-1)^{2j}    d_{m',m}^{j}(β)\\[6pt]
+d_{m',m}^{j}(-β)     &= d_{m,m'}^{j}(β) = (-1)^{m'-m} d_{m',m}^{j}(β)
 \end{aligned}
 ```
 
@@ -410,17 +410,17 @@ d_{m',m}^{j}(-\beta)     &= d_{m,m'}^{j}(\beta) = (-1)^{m'-m} d_{m',m}^{j}(\beta
 
 ```math
 \begin{gather}
-R = \cos\epsilon + \sin\epsilon\, \hat{𝔯} \\
-R𝐯 = \cos\epsilon 𝐯 + \sin\epsilon\, \hat{𝔯}𝐯 \\
-R𝐯R^{-1} = (𝐯\cos\epsilon + \sin\epsilon\, \hat{𝔯}𝐯)(\cos\epsilon - \sin\epsilon\, \hat{𝔯}) \\
-R𝐯R^{-1} = 𝐯\cos^2\epsilon + \sin^2\epsilon\, \hat{𝔯}𝐯\hat{𝔯}^{-1} + \sin\epsilon \cos\epsilon\, (\hat{𝔯}𝐯 - 𝐯\hat{𝔯}) \\
+R = \cos ϵ + \sin ϵ\, \hat{𝔯} \\
+R𝐯 = \cos ϵ 𝐯 + \sin ϵ\, \hat{𝔯}𝐯 \\
+R𝐯R^{-1} = (𝐯\cos ϵ + \sin ϵ\, \hat{𝔯}𝐯)(\cos ϵ - \sin ϵ\, \hat{𝔯}) \\
+R𝐯R^{-1} = 𝐯\cos^2ϵ + \sin^2ϵ\, \hat{𝔯}𝐯\hat{𝔯}^{-1} + \sin ϵ \cos ϵ\, (\hat{𝔯}𝐯 - 𝐯\hat{𝔯}) \\
 R𝐯R^{-1} = \begin{cases}
 𝐯 & 𝐯 \hat{𝔯} = \hat{𝔯}𝐯 \\
-𝐯(\cos^2\epsilon - \sin^2\epsilon) + 2 \sin\epsilon \cos\epsilon\, \frac{[\hat{𝔯}, 𝐯]}{2} & 𝐯 \hat{𝔯} = -\hat{𝔯}𝐯 \\
+𝐯(\cos^2ϵ - \sin^2ϵ) + 2 \sin ϵ \cos ϵ\, \frac{[\hat{𝔯}, 𝐯]}{2} & 𝐯 \hat{𝔯} = -\hat{𝔯}𝐯 \\
 \end{cases} \\
 R𝐯R^{-1} = \begin{cases}
 𝐯 & 𝐯 \hat{𝔯} = \hat{𝔯}𝐯 \\
-\cos2\epsilon 𝐯 + \sin2\epsilon \frac{[\hat{𝔯}, 𝐯]}{2} & 𝐯 \hat{𝔯} = -\hat{𝔯}𝐯 \\
+\cos2ϵ 𝐯 + \sin2ϵ \frac{[\hat{𝔯}, 𝐯]}{2} & 𝐯 \hat{𝔯} = -\hat{𝔯}𝐯 \\
 \end{cases} \\
 \end{gather}
 ```

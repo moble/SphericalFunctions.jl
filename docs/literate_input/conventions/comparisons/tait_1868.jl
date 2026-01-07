@@ -45,22 +45,22 @@ terms of a single quaternion.
 
 > Here the vectors ``i``, ``j``, ``k`` in the original position of the body correspond to
 ``\overline{OA}``, ``\overline{OB}``, ``\overline{OC}`` respectively, at time ``t``.  The
-transposition is effected by — *first*, a rotation ``\psi`` about ``k``; *second*, a
-rotation ``\theta`` about the new position of the line originally coinciding with ``j``;
-*third*, a rotation ``\phi`` about the final position of the line at first coinciding with
+transposition is effected by — *first*, a rotation ``ψ`` about ``k``; *second*, a
+rotation ``θ`` about the new position of the line originally coinciding with ``j``;
+*third*, a rotation ``ϕ`` about the final position of the line at first coinciding with
 ``k'``.
 
 So this is what would probably now be called the ``z-y'-z''`` convention for Euler angles
-``(\psi, \theta, \phi)``, which is equivalent to ``(\phi, \theta, \psi)`` in the ``z-y-z``
+``(ψ, θ, ϕ)``, which is equivalent to ``(ϕ, θ, ψ)`` in the ``z-y-z``
 convention used here.
 
 Indeed, Tait goes on to derive (somewhat laboriously) the expression for the quaternion:
 
 ```math
-q = \cos \frac{\phi + \psi}{2} \cos \frac{\theta}{2}
-  + i \sin \frac{\phi - \psi}{2} \sin \frac{\theta}{2}
-  + j \cos \frac{\phi - \psi}{2} \sin \frac{\theta}{2}
-  + k \sin \frac{\phi + \psi}{2} \cos \frac{\theta}{2},
+q = \cos \frac{ϕ + ψ}{2} \cos \frac{θ}{2}
+  + i \sin \frac{ϕ - ψ}{2} \sin \frac{θ}{2}
+  + j \cos \frac{ϕ - ψ}{2} \sin \frac{θ}{2}
+  + k \sin \frac{ϕ + ψ}{2} \cos \frac{θ}{2},
 ```
 
 which is exactly the same as our expression from `from_euler_angles(ψ, θ, ϕ)`.

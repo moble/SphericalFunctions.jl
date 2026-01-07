@@ -12,14 +12,14 @@ standard reference for the "Condon-Shortley phase convention".  Though some refe
 not very clear about precisely what they mean by that phrase, it seems clear that the
 original meaning revolved around the idea that the angular-momentum raising and lowering
 operators have eigenvalues that are *real and positive* when acting on the spherical
-harmonics.  Specifically, they discuss the phase ambiguity of the eigenfunction ``\psi`` —
+harmonics.  Specifically, they discuss the phase ambiguity of the eigenfunction ``ψ`` —
 which includes spherical harmonics indexed by ``j`` and ``m`` for the angular part — in
 section 3³ (page 48).  This culminates in Eq. (3) of that section, which is as explicit as
 they get:
 ```math
-\left( J_x \pm i J_y \right) \psi(\gamma j m)
+\left( J_x \pm i J_y \right) ψ(γ j m)
 =
-\hbar \sqrt{(j \mp m)(j \pm m + 1)} \psi(\gamma j m \pm 1).
+\hbar \sqrt{(j \mp m)(j \pm m + 1)} ψ(γ j m \pm 1).
 ```
 This eliminates any *relative* phase ambiguity between modes with neighboring ``m`` values,
 and specifically determines what factors of ``(-1)^m`` should be included in the definition
@@ -33,23 +33,23 @@ polynomials — which would subject us to another round of ambiguity — the fun
 module use automatic differentiation to compute the derivatives explicitly.
 
 Condon and Shortley are not very explicit about the meaning of the spherical coordinates,
-but they do describe them as "spherical polar coordinates ``r, \theta, \varphi``".
+but they do describe them as "spherical polar coordinates ``r, θ, φ``".
 Immediately before equation (1) of section 4³ (page 50), they define the angular-momentum
 operator
 ```math
-L_z = -i \hbar \frac{\partial}{\partial \varphi},
+L_z = -i \hbar \frac{\partial}{\partial φ},
 ```
 which agrees with [our expression](@ref "``L`` operators in spherical coordinates").  This
 is followed by equation (8):
 ```math
 \begin{aligned}
-L_x + i L_y &= \hbar e^{i\varphi} \left(
-  \frac{\partial}{\partial \theta}
-  + i \cot\theta \frac{\partial}{\partial \varphi}
+L_x + i L_y &= \hbar e^{iφ} \left(
+  \frac{\partial}{\partial θ}
+    + i \cot θ \frac{\partial}{\partial φ}
 \right) \\
-L_x - i L_y &= \hbar e^{-i\varphi} \left(
-  -\frac{\partial}{\partial \theta}
-  + i \cot\theta \frac{\partial}{\partial \varphi}
+L_x - i L_y &= \hbar e^{-iφ} \left(
+  -\frac{\partial}{\partial θ}
+    + i \cot θ \frac{\partial}{\partial φ}
 \right),
 \end{aligned}
 ```
@@ -78,47 +78,47 @@ import ..ConventionsUtilities: 𝒾, ❗, dʲsin²ᵏθdcosθʲ
 # Equation (12) of section 4³ (page 51) writes the solution to the three-dimensional Laplace
 # equation in spherical coordinates as
 # ```math
-# \psi(\gamma, ℓ, m_ℓ)
+# ψ(γ, ℓ, m_ℓ)
 # =
-# B(\gamma, ℓ) \Theta(ℓ, m_ℓ) \Phi(m_ℓ),
+# B(γ, ℓ) \Theta(ℓ, m_ℓ) \Phi(m_ℓ),
 # ```
-# where ``B`` is independent of ``\theta`` and ``\varphi``, and ``\gamma`` represents any
+# where ``B`` is independent of ``θ`` and ``φ``, and ``γ`` represents any
 # number of eigenvalues required to specify the state.  More explicitly, below Eq. (5) of
 # section 5⁵ (page 127), they specifically define the spherical harmonics as
 # ```math
-# \phi(ℓ, m_ℓ) = \Theta(ℓ, m_ℓ) \Phi(m_ℓ).
+# ϕ(ℓ, m_ℓ) = \Theta(ℓ, m_ℓ) \Phi(m_ℓ).
 # ```
-# One quirk of their notation is that the dependence on ``\theta`` and ``\varphi`` is
+# One quirk of their notation is that the dependence on ``θ`` and ``φ`` is
 # implicit in their functions; we make it explicit, as Julia requires:
 function 𝜙(ℓ, mₗ, 𝜃, φ)
     Θ(ℓ, mₗ, 𝜃) * Φ(mₗ, φ)
 end
 #+
 
-# The ``\varphi`` part is given by equation (5) of section 4³ (page 50):
+# The ``φ`` part is given by equation (5) of section 4³ (page 50):
 # ```math
 # \Phi(m_ℓ)
 # =
-# \frac{1}{\sqrt{2\pi}} e^{i m_ℓ \varphi}.
+# \frac{1}{\sqrt{2\pi}} e^{i m_ℓ φ}.
 # ```
-# Again, we make the dependence on ``\varphi`` explicit, and we capture its type to ensure
+# Again, we make the dependence on ``φ`` explicit, and we capture its type to ensure
 # that we don't lose precision when converting π to a floating-point number.
 function Φ(mₗ, φ::T) where {T}
     1 / √(2T(π)) * exp(𝒾 * mₗ * φ)
 end
 #+
 
-# Equation (15) of section 4³ (page 52) gives the ``\theta`` dependence as
+# Equation (15) of section 4³ (page 52) gives the ``θ`` dependence as
 # ```math
 # \Theta(ℓ, m)
 # =
 # (-1)^ℓ
 # \sqrt{\frac{(2ℓ+1)}{2} \frac{(ℓ+m)!}{(ℓ-m)!}}
 # \frac{1}{2^ℓ ℓ!}
-# \frac{1}{\sin^m \theta}
-# \frac{d^{ℓ-m}}{d(\cos\theta)^{ℓ-m}} \sin^{2ℓ}\theta.
+# \frac{1}{\sin^m θ}
+# \frac{d^{ℓ-m}}{d(\cos θ)^{ℓ-m}} \sin^{2ℓ}θ.
 # ```
-# Again, we make the dependence on ``\theta`` explicit, and we capture its type to ensure
+# Again, we make the dependence on ``θ`` explicit, and we capture its type to ensure
 # that we don't lose precision when converting the factorials to a floating-point number.
 function Θ(ℓ, m, 𝜃::T) where {T}
     (-1)^ℓ * T(√(((2ℓ+1) * (ℓ+m)❗) / (2 * (ℓ - m)❗)) * (1 / (2^ℓ * (ℓ)❗))) *
@@ -170,7 +170,7 @@ end  # module CondonShortley
 #+
 # so we test up to that point, and just compare the general form to the explicit formulas —
 # again, noting the subtle difference between the characters `Θ` and `ϴ`.  Note that the
-# ``1/\sin\theta`` factor in the general form will cause problems at the poles, so we avoid
+# ``1/\sin θ`` factor in the general form will cause problems at the poles, so we avoid
 # the poles by using `βrange` with a small offset:
 for θ ∈ θrange(; avoid_poles=ϵₐ/10)
     for (ℓ, m) ∈ ℓmrange(ℓₘₐₓ)
@@ -192,7 +192,7 @@ for (θ, ϕ) ∈ θϕrange(; avoid_poles=ϵₐ/40)
 end
 #+
 
-# This successful test shows that the function ``\phi`` defined by Condon and Shortley
+# This successful test shows that the function ``ϕ`` defined by Condon and Shortley
 # agrees with the spherical harmonics defined by the `SphericalFunctions` package.
 
 end  #hide

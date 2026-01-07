@@ -4,11 +4,11 @@ md"""
 This package defines the angular-momentum operators ``L_j`` and ``R_j`` in terms of elements
 of the Lie group and algebra:
 ```math
-L_𝐮 f(𝐑) = \left. i \frac{d}{d\epsilon}\right|_{\epsilon=0}
-f\left(e^{-\epsilon 𝐮/2}\, 𝐑\right)
+L_𝐮 f(𝐑) = \left. i \frac{d}{dϵ}\right|_{ϵ=0}
+f\left(e^{-ϵ 𝐮/2}\, 𝐑\right)
 \qquad \text{and} \qquad
-R_𝐮 f(𝐑) = -\left. i \frac{d}{d\epsilon}\right|_{\epsilon=0}
-f\left(𝐑\, e^{-\epsilon 𝐮/2}\right),
+R_𝐮 f(𝐑) = -\left. i \frac{d}{dϵ}\right|_{ϵ=0}
+f\left(𝐑\, e^{-ϵ 𝐮/2}\right),
 ```
 This is certainly the natural realm for these operators, but it is not the common one.  In
 particular, virtually all textbooks and papers on the subject define these operators in
@@ -28,8 +28,8 @@ important results that help make contact with more standard expressions:
      the standard expressions.
   3. We also find ``[R_x, R_y] = i R_z`` and cyclic permutations.
   4. We can explicitly compute ``[L_i, R_j] = 0``, as expected.
-  5. Using the natural extension of Goldberg et al.'s SWSHs to include ``\gamma``, we can
-     see that the natural spin-weight operator is ``R_z = i \partial_\gamma``.  Thus, we
+  5. Using the natural extension of Goldberg et al.'s SWSHs to include ``γ``, we can
+     see that the natural spin-weight operator is ``R_z = i \partial_γ``.  Thus, we
      define ``R_z = s`` for a function with spin weight ``s``.
   6. The spin-raising operator for ``R_z`` is ``\eth = R_x + i R_y``; the spin-lowering
      operator is ``\bar{\eth} = R_x - i R_y``.
@@ -38,67 +38,67 @@ important results that help make contact with more standard expressions:
 
 We start by defining a new set of Euler angles according to
 ```math
-𝐑_{\alpha', \beta', \gamma'}
-= e^{-\epsilon 𝐮 / 2} 𝐑_{\alpha, \beta, \gamma}
+𝐑_{α', β', γ'}
+= e^{-ϵ 𝐮 / 2} 𝐑_{α, β, γ}
 \qquad \text{or} \qquad
-𝐑_{\alpha', \beta', \gamma'}
-= 𝐑_{\alpha, \beta, \gamma} e^{-\epsilon 𝐮 / 2}
+𝐑_{α', β', γ'}
+= 𝐑_{α, β, γ} e^{-ϵ 𝐮 / 2}
 ```
-where ``𝐮`` will be each of the basis quaternions, and each of ``\alpha'``,
-``\beta'``, and ``\gamma'`` is a function of ``\alpha``, ``\beta``, ``\gamma``, and
-``\epsilon``.  Then, we note that the chain rule tells us that
+where ``𝐮`` will be each of the basis quaternions, and each of ``α'``,
+``β'``, and ``γ'`` is a function of ``α``, ``β``, ``γ``, and
+``ϵ``.  Then, we note that the chain rule tells us that
 ```math
-\frac{\partial}{\partial \epsilon}
+\frac{\partial}{\partial ϵ}
 =
-\frac{\partial \alpha'}{\partial \epsilon} \frac{\partial}{\partial \alpha'}
-+ \frac{\partial \beta'}{\partial \epsilon} \frac{\partial}{\partial \beta'}
-+ \frac{\partial \gamma'}{\partial \epsilon} \frac{\partial}{\partial \gamma'},
+\frac{\partial α'}{\partial ϵ} \frac{\partial}{\partial α'}
++ \frac{\partial β'}{\partial ϵ} \frac{\partial}{\partial β'}
++ \frac{\partial γ'}{\partial ϵ} \frac{\partial}{\partial γ'},
 ```
 which we will use to convert the general expression for the angular-momentum operators in
-terms of ``\partial_\epsilon`` into an expression in terms of derivatives with respect to
+terms of ``\partial_ϵ`` into an expression in terms of derivatives with respect to
 these new Euler angles:
 ```math
 \begin{align}
-  L_j f(𝐑_{\alpha, \beta, \gamma})
+  L_j f(𝐑_{α, β, γ})
   &=
-  \left. i \frac{\partial} {\partial \epsilon} f \left( e^{-\epsilon 𝐞_j / 2}
-  𝐑_{\alpha, \beta, \gamma} \right) \right|_{\epsilon=0}
+  \left. i \frac{\partial} {\partial ϵ} f \left( e^{-ϵ 𝐞_j / 2}
+  𝐑_{α, β, γ} \right) \right|_{ϵ=0}
   \\
   &=
   i \left[ \left(
-      \frac{\partial \alpha'}{\partial \epsilon} \frac{\partial}{\partial \alpha'}
-      + \frac{\partial \beta'}{\partial \epsilon} \frac{\partial}{\partial \beta'}
-      + \frac{\partial \gamma'}{\partial \epsilon} \frac{\partial}{\partial \gamma'}
-  \right) f \left(\alpha', \beta', \gamma'\right) \right]_{\epsilon=0}
+      \frac{\partial α'}{\partial ϵ} \frac{\partial}{\partial α'}
+      + \frac{\partial β'}{\partial ϵ} \frac{\partial}{\partial β'}
+      + \frac{\partial γ'}{\partial ϵ} \frac{\partial}{\partial γ'}
+  \right) f \left(α', β', γ'\right) \right]_{ϵ=0}
   \\
   &=
   i \left[ \left(
-      \frac{\partial \alpha'}{\partial \epsilon} \frac{\partial}{\partial \alpha}
-      + \frac{\partial \beta'}{\partial \epsilon} \frac{\partial}{\partial \beta}
-      + \frac{\partial \gamma'}{\partial \epsilon} \frac{\partial}{\partial \gamma}
-  \right) f \left(\alpha, \beta, \gamma\right) \right]_{\epsilon=0},
+      \frac{\partial α'}{\partial ϵ} \frac{\partial}{\partial α}
+      + \frac{\partial β'}{\partial ϵ} \frac{\partial}{\partial β}
+      + \frac{\partial γ'}{\partial ϵ} \frac{\partial}{\partial γ}
+  \right) f \left(α, β, γ\right) \right]_{ϵ=0},
 \end{align}
 ```
 or for ``R_j``:
 ```math
 \begin{align}
-  R_j f(𝐑_{\alpha, \beta, \gamma})
+  R_j f(𝐑_{α, β, γ})
   &=
-  -\left. i \frac{\partial} {\partial \epsilon} f \left( 𝐑_{\alpha, \beta, \gamma}
-  e^{-\epsilon 𝐞_j / 2} \right) \right|_{\epsilon=0}
+  -\left. i \frac{\partial} {\partial ϵ} f \left( 𝐑_{α, β, γ}
+  e^{-ϵ 𝐞_j / 2} \right) \right|_{ϵ=0}
   \\
   &=
   -i \left[ \left(
-      \frac{\partial \alpha'}{\partial \epsilon} \frac{\partial}{\partial \alpha}
-      + \frac{\partial \beta'}{\partial \epsilon} \frac{\partial}{\partial \beta}
-      + \frac{\partial \gamma'}{\partial \epsilon} \frac{\partial}{\partial \gamma}
-  \right) f \left(\alpha, \beta, \gamma\right) \right]_{\epsilon=0}.
+      \frac{\partial α'}{\partial ϵ} \frac{\partial}{\partial α}
+      + \frac{\partial β'}{\partial ϵ} \frac{\partial}{\partial β}
+      + \frac{\partial γ'}{\partial ϵ} \frac{\partial}{\partial γ}
+  \right) f \left(α, β, γ\right) \right]_{ϵ=0}.
 \end{align}
 ```
 
 So the objective is to find the new Euler angles, differentiate with respect to
-``\epsilon``, and then evaluate at ``\epsilon = 0``.  We do this by first multiplying
-``𝐑_{\alpha, \beta, \gamma}`` and ``e^{-\epsilon 𝐮 / 2}`` in the desired
+``ϵ``, and then evaluate at ``ϵ = 0``.  We do this by first multiplying
+``𝐑_{α, β, γ}`` and ``e^{-ϵ 𝐮 / 2}`` in the desired
 order, then expanding the results in terms of its quaternion components, and then computing
 the new Euler angles in terms of those components according to the usual expression.
 
@@ -191,9 +191,9 @@ macro display(expr)
             ∂α′∂ϵ, ∂β′∂ϵ, ∂γ′∂ϵ = latex.($expr)  # Call expr; format results as LaTeX
             expr = $op * "_" * $arg  # Standard form of the operator
             L"""%$expr = i\left[
-                %$(∂α′∂ϵ) \frac{\partial}{\partial \alpha}
-                + %$(∂β′∂ϵ) \frac{\partial}{\partial \beta}
-                + %$(∂γ′∂ϵ) \frac{\partial}{\partial \gamma}
+                %$(∂α′∂ϵ) \frac{\partial}{\partial α}
+                + %$(∂β′∂ϵ) \frac{\partial}{\partial β}
+                + %$(∂γ′∂ϵ) \frac{\partial}{\partial γ}
             \right]"""  # Display the result in LaTeX form
         end
     else
@@ -201,9 +201,9 @@ macro display(expr)
             ∂α′∂ϵ, ∂β′∂ϵ, ∂γ′∂ϵ = latex.($expr)  # Call expr; format results as LaTeX
             expr = $op * "_" * $arg  # Standard form of the operator
             L"""%$expr = -i\left[
-                %$(∂α′∂ϵ) \frac{\partial}{\partial \alpha}
-                + %$(∂β′∂ϵ) \frac{\partial}{\partial \beta}
-                + %$(∂γ′∂ϵ) \frac{\partial}{\partial \gamma}
+                %$(∂α′∂ϵ) \frac{\partial}{\partial α}
+                + %$(∂β′∂ϵ) \frac{\partial}{\partial β}
+                + %$(∂γ′∂ϵ) \frac{\partial}{\partial γ}
             \right]"""  # Display the result in LaTeX form
         end
     end
@@ -228,9 +228,9 @@ macro display2(expr)
             )
             expr = $op * "_" * $arg  # Standard form of the operator
             expsign = ($arg=="+" ? "" : "-")
-            L"""%$expr = e^{%$expsign i \phi} \left[
-                %$(∂ϑ′∂ϵ) \frac{\partial}{\partial \theta}
-                + %$(∂φ′∂ϵ) \frac{\partial}{\partial \phi}
+            L"""%$expr = e^{%$expsign i ϕ} \left[
+                %$(∂ϑ′∂ϵ) \frac{\partial}{\partial θ}
+                + %$(∂φ′∂ϵ) \frac{\partial}{\partial ϕ}
             \right]"""  # Display the result in LaTeX form
         end
     elseif op == "L"
@@ -238,8 +238,8 @@ macro display2(expr)
             ∂φ′∂ϵ, ∂ϑ′∂ϵ, ∂γ′∂ϵ = latex.($conversion.($expr))  # Call expr; format as LaTeX
             expr = $op * "_" * $arg  # Standard form of the operator
             L"""%$expr = i\left[
-                %$(∂ϑ′∂ϵ) \frac{\partial}{\partial \theta}
-                + %$(∂φ′∂ϵ) \frac{\partial}{\partial \phi}
+                %$(∂ϑ′∂ϵ) \frac{\partial}{\partial θ}
+                + %$(∂φ′∂ϵ) \frac{\partial}{\partial ϕ}
             \right]"""  # Display the result in LaTeX form
         end
     else
@@ -247,9 +247,9 @@ macro display2(expr)
             ∂φ′∂ϵ, ∂ϑ′∂ϵ, ∂γ′∂ϵ = latex.($conversion.($expr))  # Call expr; format as LaTeX
             expr = $op * "_" * $arg  # Standard form of the operator
             L"""%$expr = -i\left[
-                %$(∂ϑ′∂ϵ) \frac{\partial}{\partial \theta}
-                + %$(∂φ′∂ϵ) \frac{\partial}{\partial \phi}
-                + %$(∂γ′∂ϵ) \frac{\partial}{\partial \gamma}
+                %$(∂ϑ′∂ϵ) \frac{\partial}{\partial θ}
+                + %$(∂φ′∂ϵ) \frac{\partial}{\partial ϕ}
+                + %$(∂γ′∂ϵ) \frac{\partial}{\partial γ}
             \right]"""  # Display the result in LaTeX form
         end
     end
@@ -291,13 +291,13 @@ nothing  #hide
 # \begin{align}
 # R_𝐮 f(𝐑)
 # &=
-# -\left. i \frac{d}{d\epsilon}\right|_{\epsilon=0} f\left(𝐑\, e^{-\epsilon 𝐮/2}\right) \\
+# -\left. i \frac{d}{dϵ}\right|_{ϵ=0} f\left(𝐑\, e^{-ϵ 𝐮/2}\right) \\
 # &=
-# -\left. i \frac{d}{d\epsilon}\right|_{\epsilon=0}
-#   f\left(𝐑\, e^{-\epsilon 𝐮/2}\, 𝐑^{-1}\, 𝐑\right) \\
+# -\left. i \frac{d}{dϵ}\right|_{ϵ=0}
+#   f\left(𝐑\, e^{-ϵ 𝐮/2}\, 𝐑^{-1}\, 𝐑\right) \\
 # &=
-# -\left. i \frac{d}{d\epsilon}\right|_{\epsilon=0}
-#   f\left(e^{-\epsilon 𝐑\, 𝐮\, 𝐑^{-1}/2}\, 𝐑\right) \\
+# -\left. i \frac{d}{dϵ}\right|_{ϵ=0}
+#   f\left(e^{-ϵ 𝐑\, 𝐮\, 𝐑^{-1}/2}\, 𝐑\right) \\
 # &=
 # -L_{𝐑\, 𝐮\, 𝐑^{-1}} f(𝐑),
 # \end{align}
@@ -396,8 +396,8 @@ commutator(Rz, Rx)
 # 2-sphere, as seen in numerous references, so we can declare compatibility between our
 # unusual definition of ``L`` and more standard definitions.
 #
-# Now, note that including ``\partial_\gamma`` for an expression on the 2-sphere doesn't
-# actually make any sense: ``\gamma`` isn't even a coordinate for the 2-sphere!  However,
+# Now, note that including ``\partial_γ`` for an expression on the 2-sphere doesn't
+# actually make any sense: ``γ`` isn't even a coordinate for the 2-sphere!  However,
 # for historical reasons, we include it here when showing the results of the ``R`` operator
 # in Euler angles.
 
@@ -408,26 +408,26 @@ commutator(Rz, Rx)
 #-
 @display2 R(𝐤)
 
-# We get nonzero components of ``\partial_\gamma``, showing that these operators really *do
+# We get nonzero components of ``\partial_γ``, showing that these operators really *do
 # not* make sense for the 2-sphere, and therefore that it doesn't actually make sense to
 # define spin-weighted spherical functions on the 2-sphere; they really only make sense on
 # the 3-sphere.  Nonetheless, if we stipulate that the function ``\eta`` has a specific spin
 # weight, that means that *on the 3-sphere* it is an eigenfunction with ``R_z\eta =
-# i\partial_\gamma \eta = s\eta``.  So we could just substitute ``-i s`` for
-# ``\partial_\gamma`` in the expressions above, and recover the standard spin-weight
+# i\partial_γ \eta = s\eta``.  So we could just substitute ``-i s`` for
+# ``\partial_γ`` in the expressions above, and recover the standard spin-weight
 # operators.  We get
 # ```math
 # \left[R_x + i R_y\right] \eta
 # = \left[
-#     -i \frac{1}{\sin\theta} \frac{\partial}{\partial \phi}
-#     + \frac{s}{\tan \theta}
-#     - \frac{\partial}{\partial \theta}
+#     -i \frac{1}{\sin θ} \frac{\partial}{\partial ϕ}
+#     + \frac{s}{\tan θ}
+#     - \frac{\partial}{\partial θ}
 #   \right] \eta
-# = -(\sin \theta)^s \left\{
-#     \frac{\partial}{\partial \theta}
-#     +i \frac{1}{\sin\theta} \frac{\partial}{\partial \phi}
+# = -(\sin θ)^s \left\{
+#     \frac{\partial}{\partial θ}
+#     +i \frac{1}{\sin θ} \frac{\partial}{\partial ϕ}
 #   \right\}
-#   \left\{ (\sin \theta)^{-s} \eta \right\}.
+#   \left\{ (\sin θ)^{-s} \eta \right\}.
 # ```
 # And in the latter form, we can see that ``R_x + i R_y`` is exactly the spin-raising
 # operator ``\eth`` as originally defined by [Newman_1966](@citet) in their Eq. (3.8).  The

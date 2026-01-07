@@ -44,24 +44,24 @@ correspondence with the vectors, we will frequently use a vector to
 label a point in space.
 
 We will be working on the sphere, so it will be very convenient to use
-spherical coordinates ``(r, \theta, \phi)``.  We choose the standard
+spherical coordinates ``(r, θ, ϕ)``.  We choose the standard
 "physics" conventions for these, in which we relate to the Cartesian
 coordinates by
 ```math
 \begin{aligned}
 r &= \sqrt{x^2 + y^2 + z^2} &&\in [0, \infty), \\
-\theta &= \arccos\left(\frac{z}{r}\right) &&\in [0, \pi], \\
-\phi &= \arctan\left(\frac{y}{x}\right) &&\in [0, 2\pi),
+θ &= \arccos\left(\frac{z}{r}\right) &&\in [0, \pi], \\
+ϕ &= \arctan\left(\frac{y}{x}\right) &&\in [0, 2\pi),
 \end{aligned}
 ```
-where we assume the ``\arctan`` in the expression for ``\phi`` is
+where we assume the ``\arctan`` in the expression for ``ϕ`` is
 really the two-argument form that gives the correct quadrant.  The
 inverse transformation is given by
 ```math
 \begin{aligned}
-x &= r \sin\theta \cos\phi, \\
-y &= r \sin\theta \sin\phi, \\
-z &= r \cos\theta.
+x &= r \sin θ \cos ϕ, \\
+y &= r \sin θ \sin ϕ, \\
+z &= r \cos θ.
 \end{aligned}
 ```
 We can use this to find the components of the metric in spherical
@@ -72,15 +72,15 @@ g_{i'j'}
 = \left( \begin{array}{ccc}
   1 & 0 & 0 \\
   0 & r^2 & 0 \\
-  0 & 0 & r^2 \sin^2\theta
+  0 & 0 & r^2 \sin^2θ
 \end{array} \right)_{i'j'}.
 ```
 The unit coordinate vectors in spherical coordinates are then
 ```math
 \begin{aligned}
-𝐫 &= \sin\theta \cos\phi 𝐱 + \sin\theta \sin\phi 𝐲 + \cos\theta 𝐳, \\
-\boldsymbol{\theta} &= \cos\theta \cos\phi 𝐱 + \cos\theta \sin\phi 𝐲 - \sin\theta 𝐳, \\
-\boldsymbol{\phi} &= -\sin\phi 𝐱 + \cos\phi 𝐲,
+𝐫 &= \sin θ \cos ϕ 𝐱 + \sin θ \sin ϕ 𝐲 + \cos θ 𝐳, \\
+\boldsymbol{θ} &= \cos θ \cos ϕ 𝐱 + \cos θ \sin ϕ 𝐲 - \sin θ 𝐳, \\
+\boldsymbol{ϕ} &= -\sin ϕ 𝐱 + \cos ϕ 𝐲,
 \end{aligned}
 ```
 where, again, we omit the hats on the unit vectors to keep the
@@ -88,19 +88,19 @@ notation simple.  Conversely, we can express the Cartesian basis
 vectors in terms of the spherical basis vectors as
 ```math
 \begin{aligned}
-𝐱 &= \sin\theta \cos\phi 𝐫 + \cos\theta \cos\phi \boldsymbol{\theta} - \sin\phi \boldsymbol{\phi}, 
+𝐱 &= \sin θ \cos ϕ 𝐫 + \cos θ \cos ϕ \boldsymbol{θ} - \sin ϕ \boldsymbol{ϕ}, 
 \\
-𝐲 &= \sin\theta \sin\phi 𝐫 + \cos\theta \sin\phi \boldsymbol{\theta} + \cos\phi \boldsymbol{\phi},
+𝐲 &= \sin θ \sin ϕ 𝐫 + \cos θ \sin ϕ \boldsymbol{θ} + \cos ϕ \boldsymbol{ϕ},
 \\
-𝐳 &= \cos\theta 𝐫 - \sin\theta \boldsymbol{\theta}.
+𝐳 &= \cos θ 𝐫 - \sin θ \boldsymbol{θ}.
 \end{aligned}
 ```
 
 One seemingly obvious — but extremely important — fact is that the
 unit basis frame ``(𝐱, 𝐲, 𝐳)`` can be rotated onto
-``(\boldsymbol{\theta}, \boldsymbol{\phi}, 𝐫)`` by first
-rotating through the "polar" angle ``\theta`` about the ``𝐲``
-axis, and then through the "azimuthal" angle ``\phi`` about the
+``(\boldsymbol{θ}, \boldsymbol{ϕ}, 𝐫)`` by first
+rotating through the "polar" angle ``θ`` about the ``𝐲``
+axis, and then through the "azimuthal" angle ``ϕ`` about the
 ``𝐳`` axis.  This becomes important when we consider
 spin-weighted functions.
 
@@ -111,12 +111,12 @@ Integration in Cartesian coordinates is, of course, trivial as
 In spherical coordinates, the integrand involves the square-root of
 the determinant of the metric, so we have
 ```math
-\int_{\mathbb{R}^3} f\, d^3𝐫 = \int_0^\infty \int_0^\pi \int_0^{2\pi} f\, r^2 \sin\theta\, dr\, d\theta\, d\phi.
+\int_{\mathbb{R}^3} f\, d^3𝐫 = \int_0^\infty \int_0^\pi \int_0^{2\pi} f\, r^2 \sin θ\, dr\, dθ\, dϕ.
 ```
 Restricting to the unit sphere, and normalizing so that the integral
 of 1 over the sphere is 1, we can simplify this to
 ```math
-\int_{𝕊²} f\, d^2\Omega = \frac{1}{4\pi} \int_0^\pi \int_0^{2\pi} f\, \sin\theta\, d\theta\, d\phi.
+\int_{𝕊²} f\, d^2\Omega = \frac{1}{4\pi} \int_0^\pi \int_0^{2\pi} f\, \sin θ\, dθ\, dϕ.
 ```
 
 
@@ -278,20 +278,20 @@ the relation:
 ```math
 \begin{aligned}
 R &= \sqrt{W^2 + X^2 + Y^2 + Z^2} &&\in [0, \infty), \\
-\alpha &= \arctan\frac{Z}{W} + \arctan\frac{-X}{Y} &&\in [0, 2\pi), \\
-\beta &= 2\arccos\sqrt{\frac{W^2+Z^2}{W^2+X^2+Y^2+Z^2}} &&\in [0, 2\pi], \\
-\gamma &= \arctan\frac{Z}{W} - \arctan\frac{-X}{Y} &&\in [0, 2\pi),
+α &= \arctan\frac{Z}{W} + \arctan\frac{-X}{Y} &&\in [0, 2\pi), \\
+β &= 2\arccos\sqrt{\frac{W^2+Z^2}{W^2+X^2+Y^2+Z^2}} &&\in [0, 2\pi], \\
+γ &= \arctan\frac{Z}{W} - \arctan\frac{-X}{Y} &&\in [0, 2\pi),
 \end{aligned}
 ```
 where we again assume the ``\arctan`` in the expressions for
-``\alpha`` and ``\gamma`` is really the two-argument form that gives
-the correct quadrant.  Note that here, ``\beta`` ranges up to ``2\pi``
+``α`` and ``γ`` is really the two-argument form that gives
+the correct quadrant.  Note that here, ``β`` ranges up to ``2\pi``
 rather than just ``\pi``, as in the standard Euler angles.  This is
 because we are describing the space of quaternions, rather than just
 the space of rotations.  If we restrict to ``R=1``, we have exactly
 the group of unit quaternions ``\mathrm{Spin}(3)=\mathrm{SU}(2)``,
 which is a double cover of the rotation group ``\mathrm{SO}(3)``.
-This extended range for ``\beta`` is necessary to cover the entire
+This extended range for ``β`` is necessary to cover the entire
 space of quaternions; if we further restrict to ``[0, \pi)``, we would
 only cover the space of rotations.  This and the inclusion of ``R``
 identify precisely how this coordinate system extends the standard
@@ -313,9 +313,9 @@ g_{i'j'}
 = \sum_{i,j} \frac{\partial X^i}{\partial X^{i'}} \frac{\partial X^j}{\partial X^{j'}} g_{ij}
 = \left( \begin{array}{cccc}
   1 & 0 & 0 & 0 \\
-  0 & \frac{R^2}{4} & 0 & \frac{R^2 \cos\beta}{4} \\
+  0 & \frac{R^2}{4} & 0 & \frac{R^2 \cos β}{4} \\
   0 & 0 & \frac{R^2}{4} & 0 \\
-  0 & \frac{R^2 \cos\beta}{4} & 0 & \frac{R^2}{4}
+  0 & \frac{R^2 \cos β}{4} & 0 & \frac{R^2}{4}
 \end{array} \right)_{i'j'}.
 ```
 The unit basis vectors in extended Euler coordinates in terms of the
@@ -323,36 +323,36 @@ unit basis vectors in quaternion coordinates are
 ```math
 \begin{aligned}
 𝐑 &= \frac{1}{R} \left(
-  \cos \frac{\beta}{2} \cos \frac{\alpha+\gamma}{2} 𝟏
-  - \sin \frac{\beta}{2} \sin \frac{\alpha-\gamma}{2} 𝐢
-  + \sin \frac{\beta}{2} \cos \frac{\alpha-\gamma}{2} 𝐣
-  + \cos \frac{\beta}{2} \sin \frac{\alpha+\gamma}{2} 𝐤
+  \cos \frac{β}{2} \cos \frac{α+γ}{2} 𝟏
+  - \sin \frac{β}{2} \sin \frac{α-γ}{2} 𝐢
+  + \sin \frac{β}{2} \cos \frac{α-γ}{2} 𝐣
+  + \cos \frac{β}{2} \sin \frac{α+γ}{2} 𝐤
 \right), \\
-\boldsymbol{\alpha} &= \frac{R}{2} \left(
-  -\cos \frac{\beta}{2} \sin \frac{\alpha+\gamma}{2} 𝟏
-  - \sin \frac{\beta}{2} \cos \frac{\alpha-\gamma}{2} 𝐢
-  - \sin \frac{\beta}{2} \sin \frac{\alpha-\gamma}{2} 𝐣
-  + \cos \frac{\beta}{2} \cos \frac{\alpha+\gamma}{2} 𝐤
+\boldsymbol{α} &= \frac{R}{2} \left(
+  -\cos \frac{β}{2} \sin \frac{α+γ}{2} 𝟏
+  - \sin \frac{β}{2} \cos \frac{α-γ}{2} 𝐢
+  - \sin \frac{β}{2} \sin \frac{α-γ}{2} 𝐣
+  + \cos \frac{β}{2} \cos \frac{α+γ}{2} 𝐤
 \right), \\
-\boldsymbol{\beta} &= \frac{R}{2} \left(
-  -\sin \frac{\beta}{2} \cos \frac{\alpha+\gamma}{2} 𝟏
-  - \cos \frac{\beta}{2} \sin \frac{\alpha-\gamma}{2} 𝐢
-  + \cos \frac{\beta}{2} \cos \frac{\alpha-\gamma}{2} 𝐣
-  - \sin \frac{\beta}{2} \sin \frac{\alpha+\gamma}{2} 𝐤
+\boldsymbol{β} &= \frac{R}{2} \left(
+  -\sin \frac{β}{2} \cos \frac{α+γ}{2} 𝟏
+  - \cos \frac{β}{2} \sin \frac{α-γ}{2} 𝐢
+  + \cos \frac{β}{2} \cos \frac{α-γ}{2} 𝐣
+  - \sin \frac{β}{2} \sin \frac{α+γ}{2} 𝐤
 \right), \\
-\boldsymbol{\gamma} &= \frac{R}{2} \left(
-  -\cos \frac{\beta}{2} \sin \frac{\alpha+\gamma}{2} 𝟏
-  + \sin \frac{\beta}{2} \cos \frac{\alpha-\gamma}{2} 𝐢
-  - \sin \frac{\beta}{2} \cos \frac{\alpha-\gamma}{2} 𝐣
-  - \cos \frac{\beta}{2} \sin \frac{\alpha+\gamma}{2} 𝐤
+\boldsymbol{γ} &= \frac{R}{2} \left(
+  -\cos \frac{β}{2} \sin \frac{α+γ}{2} 𝟏
+  + \sin \frac{β}{2} \cos \frac{α-γ}{2} 𝐢
+  - \sin \frac{β}{2} \cos \frac{α-γ}{2} 𝐣
+  - \cos \frac{β}{2} \sin \frac{α+γ}{2} 𝐤
 \right).
 \end{aligned}
 ```
 
 Again, integration involves a square-root of the determinant of the
-metric, which reduces to ``R^3 |\sin\beta| / 8``.  Note that — unlike
+metric, which reduces to ``R^3 |\sin β| / 8``.  Note that — unlike
 with standard spherical coordinates — the absolute value is necessary
-because ``\beta`` ranges over the entire interval ``[0, 2\pi]``.  The
+because ``β`` ranges over the entire interval ``[0, 2\pi]``.  The
 integral over the entire space of quaternions is then
 ```math
 \int_{\mathbb{R}^4} f\, d^4𝐐
@@ -429,28 +429,28 @@ opposite) quaternions that represent it.
 Now that we understand how rotations work, we can provide geometric
 intuition for the expressions given above for Euler angles.  The Euler
 angles *in our convention* represent an initial rotation through
-``\gamma`` about the ``𝐳`` axis, followed by a rotation through
-``\beta`` about the ``𝐲`` axis, and finally a rotation through
-``\alpha`` about the ``𝐳`` axis.  Note that the axes are fixed, and
+``γ`` about the ``𝐳`` axis, followed by a rotation through
+``β`` about the ``𝐲`` axis, and finally a rotation through
+``α`` about the ``𝐳`` axis.  Note that the axes are fixed, and
 not subject to any preceding rotations.  More precisely, we can write
 the unit quaternion as
 ```math
-𝐑 = \exp\left(\frac{\alpha}{2} 𝐤\right)
-    \exp\left(\frac{\beta}{2} 𝐣\right)
-    \exp\left(\frac{\gamma}{2} 𝐤\right).
+𝐑 = \exp\left(\frac{α}{2} 𝐤\right)
+    \exp\left(\frac{β}{2} 𝐣\right)
+    \exp\left(\frac{γ}{2} 𝐤\right).
 ```
 One of the more important interpretations of a rotor is considering
 what it does to the basis triad ``(𝐱, 𝐲, 𝐳)``.  In particular, the
 vector ``𝐳`` is rotated onto the point given by spherical coordinates
-``(\theta, \phi) = (\beta, \alpha)``, while ``𝐱`` and ``𝐲`` are
+``(θ, ϕ) = (β, α)``, while ``𝐱`` and ``𝐲`` are
 rotated into the plane spanned by the unit basis vectors
-``\boldsymbol{\theta}`` and ``\boldsymbol{\phi}`` corresponding to
-that point.  If ``\gamma = 0`` the rotation is precise, meaning that
-``𝐱`` is rotated onto ``\boldsymbol{\theta}`` and ``𝐲`` onto
-``\boldsymbol{\phi}``; if ``\gamma ≠ 0`` then they are rotated within
-that plane by the angle ``\gamma`` about the ``𝐫`` axis.
-Thus, we identify the spherical coordinates ``(\theta, \phi)`` with
-the Euler angles ``(\alpha, \beta, \gamma) = (\phi, \theta, 0)``.
+``\boldsymbol{θ}`` and ``\boldsymbol{ϕ}`` corresponding to
+that point.  If ``γ = 0`` the rotation is precise, meaning that
+``𝐱`` is rotated onto ``\boldsymbol{θ}`` and ``𝐲`` onto
+``\boldsymbol{ϕ}``; if ``γ ≠ 0`` then they are rotated within
+that plane by the angle ``γ`` about the ``𝐫`` axis.
+Thus, we identify the spherical coordinates ``(θ, ϕ)`` with
+the Euler angles ``(α, β, γ) = (ϕ, θ, 0)``.
 
 
 ## Rotation and angular-momentum operators
@@ -482,7 +482,7 @@ spin-weighted functions are generally written as functions of
 functions on ``𝕊²`` itself; some notion of a reference tangent
 direction is needed at each point.  The difference is that spherical
 *coordinates* supply a natural choice for the reference tangent
-direction: the unit vector in the ``\boldsymbol{\theta}`` direction.
+direction: the unit vector in the ``\boldsymbol{θ}`` direction.
 This supplies just enough information to define the spin-weighted
 functions — though this ends up not being a useful form when more
 general transformations or deeper understanding are needed.
@@ -578,15 +578,15 @@ To validate the signs here, it may be helpful to work through a simple
 example involving the sphere ``𝕊²``.  We define a function on
 spherical coordinates as
 ```math
-f(\theta, \phi) = \sin\theta \sin\phi.
+f(θ, ϕ) = \sin θ \sin ϕ.
 ```
 Recall that we can map the spherical coordinates into the Euler
 angles, and the Euler angles into the quaternion
 ```math
-(\theta, \phi) \mapsto (\phi, \theta, 0) \mapsto 𝐐
+(θ, ϕ) \mapsto (ϕ, θ, 0) \mapsto 𝐐
 =
-\exp\left(\frac{\phi}{2} 𝐤\right)
-\exp\left(\frac{\theta}{2} 𝐣\right).
+\exp\left(\frac{ϕ}{2} 𝐤\right)
+\exp\left(\frac{θ}{2} 𝐣\right).
 ```
 It is straightforward to see that we can write ``f`` as a function of
 ``𝐐`` as
@@ -597,23 +597,23 @@ where the angle brackets and subscript indicate that we are taking the
 ``𝐣`` component.  That is, ``f`` is the ``y`` component of
 the vector ``𝐳`` rotated by ``𝐐``. 
 
-Now, we imagine rotating the field by an angle ``\alpha`` in the
+Now, we imagine rotating the field by an angle ``α`` in the
 positive sense about the ``z`` axis.  Visualizing the situation, we
 can see that the rotated field should be represented by
 ```math
-f'(\theta, \phi) = \sin\theta \sin(\phi - \alpha).
+f'(θ, ϕ) = \sin θ \sin(ϕ - α).
 ```
-For example, the rotated field evaluated at the point ``(\theta, \phi)
+For example, the rotated field evaluated at the point ``(θ, ϕ)
 = (\pi/2, 0)`` along the positive ``x`` axis should correspond to the
-original field evaluated at the point ``(\theta, \phi) = (\pi/2,
--\alpha)``.  This rotation is generated by ``𝔤 = \alpha
+original field evaluated at the point ``(θ, ϕ) = (\pi/2,
+-α)``.  This rotation is generated by ``𝔤 = α
 𝐤 / 2``, which allows us to immediately calculate
 ```math
 \begin{aligned}
-f(e^𝔤 𝐐) &= \sin\theta \sin(\phi + \alpha) &&&
-f(𝐐 e^𝔤) &= \sin\theta \sin\phi \\
-f(e^{-𝔤} 𝐐) &= \sin\theta \sin(\phi - \alpha) &&&
-f(𝐐 e^{-𝔤}) &= \sin\theta \sin\phi.
+f(e^𝔤 𝐐) &= \sin θ \sin(ϕ + α) &&&
+f(𝐐 e^𝔤) &= \sin θ \sin ϕ \\
+f(e^{-𝔤} 𝐐) &= \sin θ \sin(ϕ - α) &&&
+f(𝐐 e^{-𝔤}) &= \sin θ \sin ϕ.
 \end{aligned}
 ```
 Thus, we see that left-multiplication by ``e^{-𝔤}``
@@ -640,10 +640,10 @@ f(𝐐 e^{-𝔤})
 ```
 where ``𝔤' = 𝐐 𝔤 𝐐^{-1}``.  In
 this example, ``𝔤'`` generates a rotation by an angle
-``\alpha`` about the point in question, which leaves that point fixed,
+``α`` about the point in question, which leaves that point fixed,
 and since this is a scalar function it has no effect on the value.  Of
 course, we will see below that changing by a phase proportional to
-``\alpha`` is the defining feature of a *spin-weighted* function.
+``α`` is the defining feature of a *spin-weighted* function.
 
 ### Differential rotations
 
@@ -652,8 +652,8 @@ respect to infinitesimal rotations we apply to the functions
 themselves:
 ```math
 \begin{aligned}
-L_{𝔤} f(𝐐) &= \lambda \left. \frac{\partial} {\partial \theta} f \left( e^{-\theta 𝔤 / 2} 𝐐 \right) \right|_{\theta=0}, \\
-R_{𝔤} f(𝐐) &= \rho \left. \frac{\partial} {\partial \theta} f \left( 𝐐 e^{-\theta 𝔤 / 2} \right) \right|_{\theta=0}.
+L_{𝔤} f(𝐐) &= \lambda \left. \frac{\partial} {\partial θ} f \left( e^{-θ 𝔤 / 2} 𝐐 \right) \right|_{θ=0}, \\
+R_{𝔤} f(𝐐) &= \rho \left. \frac{\partial} {\partial θ} f \left( 𝐐 e^{-θ 𝔤 / 2} \right) \right|_{θ=0}.
 \end{aligned}
 ```
 Here, we have introduced the constants ``\lambda`` and ``\rho``
@@ -668,11 +668,11 @@ the order of operations, which may look slightly unnatural:
 ```math
 \begin{aligned}
   L_𝔤 L_𝔥 f(𝐐)
-  % &= \left. \lambda \frac{\partial} {\partial \gamma} f'\left(e^{-\gamma 𝔤 / 2} 𝐐 \right) \right|_{\gamma=0}, \\
-  &= \left. \lambda^2 \frac{\partial} {\partial \gamma} \frac{\partial} {\partial \eta} f\left(e^{-\eta 𝔥 / 2} e^{-\gamma 𝔤 / 2} 𝐐 \right) \right|_{\gamma=\eta=0}, \\
+  % &= \left. \lambda \frac{\partial} {\partial γ} f'\left(e^{-γ 𝔤 / 2} 𝐐 \right) \right|_{γ=0}, \\
+  &= \left. \lambda^2 \frac{\partial} {\partial γ} \frac{\partial} {\partial \eta} f\left(e^{-\eta 𝔥 / 2} e^{-γ 𝔤 / 2} 𝐐 \right) \right|_{γ=\eta=0}, \\
   R_𝔤 R_𝔥 f(𝐐)
-  % &= \rho \left. \frac{\partial} {\partial \gamma} f' \left( 𝐐 e^{-\gamma 𝔤 / 2} \right) \right|_{\gamma=0} \\
-  &= \left. \rho^2 \frac{\partial} {\partial \gamma} \frac{\partial} {\partial \eta} f\left( 𝐐 e^{-\gamma 𝔤 / 2} e^{-\eta 𝔥 / 2} \right) \right|_{\gamma=\eta=0}.
+  % &= \rho \left. \frac{\partial} {\partial γ} f' \left( 𝐐 e^{-γ 𝔤 / 2} \right) \right|_{γ=0} \\
+  &= \left. \rho^2 \frac{\partial} {\partial γ} \frac{\partial} {\partial \eta} f\left( 𝐐 e^{-γ 𝔤 / 2} e^{-\eta 𝔥 / 2} \right) \right|_{γ=\eta=0}.
 \end{aligned}
 ```
 We can prove the first of these, for example, by defining
@@ -763,68 +763,68 @@ Using these relations, we can actually solve for the constants
 
   - Express angular momentum operators in terms of Euler angles
     - We just rewrite the ``R`` in the Lie definitions in terms of
-      Euler angles, multiply by ``\exp(\theta/2)``, rederive the new
+      Euler angles, multiply by ``\exp(θ/2)``, rederive the new
       Euler angles from that result, and use the chain rule
   - Show for both the three- and two-spheres
   - Show how they act on functions on the three-sphere
 
-The idea here is to express, e.g., $e^{\theta 𝐞_i /
-2}𝐑_{\alpha, \beta, \gamma}$ in quaternion components, then
-solve for the new Euler angles $𝐑_{\alpha', \beta', \gamma'}$
+The idea here is to express, e.g., $e^{θ 𝐞_i /
+2}𝐑_{α, β, γ}$ in quaternion components, then
+solve for the new Euler angles $𝐑_{α', β', γ'}$
 in terms of the quaternion components, where these new angles all
-depend on $\theta$.  We then use the chain rule to express
-$\partial_\theta$ in terms of $\partial_{\alpha'}$, etc., which become
-$\partial_\alpha$, etc., when $\theta=0$.
+depend on $θ$.  We then use the chain rule to express
+$\partial_θ$ in terms of $\partial_{α'}$, etc., which become
+$\partial_α$, etc., when $θ=0$.
 
 
 ```math
 \begin{aligned}
-  L_i f(𝐑_{\alpha, \beta, \gamma})
+  L_i f(𝐑_{α, β, γ})
   &=
-  \left. -𝐳 \frac{\partial} {\partial \theta} f \left( e^{\theta 𝐞_i / 2} 𝐑_{\alpha, \beta, \gamma} \right) \right|_{\theta=0} \\
+  \left. -𝐳 \frac{\partial} {\partial θ} f \left( e^{θ 𝐞_i / 2} 𝐑_{α, β, γ} \right) \right|_{θ=0} \\
   &=
-  \left. -𝐳 \frac{\partial} {\partial \theta} f \left( 𝐑_{\alpha', \beta', \gamma'} \right) \right|_{\theta=0} \\
+  \left. -𝐳 \frac{\partial} {\partial θ} f \left( 𝐑_{α', β', γ'} \right) \right|_{θ=0} \\
   &=
-  \left. -𝐳 \left[ \frac{\partial \alpha'} {\partial \theta}\frac{\partial} {\partial \alpha'} + \frac{\partial \beta'} {\partial \theta}\frac{\partial} {\partial \beta'} + \frac{\partial \gamma'} {\partial \theta}\frac{\partial} {\partial \gamma'} \right] f \left( 𝐑_{\alpha', \beta', \gamma'} \right) \right|_{\theta=0} \\
+  \left. -𝐳 \left[ \frac{\partial α'} {\partial θ}\frac{\partial} {\partial α'} + \frac{\partial β'} {\partial θ}\frac{\partial} {\partial β'} + \frac{\partial γ'} {\partial θ}\frac{\partial} {\partial γ'} \right] f \left( 𝐑_{α', β', γ'} \right) \right|_{θ=0} \\
   &=
-  -𝐳 \left[ \frac{\partial \alpha'} {\partial \theta}\frac{\partial} {\partial \alpha} + \frac{\partial \beta'} {\partial \theta}\frac{\partial} {\partial \beta} + \frac{\partial \gamma'} {\partial \theta}\frac{\partial} {\partial \gamma} \right]_{\theta=0} f \left( 𝐑_{\alpha, \beta, \gamma} \right) \\
-  K_i f(𝐑_{\alpha, \beta, \gamma})
+  -𝐳 \left[ \frac{\partial α'} {\partial θ}\frac{\partial} {\partial α} + \frac{\partial β'} {\partial θ}\frac{\partial} {\partial β} + \frac{\partial γ'} {\partial θ}\frac{\partial} {\partial γ} \right]_{θ=0} f \left( 𝐑_{α, β, γ} \right) \\
+  K_i f(𝐑_{α, β, γ})
   &=
-  -𝐳 \left[ \frac{\partial \alpha''} {\partial \theta}\frac{\partial} {\partial \alpha} + \frac{\partial \beta''} {\partial \theta}\frac{\partial} {\partial \beta} + \frac{\partial \gamma''} {\partial \theta}\frac{\partial} {\partial \gamma} \right]_{\theta=0} f \left( 𝐑_{\alpha, \beta, \gamma} \right),
+  -𝐳 \left[ \frac{\partial α''} {\partial θ}\frac{\partial} {\partial α} + \frac{\partial β''} {\partial θ}\frac{\partial} {\partial β} + \frac{\partial γ''} {\partial θ}\frac{\partial} {\partial γ} \right]_{θ=0} f \left( 𝐑_{α, β, γ} \right),
 \end{aligned}
 ```
 
 ```math
 \begin{aligned}
-𝐑_{\alpha, \beta, \gamma}
+𝐑_{α, β, γ}
 &=
   R\, \cos\frac{β}{2} \cos\frac{α+γ}{2}
   -R\, \sin\frac{β}{2} \sin\frac{α-γ}{2} 𝐢
   + R\, \sin\frac{β}{2} \cos\frac{α-γ}{2} 𝐣
   + R\, \cos\frac{β}{2} \sin\frac{α+γ}{2} 𝐤.
 \\
-e^{\theta 𝐮 / 2} 𝐑_{\alpha, \beta, \gamma}
-&= \left(\cos\frac{\theta}{2} + 𝐮 \sin\frac{\theta}{2}\right) 𝐑_{\alpha, \beta, \gamma}
+e^{θ 𝐮 / 2} 𝐑_{α, β, γ}
+&= \left(\cos\frac{θ}{2} + 𝐮 \sin\frac{θ}{2}\right) 𝐑_{α, β, γ}
 \\
 &=
-  R\, \cos\frac{\theta}{2} \cos\frac{β}{2} \cos\frac{α+γ}{2}
-  -R\, \cos\frac{\theta}{2} \sin\frac{β}{2} \sin\frac{α-γ}{2} 𝐢
-  + R\, \cos\frac{\theta}{2} \sin\frac{β}{2} \cos\frac{α-γ}{2} 𝐣
-  + R\, \cos\frac{\theta}{2} \cos\frac{β}{2} \sin\frac{α+γ}{2} 𝐤
+  R\, \cos\frac{θ}{2} \cos\frac{β}{2} \cos\frac{α+γ}{2}
+  -R\, \cos\frac{θ}{2} \sin\frac{β}{2} \sin\frac{α-γ}{2} 𝐢
+  + R\, \cos\frac{θ}{2} \sin\frac{β}{2} \cos\frac{α-γ}{2} 𝐣
+  + R\, \cos\frac{θ}{2} \cos\frac{β}{2} \sin\frac{α+γ}{2} 𝐤
 \\
 &\quad +
-  R\, \sin\frac{\theta}{2}\cos\frac{β}{2} \cos\frac{α+γ}{2} 𝐮
-  -R\, \sin\frac{\theta}{2}\sin\frac{β}{2} \sin\frac{α-γ}{2} 𝐮𝐢
-  + R\, \sin\frac{\theta}{2}\sin\frac{β}{2} \cos\frac{α-γ}{2} 𝐮𝐣
-  + R\, \sin\frac{\theta}{2}\cos\frac{β}{2} \sin\frac{α+γ}{2} 𝐮𝐤
+  R\, \sin\frac{θ}{2}\cos\frac{β}{2} \cos\frac{α+γ}{2} 𝐮
+  -R\, \sin\frac{θ}{2}\sin\frac{β}{2} \sin\frac{α-γ}{2} 𝐮𝐢
+  + R\, \sin\frac{θ}{2}\sin\frac{β}{2} \cos\frac{α-γ}{2} 𝐮𝐣
+  + R\, \sin\frac{θ}{2}\cos\frac{β}{2} \sin\frac{α+γ}{2} 𝐮𝐤
 \end{aligned}
 ```
 
 ```math
 \begin{aligned}
-\alpha &= \arctan\frac{Z}{W} + \arctan\frac{-X}{Y} &&\in [0, 2\pi), \\
-\beta &= 2\arccos\sqrt{\frac{W^2+Z^2}{W^2+X^2+Y^2+Z^2}} &&\in [0, 2\pi], \\
-\gamma &= \arctan\frac{Z}{W} - \arctan\frac{-X}{Y} &&\in [0, 2\pi),
+α &= \arctan\frac{Z}{W} + \arctan\frac{-X}{Y} &&\in [0, 2\pi), \\
+β &= 2\arccos\sqrt{\frac{W^2+Z^2}{W^2+X^2+Y^2+Z^2}} &&\in [0, 2\pi], \\
+γ &= \arctan\frac{Z}{W} - \arctan\frac{-X}{Y} &&\in [0, 2\pi),
 \end{aligned}
 ```
 
@@ -934,31 +934,31 @@ derivatives, as a result.
 > ``R``, we associate an operator ``\mathscr{D}(R)`` in the
 > appropriate ket space such that
 > ```math
-> |\alpha\rangle_R = \mathscr{D}(R) |\alpha\rangle,
+> |α\rangle_R = \mathscr{D}(R) |α\rangle,
 > ```
-> ``|\alpha\rangle_R`` and ``|\alpha\rangle`` stand for the kets of
+> ``|α\rangle_R`` and ``|α\rangle`` stand for the kets of
 > the rotated and original system, respectively.
 
 If the field is represented as a function ``f(𝐑)``, then rotating the
-field by ``e^{\epsilon 𝐮/2}`` is equivalent to rotating the argument
-of the function by ``e^{-\epsilon 𝐮/2}``:
+field by ``e^{ϵ 𝐮/2}`` is equivalent to rotating the argument
+of the function by ``e^{-ϵ 𝐮/2}``:
 ```math
 \begin{aligned}
 f\left(𝐑\right)
 &\to
-f\left(e^{-\epsilon 𝐮/2}𝐑\right) \\
+f\left(e^{-ϵ 𝐮/2}𝐑\right) \\
 &\approx
-f\left(𝐑\right) + \epsilon \left. \frac{d}{d\epsilon} \right|_{\epsilon=0}
-f\left(e^{-\epsilon 𝐮/2}𝐑\right) \\
+f\left(𝐑\right) + ϵ \left. \frac{d}{dϵ} \right|_{ϵ=0}
+f\left(e^{-ϵ 𝐮/2}𝐑\right) \\
 &=
-f\left(𝐑\right) - i \epsilon L_𝐮 f\left(𝐑\right).
+f\left(𝐑\right) - i ϵ L_𝐮 f\left(𝐑\right).
 \end{aligned}
 ```
 This final expression is precisely equivalent to Sakurai's Eq. (3.1.15):
 ```math
-\mathscr{D}\left(\hat{𝐧}, d\phi \right)
+\mathscr{D}\left(\hat{𝐧}, dϕ \right)
 =
-1 - i \left( 𝐉 \cdot \hat{𝐧} \right) d\phi.
+1 - i \left( 𝐉 \cdot \hat{𝐧} \right) dϕ.
 ```
 
 Now, we can write the eigenkets of ``L^2`` and ``L_z`` as ``|ℓ,
@@ -979,29 +979,29 @@ and we can readily find the essential behavior with respect to the
 first and last Euler angles (Eq. 3.5.50):
 ```math
 \begin{aligned}
-𝔇^{(ℓ)}_{m',m}(\alpha, \beta, \gamma)
+𝔇^{(ℓ)}_{m',m}(α, β, γ)
 &=
 \langle ℓ, m' |
-    \exp[-iL_z \alpha]\exp[-iL_y \beta]\exp[-iL_z \gamma]
+    \exp[-iL_z α]\exp[-iL_y β]\exp[-iL_z γ]
 | ℓ, m \rangle \\
 &=
-\exp[-i(m' \alpha+m\gamma)]
-\langle ℓ, m' | \exp[-iL_y \beta] | ℓ, m \rangle.
+\exp[-i(m' α+mγ)]
+\langle ℓ, m' | \exp[-iL_y β] | ℓ, m \rangle.
 \end{aligned}
 ```
 To belabor this point, recall that in general
 ```math
-\left(\left\langle \psi | A\, B\, C | \chi \right\rangle\right)^\ast
+\left(\left\langle ψ | A\, B\, C | \chi \right\rangle\right)^\ast
 =
-\left\langle \chi | C^\dag\, B^\dag\, A^\dag | \psi \right\rangle,
+\left\langle \chi | C^\dag\, B^\dag\, A^\dag | ψ \right\rangle,
 ```
 and
 ```math
-\left( e^{-i \epsilon L_u} \right)^\dag
+\left( e^{-i ϵ L_u} \right)^\dag
 =
-e^{i \epsilon L_u^\dag}
+e^{i ϵ L_u^\dag}
 =
-e^{i \epsilon L_u}.
+e^{i ϵ L_u}.
 ```
 Together with the eigenvalue property for the ``L_z`` operator acting
 on a ket, this allows us to derive the above result by factoring out
@@ -1010,9 +1010,9 @@ the first and last operators.
 Now we are left with the middle operator, which we use to define
 ```math
 \begin{aligned}
-d^{(ℓ)}_{m',m}(\beta)
+d^{(ℓ)}_{m',m}(β)
 &=
-\langle ℓ, m' | \exp[-iL_y \beta] | ℓ, m \rangle.
+\langle ℓ, m' | \exp[-iL_y β] | ℓ, m \rangle.
 \end{aligned}
 ```
 Using
@@ -1045,11 +1045,11 @@ I wonder if there's a nicer approach using the symmetry transformation
 Edmonds notes in Sec. 4.5 (and credits to Wigner) — or the presumably
 equivalent one McEwen and Wiaux use (and credit to Risbo):
 ```math
-\exp\left[ \beta 𝐣 / 2 \right]
+\exp\left[ β 𝐣 / 2 \right]
 =
 \exp\left[ \pi 𝐤 / 4 \right]
 \exp\left[ \pi 𝐣 / 4 \right]
-\exp\left[ \beta 𝐤 / 2 \right]
+\exp\left[ β 𝐤 / 2 \right]
 \exp\left[ -\pi 𝐣 / 4 \right]
 \exp\left[ -\pi 𝐤 / 4 \right]
 ```
@@ -1116,9 +1116,9 @@ Theorem 2.16 of [Hanson-Yakovlev](@cite HansonYakovlev_2002) says that
 an orthonormal basis of a product of ``L^2`` spaces is given by the
 product of the orthonormal bases of the individual spaces.
 Furthermore, on page 354, they point out that ``\{(1/\sqrt{2\pi})
-e^{im\phi}\}`` is an orthonormal basis of ``L^2(0,2\pi)``, while the
-set ``\{1/c_{n,m} P_n^m(\cos\theta)`` is an orthonormal basis of
-``L^2(0, \pi)`` in the ``\theta`` coordinate.  Therefore, the product
+e^{imϕ}\}`` is an orthonormal basis of ``L^2(0,2\pi)``, while the
+set ``\{1/c_{n,m} P_n^m(\cos θ)`` is an orthonormal basis of
+``L^2(0, \pi)`` in the ``θ`` coordinate.  Therefore, the product
 of these two sets is an orthonormal basis of the product space
 ``L^2\left((0,2\pi) \times (0, \pi)\right)``, which forms a coordinate
 space for ``𝕊²``.  I would probably modify this to point out that
@@ -1130,8 +1130,8 @@ which happens to give us the Wigner D-matrices.
 
 [Gumerov and Duraiswami (2001)](@cite Gumerov_2001) derive their
 recursion relations by differentiating solutions of the Helmholtz
-equation ``\nabla^2 \psi + k^2 \psi = 0`` as ``\tfrac{1}{k} \nabla
-\psi``.  More precisely, they differentiate both sides of the equation
+equation ``\nabla^2 ψ + k^2 ψ = 0`` as ``\tfrac{1}{k} \nabla
+ψ``.  More precisely, they differentiate both sides of the equation
 relating one solution to its rotated form — which naturally involves
 Wigner's ``𝔇`` matrix.  Using orthogonal basis functions
 for the solution, this allows them to equate terms on the two sides
@@ -1141,7 +1141,7 @@ some coefficients depending on the indices of the basis functions (and
 hence of ``𝔇``) on both sides of the equation.  Since
 ``\nabla`` is a 3-vector operator, this gives them three relations.
 
-This, of course, is happening in 3-D space, since ``\psi`` is a
+This, of course, is happening in 3-D space, since ``ψ`` is a
 function of location in the Helmholtz equation.  It seems likely to
 me, however, that we could use the 4-D (quaternionic) version of the
 functions.  Note that G&D use ``\partial_z`` and ``\partial_x \pm i
