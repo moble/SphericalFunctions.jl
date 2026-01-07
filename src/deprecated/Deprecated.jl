@@ -58,9 +58,6 @@ export SSHT, pixels, rotors
 include("map2salm.jl")
 export map2salm, map2salm!, plan_map2salm
 
-include("operators.jl")
-export L², Lz, L₊, L₋, R², Rz, R₊, R₋, ð, ð̄
-
 # include("rotate.jl")
 # export rotate!
 
