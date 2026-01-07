@@ -10,7 +10,7 @@ using LinearAlgebra: Diagonal, Bidiagonal
 using FixedSizeArrays: FixedSizeVectorDefault, FixedSizeVector
 
 
-# Base.Math.IEEEFloat is not public API, so we just define our own
+# Base.IEEEFloat is not public, so we just define our own
 const IEEEFloat = Union{Float16, Float32, Float64}
 
 # Utilities (kept top-level; code lives in `src/utilities/`)
