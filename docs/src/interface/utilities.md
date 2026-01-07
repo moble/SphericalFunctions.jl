@@ -20,8 +20,8 @@ Order   = [:module, :type, :constant, :function, :macro]
 
 ## Sizes of and indexing into ``𝔇``, ``d``, and ``Y`` data
 
-By ``Y`` data, we mean anything indexed like ``Y_{\ell, m}`` modes; by ``D``
-data, we mean anything indexed like Wigner's ``\mathfrak{D}`` matrices, or
+By ``Y`` data, we mean anything indexed like ``Y_{ℓ, m}`` modes; by ``D``
+data, we mean anything indexed like Wigner's ``𝔇`` matrices, or
 special subsets of them, like the ``H`` matrices.
 
 ```@autodocs

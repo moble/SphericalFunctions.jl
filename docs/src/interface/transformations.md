@@ -117,16 +117,16 @@ discrete quadrature to evaluate the integrals.
 
 
 To describe the mode weights of a spin-``s`` function up to (and
-including) some maximum angular resolution ``\ell_\mathrm{max}``,
-there are ``(\ell_\mathrm{max}+1)^2 - s^2`` mode weights.  We assume
+including) some maximum angular resolution ``ℓ_\mathrm{max}``,
+there are ``(ℓ_\mathrm{max}+1)^2 - s^2`` mode weights.  We assume
 throughout that the values `f̃` are stored as the (column) vector
 ```julia
 f̃ = [mode_weight(ℓ, m) for ℓ ∈ abs(s):ℓₘₐₓ for m ∈ -ℓ:ℓ]
 ```
 (Here, `mode_weight` is a made-up function for schematic purposes.) In
-particular, the ``m`` index varies most rapidly, and the ``\ell``
+particular, the ``m`` index varies most rapidly, and the ``ℓ``
 index varies most slowly.  Correspondingly, there must be *at least*
-``(\ell_\mathrm{max}+1)^2 - s^2`` function values `f`.  However, some
+``(ℓ_\mathrm{max}+1)^2 - s^2`` function values `f`.  However, some
 ``s``-SHT algorithms require more function values — usually by a
 factor of 2 or 4 — trading off between speed and memory usage.
 
@@ -146,16 +146,16 @@ Currently, there are three algorithms implemented, each having different
 advantages and disadvantages:
 
   1. The "Direct" algorithm (introduced here for the first time), which is the
-     default, but should only be used up to ``\ell_\mathrm{max} \lesssim 50``
+     default, but should only be used up to ``ℓ_\mathrm{max} \lesssim 50``
      because its intermediate storage requirements scale as
-     ``\ell_\mathrm{max}^4``.  This algorithm is the fastest for small
-     ``\ell_\mathrm{max}``, it can be used with arbitrary (non-degenerate)
+     ``ℓ_\mathrm{max}^4``.  This algorithm is the fastest for small
+     ``ℓ_\mathrm{max}``, it can be used with arbitrary (non-degenerate)
      pixelizations, and achieves optimal dimensionality.
   2. The "Minimal" algorithm due to [Elahi_2018](@citet), with some minor
      improvements.  This algorithm is fast and — as the name implies — also
      achieves optimal dimensionality, and its storage scales as
-     ``\ell_\mathrm{max}^3``.  However, its pixelization is restricted, and its
-     accuracy at very high ``\ell_\mathrm{max}`` is not as good as the "RS"
+     ``ℓ_\mathrm{max}^3``.  However, its pixelization is restricted, and its
+     accuracy at very high ``ℓ_\mathrm{max}`` is not as good as the "RS"
      algorithm.  The algorithm itself is not actually fully specified by Elahi
      et al., and leaves out some relatively simple improvements, so I have had
      to take some liberties with my interpretation.
@@ -164,7 +164,7 @@ advantages and disadvantages:
      [`ducc.sht`](https://gitlab.mpcdf.mpg.de/mtr/ducc#duccsht) packages.  It
      requires pixelizations on "iso-latitude rings", and does not achieve
      optimal dimensionality.  However, it is very fast, and its accuracy is
-     excellent at extremely high ``\ell_\mathrm{max}``.
+     excellent at extremely high ``ℓ_\mathrm{max}``.
 
 
 ## `SSHT` objects
