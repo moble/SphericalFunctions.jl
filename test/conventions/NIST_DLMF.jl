@@ -27,11 +27,11 @@ or [Eq. 14.7.14](http://dlmf.nist.gov/14.7#E14)
 ```
 And for the spherical harmonics, [Eq. 14.30.1](http://dlmf.nist.gov/14.30#E1) gives
 ```math
-    Y_{\ell, m}\left(\theta,\phi\right)
+    Y_{ℓ, m}\left(\theta,\phi\right)
     =
-    \left(\frac{(\ell-m)!(2\ell+1)}{4\pi(\ell+m)!}\right)^{1/2}
+    \left(\frac{(ℓ-m)!(2ℓ+1)}{4\pi(ℓ+m)!}\right)^{1/2}
     \mathsf{e}^{im\phi}
-    \mathsf{P}_{\ell}^{m}\left(\cos\theta\right).
+    \mathsf{P}_{ℓ}^{m}\left(\cos\theta\right).
 ```
 
 """

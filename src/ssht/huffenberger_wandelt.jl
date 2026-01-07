@@ -35,61 +35,61 @@ e^{\frac{\pi}{2} 𝐤/ 2}\, e^{-\frac{\pi}{2} 𝐣/ 2}\, e^{-\frac{\pi}{2} 𝐤/
 Now, we can use this expansion to find an expression for the ``d`` matrix value:
 ```math
 \begin{align}
-d^{\ell}_{m', m}(\beta)
+d^{ℓ}_{m', m}(\beta)
 &=
-\mathfrak{D}^{\ell}_{m', m}\left(e^{\beta 𝐣 / 2}\right) \\
+𝔇^{ℓ}_{m', m}\left(e^{\beta 𝐣 / 2}\right) \\
 &=
-\mathfrak{D}^{\ell}_{m', m_1}\left(e^{-\frac{\pi}{2} 𝐤/ 2}\right)\,
-\mathfrak{D}^{\ell}_{m_1, m_2}\left(e^{\frac{\pi}{2} 𝐣/ 2}\right)\,
-\mathfrak{D}^{\ell}_{m_2, m_3}\left(e^{\frac{\pi}{2} 𝐤/ 2}\right)\,
-\mathfrak{D}^{\ell}_{m_3, m_4}\left(e^{\beta 𝐤 / 2}\right)\, \\
+𝔇^{ℓ}_{m', m_1}\left(e^{-\frac{\pi}{2} 𝐤/ 2}\right)\,
+𝔇^{ℓ}_{m_1, m_2}\left(e^{\frac{\pi}{2} 𝐣/ 2}\right)\,
+𝔇^{ℓ}_{m_2, m_3}\left(e^{\frac{\pi}{2} 𝐤/ 2}\right)\,
+𝔇^{ℓ}_{m_3, m_4}\left(e^{\beta 𝐤 / 2}\right)\, \\
 &\quad \times
-\mathfrak{D}^{\ell}_{m_4, m_5}\left(e^{\frac{\pi}{2} 𝐤/ 2}\right)\,
-\mathfrak{D}^{\ell}_{m_5, m_6}\left(e^{-\frac{\pi}{2} 𝐣/ 2}\right)\,
-\mathfrak{D}^{\ell}_{m_6, m}\left(e^{-\frac{\pi}{2} 𝐤/ 2}\right) \\
+𝔇^{ℓ}_{m_4, m_5}\left(e^{\frac{\pi}{2} 𝐤/ 2}\right)\,
+𝔇^{ℓ}_{m_5, m_6}\left(e^{-\frac{\pi}{2} 𝐣/ 2}\right)\,
+𝔇^{ℓ}_{m_6, m}\left(e^{-\frac{\pi}{2} 𝐤/ 2}\right) \\
 &=
 \delta_{m', m_1} e^{im'\frac{\pi}{2}}\,
-\mathfrak{D}^{\ell}_{m_1, m_2}\left(e^{\frac{\pi}{2} 𝐣/ 2}\right)\,
+𝔇^{ℓ}_{m_1, m_2}\left(e^{\frac{\pi}{2} 𝐣/ 2}\right)\,
 \delta_{m_2, m_3} e^{-im_2\frac{\pi}{2}}\,
-\mathfrak{D}^{\ell}_{m_3, m_4}\left(e^{\beta 𝐤 / 2}\right)\, \\
+𝔇^{ℓ}_{m_3, m_4}\left(e^{\beta 𝐤 / 2}\right)\, \\
 &\quad \times
 \delta_{m_4, m_5} e^{-im_4\frac{\pi}{2}}\,
-\mathfrak{D}^{\ell}_{m_5, m_6}\left(e^{-\frac{\pi}{2} 𝐣/ 2}\right)\,
+𝔇^{ℓ}_{m_5, m_6}\left(e^{-\frac{\pi}{2} 𝐣/ 2}\right)\,
 \delta_{m_6, m} e^{im\frac{\pi}{2}} \\
 &=
 e^{im'\frac{\pi}{2}}\, e^{-im''\frac{\pi}{2}}\,
 e^{-im'''\frac{\pi}{2}}\, e^{im\frac{\pi}{2}}\,
 &\quad \times
-\mathfrak{D}^{\ell}_{m', m''}\left(e^{\frac{\pi}{2} 𝐣/ 2}\right)\,
-\mathfrak{D}^{\ell}_{m'', m'''}\left(e^{\beta 𝐤 / 2}\right)\, \\
-\mathfrak{D}^{\ell}_{m''', m}\left(e^{-\frac{\pi}{2} 𝐣/ 2}\right) \\
+𝔇^{ℓ}_{m', m''}\left(e^{\frac{\pi}{2} 𝐣/ 2}\right)\,
+𝔇^{ℓ}_{m'', m'''}\left(e^{\beta 𝐤 / 2}\right)\, \\
+𝔇^{ℓ}_{m''', m}\left(e^{-\frac{\pi}{2} 𝐣/ 2}\right) \\
 &=
 e^{im'\frac{\pi}{2}}\, e^{-im''\frac{\pi}{2}}\,
 e^{-im'''\frac{\pi}{2}}\, e^{im\frac{\pi}{2}}\,
 &\quad \times
-\mathfrak{D}^{\ell}_{m', m''}\left(e^{\frac{\pi}{2} 𝐣/ 2}\right)\,
+𝔇^{ℓ}_{m', m''}\left(e^{\frac{\pi}{2} 𝐣/ 2}\right)\,
 e^{-im''\beta}\,
-\mathfrak{D}^{\ell}_{m'', m}\left(e^{-\frac{\pi}{2} 𝐣/ 2}\right) \\
+𝔇^{ℓ}_{m'', m}\left(e^{-\frac{\pi}{2} 𝐣/ 2}\right) \\
 &=
 i^{m'+m-2m''}\,
-d^{\ell}_{m', m''}\left(e^{\frac{\pi}{2} 𝐣/ 2}\right)\,
+d^{ℓ}_{m', m''}\left(e^{\frac{\pi}{2} 𝐣/ 2}\right)\,
 e^{-im''\beta}\,
-d^{\ell}_{m'', m}\left(e^{-\frac{\pi}{2} 𝐣/ 2}\right) \\
+d^{ℓ}_{m'', m}\left(e^{-\frac{\pi}{2} 𝐣/ 2}\right) \\
 &=
 i^{m'+m}(-1)^{m''}\,
-d^{\ell}_{m', m''}\left(\frac{\pi}{2}\right)\,
+d^{ℓ}_{m', m''}\left(\frac{\pi}{2}\right)\,
 e^{-im''\beta}\,
-d^{\ell}_{m'', m}\left(-\frac{\pi}{2}\right) \\
+d^{ℓ}_{m'', m}\left(-\frac{\pi}{2}\right) \\
 &=
 i^{m'+m}(-1)^{m}\,
-d^{\ell}_{m', m''}\left(\frac{\pi}{2}\right)\,
+d^{ℓ}_{m', m''}\left(\frac{\pi}{2}\right)\,
 e^{-im''\beta}\,
-d^{\ell}_{m'', m}\left(\frac{\pi}{2}\right) \\
+d^{ℓ}_{m'', m}\left(\frac{\pi}{2}\right) \\
 &=
 i^{m'-m}\,
-d^{\ell}_{m', m''}\left(\frac{\pi}{2}\right)\,
+d^{ℓ}_{m', m''}\left(\frac{\pi}{2}\right)\,
 e^{-im''\beta}\,
-d^{\ell}_{m'', m}\left(\frac{\pi}{2}\right)
+d^{ℓ}_{m'', m}\left(\frac{\pi}{2}\right)
 \end{align}
 ```
 

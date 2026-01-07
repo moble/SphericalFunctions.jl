@@ -14,9 +14,9 @@ using Quaternionic: Quaternionic, AbstractQuaternion, to_euler_phases
     d_matrices(β, ℓₘₐₓ)
     d_matrices(expiβ, ℓₘₐₓ)
 
-Compute Wigner's ``d^{(\ell)}`` matrices with elements ``d^{(\ell)}_{m',m}(\beta)`` for all
-``\ell \leq \ell_\mathrm{max}``.  The ``d`` matrices are sometimes called the "reduced"
-Wigner matrices, in contrast to the full ``\mathfrak{D}`` matrices.
+Compute Wigner's ``d^{(ℓ)}`` matrices with elements ``d^{(ℓ)}_{m',m}(\beta)`` for all
+``ℓ \leq ℓ_\mathrm{max}``.  The ``d`` matrices are sometimes called the "reduced"
+Wigner matrices, in contrast to the full ``𝔇`` matrices.
 
 See [`d_matrices!`](@ref) for details about the input and output values.
 
@@ -35,9 +35,9 @@ d_matrices(β::Real, ℓₘₐₓ) = d_matrices(cis(β), ℓₘₐₓ)
     d_matrices!(d, β, ℓₘₐₓ)
     d_matrices!(d, expiβ, ℓₘₐₓ)
 
-Compute Wigner's ``d^{(\ell)}`` matrices with elements ``d^{(\ell)}_{m',m}(\beta)`` for all
-``\ell \leq \ell_\mathrm{max}``.  The ``d`` matrices are sometimes called the "reduced"
-Wigner matrices, in contrast to the full ``\mathfrak{D}`` matrices.
+Compute Wigner's ``d^{(ℓ)}`` matrices with elements ``d^{(ℓ)}_{m',m}(\beta)`` for all
+``ℓ \leq ℓ_\mathrm{max}``.  The ``d`` matrices are sometimes called the "reduced"
+Wigner matrices, in contrast to the full ``𝔇`` matrices.
 
 In all cases, the result is returned in a 1-dimensional array ordered as
 
@@ -188,7 +188,7 @@ package's Wigner ``d`` function and other references' more clear.  It is ineffic
 in terms of memory and computation time, and should generally not be used in production
 code.
 
-Computes a single (complex) value of the ``d`` matrix ``(\ell, m', m)`` at the given
+Computes a single (complex) value of the ``d`` matrix ``(ℓ, m', m)`` at the given
 angle ``(\iota)``.
 """
 function d(ℓ, m′, m, β)
@@ -200,8 +200,8 @@ end
     D_matrices(R, ℓₘₐₓ)
     D_matrices(α, β, γ, ℓₘₐₓ)
 
-Compute Wigner's 𝔇 matrices ``\mathfrak{D}^{(\ell)}_{m',m}(\beta)`` for all ``\ell \leq
-\ell_\mathrm{max}``.
+Compute Wigner's 𝔇 matrices ``𝔇^{(ℓ)}_{m',m}(\beta)`` for all ``ℓ \leq
+ℓ_\mathrm{max}``.
 
 See [`D_matrices!`](@ref) for details about the input and output values.
 
@@ -230,8 +230,8 @@ end
     D_matrices!(D, R, ℓₘₐₓ)
     D_matrices!(D, α, β, γ, ℓₘₐₓ)
 
-Compute Wigner's 𝔇 matrices ``\mathfrak{D}^{(\ell)}_{m',m}(\beta)`` for all ``\ell \leq
-\ell_\mathrm{max}``.
+Compute Wigner's 𝔇 matrices ``𝔇^{(ℓ)}_{m',m}(\beta)`` for all ``ℓ \leq
+ℓ_\mathrm{max}``.
 
 In all cases, the result is returned in a 1-dimensional array ordered as
 
@@ -298,7 +298,7 @@ end
     D_prep(ℓₘₐₓ, [T=Float64])
 
 Construct storage space and pre-compute recursion coefficients to compute Wigner's
-``\mathfrak{D}`` matrix in place.
+``𝔇`` matrix in place.
 
 This returns the `D_storage` arguments needed by [`D_matrices!`](@ref).
 
@@ -395,7 +395,7 @@ package's Wigner ``D`` function and other references' more clear.  It is ineffic
 in terms of memory and computation time, and should generally not be used in production
 code.
 
-Computes a single (complex) value of the ``D`` matrix ``(\ell, m', m)`` at the given
+Computes a single (complex) value of the ``D`` matrix ``(ℓ, m', m)`` at the given
 angle ``(\iota)``.
 """
 function D(ℓ, m′, m, α, β, γ)
@@ -414,12 +414,12 @@ end
     sYlm_values(R, ℓₘₐₓ, spin)
     sYlm_values(θ, ϕ, ℓₘₐₓ, spin)
 
-Compute values of the spin-weighted spherical harmonic ``{}_{s}Y_{\ell, m}(R)`` for all
-``\ell \leq \ell_\mathrm{max}``.
+Compute values of the spin-weighted spherical harmonic ``{}_{s}Y_{ℓ, m}(R)`` for all
+``ℓ \leq ℓ_\mathrm{max}``.
 
 See [`sYlm_values!`](@ref) for details about the input and output values.
 
-This function only appropriate when you need to evaluate the ``{}_{s}Y_{\ell, m}`` for a
+This function only appropriate when you need to evaluate the ``{}_{s}Y_{ℓ, m}`` for a
 single value of `R` or `θ, ϕ` because it allocates large arrays and performs many
 calculations that could be reused.  If you need to evaluate the matrices for many values of
 `R` or `θ, ϕ`, you should pre-allocate the storage with [`sYlm_prep`](@ref), and then call
@@ -442,16 +442,16 @@ end
     sYlm_values!(sYlm, R, ℓₘₐₓ, spin)
     sYlm_values!(sYlm, θ, ϕ, ℓₘₐₓ, spin)
 
-Compute values of the spin-weighted spherical harmonic ``{}_{s}Y_{\ell, m}(R)`` for all
-``\ell \leq \ell_\mathrm{max}``.
+Compute values of the spin-weighted spherical harmonic ``{}_{s}Y_{ℓ, m}(R)`` for all
+``ℓ \leq ℓ_\mathrm{max}``.
 
-The spherical harmonics of spin weight ``s`` are related to Wigner's ``\mathfrak{D}`` matrix
+The spherical harmonics of spin weight ``s`` are related to Wigner's ``𝔇`` matrix
 as
 ```math
 \begin{aligned}
-{}_{s}Y_{\ell, m}(R)
-  &= (-1)^s \sqrt{\frac{2\ell+1}{4\pi}} \mathfrak{D}^{(\ell)}_{m, -s}(R) \\
-  &= (-1)^s \sqrt{\frac{2\ell+1}{4\pi}} \bar{\mathfrak{D}}^{(\ell)}_{-s, m}(\bar{R}).
+{}_{s}Y_{ℓ, m}(R)
+  &= (-1)^s \sqrt{\frac{2ℓ+1}{4\pi}} 𝔇^{(ℓ)}_{m, -s}(R) \\
+  &= (-1)^s \sqrt{\frac{2ℓ+1}{4\pi}} \bar{𝔇}^{(ℓ)}_{-s, m}(\bar{R}).
 \end{aligned}
 ```
 
@@ -480,7 +480,7 @@ The `θ, ϕ` arguments are spherical coordinates as described in the documentati
 [`Quaternionic.from_spherical_coordinates`](https://moble.github.io/Quaternionic.jl/dev/manual/#Quaternionic.from_spherical_coordinates-Tuple{Any,%20Any}).
 
 See also [`sYlm_values`](@ref) for a simpler function call when you only need to evaluate
-the ``{}_{s}Y_{\ell, m}`` for a single value of `R` or `θ, ϕ`.
+the ``{}_{s}Y_{ℓ, m}`` for a single value of `R` or `θ, ϕ`.
 
 # Examples
 
@@ -540,14 +540,14 @@ end
     sYlm_prep(ℓₘₐₓ, sₘₐₓ, [T=Float64, [ℓₘᵢₙ=0]])
 
 Construct storage space and pre-compute recursion coefficients to compute spin-weighted
-spherical-harmonic values ``{}_{s}Y_{\ell, m}`` in place.
+spherical-harmonic values ``{}_{s}Y_{ℓ, m}`` in place.
 
 This returns the `sYlm_storage` arguments needed by [`sYlm_values!`](@ref).
 
 Note that the result of this function can be passed to `sYlm_values!`, even if the value of
 `spin` passed to that function is smaller (in absolute value) than the `sₘₐₓ` passed to this
 function.  That is, the `sYlm_storage` returned by this function can be used to compute
-``{}_{s}Y_{\ell, m}`` values for numerous values of the spin.
+``{}_{s}Y_{ℓ, m}`` values for numerous values of the spin.
 
 """
 function sYlm_prep(ℓₘₐₓ, sₘₐₓ, ::Type{T}=Float64, ℓₘᵢₙ=0) where {T<:Real}
@@ -611,7 +611,7 @@ end
     ₛ𝐘(s, ℓₘₐₓ, [T=Float64], [Rθϕ=golden_ratio_spiral_rotors(s, ℓₘₐₓ, T)])
 
 
-Construct a matrix of ``ₛYₗₘ(Rθϕ)`` values for the input `s` and all nontrivial ``(\ell,
+Construct a matrix of ``ₛYₗₘ(Rθϕ)`` values for the input `s` and all nontrivial ``(ℓ,
 m)`` up to `ℓₘₐₓ`.
 
 This is a fast and accurate method for mapping between the vector of spin-weighted
@@ -655,7 +655,7 @@ NOTE: This function is primarily a test function just to make comparisons betwee
 package's spherical harmonics and other references' more clear.  It is inefficient, both in
 terms of memory and computation time, and should generally not be used in production code.
 
-Computes a single (complex) value of the spherical harmonic ``(\ell, m)`` at the given
+Computes a single (complex) value of the spherical harmonic ``(ℓ, m)`` at the given
 spherical coordinate ``(\theta, \phi)``.
 """
 function Y(s::Int, ℓ::Int, m::Int, θ, ϕ)

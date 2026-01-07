@@ -261,14 +261,14 @@ Base.size(Yi::sYlm_iterator, dim) = dim > 1 ? 1 : length(Yi)
     λ_recursion_initialize(cosθ, sin½θ, cos½θ, s, ℓ, m)
 
 This provides initial values for the recursion to find
-``{}_{s}\lambda_{\ell,m}`` along indices of increasing ``\ell``, due to
+``{}_{s}\lambda_{ℓ,m}`` along indices of increasing ``ℓ``, due to
 [Kostelec & Rockmore](@cite Kostelec_2008) Specifically, this function computes
-values with ``\ell=m``.
+values with ``ℓ=m``.
 
 ```math
-{}_{s}\lambda_{\ell,m}(\theta)
-    := {}_{s}Y_{\ell,m}(\theta, 0)
-    = (-1)^m\, \sqrt{\frac{2\ell+1}{4\pi}} d^\ell_{-m,s}(\theta)
+{}_{s}\lambda_{ℓ,m}(\theta)
+    := {}_{s}Y_{ℓ,m}(\theta, 0)
+    = (-1)^m\, \sqrt{\frac{2ℓ+1}{4\pi}} d^ℓ_{-m,s}(\theta)
 ```
 """
 function λ_recursion_initialize(sin½θ::T, cos½θ::T, s, ℓ, m) where T

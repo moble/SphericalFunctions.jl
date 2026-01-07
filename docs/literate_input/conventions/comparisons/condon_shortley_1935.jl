@@ -78,15 +78,15 @@ import ..ConventionsUtilities: 𝒾, ❗, dʲsin²ᵏθdcosθʲ
 # Equation (12) of section 4³ (page 51) writes the solution to the three-dimensional Laplace
 # equation in spherical coordinates as
 # ```math
-# \psi(\gamma, \ell, m_\ell)
+# \psi(\gamma, ℓ, m_ℓ)
 # =
-# B(\gamma, \ell) \Theta(\ell, m_\ell) \Phi(m_\ell),
+# B(\gamma, ℓ) \Theta(ℓ, m_ℓ) \Phi(m_ℓ),
 # ```
 # where ``B`` is independent of ``\theta`` and ``\varphi``, and ``\gamma`` represents any
 # number of eigenvalues required to specify the state.  More explicitly, below Eq. (5) of
 # section 5⁵ (page 127), they specifically define the spherical harmonics as
 # ```math
-# \phi(\ell, m_\ell) = \Theta(\ell, m_\ell) \Phi(m_\ell).
+# \phi(ℓ, m_ℓ) = \Theta(ℓ, m_ℓ) \Phi(m_ℓ).
 # ```
 # One quirk of their notation is that the dependence on ``\theta`` and ``\varphi`` is
 # implicit in their functions; we make it explicit, as Julia requires:
@@ -97,9 +97,9 @@ end
 
 # The ``\varphi`` part is given by equation (5) of section 4³ (page 50):
 # ```math
-# \Phi(m_\ell)
+# \Phi(m_ℓ)
 # =
-# \frac{1}{\sqrt{2\pi}} e^{i m_\ell \varphi}.
+# \frac{1}{\sqrt{2\pi}} e^{i m_ℓ \varphi}.
 # ```
 # Again, we make the dependence on ``\varphi`` explicit, and we capture its type to ensure
 # that we don't lose precision when converting π to a floating-point number.
@@ -110,13 +110,13 @@ end
 
 # Equation (15) of section 4³ (page 52) gives the ``\theta`` dependence as
 # ```math
-# \Theta(\ell, m)
+# \Theta(ℓ, m)
 # =
-# (-1)^\ell
-# \sqrt{\frac{(2\ell+1)}{2} \frac{(\ell+m)!}{(\ell-m)!}}
-# \frac{1}{2^\ell \ell!}
+# (-1)^ℓ
+# \sqrt{\frac{(2ℓ+1)}{2} \frac{(ℓ+m)!}{(ℓ-m)!}}
+# \frac{1}{2^ℓ ℓ!}
 # \frac{1}{\sin^m \theta}
-# \frac{d^{\ell-m}}{d(\cos\theta)^{\ell-m}} \sin^{2\ell}\theta.
+# \frac{d^{ℓ-m}}{d(\cos\theta)^{ℓ-m}} \sin^{2ℓ}\theta.
 # ```
 # Again, we make the dependence on ``\theta`` explicit, and we capture its type to ensure
 # that we don't lose precision when converting the factorials to a floating-point number.

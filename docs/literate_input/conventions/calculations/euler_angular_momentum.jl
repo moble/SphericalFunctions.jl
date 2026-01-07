@@ -38,13 +38,13 @@ important results that help make contact with more standard expressions:
 
 We start by defining a new set of Euler angles according to
 ```math
-\mathbf{R}_{\alpha', \beta', \gamma'}
-= e^{-\epsilon \mathbf{u} / 2} \mathbf{R}_{\alpha, \beta, \gamma}
+𝐑_{\alpha', \beta', \gamma'}
+= e^{-\epsilon 𝐮 / 2} 𝐑_{\alpha, \beta, \gamma}
 \qquad \text{or} \qquad
-\mathbf{R}_{\alpha', \beta', \gamma'}
-= \mathbf{R}_{\alpha, \beta, \gamma} e^{-\epsilon \mathbf{u} / 2}
+𝐑_{\alpha', \beta', \gamma'}
+= 𝐑_{\alpha, \beta, \gamma} e^{-\epsilon 𝐮 / 2}
 ```
-where ``\mathbf{u}`` will be each of the basis quaternions, and each of ``\alpha'``,
+where ``𝐮`` will be each of the basis quaternions, and each of ``\alpha'``,
 ``\beta'``, and ``\gamma'`` is a function of ``\alpha``, ``\beta``, ``\gamma``, and
 ``\epsilon``.  Then, we note that the chain rule tells us that
 ```math
@@ -59,10 +59,10 @@ terms of ``\partial_\epsilon`` into an expression in terms of derivatives with r
 these new Euler angles:
 ```math
 \begin{align}
-  L_j f(\mathbf{R}_{\alpha, \beta, \gamma})
+  L_j f(𝐑_{\alpha, \beta, \gamma})
   &=
-  \left. i \frac{\partial} {\partial \epsilon} f \left( e^{-\epsilon \mathbf{e}_j / 2}
-  \mathbf{R}_{\alpha, \beta, \gamma} \right) \right|_{\epsilon=0}
+  \left. i \frac{\partial} {\partial \epsilon} f \left( e^{-\epsilon 𝐞_j / 2}
+  𝐑_{\alpha, \beta, \gamma} \right) \right|_{\epsilon=0}
   \\
   &=
   i \left[ \left(
@@ -82,10 +82,10 @@ these new Euler angles:
 or for ``R_j``:
 ```math
 \begin{align}
-  R_j f(\mathbf{R}_{\alpha, \beta, \gamma})
+  R_j f(𝐑_{\alpha, \beta, \gamma})
   &=
-  -\left. i \frac{\partial} {\partial \epsilon} f \left( \mathbf{R}_{\alpha, \beta, \gamma}
-  e^{-\epsilon \mathbf{e}_j / 2} \right) \right|_{\epsilon=0}
+  -\left. i \frac{\partial} {\partial \epsilon} f \left( 𝐑_{\alpha, \beta, \gamma}
+  e^{-\epsilon 𝐞_j / 2} \right) \right|_{\epsilon=0}
   \\
   &=
   -i \left[ \left(
@@ -98,7 +98,7 @@ or for ``R_j``:
 
 So the objective is to find the new Euler angles, differentiate with respect to
 ``\epsilon``, and then evaluate at ``\epsilon = 0``.  We do this by first multiplying
-``\mathbf{R}_{\alpha, \beta, \gamma}`` and ``e^{-\epsilon \mathbf{u} / 2}`` in the desired
+``𝐑_{\alpha, \beta, \gamma}`` and ``e^{-\epsilon 𝐮 / 2}`` in the desired
 order, then expanding the results in terms of its quaternion components, and then computing
 the new Euler angles in terms of those components according to the usual expression.
 
@@ -281,7 +281,7 @@ nothing  #hide
 # top, [Varshalovich_1988](@citet) provide equivalent expressions in Eqs. (6) and (7) of
 # their Sec. 4.2 — except that ``R_x`` and ``R_z`` have the wrong signs.
 # [Wikipedia](https://en.wikipedia.org/wiki/Wigner_D-matrix#Properties_of_the_Wigner_D-matrix),
-# meanwhile, provides equivalent expressions, except that their ``\hat{\mathcal{P}}`` has
+# meanwhile, provides equivalent expressions, except that their ``\hat{𝒫}`` has
 # (consistently) the opposite sign to ``R`` defined here.
 
 # Note that the Wikipedia convention is actually entirely sensible — maybe more sensible

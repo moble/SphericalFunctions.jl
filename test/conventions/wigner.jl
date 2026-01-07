@@ -19,7 +19,7 @@ with respect to ours.  For example, note that the position of ``z'`` is independ
 which appears to represent a final rotation about the ``z'`` axis.  In our convention, this
 rotation would be described by the final Euler angle, γ.
 
-On the other hand, on page 156, if ``𝔇^{(\ell)}`` obeys the representation-composition
+On the other hand, on page 156, if ``𝔇^{(ℓ)}`` obeys the representation-composition
 property, then {α, β, γ} represents the rotation {α, 0, 0}∘{0, β, 0}∘{0, 0, γ}, which is the
 same as our convention.
 
@@ -49,7 +49,7 @@ conjugation of the D function, which is consistent with our convention.
 
 # Eq. (15.8) of [Wigner](@cite Wigner_1959), implementing
 # ```math
-#     D^\ell_{m',m}(\alpha, \beta, \gamma).
+#     D^ℓ_{m',m}(\alpha, \beta, \gamma).
 # ```
 # """
 # function D(ℓ, m′, m, α, β, γ)

@@ -6,17 +6,17 @@ The conclusion here is that Sakurai's Yₗᵐ(θ, ϕ) is the same as ours, but h
 
 - On p. 154 he says that "a rotation operation affects the physical system itself, ...,
   while the coordinate axes remain *unchanged*."
-- On p. 156 he poses "``|\alpha\rangle_R = \mathcal{D}(R) | \alpha \rangle``, where
+- On p. 156 he poses "``|\alpha\rangle_R = 𝒟(R) | \alpha \rangle``, where
   ``|\alpha\rangle_R`` and ``|\alpha \rangle`` stand for the kets of the rotated and
   original system, respectively."
-- On p. 157 he says "``\mathcal{D}(\hat{\mathbf{n}}, d\phi) = 1 - i\left( \frac{\mathbf{J}
-  \cdot \hat{\mathbf{n}}} {\hbar} \right) d\phi``"
+- On p. 157 he says "``𝒟(\hat{𝐧}, d\phi) = 1 - i\left( \frac{𝐉
+  \cdot \hat{𝐧}} {\hbar} \right) d\phi``"
 - On p. 173 he defines his Euler angles in the same way as Quaternionic.
-- On p. 192 he defines "``\mathcal{D}^{(j)}_{m',m}(R) =  \langle j,m'| \exp \left(
-  \frac{-i\mathbf{J} \cdot \hat{\mathbf{n}} \phi} {\hbar} \right) |j, m\rangle``".
+- On p. 192 he defines "``𝒟^{(j)}_{m',m}(R) =  \langle j,m'| \exp \left(
+  \frac{-i𝐉 \cdot \hat{𝐧} \phi} {\hbar} \right) |j, m\rangle``".
 - On p. 194 he gives the expression in terms of Euler angles.
 - On p. 223 he gives an explicit formula for ``d``.
-- On p. 203 he relates ``\mathcal{D} to Y_{\ell}^m$ (note the upper index of ``m``).
+- On p. 203 he relates ``𝒟 to Y_{ℓ}^m$ (note the upper index of ``m``).
 
 
 Below (1.6.14), we find the translation operator acts as
@@ -66,7 +66,7 @@ import .NaiveFactorials: ❗
 Eqs. (3.5.50)-(3.5.51) of [Sakurai](@cite Sakurai_1994), p. 194,
 implementing
 ```math
-    \mathcal{D}^{(j)}_{m',m}(\alpha, \beta, \gamma).
+    𝒟^{(j)}_{m',m}(\alpha, \beta, \gamma).
 ```
 
 See also [`d`](@ref) for Sakurai's version the Wigner d-function.
@@ -125,7 +125,7 @@ end
 Eqs. (3.6.51) of [Sakurai](@cite Sakurai_1994), p. 203,
 implementing
 ```math
-    Y_{\ell}^m(\theta, \phi).
+    Y_{ℓ}^m(\theta, \phi).
 ```
 """
 function Y(ℓ, m, θ, ϕ)

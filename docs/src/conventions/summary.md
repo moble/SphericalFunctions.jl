@@ -205,8 +205,8 @@ package defines the spherical harmonics in terms of Wigner's 𝔇
 matrices, by way of the spin-weighted spherical harmonics, as a
 function of a quaternion:
 ```math
-Y_{l,m}(\mathbf{Q}) = \sqrt{\frac{2\ell+1}{4\pi}} e^{im\phi}
-    D^{(l)}_{m,0}(\mathbf{Q}),
+Y_{l,m}(𝐐) = \sqrt{\frac{2ℓ+1}{4\pi}} e^{im\phi}
+    D^{(l)}_{m,0}(𝐐),
 ```
 where ``D^{(l)}_{m,0}`` is the Wigner 𝔇 matrix.  This is a
 
@@ -219,17 +219,17 @@ terms of spherical coordinates, that expression is
 \begin{align}
   Y_{l,m}
   &=
-  \sqrt{\frac{2\ell+1}{4\pi}} e^{im\phi}
+  \sqrt{\frac{2ℓ+1}{4\pi}} e^{im\phi}
   \sum_{k = k_1}^{k_2}
-  \frac{(-1)^k \ell! [(\ell+m)!(\ell-m)!]^{1/2}}
-  {(\ell+m-k)!(\ell-k)!k!(k-m)!}
+  \frac{(-1)^k ℓ! [(ℓ+m)!(ℓ-m)!]^{1/2}}
+  {(ℓ+m-k)!(ℓ-k)!k!(k-m)!}
   \\ &\qquad \times
-  \left(\cos\left(\frac{\theta}{2}\right)\right)^{2\ell+m-2k}
+  \left(\cos\left(\frac{\theta}{2}\right)\right)^{2ℓ+m-2k}
   \left(\sin\left(\frac{\theta}{2}\right)\right)^{2k-m}
 \end{align}
 ```
-where ``k_1 = \textrm{max}(0, m)`` and ``k_2=\textrm{min}(\ell+m,
-\ell)``.  Again, we must emphasize that this package does not actually
+where ``k_1 = \textrm{max}(0, m)`` and ``k_2=\textrm{min}(ℓ+m,
+ℓ)``.  Again, we must emphasize that this package does not actually
 use this form; it is just shown here to make it easier to compare to
 other sources.
 
@@ -287,7 +287,7 @@ We can make this a little less dependent on the choice of Euler
 angles by writing ``\eta`` not as a function of Euler angles, but as
 a function of a quaternion.  We then have
 ```math
-\eta(\mathbf{Q}\, e^{\gamma 𝐤/2}) = e^{-is\gamma} \eta(\mathbf{Q}),
+\eta(𝐐\, e^{\gamma 𝐤/2}) = e^{-is\gamma} \eta(𝐐),
 ```
 which means that spin-weighted functions are eigenfunctions of the
 operator ``R_𝐤`` with eigenvalue ``s``.
@@ -330,17 +330,17 @@ of comparison with other sources.  The expression is
 \begin{align}
   {}_{s}Y_{l,m}
   &=
-  (-1)^s\sqrt{\frac{2\ell+1}{4\pi}} e^{im\phi}
+  (-1)^s\sqrt{\frac{2ℓ+1}{4\pi}} e^{im\phi}
   \sum_{k = k_1}^{k_2}
-  \frac{(-1)^k[(\ell+m)!(\ell-m)!(\ell-s)!(\ell+s)!]^{1/2}}
-  {(\ell+m-k)!(\ell+s-k)!k!(k-s-m)!}
+  \frac{(-1)^k[(ℓ+m)!(ℓ-m)!(ℓ-s)!(ℓ+s)!]^{1/2}}
+  {(ℓ+m-k)!(ℓ+s-k)!k!(k-s-m)!}
   \\ &\qquad \times
-  \left(\cos\left(\frac{\iota}{2}\right)\right)^{2\ell+m+s-2k}
+  \left(\cos\left(\frac{\iota}{2}\right)\right)^{2ℓ+m+s-2k}
   \left(\sin\left(\frac{\iota}{2}\right)\right)^{2k-s-m}
 \end{align}
 ```
-where ``k_1 = \textrm{max}(0, m+s)`` and ``k_2=\textrm{min}(\ell+m,
-\ell+s)``.
+where ``k_1 = \textrm{max}(0, m+s)`` and ``k_2=\textrm{min}(ℓ+m,
+ℓ+s)``.
 
 
 ## Wigner D-matrices

@@ -25,7 +25,7 @@ actually used by any of these sources:
 * Spin-weighted spherical harmonics
   - Behavior under rotation
 * Wigner D-matrices
-  - Representation à la $\langle \ell, m' | e^{-i \alpha J_z} e^{-i \beta J_y} e^{-i \gamma J_z} | \ell, m \rangle$
+  - Representation à la $\langle ℓ, m' | e^{-i \alpha J_z} e^{-i \beta J_y} e^{-i \gamma J_z} | ℓ, m \rangle$
   - Rotation of spherical harmonics
   - Order of indices
   - Conjugation
@@ -144,7 +144,7 @@ agrees with our results, with the extra factor of ``\hbar``.)
 Unfortunately, there is disagreement over the definition of the
 Wigner D-matrices.  In Eq. (4.1.12) he defines
 ```math
-\mathcal{D}_{\alpha \beta \gamma} =
+𝒟_{\alpha \beta \gamma} =
 \exp\big( \frac{i\alpha}{\hbar} J_z\big)
 \exp\big( \frac{i\beta}{\hbar} J_y\big)
 \exp\big( \frac{i\gamma}{\hbar} J_z\big),
@@ -163,15 +163,15 @@ If we relate two vectors by a rotation matrix as ``x'^k = R^{kl}
 x^l``, then Goldberg et al. define ``D`` by its action on spherical
 harmonics [Eq. (3.3)]:
 ```math
-Y_{\ell,m}(x') = \sum_{m'} Y_{\ell,m'}(x) D^{\ell}_{m',m}\left( R^{-1} \right).
+Y_{ℓ,m}(x') = \sum_{m'} Y_{ℓ,m'}(x) D^{ℓ}_{m',m}\left( R^{-1} \right).
 ```
 They then define the Euler angles as we do, and write [Eq. (3.4)]
 ```math
-D^{\ell}_{m', m}(\alpha, \beta, \gamma)
+D^{ℓ}_{m', m}(\alpha, \beta, \gamma)
 \equiv
-D^{\ell}_{m', m}\left( R(\alpha \beta \gamma)^{-1} \right)
+D^{ℓ}_{m', m}\left( R(\alpha \beta \gamma)^{-1} \right)
 =
-e^{i m' \gamma} d^{\ell}_{m', m}(\beta) e^{i m \alpha}.
+e^{i m' \gamma} d^{ℓ}_{m', m}(\beta) e^{i m \alpha}.
 ```
 Finally, they derive [Eq. (3.9)]
 ```math
@@ -188,18 +188,18 @@ e^{im'\gamma}.
 
 Equation (3.11) naturally extends to
 ```math
-  {}_sY_{\ell, m}(\theta, \phi, \gamma)
+  {}_sY_{ℓ, m}(\theta, \phi, \gamma)
   =
-  \left[ \left(2\ell+1\right) / 4\pi \right]^{1/2}
-  D^{\ell}_{-s,m}(\phi, \theta, \gamma),
+  \left[ \left(2ℓ+1\right) / 4\pi \right]^{1/2}
+  D^{ℓ}_{-s,m}(\phi, \theta, \gamma),
 ```
-where Eq. (3.4) also shows that ``D^{\ell}_{m', m}(\alpha, \beta,
-\gamma) = D^{\ell}_{m', m}(\alpha, \beta, 0) e^{i m' \gamma}``,
+where Eq. (3.4) also shows that ``D^{ℓ}_{m', m}(\alpha, \beta,
+\gamma) = D^{ℓ}_{m', m}(\alpha, \beta, 0) e^{i m' \gamma}``,
 so we have
 ```math
-  {}_sY_{\ell, m}(\theta, \phi, \gamma)
+  {}_sY_{ℓ, m}(\theta, \phi, \gamma)
   =
-  {}_sY_{\ell, m}(\theta, \phi)\, e^{-i s \gamma}.
+  {}_sY_{ℓ, m}(\theta, \phi)\, e^{-i s \gamma}.
 ```
 This is the most natural extension of the standard spin-weighted
 spherical harmonics to ``\mathrm{Spin}(3)``.  In particular, the
@@ -216,23 +216,23 @@ physics programs, so it would be useful to compare.
 
 Equation (4.27) gives the associated Legendre function as
 ```math
-P_{\ell}^{m}(x)
+P_{ℓ}^{m}(x)
 =
-(1-x^2)^{|m|/2} \left(\frac{d}{dx}\right)^{|m|} P_{\ell}(x),
+(1-x^2)^{|m|/2} \left(\frac{d}{dx}\right)^{|m|} P_{ℓ}(x),
 ```
 and (4.28) gives the Legendre polynomial as
 ```math
-P_{\ell}(x)
+P_{ℓ}(x)
 =
-\frac{1}{2^\ell \ell!} \left(\frac{d}{dx}\right)^\ell (x^2-1)^\ell.
+\frac{1}{2^ℓ ℓ!} \left(\frac{d}{dx}\right)^ℓ (x^2-1)^ℓ.
 ```
 Then, (4.32) gives the spherical harmonics as
 ```math
-Y_{\ell}^{m}(\theta, \phi)
+Y_{ℓ}^{m}(\theta, \phi)
 =
 \epsilon
-\sqrt{\frac{2\ell+1}{4\pi} \frac{(\ell-|m|)!}{(\ell+|m|)!}}
-e^{im\phi} P_{\ell}^{m}(\cos\theta),
+\sqrt{\frac{2ℓ+1}{4\pi} \frac{(ℓ-|m|)!}{(ℓ+|m|)!}}
+e^{im\phi} P_{ℓ}^{m}(\cos\theta),
 ```
 where ``\epsilon = (-1)^m`` for ``m\geq 0`` and ``\epsilon = 1`` for
 ``m\leq 0``.  In Table 4.2, he explicitly lists the first few
@@ -277,7 +277,7 @@ L_z &= -i \hbar \frac{\partial} {\partial \phi}.
 [LeBellac_2006](@citet) (with Foreword by Cohen-Tannoudji) takes an
 odd approach, defining [Eq. (10.32)]
 ```math
-D^{(j)}_{m', m} \left[ \mathcal{R}(\theta, \phi) \right]
+D^{(j)}_{m', m} \left[ ℛ(\theta, \phi) \right]
 =
 \langle j, m' | e^{-i\phi J_z} e^{-i\theta J_y} | j, m \rangle,
 ```
@@ -288,16 +288,16 @@ spherical coordinates are standard (physicist's) coordinates.
 
 Equation (10.65) shows the rotation law:
 ```math
-Y_{\ell}^{m}\left( \mathcal{R}^{-1} \hat{r} \right)
+Y_{ℓ}^{m}\left( ℛ^{-1} \hat{r} \right)
 =
-\sum_{m'} D^{(\ell)}_{m', m}(\mathcal{R}) Y_{\ell}^{m'}(\hat{r}),
+\sum_{m'} D^{(ℓ)}_{m', m}(ℛ) Y_{ℓ}^{m'}(\hat{r}),
 ```
 and Eq. (10.66) relates the spherical harmonics to the Wigner
 D-matrices:
 ```math
-D^{(\ell)}_{m, 0}(\theta, \phi)
+D^{(ℓ)}_{m, 0}(\theta, \phi)
 =
-\sqrt{\frac{4\pi}{2\ell+1}} \left[Y_{\ell}^{m}(\theta, \phi)\right]^\ast.
+\sqrt{\frac{4\pi}{2ℓ+1}} \left[Y_{ℓ}^{m}(\theta, \phi)\right]^\ast.
 ```
 
 
@@ -342,7 +342,7 @@ page](https://reference.wolfram.com/language/ref/WignerD.html).
 > ϕ]]`
 
 
-> For ``\ell \geq 0``, ``Y_\ell^m = \sqrt{(2\ell+1)/(4\pi)} \sqrt{(\ell-m)! / (\ell+m)!}  P_\ell^m(\cos \theta) e^{im\phi}`` where ``P_\ell^m`` is the associated Legendre function.
+> For ``ℓ \geq 0``, ``Y_ℓ^m = \sqrt{(2ℓ+1)/(4\pi)} \sqrt{(ℓ-m)! / (ℓ+m)!}  P_ℓ^m(\cos \theta) e^{im\phi}`` where ``P_ℓ^m`` is the associated Legendre function.
 
 > The associated Legendre polynomials are defined by ``P_n^m(x) = (-1)^m (1-x^2)^{m/2}(d^m/dx^m)P_n(x)`` where ``P_n(x)`` is the Legendre polynomial.
 
@@ -355,7 +355,7 @@ P_n(x) = \frac{1}{2^n n!} \frac{d^n}{dx^n} (x^2 - 1)^n.
 ## Newman-Penrose
 
 In their 1966 paper, [Newman_1966](@citet), Newman and Penrose first
-introduced the spin-weighted spherical harmonics, ``{}_sY_{\ell m}``.
+introduced the spin-weighted spherical harmonics, ``{}_sY_{ℓ m}``.
 They use the standard (physicists') convention for spherical
 coordinates and introduce the stereographic coordinate ``\zeta =
 e^{i\phi} \cot\frac{\theta}{2}``.  They define the spin-raising
@@ -371,12 +371,12 @@ operator ``\eth`` acting on a function of spin weight ``s`` as
 ```
 They then compute
 ```math
-{}_sY_{\ell, m}
+{}_sY_{ℓ, m}
 \propto
-\frac{1}{\left[(\ell-s)! (\ell+s)!\right]^{1/2}}
-\left(1 + \zeta \bar{\zeta}\right)^{-\ell}
+\frac{1}{\left[(ℓ-s)! (ℓ+s)!\right]^{1/2}}
+\left(1 + \zeta \bar{\zeta}\right)^{-ℓ}
 \sum_p \zeta^p (-\bar{\zeta})^{p+s-m}
-\binom{\ell-s}{p} \binom{\ell+s}{p+s-m},
+\binom{ℓ-s}{p} \binom{ℓ+s}{p+s-m},
 ```
 where the sum is over all integers ``p`` such that the factorials are
 nonzero.
@@ -454,22 +454,22 @@ Thus, the operator with eigenvalue ``s`` is ``i \partial_\gamma``.
 [Shankar_1994](@citet) writes in Eq. (12.5.35) the spherical harmonics
 as
 ```math
-Y_{\ell}^{m}(\theta, \phi)
+Y_{ℓ}^{m}(\theta, \phi)
 =
-(-1)^\ell
-\left[ \frac{(2\ell+1)!}{4\pi} \right]^{1/2}
-\frac{1}{2^\ell \ell!}
-\left[ \frac{(\ell+m)!}{(2\ell)!(\ell-m)!} \right]^{1/2}
+(-1)^ℓ
+\left[ \frac{(2ℓ+1)!}{4\pi} \right]^{1/2}
+\frac{1}{2^ℓ ℓ!}
+\left[ \frac{(ℓ+m)!}{(2ℓ)!(ℓ-m)!} \right]^{1/2}
 e^{i m \phi}
 (\sin \theta)^{-m}
-\frac{d^{\ell-m}}{d(\cos\theta)^{\ell-m}}
-(\sin\theta)^{2\ell}
+\frac{d^{ℓ-m}}{d(\cos\theta)^{ℓ-m}}
+(\sin\theta)^{2ℓ}
 ```
 for ``m \geq 0``, with (12.5.40) giving the expression
 ```math
-Y_{\ell}^{-m}(\theta, \phi)
+Y_{ℓ}^{-m}(\theta, \phi)
 =
-(-1)^m \left( Y_{\ell}^{m}(\theta, \phi) \right)^\ast.
+(-1)^m \left( Y_{ℓ}^{m}(\theta, \phi) \right)^\ast.
 ```
 The angular-momentum operators are given below (12.5.27) as
 ```math
@@ -513,7 +513,7 @@ Specifically, the
 [source](https://github.com/sympy/sympy/blob/b4ce69ad5d40e4e545614b6c76ca9b0be0b98f0b/sympy/physics/wigner.py#L1136-L1191)
 cites [Edmonds_2016](@citet) when defining
 ```math
-\mathcal{D}_{\alpha \beta \gamma} =
+𝒟_{\alpha \beta \gamma} =
 \exp\big( \frac{i\alpha}{\hbar} J_z\big)
 \exp\big( \frac{i\beta}{\hbar} J_y\big)
 \exp\big( \frac{i\gamma}{\hbar} J_z\big).
@@ -541,29 +541,29 @@ definition of the D matrix.
 ## Torres del Castillo (2003)
 
 [TorresDelCastillo_2003](@citet) starts by defining a rotation
-``\mathcal{R}`` as transforming a point ``x_i`` into another point
+``ℛ`` as transforming a point ``x_i`` into another point
 with coordinates ``x_i' = a_{ij}x_j``.  Under that rotation, any
 scalar function ``f`` transforms into another function ``f' =
-\mathcal{R} f`` defined by [Eq. (2.43)]
+ℛ f`` defined by [Eq. (2.43)]
 ```math
 f'\big(x_i\big) = f\big( a^{-1}_{ij} x_j \big).
 ```
 In particular, ``f'(x'_i) = f(x_i)``.  He then defines Wigner's
 D-matrix to satisfy [Eq. (2.45)]
 ```math
-\mathcal{R} Y_{l,m} = \sum_{m} D^l_{m',m}(\mathcal{R}) Y_{l,m'}.
+ℛ Y_{l,m} = \sum_{m} D^l_{m',m}(ℛ) Y_{l,m'}.
 ```
 Including the arguments to the spherical harmonics, this becomes
 ```math
-Y_{l,m}\big(\mathcal{R}^{-1} R_{\theta, \phi}\big)
+Y_{l,m}\big(ℛ^{-1} R_{\theta, \phi}\big)
 =
-\sum_{m} D^l_{m',m}(\mathcal{R}) Y_{l,m'}\big(R_{\theta, \phi}\big).
+\sum_{m} D^l_{m',m}(ℛ) Y_{l,m'}\big(R_{\theta, \phi}\big).
 ```
 In this form, we have [Eq. (2.46)]
 ```math
-D^l_{m'',m}(\mathcal{R}_1 \mathcal{R}_2)
+D^l_{m'',m}(ℛ_1 ℛ_2)
 =
-\sum_{m'} D^l_{m'',m'}(\mathcal{R}_1) D^l_{m',m}(\mathcal{R}_2).
+\sum_{m'} D^l_{m'',m'}(ℛ_1) D^l_{m',m}(ℛ_2).
 ```
 He computes [Eq. (2.53)]
 ```math
@@ -617,9 +617,9 @@ where the ``\hat{J}`` operators are defined in
 > 
 > A transformation of an arbitrary wave function ``\Psi`` under
 > rotation of the coordinate system through an infinitesimal angle
-> ``\delta \omega`` about an axis ``\mathbf{n}`` may be written as
+> ``\delta \omega`` about an axis ``𝐧`` may be written as
 > ```math
-> \Psi \to \Psi' = \left(1 - i \delta \omega \mathbf{n} \cdot \hat{J} \right)\Psi,
+> \Psi \to \Psi' = \left(1 - i \delta \omega 𝐧 \cdot \hat{J} \right)\Psi,
 > ```
 > where ``\hat{J}`` is the total angular momentum operator.
 
@@ -639,25 +639,25 @@ e^{-i M' \gamma}
 ```
 
 
-Page 155 has a table of values for ``\ell \leq 5``
+Page 155 has a table of values for ``ℓ \leq 5``
 
 [Varshalovich_1988](@citet) distinguish in Sec. 1.1.3 between
 *covariant* and *contravariant* spherical coordinates and the
 corresponding basis vectors, which they define as
 ```math
 \begin{aligned}
-  \mathbf{e}_{+1} &= - \frac{1}{\sqrt{2}} \left( \mathbf{e}_x + i \mathbf{e}_y\right)
+  𝐞_{+1} &= - \frac{1}{\sqrt{2}} \left( 𝐞_x + i 𝐞_y\right)
   &&&
-  \mathbf{e}^{+1} &= - \frac{1}{\sqrt{2}} \left( \mathbf{e}_x - i \mathbf{e}_y\right) \\
-  \mathbf{e}_{0} &= \mathbf{e}_z &&& \mathbf{e}^{0} &= \mathbf{e}_z \\
-  \mathbf{e}_{-1} &= \frac{1}{\sqrt{2}} \left( \mathbf{e}_x - i \mathbf{e}_y\right)
+  𝐞^{+1} &= - \frac{1}{\sqrt{2}} \left( 𝐞_x - i 𝐞_y\right) \\
+  𝐞_{0} &= 𝐞_z &&& 𝐞^{0} &= 𝐞_z \\
+  𝐞_{-1} &= \frac{1}{\sqrt{2}} \left( 𝐞_x - i 𝐞_y\right)
   &&&
-  \mathbf{e}^{-1} &= \frac{1}{\sqrt{2}} \left( \mathbf{e}_x + i \mathbf{e}_y\right).
+  𝐞^{-1} &= \frac{1}{\sqrt{2}} \left( 𝐞_x + i 𝐞_y\right).
 \end{aligned}
 ```
-Then, in Sec. 4.2 they define ``\hat{\mathbf{J}}`` as the operator of
+Then, in Sec. 4.2 they define ``\hat{𝐉}`` as the operator of
 angular momentum of the rigid symmetric top.  They then give in Eq.
-(6) the "covariant spherical coordinates of ``\hat{\mathbf{J}}`` in the
+(6) the "covariant spherical coordinates of ``\hat{𝐉}`` in the
 non-rotating (lab-fixed) system" as
 ```math
 \begin{gather}
@@ -669,7 +669,7 @@ non-rotating (lab-fixed) system" as
   \hat{J}_0 = - i \frac{\partial}{\partial \alpha},
 \end{gather}
 ```
-and "contravariant components of ``\hat{\mathbf{J}}`` in the rotating
+and "contravariant components of ``\hat{𝐉}`` in the rotating
 (body-fixed) system" as
 ```math
 \begin{gather}
@@ -809,11 +809,11 @@ Spin-weighted spherical harmonics
 
 Defining the operator
 ```math
-\mathcal{R}(\alpha,\beta,\gamma) = e^{-i\alpha J_z}e^{-i\beta J_y}e^{-i\gamma J_z},
+ℛ(\alpha,\beta,\gamma) = e^{-i\alpha J_z}e^{-i\beta J_y}e^{-i\gamma J_z},
 ```
 [Wikipedia expresses the Wigner D-matrix](https://en.wikipedia.org/wiki/Wigner_D-matrix#Definition_of_the_Wigner_D-matrix) as
 ```math
-D^j_{m'm}(\alpha,\beta,\gamma) \equiv \langle jm' | \mathcal{R}(\alpha,\beta,\gamma)| jm \rangle =e^{-im'\alpha } d^j_{m'm}(\beta)e^{-i m\gamma}.
+D^j_{m'm}(\alpha,\beta,\gamma) \equiv \langle jm' | ℛ(\alpha,\beta,\gamma)| jm \rangle =e^{-im'\alpha } d^j_{m'm}(\beta)e^{-i m\gamma}.
 ```
 
 
@@ -922,7 +922,7 @@ In Sec. 7.2.6, we find that if the operator ``\hat{R}(\alpha, \beta,
 vector pointing in the ``(\theta', \phi')`` direction, then the
 spherical harmonics transform as [Eq. (7.70)]
 ```math
-Y_{\ell, m}^\ast (\theta', \phi')
+Y_{ℓ, m}^\ast (\theta', \phi')
 =
-\sum_{m'} D^{(\ell)}_{m, m'}(\alpha, \beta, \gamma) Y_{\ell, m'}^\ast (\theta, \phi).
+\sum_{m'} D^{(ℓ)}_{m, m'}(\alpha, \beta, \gamma) Y_{ℓ, m'}^\ast (\theta, \phi).
 ```

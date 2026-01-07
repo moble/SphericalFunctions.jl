@@ -16,7 +16,7 @@ Boyle_2016) for more details.
 
 In terms of the SWSHs, we can write the action of ``L^2`` as
 ```math
-L^2 {}_{s}Y_{\ell,m} = \ell\,(\ell+1) {}_{s}Y_{\ell,m}
+L^2 {}_{s}Y_{ℓ,m} = ℓ\,(ℓ+1) {}_{s}Y_{ℓ,m}
 ```
 
 See also [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`R²`](@ref), [`Rz`](@ref), [`R₊`](@ref),
@@ -38,7 +38,7 @@ Boyle_2016) for more details.
 
 In terms of the SWSHs, we can write the action of ``L_z`` as
 ```math
-L_z {}_{s}Y_{\ell,m} = m\, {}_{s}Y_{\ell,m}
+L_z {}_{s}Y_{ℓ,m} = m\, {}_{s}Y_{ℓ,m}
 ```
 
 See also [`L²`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`R²`](@ref), [`Rz`](@ref), [`R₊`](@ref),
@@ -63,11 +63,11 @@ L_+] = L_+``, which allows us to derive ``L_+ = L_x + i\, L_y.``
 
 In terms of the SWSHs, we can write the action of ``L_+`` as
 ```math
-L_+ {}_{s}Y_{\ell,m} = \sqrt{(\ell-m)(\ell+m+1)}\, {}_{s}Y_{\ell,m+1}.
+L_+ {}_{s}Y_{ℓ,m} = \sqrt{(ℓ-m)(ℓ+m+1)}\, {}_{s}Y_{ℓ,m+1}.
 ```
 Consequently, the *mode weights* of a function are affected as
 ```math
-\left\{L_+(f)\right\}_{s,\ell,m} = \sqrt{(\ell+m)(\ell-m+1)}\,\left\{f\right\}_{s,\ell,m-1}.
+\left\{L_+(f)\right\}_{s,ℓ,m} = \sqrt{(ℓ+m)(ℓ-m+1)}\,\left\{f\right\}_{s,ℓ,m-1}.
 ```
 
 See also [`L²`](@ref), [`Lz`](@ref), [`L₋`](@ref), [`R²`](@ref), [`Rz`](@ref), [`R₊`](@ref),
@@ -99,11 +99,11 @@ L_-] = -L_-``, which allows us to derive ``L_- = L_x - i\, L_y.``
 
 In terms of the SWSHs, we can write the action of ``L_-`` as
 ```math
-L_- {}_{s}Y_{\ell,m} = \sqrt{(\ell+m)(\ell-m+1)}\, {}_{s}Y_{\ell,m-1}.
+L_- {}_{s}Y_{ℓ,m} = \sqrt{(ℓ+m)(ℓ-m+1)}\, {}_{s}Y_{ℓ,m-1}.
 ```
 Consequently, the *mode weights* of a function are affected as
 ```math
-\left\{L_-(f)\right\}_{s,\ell,m} = \sqrt{(\ell-m)(\ell+m+1)}\,\left\{f\right\}_{s,\ell,m+1}.
+\left\{L_-(f)\right\}_{s,ℓ,m} = \sqrt{(ℓ-m)(ℓ+m+1)}\,\left\{f\right\}_{s,ℓ,m+1}.
 ```
 
 See also [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`R²`](@ref), [`Rz`](@ref),
@@ -141,7 +141,7 @@ Boyle_2016) for more details.
 
 In terms of the SWSHs, we can write the action of ``R^2`` as
 ```math
-R^2 {}_{s}Y_{\ell,m} = \ell\,(\ell+1) {}_{s}Y_{\ell,m}
+R^2 {}_{s}Y_{ℓ,m} = ℓ\,(ℓ+1) {}_{s}Y_{ℓ,m}
 ```
 
 See also [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`Rz`](@ref), [`R₊`](@ref),
@@ -164,7 +164,7 @@ operators") or [Boyle](@cite Boyle_2016) for more details.
 
 In terms of the SWSHs, we can write the action of ``R_z`` as
 ```math
-R_z {}_{s}Y_{\ell,m} = -s\, {}_{s}Y_{\ell,m}
+R_z {}_{s}Y_{ℓ,m} = -s\, {}_{s}Y_{ℓ,m}
 ```
 Note the unfortunate sign of ``s``, which seems to be opposite to what we expect, and arises
 from the choice of definition of ``s`` in the original paper by [Newman and Penrose](@cite
@@ -194,11 +194,11 @@ R_+] = R_+``, which allows us to derive ``R_+ = R_x - i\, R_y.``
 
 In terms of the SWSHs, we can write the action of ``R_+`` as
 ```math
-R_+ {}_{s}Y_{\ell,m} = \sqrt{(\ell+s)(\ell-s+1)}\, {}_{s-1}Y_{\ell,m}
+R_+ {}_{s}Y_{ℓ,m} = \sqrt{(ℓ+s)(ℓ-s+1)}\, {}_{s-1}Y_{ℓ,m}
 ```
 Consequently, the *mode weights* of a function are affected as
 ```math
-\left\{R_+(f)\right\}_{s,\ell,m} = \sqrt{(\ell+s)(\ell-s+1)}\,\left\{f\right\}_{s-1,\ell,m}.
+\left\{R_+(f)\right\}_{s,ℓ,m} = \sqrt{(ℓ+s)(ℓ-s+1)}\,\left\{f\right\}_{s-1,ℓ,m}.
 ```
 Because of the unfortunate sign of ``s`` arising from the choice of definition of ``s`` in
 the original paper by [Newman and Penrose](@cite Newman_1966), this is a *lowering* operator
@@ -235,11 +235,11 @@ R_-] = -R_-``, which allows us to derive ``R_- = R_x + i\, R_y.``
 
 In terms of the SWSHs, we can write the action of ``R_-`` as
 ```math
-R_- {}_{s}Y_{\ell,m} = \sqrt{(\ell-s)(\ell+s+1)}\, {}_{s+1}Y_{\ell,m}
+R_- {}_{s}Y_{ℓ,m} = \sqrt{(ℓ-s)(ℓ+s+1)}\, {}_{s+1}Y_{ℓ,m}
 ```
 Consequently, the *mode weights* of a function are affected as
 ```math
-\left\{R_-(f)\right\}_{s,\ell,m} = \sqrt{(\ell-s)(\ell+s+1)}\,\left\{f\right\}_{s+1,\ell,m}.
+\left\{R_-(f)\right\}_{s,ℓ,m} = \sqrt{(ℓ-s)(ℓ+s+1)}\,\left\{f\right\}_{s+1,ℓ,m}.
 ```
 Because of the unfortunate sign of ``s`` arising from the choice of definition of ``s`` in
 the original paper by [Newman and Penrose](@cite Newman_1966), this is a *raising* operator
@@ -276,11 +276,11 @@ By definition, the spin-raising operator satisfies the commutator relation ``[S,
 \eth`` (where ``S`` is the spin operator, which just multiplies the function by its spin).
 In terms of the SWSHs, we can write the action of ``\eth`` as
 ```math
-    \eth {}_{s}Y_{\ell,m} = \sqrt{(\ell-s)(\ell+s+1)} {}_{s+1}Y_{\ell,m}.
+    \eth {}_{s}Y_{ℓ,m} = \sqrt{(ℓ-s)(ℓ+s+1)} {}_{s+1}Y_{ℓ,m}.
 ```
 Consequently, the *mode weights* of a function are affected as
 ```math
-\left\{\eth f\right\}_{s,\ell,m} = \sqrt{(\ell-s)(\ell+s+1)}\,\left\{f\right\}_{s+1,\ell,m}.
+\left\{\eth f\right\}_{s,ℓ,m} = \sqrt{(ℓ-s)(ℓ+s+1)}\,\left\{f\right\}_{s+1,ℓ,m}.
 ```
 
 See also [`ð̄`](@ref),  [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref),
@@ -305,12 +305,12 @@ By definition, the spin-lowering operator satisfies the commutator relation ``[S
 \bar{\eth}] = -\bar{\eth}`` (where ``S`` is the spin operator, which just multiplies the
 function by its spin).  In terms of the SWSHs, we can write the action of ``\bar{\eth}`` as
 ```math
-\bar{\eth} {}_{s}Y_{\ell,m} = -\sqrt{(\ell+s)(\ell-s+1)} {}_{s-1}Y_{\ell,m}.
+\bar{\eth} {}_{s}Y_{ℓ,m} = -\sqrt{(ℓ+s)(ℓ-s+1)} {}_{s-1}Y_{ℓ,m}.
 ```
 Consequently, the *mode weights* of a function are affected as
 ```math
-\left\{\bar{\eth} f\right\}_{s,\ell,m}
-= -\sqrt{(\ell-s)(\ell+s+1)}\,\left\{f\right\}_{s+1,\ell,m}.
+\left\{\bar{\eth} f\right\}_{s,ℓ,m}
+= -\sqrt{(ℓ-s)(ℓ+s+1)}\,\left\{f\right\}_{s+1,ℓ,m}.
 ```
 
 See also [`ð`](@ref),  [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`R²`](@ref),

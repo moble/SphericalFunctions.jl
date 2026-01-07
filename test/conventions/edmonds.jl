@@ -39,7 +39,7 @@ end
 
 Eqs. (4.1.12) of [Edmonds](@cite Edmonds_2016), implementing
 ```math
-    \mathcal{D}^{(j)}_{m',m}(\alpha, \beta, \gamma).
+    𝒟^{(j)}_{m',m}(\alpha, \beta, \gamma).
 ```
 
 See also [`d`](@ref) for Edmonds' version the Wigner d-function.
