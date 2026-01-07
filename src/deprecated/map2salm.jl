@@ -87,7 +87,7 @@ function plan_map2salm(map_data::AbstractArray{Complex{T}}, spin::Int, ℓmax::I
     # Number of workers seen by `@thread`
     Nworkers = threadpoolsize(:default)
 
-    workspace_pool = if T <: MachineFloat
+    workspace_pool = if T <: IEEEFloat
         # Build FFT plan from a representative slice
         proto_idx = extra_dims[1]
         proto = @views map_data[:, 1, proto_idx.I...]
@@ -131,7 +131,7 @@ function computeG!(
     G::AbstractArray{Complex{T}},
     map::AbstractArray{Complex{T}},
     weight::T, fftplan
-) where {T<:MachineFloat}
+) where {T<:IEEEFloat}
     @views mul!(G[:], fftplan, map)
     @views G[:] *= weight
 end

@@ -10,7 +10,8 @@ using FixedSizeArrays: FixedSizeArrayDefault, FixedSizeVectorDefault, FixedSizeA
     FixedSizeVector
 
 
-const MachineFloat = Union{Float16, Float32, Float64}
+# Base.Math.IEEEFloat is not public API, so we just define our own
+const IEEEFloat = Union{Float16, Float32, Float64}
 
 # Utilities (kept top-level; code lives in `src/utilities/`)
 include("utilities/utils.jl")
