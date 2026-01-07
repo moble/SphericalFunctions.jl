@@ -85,7 +85,6 @@ makedocs(
             "development/literate_testitems.md",
         ],
         "References" => "references.md",
-        "Redesign" => "redesign.md",
     ],
     warnonly=true,
     #doctest = false,
