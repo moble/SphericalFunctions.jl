@@ -113,11 +113,11 @@ the determinant of the metric, so we have
 ```math
 \int_{\mathbb{R}^3} f\, d^3𝐫 = \int_0^\infty \int_0^\pi \int_0^{2\pi} f\, r^2 \sin θ\, dr\, dθ\, dϕ.
 ```
-Restricting to the unit sphere, and normalizing so that the integral
-of 1 over the sphere is 1, we can simplify this to
+Restricting to the unit sphere, we obtain the usual surface element
 ```math
-\int_{𝕊²} f\, d^2\Omega = \frac{1}{4\pi} \int_0^\pi \int_0^{2\pi} f\, \sin θ\, dθ\, dϕ.
+\int_{𝕊²} f\, d^2\Omega = \int_0^\pi \int_0^{2\pi} f\, \sin θ\, dθ\, dϕ.
 ```
+Note that ``\int_{𝕊²} d^2\Omega = 4\pi``.
 
 
 ## Four-dimensional space: Quaternions and rotations
@@ -279,23 +279,33 @@ the relation:
 \begin{aligned}
 R &= \sqrt{W^2 + X^2 + Y^2 + Z^2} &&\in [0, \infty), \\
 α &= \arctan\frac{Z}{W} + \arctan\frac{-X}{Y} &&\in [0, 2\pi), \\
-β &= 2\arccos\sqrt{\frac{W^2+Z^2}{W^2+X^2+Y^2+Z^2}} &&\in [0, 2\pi], \\
-γ &= \arctan\frac{Z}{W} - \arctan\frac{-X}{Y} &&\in [0, 2\pi),
+β &= 2\arccos\sqrt{\frac{W^2+Z^2}{W^2+X^2+Y^2+Z^2}} &&\in [0, \pi], \\
+γ &= \arctan\frac{Z}{W} - \arctan\frac{-X}{Y} &&\in [0, 4\pi),
 \end{aligned}
 ```
-where we again assume the ``\arctan`` in the expressions for
-``α`` and ``γ`` is really the two-argument form that gives
-the correct quadrant.  Note that here, ``β`` ranges up to ``2\pi``
-rather than just ``\pi``, as in the standard Euler angles.  This is
-because we are describing the space of quaternions, rather than just
-the space of rotations.  If we restrict to ``R=1``, we have exactly
-the group of unit quaternions ``\mathrm{Spin}(3)=\mathrm{SU}(2)``,
-which is a double cover of the rotation group ``\mathrm{SO}(3)``.
-This extended range for ``β`` is necessary to cover the entire
-space of quaternions; if we further restrict to ``[0, \pi)``, we would
-only cover the space of rotations.  This and the inclusion of ``R``
+where we again assume the ``\arctan`` in the expressions for ``α`` and
+``γ`` is really the two-argument form that gives the correct quadrant,
+and if relevant, we use `mod` to limit the values on output.  Note
+that here, ``γ`` ranges up to ``4\pi`` rather than just ``2\pi``, as
+in the standard Euler angles.  This is because we are describing the
+space of quaternions, rather than just the space of rotations.  If we
+restrict to quaternions with magnitude ``R=1``, we have exactly the
+group of unit quaternions ``\mathrm{Spin}(3)=\mathrm{SU}(2)``, which
+is a double cover of the rotation group ``\mathrm{SO}(3)``.  This
+extended range for ``γ`` is necessary to cover the entire space of
+quaternions; if we further restrict to ``[0, 2\pi)``, we would only
+cover the space of rotations.  This and the inclusion of ``R``
 identify precisely how this coordinate system extends the standard
 Euler angles.
+
+Note that it would also be reasonable to limit ``γ`` to ``2\pi``,
+while allowing ``β`` to range up to ``2\pi`` to cover the entire space
+of quaternions.  This is just somewhat more delicate to compute, and
+is simply not conventional.  Also, using ``γ ∈ [0,4\pi)`` integrates
+nicely with our [framework of a telescope](@ref Domain) with ``γ``
+representing the rotation about its line of sight; a full ``4\pi``
+rotation is required for the polarizer to explore the full range of
+states of half-integer spin fields.
 
 The inverse transformation is given by
 ```math
@@ -350,27 +360,25 @@ unit basis vectors in quaternion coordinates are
 ```
 
 Again, integration involves a square-root of the determinant of the
-metric, which reduces to ``R^3 |\sin β| / 8``.  Note that — unlike
-with standard spherical coordinates — the absolute value is necessary
-because ``β`` ranges over the entire interval ``[0, 2\pi]``.  The
-integral over the entire space of quaternions is then
+metric, which reduces to ``R^3 \sin β / 8``.  The integral over the
+entire space of quaternions is then
 ```math
 \int_{\mathbb{R}^4} f\, d^4𝐐
 = \int_{-\infty}^\infty \int_{-\infty}^\infty \int_{-\infty}^\infty \int_{-\infty}^\infty f\, dW\, dX\, dY\, dZ
-= \int_0^\infty \int_0^{2\pi} \int_0^{2\pi} \int_0^{2\pi} f\, \frac{R^3}{8} |\sin β|\, dR\, dα\, dβ\, dγ.
+= \int_0^\infty \int_0^{2\pi} \int_0^{\pi} \int_0^{4\pi} f\, \frac{R^3}{8} \sin β\, dR\, dα\, dβ\, dγ.
 ```
-Restricting to the unit sphere, and normalizing so that the integral
-of 1 over the sphere is 1, we can simplify this to
+Restricting to the unit sphere, we can simplify this to
 ```math
 \int_{\mathrm{Spin}(3)} f\, d^3\Omega
-= \frac{1}{16\pi^2} \int_0^{2\pi} \int_0^{2\pi} \int_0^{2\pi} f\, |\sin β|\, dα\, dβ\, dγ.
+= \int_0^{2\pi} \int_0^{\pi} \int_0^{4\pi} f\, \sin β\, dα\, dβ\, dγ,
 ```
-Finally, restricting to the space of rotations, we can further
-simplify this to
+where ``\int_{\mathrm{Spin}(3)} d^3\Omega = 16\pi^2``.  Finally,
+restricting to the space of rotations, we can further simplify this to
 ```math
 \int_{\mathrm{SO}(3)} f\, d^3\Omega
-= \frac{1}{8\pi^2} \int_0^{2\pi} \int_0^{\pi} \int_0^{2\pi} f\, \sin β\, dα\, dβ\, dγ.
+= \int_0^{2\pi} \int_0^{\pi} \int_0^{2\pi} f\, \sin β\, dα\, dβ\, dγ,
 ```
+where ``\int_{\mathrm{SO}(3)} d^3\Omega = 8\pi^2``.
 
 ## Rotations
 
