@@ -121,9 +121,9 @@ So the conclusion is clear: we should represent the arguments of all
 these functions as unit quaternions, which is what this package does:
 ```math
 \begin{gathered}
-Y_{ℓ,m}(Q), \\
-{}_sY_{ℓ,m}(Q), \\
-𝔇^{(ℓ)}_{m', m}(Q).
+Y_{ℓ,m}(𝐐), \\
+{}_sY_{ℓ,m}(𝐐), \\
+𝔇^{(ℓ)}_{m', m}(𝐐).
 \end{gathered}
 ```
 We can still provide convenience methods that convert from spherical

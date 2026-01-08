@@ -52,8 +52,8 @@ makedocs(
         "Background" => [
             "background/domain.md",
             "background/operators.md",
-            "background/wigner_matrices.md",
-            "background/sYlm.md",
+            "background/sYlm_and_Dlmpm.md",
+            "background/mode_weights.md",
             "background/transformations.md",
         ],
         "Interface" => [
