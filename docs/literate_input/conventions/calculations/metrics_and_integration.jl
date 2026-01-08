@@ -177,33 +177,34 @@ metric_extended_euler = sympy.simplify((jacobian_4.T * metric_cartesian_4 * jaco
 # metric:
 four_volume_form_factor = sympy.simplify(sympy.sqrt(metric_extended_euler.det()))
 
-# Again, SymPy correctly includes the absolute value of the ``\sin β`` factor, but in this
-# case, it can actually be negative, since ``β`` is in ``[0, 2π]``, so it is correct for
-# integration over ``\mathrm{Spin}(3)`` to include the absolute value here.
+# Again, SymPy correctly includes the absolute value of the ``\sin β`` factor.  However,
+# with our chosen Euler-angle ranges for ``\mathrm{Spin}(3)`` we take ``β ∈ [0, π]``, so
+# ``\sin β ≥ 0`` and we can drop the absolute value for integration.
 #
 # Restricting to the unit sphere (``R=1``), we integrate naively to find the surface area:
 S3_surface_area = sympy.integrate(
     sympy.integrate(
         sympy.integrate(
-            four_volume_form_factor.subs(R, 1),
-            (γ, 0, 2π),
+            four_volume_form_factor.subs(abs(sympy.sin(β)), sympy.sin(β)).subs(R, 1),
+            (γ, 0, 4π),
         ),
-        (β, 0, 2π),
+        (β, 0, π),
     ),
     (α, 0, 2π)
 )
 
 # Therefore, the normalized volume-form factor on the unit sphere 𝕊³ is
 S3_normalized_volume_form_factor = sympy.simplify(
-    four_volume_form_factor.subs(R, 1) / S3_surface_area
+    four_volume_form_factor.subs(abs(sympy.sin(β)), sympy.sin(β)).subs(R, 1)
+    / S3_surface_area
 )
 
-# And finally, we can restrict back to ``\mathrm{SO}(3)`` by taking ``β ∈ [0, π]``, and
-# integrating over that range:
+# And finally, we can restrict back to ``\mathrm{SO}(3)`` by taking ``γ ∈ [0, 2π]`` (while
+# keeping ``α ∈ [0, 2π]`` and ``β ∈ [0, π]``), and integrating over that range:
 SO3_volume = sympy.integrate(
     sympy.integrate(
         sympy.integrate(
-            four_volume_form_factor.subs(R, 1),
+            four_volume_form_factor.subs(abs(sympy.sin(β)), sympy.sin(β)).subs(R, 1),
             (γ, 0, 2π),
         ),
         (β, 0, π),
