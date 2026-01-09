@@ -4,7 +4,7 @@
 Compute `n` weights for Fejér's first rule, corresponding to `n` evenly spaced
 nodes from 0 to π inclusive.  That is, the nodes are located at
 ```math
-θ_k = k \frac{\pi}{n-1} \quad k=0, \ldots, n-1.
+θ_k = k \frac{π}{n-1} \quad k=0, \ldots, n-1.
 ```
 
 This function uses [Waldvogel's method](@cite Waldvogel_2006).
@@ -39,7 +39,7 @@ end
 Compute `n` weights for Fejér's second rule, corresponding to `n` evenly spaced
 nodes between 0 and π exclusive.  That is, the nodes are located at
 ```math
-θ_k = k \frac{\pi}{n+1} \quad k=1, \ldots, n.
+θ_k = k \frac{π}{n+1} \quad k=1, \ldots, n.
 ```
 
 This function uses [Waldvogel's method](@cite Waldvogel_2006).  However,
@@ -92,7 +92,7 @@ end
 Compute `n` weights for the Clenshaw-Curtis rule, corresponding to `n` evenly
 spaced nodes from 0 to π inclusive.  That is, the nodes are located at
 ```math
-θ_k = k \frac{\pi}{n-1} \quad k=0, \ldots, n-1.
+θ_k = k \frac{π}{n-1} \quad k=0, \ldots, n-1.
 ```
 
 This function uses [Waldvogel's method](@cite Waldvogel_2006).

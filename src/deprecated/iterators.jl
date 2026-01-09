@@ -268,7 +268,7 @@ values with ``ℓ=m``.
 ```math
 {}_{s}\lambda_{ℓ,m}(θ)
     := {}_{s}Y_{ℓ,m}(θ, 0)
-    = (-1)^m\, \sqrt{\frac{2ℓ+1}{4\pi}} d^ℓ_{-m,s}(θ)
+    = (-1)^m\, \sqrt{\frac{2ℓ+1}{4π}} d^ℓ_{-m,s}(θ)
 ```
 """
 function λ_recursion_initialize(sin½θ::T, cos½θ::T, s, ℓ, m) where T

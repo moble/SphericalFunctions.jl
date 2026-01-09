@@ -23,7 +23,7 @@ has slowly growing errors through ``L = 4096``.
 The EKKM analysis looks like the following (with some notational
 changes).  We begin by defining
 ```math
-  {}_{s}\tilde{f}_{θ}(m) := \int_0^{2\pi} {}_sf(θ, ϕ)\, e^{-imϕ}\, dϕ.
+  {}_{s}\tilde{f}_{θ}(m) := \int_0^{2π} {}_sf(θ, ϕ)\, e^{-imϕ}\, dϕ.
 ```
 We will denote the vector of these quantities for all values of
 ``θ`` as ``{}_{s}\tilde{𝐟}_m``.  Inserting the
@@ -31,13 +31,13 @@ We will denote the vector of these quantities for all values of
 performing the integration using orthogonality of complex
 exponentials, we can find that
 ```math
-  {}_{s}\tilde{f}_{θ}(m) = (-1)^s\, 2\pi \sum_{ℓ=\Delta}^L \sqrt{\frac{2ℓ+1}{4\pi}}\, d_{m,-s}^{ℓ}(θ)\, {}_sf_{ℓ,m}.
+  {}_{s}\tilde{f}_{θ}(m) = (-1)^s\, 2π \sum_{ℓ=\Delta}^L \sqrt{\frac{2ℓ+1}{4π}}\, d_{m,-s}^{ℓ}(θ)\, {}_sf_{ℓ,m}.
 ```
 Now, denoting the vector of ``{}_sf_{ℓ,m}`` for all values of
 ``ℓ`` as ``{}_s𝐟_m``, we can write this as a matrix-vector
 equation:
 ```math
-  {}_{s}\tilde{𝐟}_m = (-1)^s\, 2\pi\, {}_s𝐝_{m}\, {}_s𝐟_m.
+  {}_{s}\tilde{𝐟}_m = (-1)^s\, 2π\, {}_s𝐝_{m}\, {}_s𝐟_m.
 ```
 We are effectively measuring the ``{}_{s}\tilde{𝐟}_m``
 values, we can easily construct the ``{}_s𝐝_{m}`` matrix, and
@@ -58,8 +58,8 @@ like this:
 ```math
   {}_{s}\tilde{f}_{j}(m) := \sum_{k=0}^{2j} {}_sf(θ_j, ϕ_k)\, e^{-imϕ_k}\, \Delta ϕ,
 ```
-where ``ϕ_k = \frac{2\pi k}{2j+1}``, and ``\Delta ϕ =
-\frac{2\pi}{2j+1}``.  (Recall the subtle notational distinction common
+where ``ϕ_k = \frac{2π k}{2j+1}``, and ``\Delta ϕ =
+\frac{2π}{2j+1}``.  (Recall the subtle notational distinction common
 in time-frequency analysis that ``\tilde{s}(t_j) = \Delta t
 \tilde{s}_j``, which would suggest we use ``{}_{s}\tilde{f}_{j}(m) =
 \Delta ϕ\, {}_{s}\tilde{f}_{j,m}``.)  Next, we can insert the
@@ -69,8 +69,8 @@ expansion for ``{}_sf(θ, ϕ)``:
 \begin{aligned}
     {}_{s}\tilde{f}_{j}(m)
     &= \sum_{k=0}^{2j} \sum_{ℓ,m'} {}_sf_{ℓ,m'}\, {}_sY_{ℓ,m'}(θ_j, ϕ_k)\, e^{-imϕ_k}\, \Delta ϕ \\
-    &= \sum_{k=0}^{2j} \sum_{ℓ,m'} {}_sf_{ℓ,m'}\, (-1)^{s}\, \sqrt{\frac{2ℓ+1}{4\pi}}\, d_{ℓ}^{m',-s}(θ_j) e^{i m' ϕ_k}\, e^{-imϕ_k}\, \frac{2\pi}{2j+1} \\
-    &= (-1)^{s}\, \frac{2\pi}{2j+1} \sum_{ℓ,m'} {}_sf_{ℓ,m'}\, \sqrt{\frac{2ℓ+1}{4\pi}}\, d_{ℓ}^{m',-s}(θ_j) \sum_{k=0}^{2j}e^{i (m'-m) ϕ_k}.
+    &= \sum_{k=0}^{2j} \sum_{ℓ,m'} {}_sf_{ℓ,m'}\, (-1)^{s}\, \sqrt{\frac{2ℓ+1}{4π}}\, d_{ℓ}^{m',-s}(θ_j) e^{i m' ϕ_k}\, e^{-imϕ_k}\, \frac{2π}{2j+1} \\
+    &= (-1)^{s}\, \frac{2π}{2j+1} \sum_{ℓ,m'} {}_sf_{ℓ,m'}\, \sqrt{\frac{2ℓ+1}{4π}}\, d_{ℓ}^{m',-s}(θ_j) \sum_{k=0}^{2j}e^{i (m'-m) ϕ_k}.
 \end{aligned}
 ```
 We can evaluate this last sum easily:
@@ -84,7 +84,7 @@ This allows us to simplify as
 
 ```math
 \begin{aligned}
-    {}_{s}\tilde{f}_{j}(m) = (-1)^{s}\, 2\pi \sum_{ℓ,m'} {}_sf_{ℓ,m'}\, \sqrt{\frac{2ℓ+1}{4\pi}}\, d_{ℓ}^{m',-s}(θ_j),
+    {}_{s}\tilde{f}_{j}(m) = (-1)^{s}\, 2π \sum_{ℓ,m'} {}_sf_{ℓ,m'}\, \sqrt{\frac{2ℓ+1}{4π}}\, d_{ℓ}^{m',-s}(θ_j),
 \end{aligned}
 ```
 where ``m'`` ranges over ``m + n(2j+1)`` for all ``n\in \mathbb{Z}`` such that ``|m + n(2j+1)| \leq ℓ``
@@ -103,7 +103,7 @@ values of ``ℓ, m'``, and just set the coefficient to zero whenever
 these conditions are not satisfied.  In that case, we can again think
 of this as a (much larger) vector-matrix equation reading
 ```math
-  {}_s\tilde{𝐟} = (-1)^s\, 2\pi\, {}_s𝐝\, {}_s𝐟,
+  {}_s\tilde{𝐟} = (-1)^s\, 2π\, {}_s𝐝\, {}_s𝐟,
 ```
 where the index on ``{}_s\tilde{𝐟}`` loops over ``j`` and
 ``m``, the index on ``{}_s𝐟`` loops over ``ℓ`` and ``m'``,

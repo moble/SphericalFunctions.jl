@@ -35,7 +35,7 @@ import ..ConventionsUtilities: 𝒾, ❗
 
 # The ``s=-2`` spin-weighted spherical harmonics are defined in Eq. (184a) as
 # ```math
-#   Y^{l,m}_{-2} = \sqrt{\frac{2l+1}{4\pi}} d^{ℓ m}(θ) e^{imϕ}.
+#   Y^{l,m}_{-2} = \sqrt{\frac{2l+1}{4π}} d^{ℓ m}(θ) e^{imϕ}.
 # ```
 function Yˡᵐ₋₂(l, m, θ::T, ϕ::T) where {T<:Real}
     √((2l + 1) / (4T(π))) * d(l, m, θ) * exp(𝒾 * m * ϕ)

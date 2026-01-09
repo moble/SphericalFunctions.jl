@@ -74,18 +74,18 @@ The upshot is that his definition agrees with ours, though he uses the
 "active" definition style.  That is, the rotations are to be performed
 successively in order:
 
-> 1. A rotation ``α(0 \leq α < 2\pi)`` about the ``z``-axis,
+> 1. A rotation ``α(0 \leq α < 2π)`` about the ``z``-axis,
 >    bringing the frame of axes from the initial position ``S`` into
 >    the position ``S'``.  The axis of this rotation is commonly
 >    called the *vertical*.
 >
-> 2. A rotation ``β(0 \leq β < \pi)`` about the ``y``-axis of
+> 2. A rotation ``β(0 \leq β < π)`` about the ``y``-axis of
 >    the frame ``S'``, called the *line of nodes*.  Note that its
 >    position is in general different from the initial position of the
 >    ``y``-axis of the frame ``S``. The resulting position of the
 >    frame of axes is symbolized by ``S''``.
 >
-> 3. A rotation ``γ(0 \leq γ < 2\pi)`` about the ``z``-axis
+> 3. A rotation ``γ(0 \leq γ < 2π)`` about the ``z``-axis
 >    of the frame of axes ``S''``, called the *figure axis*; the
 >    position of this axis depends on the previous rotations
 >    ``α`` and ``β``.  The final position of the frame is
@@ -190,7 +190,7 @@ Equation (3.11) naturally extends to
 ```math
   {}_sY_{ℓ, m}(θ, ϕ, γ)
   =
-  \left[ \left(2ℓ+1\right) / 4\pi \right]^{1/2}
+  \left[ \left(2ℓ+1\right) / 4π \right]^{1/2}
   D^{ℓ}_{-s,m}(ϕ, θ, γ),
 ```
 where Eq. (3.4) also shows that ``D^{ℓ}_{m', m}(α, β,
@@ -231,7 +231,7 @@ Then, (4.32) gives the spherical harmonics as
 Y_{ℓ}^{m}(θ, ϕ)
 =
 ϵ
-\sqrt{\frac{2ℓ+1}{4\pi} \frac{(ℓ-|m|)!}{(ℓ+|m|)!}}
+\sqrt{\frac{2ℓ+1}{4π} \frac{(ℓ-|m|)!}{(ℓ+|m|)!}}
 e^{imϕ} P_{ℓ}^{m}(\cos θ),
 ```
 where ``ϵ = (-1)^m`` for ``m\geq 0`` and ``ϵ = 1`` for
@@ -239,16 +239,16 @@ where ``ϵ = (-1)^m`` for ``m\geq 0`` and ``ϵ = 1`` for
 spherical harmonics:
 ```math
 \begin{aligned}
-  Y_{0}^{0} &= \left(\frac{1}{4\pi}\right)^{1/2},\\
-  Y_{1}^{0} &= \left(\frac{3}{4\pi}\right)^{1/2} \cos θ,\\
-  Y_{1}^{\pm 1} &= \mp \left(\frac{3}{8\pi}\right)^{1/2} \sin θ e^{\pm iϕ},\\
-  Y_{2}^{0} &= \left(\frac{5}{16\pi}\right)^{1/2} \left(3\cos^2θ - 1\right),\\
-  Y_{2}^{\pm 1} &= \mp \left(\frac{15}{8\pi}\right)^{1/2} \sin θ \cos θ e^{\pm iϕ},\\
-  Y_{2}^{\pm 2} &= \left(\frac{15}{32\pi}\right)^{1/2} \sin^2θ e^{\pm 2iϕ},\\
-  Y_{3}^{0} &= \left(\frac{7}{16\pi}\right)^{1/2} \left(5\cos^3θ - 3\cos θ\right),\\
-  Y_{3}^{\pm 1} &= \mp \left(\frac{21}{64\pi}\right)^{1/2} \sin θ \left(5\cos^2θ - 1\right) e^{\pm iϕ},\\
-  Y_{3}^{\pm 2} &= \left(\frac{105}{32\pi}\right)^{1/2} \sin^2θ \cos θ e^{\pm 2iϕ},\\
-  Y_{3}^{\pm 3} &= \mp \left(\frac{35}{64\pi}\right)^{1/2} \sin^3θ e^{\pm 3iϕ}.
+  Y_{0}^{0} &= \left(\frac{1}{4π}\right)^{1/2},\\
+  Y_{1}^{0} &= \left(\frac{3}{4π}\right)^{1/2} \cos θ,\\
+  Y_{1}^{\pm 1} &= \mp \left(\frac{3}{8π}\right)^{1/2} \sin θ e^{\pm iϕ},\\
+  Y_{2}^{0} &= \left(\frac{5}{16π}\right)^{1/2} \left(3\cos^2θ - 1\right),\\
+  Y_{2}^{\pm 1} &= \mp \left(\frac{15}{8π}\right)^{1/2} \sin θ \cos θ e^{\pm iϕ},\\
+  Y_{2}^{\pm 2} &= \left(\frac{15}{32π}\right)^{1/2} \sin^2θ e^{\pm 2iϕ},\\
+  Y_{3}^{0} &= \left(\frac{7}{16π}\right)^{1/2} \left(5\cos^3θ - 3\cos θ\right),\\
+  Y_{3}^{\pm 1} &= \mp \left(\frac{21}{64π}\right)^{1/2} \sin θ \left(5\cos^2θ - 1\right) e^{\pm iϕ},\\
+  Y_{3}^{\pm 2} &= \left(\frac{105}{32π}\right)^{1/2} \sin^2θ \cos θ e^{\pm 2iϕ},\\
+  Y_{3}^{\pm 3} &= \mp \left(\frac{35}{64π}\right)^{1/2} \sin^3θ e^{\pm 3iϕ}.
 \end{aligned}
 ```
 In Eqs. (4.127)—(4.129), he gives the angular-momentum operators in
@@ -297,7 +297,7 @@ D-matrices:
 ```math
 D^{(ℓ)}_{m, 0}(θ, ϕ)
 =
-\sqrt{\frac{4\pi}{2ℓ+1}} \left[Y_{ℓ}^{m}(θ, ϕ)\right]^\ast.
+\sqrt{\frac{4π}{2ℓ+1}} \left[Y_{ℓ}^{m}(θ, ϕ)\right]^\ast.
 ```
 
 
@@ -342,7 +342,7 @@ page](https://reference.wolfram.com/language/ref/WignerD.html).
 > ϕ]]`
 
 
-> For ``ℓ \geq 0``, ``Y_ℓ^m = \sqrt{(2ℓ+1)/(4\pi)} \sqrt{(ℓ-m)! / (ℓ+m)!}  P_ℓ^m(\cos θ) e^{imϕ}`` where ``P_ℓ^m`` is the associated Legendre function.
+> For ``ℓ \geq 0``, ``Y_ℓ^m = \sqrt{(2ℓ+1)/(4π)} \sqrt{(ℓ-m)! / (ℓ+m)!}  P_ℓ^m(\cos θ) e^{imϕ}`` where ``P_ℓ^m`` is the associated Legendre function.
 
 > The associated Legendre polynomials are defined by ``P_n^m(x) = (-1)^m (1-x^2)^{m/2}(d^m/dx^m)P_n(x)`` where ``P_n(x)`` is the Legendre polynomial.
 
@@ -457,7 +457,7 @@ as
 Y_{ℓ}^{m}(θ, ϕ)
 =
 (-1)^ℓ
-\left[ \frac{(2ℓ+1)!}{4\pi} \right]^{1/2}
+\left[ \frac{(2ℓ+1)!}{4π} \right]^{1/2}
 \frac{1}{2^ℓ ℓ!}
 \left[ \frac{(ℓ+m)!}{(2ℓ)!(ℓ-m)!} \right]^{1/2}
 e^{i m ϕ}
@@ -589,7 +589,7 @@ and the spin-weighted spherical harmonic is related to ``D`` by
 {}_{s}Y_{j,m}(θ, ϕ)
 =
 (-1)^m
-\sqrt{\frac{2j+1}{4\pi}}
+\sqrt{\frac{2j+1}{4π}}
 d^j_{-m,s}(θ)
 e^{i m ϕ}.
 ```
@@ -855,7 +855,7 @@ Equation (5.180) gives the spherical harmonics as
 Y_{l, m}(θ, φ)
 =
 \frac{(-1)^l}{2^l l!}
-\sqrt{\frac{2l+1}{4\pi} \frac{(l+m)!}{(l-m)!}}
+\sqrt{\frac{2l+1}{4π} \frac{(l+m)!}{(l-m)!}}
 e^{imφ}
 \frac{1}{\sin^m θ}
 \frac{d^{l-m}}{d(\cos θ)^{l-m}}

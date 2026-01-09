@@ -73,7 +73,7 @@ the action of ``L_-``.
     A technical note about the integrals above: the integrals should be taken
     over the appropriate space and with the appropriate weight such that the
     SWSHs are orthonormal.  In general, this integral should be over
-    ``\mathrm{Spin}(3)`` and weighted by ``1/2\pi`` so that the result will be
+    ``\mathrm{Spin}(3)`` and weighted by ``1/2π`` so that the result will be
     either ``0`` or ``1``; in general the SWSHs are not truly orthonormal when
     integrated over an ``𝕊²`` subspace (nor even is the integral invariant).
     However, if we know that the spins are the same in both cases, it *is*

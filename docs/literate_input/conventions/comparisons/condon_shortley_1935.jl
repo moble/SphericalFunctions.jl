@@ -99,7 +99,7 @@ end
 # ```math
 # \Phi(m_ℓ)
 # =
-# \frac{1}{\sqrt{2\pi}} e^{i m_ℓ φ}.
+# \frac{1}{\sqrt{2π}} e^{i m_ℓ φ}.
 # ```
 # Again, we make the dependence on ``φ`` explicit, and we capture its type to ensure
 # that we don't lose precision when converting π to a floating-point number.
