@@ -11,26 +11,26 @@ terms of ``d`` for the angle ``π/2`` and a phase factor.
 We start with the fact that the ``y`` axis equals the ``z`` axis rotated by ``π/2`` about
 the ``x`` axis:
 ```math
-𝐣 = e^{\frac{\pi}{2} 𝐢/ 2}\, 𝐤\, e^{-\frac{\pi}{2} 𝐢/ 2}.
+𝐣 = e^{\frac{π}{2} 𝐢/ 2}\, 𝐤\, e^{-\frac{π}{2} 𝐢/ 2}.
 ```
 So we have
 ```math
 e^{β 𝐣 / 2}
 =
-e^{\frac{\pi}{2} 𝐢/ 2}\, e^{β 𝐤 / 2}\, e^{-\frac{\pi}{2} 𝐢/ 2}.
+e^{\frac{π}{2} 𝐢/ 2}\, e^{β 𝐤 / 2}\, e^{-\frac{π}{2} 𝐢/ 2}.
 ```
 Unfortunately, this expression involves the ``x`` axis, which we don't want.  But we can
 similarly express the ``x`` axis in terms of the ``y`` axis rotated about the ``z`` axis:
 ```math
-𝐢 = e^{-\frac{\pi}{2} 𝐤/ 2}\, 𝐣\, e^{\frac{\pi}{2} 𝐤/ 2}.
+𝐢 = e^{-\frac{π}{2} 𝐤/ 2}\, 𝐣\, e^{\frac{π}{2} 𝐤/ 2}.
 ```
 And now we can use this in our first expression to find
 ```math
 e^{β 𝐣 / 2}
 =
-e^{-\frac{\pi}{2} 𝐤/ 2}\, e^{\frac{\pi}{2} 𝐣/ 2}\, e^{\frac{\pi}{2} 𝐤/ 2}\,
+e^{-\frac{π}{2} 𝐤/ 2}\, e^{\frac{π}{2} 𝐣/ 2}\, e^{\frac{π}{2} 𝐤/ 2}\,
 e^{β 𝐤 / 2}\,
-e^{\frac{\pi}{2} 𝐤/ 2}\, e^{-\frac{\pi}{2} 𝐣/ 2}\, e^{-\frac{\pi}{2} 𝐤/ 2}.
+e^{\frac{π}{2} 𝐤/ 2}\, e^{-\frac{π}{2} 𝐣/ 2}\, e^{-\frac{π}{2} 𝐤/ 2}.
 ```
 Now, we can use this expansion to find an expression for the ``d`` matrix value:
 ```math
@@ -39,57 +39,57 @@ d^{ℓ}_{m', m}(β)
 &=
 𝔇^{ℓ}_{m', m}\left(e^{β 𝐣 / 2}\right) \\
 &=
-𝔇^{ℓ}_{m', m_1}\left(e^{-\frac{\pi}{2} 𝐤/ 2}\right)\,
-𝔇^{ℓ}_{m_1, m_2}\left(e^{\frac{\pi}{2} 𝐣/ 2}\right)\,
-𝔇^{ℓ}_{m_2, m_3}\left(e^{\frac{\pi}{2} 𝐤/ 2}\right)\,
+𝔇^{ℓ}_{m', m_1}\left(e^{-\frac{π}{2} 𝐤/ 2}\right)\,
+𝔇^{ℓ}_{m_1, m_2}\left(e^{\frac{π}{2} 𝐣/ 2}\right)\,
+𝔇^{ℓ}_{m_2, m_3}\left(e^{\frac{π}{2} 𝐤/ 2}\right)\,
 𝔇^{ℓ}_{m_3, m_4}\left(e^{β 𝐤 / 2}\right)\, \\
 &\quad \times
-𝔇^{ℓ}_{m_4, m_5}\left(e^{\frac{\pi}{2} 𝐤/ 2}\right)\,
-𝔇^{ℓ}_{m_5, m_6}\left(e^{-\frac{\pi}{2} 𝐣/ 2}\right)\,
-𝔇^{ℓ}_{m_6, m}\left(e^{-\frac{\pi}{2} 𝐤/ 2}\right) \\
+𝔇^{ℓ}_{m_4, m_5}\left(e^{\frac{π}{2} 𝐤/ 2}\right)\,
+𝔇^{ℓ}_{m_5, m_6}\left(e^{-\frac{π}{2} 𝐣/ 2}\right)\,
+𝔇^{ℓ}_{m_6, m}\left(e^{-\frac{π}{2} 𝐤/ 2}\right) \\
 &=
-δ_{m', m_1} e^{im'\frac{\pi}{2}}\,
-𝔇^{ℓ}_{m_1, m_2}\left(e^{\frac{\pi}{2} 𝐣/ 2}\right)\,
-δ_{m_2, m_3} e^{-im_2\frac{\pi}{2}}\,
+δ_{m', m_1} e^{im'\frac{π}{2}}\,
+𝔇^{ℓ}_{m_1, m_2}\left(e^{\frac{π}{2} 𝐣/ 2}\right)\,
+δ_{m_2, m_3} e^{-im_2\frac{π}{2}}\,
 𝔇^{ℓ}_{m_3, m_4}\left(e^{β 𝐤 / 2}\right)\, \\
 &\quad \times
-δ_{m_4, m_5} e^{-im_4\frac{\pi}{2}}\,
-𝔇^{ℓ}_{m_5, m_6}\left(e^{-\frac{\pi}{2} 𝐣/ 2}\right)\,
-δ_{m_6, m} e^{im\frac{\pi}{2}} \\
+δ_{m_4, m_5} e^{-im_4\frac{π}{2}}\,
+𝔇^{ℓ}_{m_5, m_6}\left(e^{-\frac{π}{2} 𝐣/ 2}\right)\,
+δ_{m_6, m} e^{im\frac{π}{2}} \\
 &=
-e^{im'\frac{\pi}{2}}\, e^{-im''\frac{\pi}{2}}\,
-e^{-im'''\frac{\pi}{2}}\, e^{im\frac{\pi}{2}}\,
+e^{im'\frac{π}{2}}\, e^{-im''\frac{π}{2}}\,
+e^{-im'''\frac{π}{2}}\, e^{im\frac{π}{2}}\,
 &\quad \times
-𝔇^{ℓ}_{m', m''}\left(e^{\frac{\pi}{2} 𝐣/ 2}\right)\,
+𝔇^{ℓ}_{m', m''}\left(e^{\frac{π}{2} 𝐣/ 2}\right)\,
 𝔇^{ℓ}_{m'', m'''}\left(e^{β 𝐤 / 2}\right)\, \\
-𝔇^{ℓ}_{m''', m}\left(e^{-\frac{\pi}{2} 𝐣/ 2}\right) \\
+𝔇^{ℓ}_{m''', m}\left(e^{-\frac{π}{2} 𝐣/ 2}\right) \\
 &=
-e^{im'\frac{\pi}{2}}\, e^{-im''\frac{\pi}{2}}\,
-e^{-im'''\frac{\pi}{2}}\, e^{im\frac{\pi}{2}}\,
+e^{im'\frac{π}{2}}\, e^{-im''\frac{π}{2}}\,
+e^{-im'''\frac{π}{2}}\, e^{im\frac{π}{2}}\,
 &\quad \times
-𝔇^{ℓ}_{m', m''}\left(e^{\frac{\pi}{2} 𝐣/ 2}\right)\,
+𝔇^{ℓ}_{m', m''}\left(e^{\frac{π}{2} 𝐣/ 2}\right)\,
 e^{-im''β}\,
-𝔇^{ℓ}_{m'', m}\left(e^{-\frac{\pi}{2} 𝐣/ 2}\right) \\
+𝔇^{ℓ}_{m'', m}\left(e^{-\frac{π}{2} 𝐣/ 2}\right) \\
 &=
 i^{m'+m-2m''}\,
-d^{ℓ}_{m', m''}\left(e^{\frac{\pi}{2} 𝐣/ 2}\right)\,
+d^{ℓ}_{m', m''}\left(e^{\frac{π}{2} 𝐣/ 2}\right)\,
 e^{-im''β}\,
-d^{ℓ}_{m'', m}\left(e^{-\frac{\pi}{2} 𝐣/ 2}\right) \\
+d^{ℓ}_{m'', m}\left(e^{-\frac{π}{2} 𝐣/ 2}\right) \\
 &=
 i^{m'+m}(-1)^{m''}\,
-d^{ℓ}_{m', m''}\left(\frac{\pi}{2}\right)\,
+d^{ℓ}_{m', m''}\left(\frac{π}{2}\right)\,
 e^{-im''β}\,
-d^{ℓ}_{m'', m}\left(-\frac{\pi}{2}\right) \\
+d^{ℓ}_{m'', m}\left(-\frac{π}{2}\right) \\
 &=
 i^{m'+m}(-1)^{m}\,
-d^{ℓ}_{m', m''}\left(\frac{\pi}{2}\right)\,
+d^{ℓ}_{m', m''}\left(\frac{π}{2}\right)\,
 e^{-im''β}\,
-d^{ℓ}_{m'', m}\left(\frac{\pi}{2}\right) \\
+d^{ℓ}_{m'', m}\left(\frac{π}{2}\right) \\
 &=
 i^{m'-m}\,
-d^{ℓ}_{m', m''}\left(\frac{\pi}{2}\right)\,
+d^{ℓ}_{m', m''}\left(\frac{π}{2}\right)\,
 e^{-im''β}\,
-d^{ℓ}_{m'', m}\left(\frac{\pi}{2}\right)
+d^{ℓ}_{m'', m}\left(\frac{π}{2}\right)
 \end{align}
 ```
 

@@ -29,7 +29,7 @@ And for the spherical harmonics, [Eq. 14.30.1](http://dlmf.nist.gov/14.30#E1) gi
 ```math
     Y_{ℓ, m}\left(θ,ϕ\right)
     =
-    \left(\frac{(ℓ-m)!(2ℓ+1)}{4\pi(ℓ+m)!}\right)^{1/2}
+    \left(\frac{(ℓ-m)!(2ℓ+1)}{4π(ℓ+m)!}\right)^{1/2}
     \mathsf{e}^{imϕ}
     \mathsf{P}_{ℓ}^{m}\left(\cos θ\right).
 ```

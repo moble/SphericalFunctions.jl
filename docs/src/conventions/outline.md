@@ -54,7 +54,7 @@
       group is just ``\{1, -1\}``.  Presumably, every representation
       acting on ``1`` will give the identity matrix, so that's
       trivial.  So we just need a criterion for when a representation
-      is trivial on ``-1``.  Noting that ``\exp(\pi \vec{v}) = -1``
+      is trivial on ``-1``.  Noting that ``\exp(π \vec{v}) = -1``
       for any ``\vec{v}``, I think we can show that this requires
       ``m \in \mathbb{Z}``.
     - Basically, the point is that the representations of
@@ -85,14 +85,14 @@ discussion; maybe the paper has better references.
 Theorem 2.16 of [Hanson-Yakovlev](@cite HansonYakovlev_2002) says that
 an orthonormal basis of a product of ``L^2`` spaces is given by the
 product of the orthonormal bases of the individual spaces.
-Furthermore, on page 354, they point out that ``\{(1/\sqrt{2\pi})
-e^{imϕ}\}`` is an orthonormal basis of ``L^2(0,2\pi)``, while the
+Furthermore, on page 354, they point out that ``\{(1/\sqrt{2π})
+e^{imϕ}\}`` is an orthonormal basis of ``L^2(0,2π)``, while the
 set ``\{1/c_{n,m} P_n^m(\cos θ)`` is an orthonormal basis of
-``L^2(0, \pi)`` in the ``θ`` coordinate.  Therefore, the product
+``L^2(0, π)`` in the ``θ`` coordinate.  Therefore, the product
 of these two sets is an orthonormal basis of the product space
-``L^2\left((0,2\pi) \times (0, \pi)\right)``, which forms a coordinate
+``L^2\left((0,2π) \times (0, π)\right)``, which forms a coordinate
 space for ``𝕊²``.  I would probably modify this to point out that
-``(0,2\pi)`` is really ``𝕊¹``, and then we could extend it to point
+``(0,2π)`` is really ``𝕊¹``, and then we could extend it to point
 out that you can throw on another factor of ``𝕊¹`` to cover ``𝕊³``,
 which happens to give us the Wigner D-matrices.
 
@@ -215,7 +215,7 @@ spherical harmonics.  The key expression is Eq. (15) of section 4³
 \frac{1}{2^ℓ ℓ!} \frac{1}{\sin^mθ}
 \frac{d^{ℓ-m}}{d(\cos θ)^{ℓ-m}} \sin^{2ℓ}θ.
 ```
-When multiplied by Eq. (5) ``\Phi(m) = e^{imϕ} / \sqrt{2\pi}``,
+When multiplied by Eq. (5) ``\Phi(m) = e^{imϕ} / \sqrt{2π}``,
 this gives the spherical harmonic function.  The right-hand side of
 the expression above is usually immediately replaced by a simpler
 expression using Legendre polynomials, but this just shifts sign
@@ -371,7 +371,7 @@ L_{\pm} 𝔇^{(ℓ)}_{m',m}(𝐑)
 while Eq. (21) relates the Wigner D-matrix to the spin-weighted spherical harmonics as
 ```math
 {}_{s}Y_{ℓ,m}(𝐑)
-= (-1)^s \sqrt{\frac{2ℓ+1}{4\pi}} 𝔇^{(ℓ)}_{m,-s}(𝐑).
+= (-1)^s \sqrt{\frac{2ℓ+1}{4π}} 𝔇^{(ℓ)}_{m,-s}(𝐑).
 ```
 Plugging the latter into the former, we get
 ```math
@@ -394,10 +394,10 @@ convention.
 
 ```math
 \begin{aligned}
-d_{m',m}^{j}(\pi)        &= (-1)^{j-m}  δ_{m',-m} \\[6pt]
-d_{m',m}^{j}(\pi-β)  &= (-1)^{j+m'}  d_{m',-m}^{j}(β)\\[6pt]
-d_{m',m}^{j}(\pi+β)  &= (-1)^{j-m}  d_{m',-m}^{j}(β)\\[6pt]
-d_{m',m}^{j}(2\pi+β) &= (-1)^{2j}    d_{m',m}^{j}(β)\\[6pt]
+d_{m',m}^{j}(π)        &= (-1)^{j-m}  δ_{m',-m} \\[6pt]
+d_{m',m}^{j}(π-β)  &= (-1)^{j+m'}  d_{m',-m}^{j}(β)\\[6pt]
+d_{m',m}^{j}(π+β)  &= (-1)^{j-m}  d_{m',-m}^{j}(β)\\[6pt]
+d_{m',m}^{j}(2π+β) &= (-1)^{2j}    d_{m',m}^{j}(β)\\[6pt]
 d_{m',m}^{j}(-β)     &= d_{m,m'}^{j}(β) = (-1)^{m'-m} d_{m',m}^{j}(β)
 \end{aligned}
 ```

@@ -62,7 +62,7 @@ import ..ConventionsUtilities: 𝒾, ❗, dʲsin²ᵏθdcosθʲ
 # ```math
 # Y_{l}^{m}(θ, ϕ)
 # =
-# \frac{(-1)^l}{2^l l!} \sqrt{\frac{(2l+1)}{4\pi} \frac{(l+m)!}{(l-m)!}}
+# \frac{(-1)^l}{2^l l!} \sqrt{\frac{(2l+1)}{4π} \frac{(l+m)!}{(l-m)!}}
 # e^{i m ϕ} (\sin θ)^{-m}
 # \frac{d^{l-m}}{d(\cos θ)^{l-m}} (\sin θ)^{2l},
 # ```
@@ -80,7 +80,7 @@ end
 # ```math
 # Y_{l}^{m}(θ, ϕ)
 # =
-# \frac{(-1)^{l+m}}{2^l l!} \sqrt{\frac{(2l+1)}{4\pi} \frac{(l-m)!}{(l+m)!}}
+# \frac{(-1)^{l+m}}{2^l l!} \sqrt{\frac{(2l+1)}{4π} \frac{(l-m)!}{(l+m)!}}
 # e^{i m ϕ} (\sin θ)^m
 # \frac{d^{l+m}}{d(\cos θ)^{l+m}} (\sin θ)^{2l}.
 # ```

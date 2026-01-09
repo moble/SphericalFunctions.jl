@@ -21,12 +21,12 @@ unit basis vectors ``(𝐱, 𝐲, 𝐳)``.
 ## Spherical coordinates
 We define spherical coordinates ``(r, θ, ϕ)`` and unit basis
 vectors ``(𝐧, \boldsymbol{θ}, \boldsymbol{ϕ})``.  The "polar
-angle" ``θ \in [0, \pi]`` measures the angle between the
+angle" ``θ \in [0, π]`` measures the angle between the
 specified direction and the positive ``𝐳`` axis.  The "azimuthal
-angle" ``ϕ \in [0, 2\pi)`` measures the angle between the
+angle" ``ϕ \in [0, 2π)`` measures the angle between the
 projection of the specified direction onto the ``𝐱``-``𝐲`` plane and
 the positive ``𝐱`` axis, with the positive ``𝐲`` axis corresponding
-to the positive angle ``ϕ = \pi/2``.
+to the positive angle ``ϕ = π/2``.
 
 ## Quaternions
 A quaternion is written ``𝐐 = W + X𝐢 + Y𝐣 + Z𝐤``, where ``𝐢^2 =
@@ -78,10 +78,10 @@ Euler angles parametrize a unit quaternion as
 =
 \exp(α 𝐤/2)\, \exp(β 𝐣/2)\, \exp(γ 𝐤/2).
 ```
-The angles ``α`` and ``γ`` take values in ``[0, 2\pi)``.
-The angle ``β`` takes values in ``[0, 2\pi]`` to parametrize the
+The angles ``α`` and ``γ`` take values in ``[0, 2π)``.
+The angle ``β`` takes values in ``[0, 2π]`` to parametrize the
 group of unit quaternions ``\mathrm{Spin}(3) = \mathrm{SU}(2)``, or in
-``[0, \pi]`` to parametrize the group of rotations ``\mathrm{SO}(3)``.
+``[0, π]`` to parametrize the group of rotations ``\mathrm{SO}(3)``.
 
 By comparison, we can immediately see that spherical coordinates
 ``(θ, ϕ)`` can be represented as Euler angles with the
@@ -205,7 +205,7 @@ package defines the spherical harmonics in terms of Wigner's 𝔇
 matrices, by way of the spin-weighted spherical harmonics, as a
 function of a quaternion:
 ```math
-Y_{l,m}(𝐐) = \sqrt{\frac{2ℓ+1}{4\pi}} e^{imϕ}
+Y_{l,m}(𝐐) = \sqrt{\frac{2ℓ+1}{4π}} e^{imϕ}
     D^{(l)}_{m,0}(𝐐),
 ```
 where ``D^{(l)}_{m,0}`` is the Wigner 𝔇 matrix.  This is a
@@ -219,7 +219,7 @@ terms of spherical coordinates, that expression is
 \begin{align}
   Y_{l,m}
   &=
-  \sqrt{\frac{2ℓ+1}{4\pi}} e^{imϕ}
+  \sqrt{\frac{2ℓ+1}{4π}} e^{imϕ}
   \sum_{k = k_1}^{k_2}
   \frac{(-1)^k ℓ! [(ℓ+m)!(ℓ-m)!]^{1/2}}
   {(ℓ+m-k)!(ℓ-k)!k!(k-m)!}
@@ -330,7 +330,7 @@ of comparison with other sources.  The expression is
 \begin{align}
   {}_{s}Y_{l,m}
   &=
-  (-1)^s\sqrt{\frac{2ℓ+1}{4\pi}} e^{imϕ}
+  (-1)^s\sqrt{\frac{2ℓ+1}{4π}} e^{imϕ}
   \sum_{k = k_1}^{k_2}
   \frac{(-1)^k[(ℓ+m)!(ℓ-m)!(ℓ-s)!(ℓ+s)!]^{1/2}}
   {(ℓ+m-k)!(ℓ+s-k)!k!(k-s-m)!}

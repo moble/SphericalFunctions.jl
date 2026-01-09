@@ -53,7 +53,7 @@ spherical harmonics [Newman_1966](@cite) are simply proportional to
 Wigner's 𝔇 matrices,
 ```math
 {}_{s}Y_{ℓ,m}(θ, ϕ, ψ)
-= (-1)^s \sqrt{\frac{2ℓ+1}{4\pi}} \, 𝔇^{(ℓ)}_{m, -s}(ϕ, θ, ψ),
+= (-1)^s \sqrt{\frac{2ℓ+1}{4π}} \, 𝔇^{(ℓ)}_{m, -s}(ϕ, θ, ψ),
 ```
 so we might as well think of them as being parameterized in the same
 way.

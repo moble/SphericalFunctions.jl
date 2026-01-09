@@ -15,7 +15,7 @@ introduced by [Newman_1966](@citet), they are essentially components
 of Wigner's ``𝔇`` matrices:
 ```math
 {}_{s}Y_{ℓ,m}(𝐑)
-  = (-1)^s \sqrt{\frac{2ℓ+1}{4\pi}} \, 𝔇^{(ℓ)}_{m, -s}(𝐑).
+  = (-1)^s \sqrt{\frac{2ℓ+1}{4π}} \, 𝔇^{(ℓ)}_{m, -s}(𝐑).
 ```
 As such, they can be computed using the same [``H`` recursion](@ref
 "Algorithm for computing ``H``") algorithm as the Wigner

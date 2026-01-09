@@ -50,8 +50,8 @@ coordinates by
 ```math
 \begin{aligned}
 r &= \sqrt{x^2 + y^2 + z^2} &&\in [0, \infty), \\
-θ &= \arccos\left(\frac{z}{r}\right) &&\in [0, \pi], \\
-ϕ &= \arctan\left(\frac{y}{x}\right) &&\in [0, 2\pi),
+θ &= \arccos\left(\frac{z}{r}\right) &&\in [0, π], \\
+ϕ &= \arctan\left(\frac{y}{x}\right) &&\in [0, 2π),
 \end{aligned}
 ```
 where we assume the ``\arctan`` in the expression for ``ϕ`` is
@@ -111,13 +111,13 @@ Integration in Cartesian coordinates is, of course, trivial as
 In spherical coordinates, the integrand involves the square-root of
 the determinant of the metric, so we have
 ```math
-\int_{\mathbb{R}^3} f\, d^3𝐫 = \int_0^\infty \int_0^\pi \int_0^{2\pi} f\, r^2 \sin θ\, dr\, dθ\, dϕ.
+\int_{\mathbb{R}^3} f\, d^3𝐫 = \int_0^\infty \int_0^π \int_0^{2π} f\, r^2 \sin θ\, dr\, dθ\, dϕ.
 ```
 Restricting to the unit sphere, we obtain the usual surface element
 ```math
-\int_{𝕊²} f\, d^2\Omega = \int_0^\pi \int_0^{2\pi} f\, \sin θ\, dθ\, dϕ.
+\int_{𝕊²} f\, d^2\Omega = \int_0^π \int_0^{2π} f\, \sin θ\, dθ\, dϕ.
 ```
-Note that ``\int_{𝕊²} d^2\Omega = 4\pi``.
+Note that ``\int_{𝕊²} d^2\Omega = 4π``.
 
 
 ## Four-dimensional space: Quaternions and rotations
@@ -278,32 +278,32 @@ the relation:
 ```math
 \begin{aligned}
 R &= \sqrt{W^2 + X^2 + Y^2 + Z^2} &&\in [0, \infty), \\
-α &= \arctan\frac{Z}{W} + \arctan\frac{-X}{Y} &&\in [0, 2\pi), \\
-β &= 2\arccos\sqrt{\frac{W^2+Z^2}{W^2+X^2+Y^2+Z^2}} &&\in [0, \pi], \\
-γ &= \arctan\frac{Z}{W} - \arctan\frac{-X}{Y} &&\in [0, 4\pi),
+α &= \arctan\frac{Z}{W} + \arctan\frac{-X}{Y} &&\in [0, 2π), \\
+β &= 2\arccos\sqrt{\frac{W^2+Z^2}{W^2+X^2+Y^2+Z^2}} &&\in [0, π], \\
+γ &= \arctan\frac{Z}{W} - \arctan\frac{-X}{Y} &&\in [0, 4π),
 \end{aligned}
 ```
 where we again assume the ``\arctan`` in the expressions for ``α`` and
 ``γ`` is really the two-argument form that gives the correct quadrant,
 and if relevant, we use `mod` to limit the values on output.  Note
-that here, ``γ`` ranges up to ``4\pi`` rather than just ``2\pi``, as
+that here, ``γ`` ranges up to ``4π`` rather than just ``2π``, as
 in the standard Euler angles.  This is because we are describing the
 space of quaternions, rather than just the space of rotations.  If we
 restrict to quaternions with magnitude ``R=1``, we have exactly the
 group of unit quaternions ``\mathrm{Spin}(3)=\mathrm{SU}(2)``, which
 is a double cover of the rotation group ``\mathrm{SO}(3)``.  This
 extended range for ``γ`` is necessary to cover the entire space of
-quaternions; if we further restrict to ``[0, 2\pi)``, we would only
+quaternions; if we further restrict to ``[0, 2π)``, we would only
 cover the space of rotations.  This and the inclusion of ``R``
 identify precisely how this coordinate system extends the standard
 Euler angles.
 
-Note that it would also be reasonable to limit ``γ`` to ``2\pi``,
-while allowing ``β`` to range up to ``2\pi`` to cover the entire space
+Note that it would also be reasonable to limit ``γ`` to ``2π``,
+while allowing ``β`` to range up to ``2π`` to cover the entire space
 of quaternions.  This is just somewhat more delicate to compute, and
-is simply not conventional.  Also, using ``γ ∈ [0,4\pi)`` integrates
+is simply not conventional.  Also, using ``γ ∈ [0,4π)`` integrates
 nicely with our [framework of a telescope](@ref Domain) with ``γ``
-representing the rotation about its line of sight; a full ``4\pi``
+representing the rotation about its line of sight; a full ``4π``
 rotation is required for the polarizer to explore the full range of
 states of half-integer spin fields.
 
@@ -365,20 +365,20 @@ entire space of quaternions is then
 ```math
 \int_{\mathbb{R}^4} f\, d^4𝐐
 = \int_{-\infty}^\infty \int_{-\infty}^\infty \int_{-\infty}^\infty \int_{-\infty}^\infty f\, dW\, dX\, dY\, dZ
-= \int_0^\infty \int_0^{2\pi} \int_0^{\pi} \int_0^{4\pi} f\, \frac{R^3}{8} \sin β\, dR\, dα\, dβ\, dγ.
+= \int_0^\infty \int_0^{2π} \int_0^{π} \int_0^{4π} f\, \frac{R^3}{8} \sin β\, dR\, dα\, dβ\, dγ.
 ```
 Restricting to the unit sphere, we can simplify this to
 ```math
 \int_{\mathrm{Spin}(3)} f\, d^3\Omega
-= \int_0^{2\pi} \int_0^{\pi} \int_0^{4\pi} f\, \sin β\, dα\, dβ\, dγ,
+= \int_0^{2π} \int_0^{π} \int_0^{4π} f\, \sin β\, dα\, dβ\, dγ,
 ```
-where ``\int_{\mathrm{Spin}(3)} d^3\Omega = 16\pi^2``.  Finally,
+where ``\int_{\mathrm{Spin}(3)} d^3\Omega = 16π^2``.  Finally,
 restricting to the space of rotations, we can further simplify this to
 ```math
 \int_{\mathrm{SO}(3)} f\, d^3\Omega
-= \int_0^{2\pi} \int_0^{\pi} \int_0^{2\pi} f\, \sin β\, dα\, dβ\, dγ,
+= \int_0^{2π} \int_0^{π} \int_0^{2π} f\, \sin β\, dα\, dβ\, dγ,
 ```
-where ``\int_{\mathrm{SO}(3)} d^3\Omega = 8\pi^2``.
+where ``\int_{\mathrm{SO}(3)} d^3\Omega = 8π^2``.
 
 ## Rotations
 
@@ -612,8 +612,8 @@ can see that the rotated field should be represented by
 f'(θ, ϕ) = \sin θ \sin(ϕ - α).
 ```
 For example, the rotated field evaluated at the point ``(θ, ϕ)
-= (\pi/2, 0)`` along the positive ``x`` axis should correspond to the
-original field evaluated at the point ``(θ, ϕ) = (\pi/2,
+= (π/2, 0)`` along the positive ``x`` axis should correspond to the
+original field evaluated at the point ``(θ, ϕ) = (π/2,
 -α)``.  This rotation is generated by ``𝔤 = α
 𝐤 / 2``, which allows us to immediately calculate
 ```math
@@ -830,9 +830,9 @@ e^{θ 𝐮 / 2} 𝐑_{α, β, γ}
 
 ```math
 \begin{aligned}
-α &= \arctan\frac{Z}{W} + \arctan\frac{-X}{Y} &&\in [0, 2\pi), \\
-β &= 2\arccos\sqrt{\frac{W^2+Z^2}{W^2+X^2+Y^2+Z^2}} &&\in [0, 2\pi], \\
-γ &= \arctan\frac{Z}{W} - \arctan\frac{-X}{Y} &&\in [0, 2\pi),
+α &= \arctan\frac{Z}{W} + \arctan\frac{-X}{Y} &&\in [0, 2π), \\
+β &= 2\arccos\sqrt{\frac{W^2+Z^2}{W^2+X^2+Y^2+Z^2}} &&\in [0, 2π], \\
+γ &= \arctan\frac{Z}{W} - \arctan\frac{-X}{Y} &&\in [0, 2π),
 \end{aligned}
 ```
 
@@ -1055,15 +1055,15 @@ equivalent one McEwen and Wiaux use (and credit to Risbo):
 ```math
 \exp\left[ β 𝐣 / 2 \right]
 =
-\exp\left[ \pi 𝐤 / 4 \right]
-\exp\left[ \pi 𝐣 / 4 \right]
+\exp\left[ π 𝐤 / 4 \right]
+\exp\left[ π 𝐣 / 4 \right]
 \exp\left[ β 𝐤 / 2 \right]
-\exp\left[ -\pi 𝐣 / 4 \right]
-\exp\left[ -\pi 𝐤 / 4 \right]
+\exp\left[ -π 𝐣 / 4 \right]
+\exp\left[ -π 𝐤 / 4 \right]
 ```
 The 𝔇 matrices corresponding to the ``𝐤`` rotations are simple
 phases, which converts the problem into one of finding the 𝔇 matrices
-for the ``𝐣`` rotations through angles of ``\pm\pi/2`` — which are
+for the ``𝐣`` rotations through angles of ``\pm π/2`` — which are
 presumably simpler to compute.  See, e.g., Varshalovich's Eq.
 4.16.(5), where they are given by purely combinatorial terms.
 
@@ -1100,7 +1100,7 @@ presumably simpler to compute.  See, e.g., Varshalovich's Eq.
       group is just ``\{1, -1\}``.  Presumably, every representation
       acting on ``1`` will give the identity matrix, so that's
       trivial.  So we just need a criterion for when a representation
-      is trivial on ``-1``.  Noting that ``\exp(\pi \vec{v}) = -1``
+      is trivial on ``-1``.  Noting that ``\exp(π \vec{v}) = -1``
       for any ``\vec{v}``, I think we can show that this requires
       ``m \in \mathbb{Z}``.
     - Basically, the point is that the representations of
@@ -1123,14 +1123,14 @@ presumably simpler to compute.  See, e.g., Varshalovich's Eq.
 Theorem 2.16 of [Hanson-Yakovlev](@cite HansonYakovlev_2002) says that
 an orthonormal basis of a product of ``L^2`` spaces is given by the
 product of the orthonormal bases of the individual spaces.
-Furthermore, on page 354, they point out that ``\{(1/\sqrt{2\pi})
-e^{imϕ}\}`` is an orthonormal basis of ``L^2(0,2\pi)``, while the
+Furthermore, on page 354, they point out that ``\{(1/\sqrt{2π})
+e^{imϕ}\}`` is an orthonormal basis of ``L^2(0,2π)``, while the
 set ``\{1/c_{n,m} P_n^m(\cos θ)`` is an orthonormal basis of
-``L^2(0, \pi)`` in the ``θ`` coordinate.  Therefore, the product
+``L^2(0, π)`` in the ``θ`` coordinate.  Therefore, the product
 of these two sets is an orthonormal basis of the product space
-``L^2\left((0,2\pi) \times (0, \pi)\right)``, which forms a coordinate
+``L^2\left((0,2π) \times (0, π)\right)``, which forms a coordinate
 space for ``𝕊²``.  I would probably modify this to point out that
-``(0,2\pi)`` is really ``𝕊¹``, and then we could extend it to point
+``(0,2π)`` is really ``𝕊¹``, and then we could extend it to point
 out that you can throw on another factor of ``𝕊¹`` to cover ``𝕊³``,
 which happens to give us the Wigner D-matrices.
 
