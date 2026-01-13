@@ -193,12 +193,6 @@ S3_surface_area = sympy.integrate(
     (α, 0, 2π)
 )
 
-# Therefore, the normalized volume-form factor on the unit sphere 𝕊³ is
-S3_normalized_volume_form_factor = sympy.simplify(
-    four_volume_form_factor.subs(abs(sympy.sin(β)), sympy.sin(β)).subs(R, 1)
-    / S3_surface_area
-)
-
 # And finally, we can restrict back to ``\mathrm{SO}(3)`` by taking ``γ ∈ [0, 2π]`` (while
 # keeping ``α ∈ [0, 2π]`` and ``β ∈ [0, π]``), and integrating over that range:
 SO3_volume = sympy.integrate(
@@ -210,9 +204,4 @@ SO3_volume = sympy.integrate(
         (β, 0, π),
     ),
     (α, 0, 2π)
-)
-
-# So the normalized volume-form factor on ``\mathrm{SO}(3)`` is
-SO3_normalized_volume_form_factor = sympy.simplify(
-    four_volume_form_factor.subs(abs(sympy.sin(β)), sympy.sin(β)).subs(R, 1) / SO3_volume
 )
