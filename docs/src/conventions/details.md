@@ -372,13 +372,13 @@ Restricting to the unit sphere, we can simplify this to
 \int_{\mathrm{Spin}(3)} f\, d^3\Omega
 = \int_0^{2π} \int_0^{π} \int_0^{4π} f\, \sin β\, dα\, dβ\, dγ,
 ```
-where ``\int_{\mathrm{Spin}(3)} d^3\Omega = 16π^2``.  Finally,
+where ``\int_{\mathrm{Spin}(3)} d^3\Omega = 2π^2``.  Finally,
 restricting to the space of rotations, we can further simplify this to
 ```math
 \int_{\mathrm{SO}(3)} f\, d^3\Omega
 = \int_0^{2π} \int_0^{π} \int_0^{2π} f\, \sin β\, dα\, dβ\, dγ,
 ```
-where ``\int_{\mathrm{SO}(3)} d^3\Omega = 8π^2``.
+where ``\int_{\mathrm{SO}(3)} d^3\Omega = π^2``.
 
 ## Rotations
 
