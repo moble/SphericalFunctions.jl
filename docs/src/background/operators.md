@@ -147,9 +147,11 @@ becomes
 ```math
 [\hat{e}_j, \hat{e}_k] = 2 \sum_{l=1}^{3} ε_{jkl} \hat{e}_l.
 ```
-Plugging this into the general expression ``[L_𝐚, L_𝐛] = \frac{i}{2}
-L_{[𝐚,𝐛]}``, we obtain (except for that factor of ``\hbar``) the
-version used in quantum physics.
+That is, the commutator ``[𝐚,𝐛]`` is essentially twice the cross
+product of the corresponding vectors.  Plugging this into the general
+expression ``[L_𝐚, L_𝐛] = \frac{i}{2} L_{[𝐚,𝐛]}``, we obtain
+(except for that factor of ``\hbar``) the version used in quantum
+physics.
 
 The raising and lowering operators relative to ``L_z`` and ``R_z``
 satisfy — *by definition of raising and lowering operators* — the
@@ -166,10 +168,11 @@ L_\pm = L_x \pm i L_y
 \qquad
 R_\pm = R_x \pm i R_y.
 ```
-(Interestingly, this procedure also shows that rasing and lowering
-operators can only exist if the factor in front of the derivatives in
-the definitions of ``L_g`` and ``R_g`` are pure imaginary numbers.) In
-particular, this results in the commutator relations
+(Interestingly, the solution process also shows that rasing and
+lowering operators can only exist if the factor in front of the
+derivatives in the definitions of ``L_g`` and ``R_g`` are pure
+imaginary numbers.) In particular, this results in the commutator
+relations
 ```math
 [L_+, L_-] = 2L_z
 \qquad
