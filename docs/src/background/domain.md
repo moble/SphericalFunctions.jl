@@ -3,8 +3,11 @@
 This package deals with standard spherical harmonics, spin-weighted
 spherical harmonics, and Wigner's 𝔇 matrices.  The key question is
 what domains these functions are defined on — what their arguments
-are.  We will discover that it's best to use quaternions for all
-three.
+are.  Here, we will argue that it's best to use quaternions for all
+three.  The rest of this package and documentation use the language of
+quaternions, though we make contact with the more traditional
+parameterizations in terms of spherical coordinates and Euler angles
+as needed.
 
 ## Three functions on two domains
 
@@ -254,6 +257,15 @@ defined there.  That is, the function value will not be independent of
 the choice of ``ϕ`` at the poles, so the "wrapping" is not well
 defined.
 
-This is how we can quite reasonably write spin-weighted spherical
-harmonics as functions of spherical coordinates, even though they
-cannot be defined as functions on the sphere itself.
+Still, this approach does give us the value of the function for any
+particular point on ``𝕊²`` *and* a particular choice of tangent
+direction at that point.  Moreover, for a function with a definite
+spin weight ``s``, this is enough information to reconstruct the value
+of the function for *any other* choice of tangent direction at that
+same point.  This is how we can quite reasonably write spin-weighted
+spherical harmonics as functions of spherical coordinates, even though
+they cannot be defined as functions on the sphere itself.  Of course,
+using the fundamental domain is a much more powerful and flexible
+approach; among other things, it allows us to define differential
+operators acting on these functions, which we will do [next](@ref
+background_differential_operators).

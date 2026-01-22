@@ -47,21 +47,43 @@ R_𝐠(f)\{𝐐\} := -\frac{i}{2}
     \left. \frac{df\left(𝐐\, e^{-ϵ\,𝐠}\right)}{d ϵ} \right|_{ϵ=0}.
 ```
 Note that the exponential multiplies ``𝐐`` *on the right* — hence the
-name.
+name.  Also observe that
+```math
+𝐐\, e^{-ϵ\,𝐠}
+= 𝐐\, e^{-ϵ\,𝐠}\, 𝐐⁻¹\, 𝐐
+= e^{-ϵ\,𝐐\, 𝐠\, 𝐐⁻¹}\, 𝐐
+```
+and
+```math
+e^{ϵ\,𝐠}\, 𝐐
+= 𝐐\, 𝐐⁻¹\, e^{-ϵ\,𝐠}\, 𝐐
+= 𝐐\, e^{-ϵ\,𝐐⁻¹\, 𝐠\, 𝐐},
+```
+which mean that
+```math
+R_𝐠(f)\{𝐐\} = L_{-𝐐\, 𝐠\, 𝐐⁻¹}(f)\{𝐐\}
+\qquad \text{and} \qquad
+L_𝐠(f)\{𝐐\} = R_{-𝐐⁻¹\, 𝐠\, 𝐐}(f)\{𝐐\}.
+```
+That is, the right Lie derivative with respect to ``𝐠`` is equal to
+the left Lie derivative with respect to the "rotated" version of the
+algebra element ``-𝐠``, and vice versa.  But the arguments *depend on
+the value* ``𝐐``, which means, for example, that commutator
+expressions can't be evaluated by simple static substitution.
 
-This operator is less common in physics, because it represents the
-dependence of the function on the choice of frame (or coordinate
-system), which is not usually interesting.  Multiplication on the left
-represents a rotation of the physical system, while rotation on the
-right represents a rotation of the coordinate system.  However, this
-dependence on coordinate system is precisely what defines the *spin
-weight* of a function, so this class of operators is relevant in
-discussions of spin-weighted spherical functions.  In particular,
-``R_z`` is the spin-weight operator — meaning that when it acts on a
-spin-weighted spherical harmonic of spin weight ``s``, it returns
-``s`` times that same function.  Moreover, the operators ``R_\pm``
-correspond (up to a sign) to the spin-raising and -lowering operators
-``\eth`` and ``\bar{\eth}`` originally introduced by
+This ``R_𝐠`` operator is less common in physics, because it
+represents the dependence of the function on the choice of frame (or
+coordinate system), which is not usually interesting.  Multiplication
+on the left represents a rotation of the physical system, while
+rotation on the right represents a rotation of the coordinate system.
+However, this dependence on coordinate system is precisely what
+defines the *spin weight* of a function, so this class of operators is
+relevant in discussions of spin-weighted spherical functions.  In
+particular, ``R_z`` is the spin-weight operator — meaning that when it
+acts on a spin-weighted spherical harmonic of spin weight ``s``, it
+returns ``s`` times that same function.  Moreover, the operators
+``R_\pm`` correspond (up to a sign) to the spin-raising and -lowering
+operators ``\eth`` and ``\bar{\eth}`` originally introduced by
 [Newman_1966](@citet), as explained in greater detail by
 [Boyle_2016](@citet).
 
@@ -80,12 +102,11 @@ L_{𝐚+𝐛} = L_{𝐚} + L_{𝐛}
 \qquad \text{and} \qquad
 R_{𝐚+𝐛} = R_{𝐚} + R_{𝐛},
 ```
-for any scalar ``s`` and any elements of the Lie algebra
-``𝐚`` and ``𝐛``.  In particular, if the Lie algebra
-has a basis ``𝐞_{(j)}``, we use the shorthand ``L_j`` and
-``R_j`` for ``L_{𝐞_{(j)}}`` and ``R_{𝐞_{(j)}}``,
-respectively, and we can expand any operator in terms of these basis
-operators:
+for any *real* scalar ``s`` and any elements of the Lie algebra ``𝐚``
+and ``𝐛``.  In particular, if the Lie algebra has a basis
+``𝐞_{(j)}``, we use the shorthand ``L_j`` and ``R_j`` for
+``L_{𝐞_{(j)}}`` and ``R_{𝐞_{(j)}}``, respectively, and we can expand
+any operator in terms of these basis operators:
 ```math
 L_{𝐚} = \sum_{j} a_j L_j
 \qquad \text{and} \qquad
@@ -100,7 +121,9 @@ relations
 ```math
 \left[ L_𝐚, L_𝐛 \right] = \frac{i}{2} L_{[𝐚,𝐛]}
 \qquad
-\left[ R_𝐚, R_𝐛 \right] = \frac{i}{2} R_{[𝐚,𝐛]},
+\left[ R_𝐚, R_𝐛 \right] = \frac{i}{2} R_{[𝐚,𝐛]}
+\qquad
+\left[ L_𝐚, R_𝐛 \right] = 0,
 ```
 where ``[𝐚,𝐛]`` is the commutator of the two generators, which can
 be obtained directly as the commutator of the corresponding
@@ -123,8 +146,8 @@ produce similar commutators for ``R``.[^1]
     sense to use the coefficient ``i/2`` in general; it was chosen
     here for consistency with the standard angular-momentum operators.
     If that coefficient is changed in the definitions of the Lie
-    derivatives, the only change to the commutator relations would the
-    substitution of that coefficient.  The presence of an ``i`` is
+    derivatives, the only change to the commutator relations would be
+    the substitution of that coefficient.  The presence of an ``i`` is
     important to ensure that the operators are Hermitian when acting on
     appropriate function spaces.
 
@@ -168,7 +191,7 @@ L_\pm = L_x \pm i L_y
 \qquad
 R_\pm = R_x \pm i R_y.
 ```
-(Interestingly, the solution process also shows that rasing and
+(Interestingly, the solution process also shows that raising and
 lowering operators can only exist if the factor in front of the
 derivatives in the definitions of ``L_g`` and ``R_g`` are pure
 imaginary numbers.) In particular, this results in the commutator

@@ -34,7 +34,11 @@ L_z \left\{ Y_{ℓ,m} \right\}(θ, ϕ)
 \end{aligned}
 ```
 (As usual, we do not include the factors of ``\hbar`` that would
-normally be included in quantum mechanics texts.)
+normally be included in quantum mechanics texts.)  Familiar arguments
+— either from spectra of operators, or continuity of the functions —
+tell us that the allowed values of ``ℓ`` are non-negative integers,
+and for each ``ℓ``, the allowed values of ``m`` are integers
+satisfying ``-ℓ ≤ m ≤ ℓ``.
 
 But now, we consider functions defined on the full group
 ``\mathrm{Spin}(3)``.  In that case, we have both left and right Lie
@@ -60,8 +64,12 @@ R_z \left\{ {}_{s}Y_{ℓ,m} \right\}(𝐐)
 &= s \left\{ {}_{s}Y_{ℓ,m} \right\}(𝐐).
 \end{aligned}
 ```
-These conditions only determine the functions up to a normalization
-factor, which we discuss in the next section.
+In this case, similar arguments show that the allowed values of ``ℓ``
+are non-negative integers or half-integers, and for each ``ℓ``, the
+allowed values of ``m`` and ``s`` are correspondingly integers or
+half-integers satisfying ``-ℓ ≤ m ≤ ℓ`` and ``-ℓ ≤ s ≤ ℓ``.  These
+conditions only determine the functions up to a normalization factor,
+which we discuss in the next section.
 
 First, though, we take a moment to consider the effect of the raising
 and lowering operators.  We know the commutators from the previous
@@ -113,7 +121,8 @@ unit three-sphere ``𝕊³``, which has volume ``2π²``, this makes sense.
     engineering, and computer science.  But note that mathematicians
     more commonly write ``⟨f, g⟩`` (with a comma instead of a vertical
     bar) and define the inner product with opposite linearity: linear
-    in its first argument and conjugate-linear in its second argument.
+    in its first argument and conjugate-linear in its second argument,
+    so that ``⟨af|bg⟩=a⟨f|g⟩b̄``.
 
 Unfortunately, these are not actually the conventional inner product
 and norm used in the literature.  The difference is not too difficult
@@ -146,11 +155,11 @@ the ``𝕊²`` norm.
     its integral over ``\mathrm{Spin}(3)`` will only pick up
     contributions from the part of that function with spin weight 0.
 
+!!! danger "#TODO"
 
-* Note that SWSHs with different spin weights are not orthogonal under
-  the ``𝕊²`` inner product.
-* "Reproducing kernel" and invariance of integral implies factors of
-  2ell+1/4pi
+    Finish this section, noting that SWSHs with different 
+    spin weights are not orthogonal under
+    the ``𝕊²`` inner product.
 
 
 ## Defining ``𝔇^{(ℓ)}_{m', m}``
@@ -194,7 +203,12 @@ That is, Wigner's ``𝔇`` matrices are proportional to the
 spin-weighted spherical harmonics.  We can get the proportionality
 factor by applying the definition above with ``𝐐=𝟏``, in which case
 the integral simplifies to the orthonormality condition for the
-spherical harmonics:
+spin-weighted spherical harmonics:
 ```math
 𝔇^{(ℓ)}_{m', m}(𝟏) = \delta_{m', m}.
 ```
+
+!!! danger "#TODO"
+
+    Check the signs on the eigenvalues above, and refer to 
+    the Notes page on normalization to relate Y to D.
