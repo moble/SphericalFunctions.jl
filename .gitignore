@@ -33,7 +33,27 @@ benchmark/results.md
 # Ignore my notes and settings
 /notes
 .vscode
-
+conventions.slides.json
 
 rotate.jl
 
+docs/.CondaPkg
+
+## The following are generated during the documentation build process
+## from files in docs/literate_input, and added to this file automatically
+## by docs/make_literate.jl
+docs/src/conventions/calculations/euler_angular_momentum.md
+docs/src/conventions/comparisons/blanchet_2024.md
+docs/src/conventions/comparisons/cohen_tannoudji_1991.md
+docs/src/conventions/comparisons/condon_shortley_1935.md
+docs/src/conventions/comparisons/lalsuite_2025.md
+docs/src/conventions/comparisons/ninja_2011.md
+docs/src/conventions/comparisons/lalsuite_SphericalHarmonics.md
+docs/src/conventions/calculations/metrics_and_integration.md
+docs/src/conventions/comparisons/euler_1767.md
+docs/src/conventions/comparisons/clifford_1878.md
+docs/src/conventions/comparisons/hamilton_1844.md
+docs/src/conventions/comparisons/tait_1868.md
+docs/src/conventions/comparisons/gibbs_1881.md
+docs/src/conventions/comparisons/wilson_1921.md
+docs/src/conventions/comparisons/whittaker_1947.md

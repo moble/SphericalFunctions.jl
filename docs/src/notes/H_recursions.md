@@ -1,17 +1,17 @@
 # Algorithm for computing ``H``
 
 The ``H`` array, as given by [Gumerov_2015](@citet), is related to Wigner's (small) ``d`` matrices —
-which is itself related to the (big) ``\mathfrak{D}`` matrices and the various spin-weighted
-spherical harmonics ``{}_{s}Y_{\ell,m}`` — via
+which is itself related to the (big) ``𝔇`` matrices and the various spin-weighted
+spherical harmonics ``{}_{s}Y_{ℓ,m}`` — via
 
 ```math
-d_{\ell}^{m',m} = \epsilon_{m'} \epsilon_{-m} H_{\ell}^{m',m},
+d_{ℓ}^{m',m} = ϵ_{m'} ϵ_{-m} H_{ℓ}^{m',m},
 ```
 
 where
 
 ```math
-\epsilon_k =
+ϵ_k =
   \begin{cases}
     1 & k\leq 0, \\
     (-1)^k & k > 0.
@@ -19,7 +19,7 @@ where
 ```
 
 ``H`` has various advantages over ``d``, including the fact that it can be efficiently
-and robustly valculated via recurrence relations, and the following symmetry
+and robustly calculated via recurrence relations, and the following symmetry
 relations:
 
 ```math
@@ -46,7 +46,7 @@ to compute values with ``|m'| ≤ |s|``, which constitutes a dramatic savings
 when ``|s| ≪ ℓₘₐₓ``.  The data are stored in the array `Hwedge`.
 
 However, some parts of this calculation require calculating terms with
-``m=n+1`` — whereas such elements of ``d`` and ``\mathfrak{D}`` are considered
+``m=n+1`` — whereas such elements of ``d`` and ``𝔇`` are considered
 zero.  For this purpose, we need additional storage.  Rather than allocating
 extra space, or requiring some additional workspace to be passed in, we can
 actually use parts of the input ``H`` data space for temporary storage while
@@ -79,18 +79,22 @@ Here, ``k_0=1`` and ``k_m=2`` for ``m>0``, and ``P̄`` is defined as
 ```math
   P̄_{n,|m|} = \sqrt{\frac{k_m(2n+1)(n-m)!}{(n+m)!}} P_{n,|m|}.
 ```
-Note that the factor of ``(-1)^m`` in the first equation above is different from
-the convention used here, and is related to the
-[Condon-Shortley phase](https://en.wikipedia.org/wiki/Spherical_harmonics#Condon%E2%80%93Shortley_phase).
-Note that Gumerov and Duraiswami use the notation ``P^{|m|}_{n}``, whereas we are
-using the notation ``P_{n,|m|}`` — which usually differ by a factor of ``(-1)^m``.
+Note that the factor of ``(-1)^m`` in the first equation above is
+different from the convention used here, and is related to the
+[Condon-Shortley
+phase](https://en.wikipedia.org/wiki/Spherical_harmonics#Condon%E2%80%93Shortley_phase).
+Note that Gumerov and Duraiswami use the notation ``P^{|m|}_{n}``,
+whereas we are using the notation ``P_{n,|m|}`` — which usually differ
+by a factor of ``(-1)^m``.
 
-We use the "fully normalized" associated Legendre functions (fnALF) ``P̄`` because, as explained by
-[Xing_2019](@citet), it is possible to compute these values very efficiently and accurately, while
-also delaying the onset of overflow and underflow.
+We use the "fully normalized" associated Legendre functions (fnALF)
+``P̄`` because, as explained by [Xing_2019](@citet), it is possible to
+compute these values very efficiently and accurately, while also
+delaying the onset of overflow and underflow.
 
-The algorithm Xing et al. describe as the best for computing ``P̄`` is due to
-Belikov (1991), and is given by them as
+The algorithm Xing et al. describe as the best for computing ``P̄`` is
+due to [Strakhov_1980](@citet) via [Belikov_1991](@citet), and is
+given by them as
 ```math
 \begin{aligned}
   P̄_{0,0} &= 1 \\
@@ -109,7 +113,7 @@ where the coefficients are given by
   b_n &= \sqrt{\frac{2(n-1)(2n+1)}{n(2n-1)}} \\
   c_{n,m} &= \frac{1}{n} \sqrt{\frac{(n+m)(n-m)(2n+1)}{2n-1}} \\
   d_{n,m} &= \frac{1}{2n} \sqrt{\frac{(n-m)(n-m-1)(2n+1)}{2n-1}} \\
-  e_{n,m} &= \frac{1}{2n} \sqrt{\frac{2}{2-\delta_0^{m-1}}} \sqrt{\frac{(n+m)(n+m-1)(2n+1)}{2n-1}}.
+  e_{n,m} &= \frac{1}{2n} \sqrt{\frac{2}{2-δ_0^{m-1}}} \sqrt{\frac{(n+m)(n+m-1)(2n+1)}{2n-1}}.
 \end{aligned}
 ```
 

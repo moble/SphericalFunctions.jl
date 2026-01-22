@@ -1,70 +1,44 @@
 module SphericalFunctions
 
-using FastTransforms: FFTW, fft, fftshift!, ifft, ifftshift!, irfft,
-                      plan_bfft!, plan_fft, plan_fft!
-using LinearAlgebra: LinearAlgebra, Bidiagonal, Diagonal, convert, ldiv!, mul!
-using OffsetArrays: OffsetArray, OffsetVector
-using ProgressMeter: Progress, next!
-using Quaternionic: Quaternionic, Rotor, from_spherical_coordinates,
-                    to_euler_phases, to_spherical_coordinates
+using TestItems: @testitem, @testsnippet
+using FastTransforms: ifft, irfft
+using Quaternionic: Quaternionic, from_spherical_coordinates
 using StaticArrays: @SVector
-using SpecialFunctions, DoubleFloats
-using LoopVectorization: @turbo
-using Hwloc: num_physical_cores
-using Base.Threads: @threads, nthreads
-using TestItems: @testitem
-
-const MachineFloat = Union{Float16, Float32, Float64}
+using SpecialFunctions
+using DoubleFloats
+using LinearAlgebra: Diagonal, Bidiagonal
+using FixedSizeArrays: FixedSizeVectorDefault, FixedSizeVector
 
 
-include("utils.jl")
+# Base.IEEEFloat is not public, so we just define our own
+const IEEEFloat = Union{Float16, Float32, Float64}
 
-include("pixelizations.jl")
+# Utilities (kept top-level; code lives in `src/utilities/`)
+include("utilities/utils.jl")
+
+include("utilities/pixelizations.jl")
 export golden_ratio_spiral_pixels, golden_ratio_spiral_rotors
 export sorted_rings, sorted_ring_pixels, sorted_ring_rotors
 export fejer1_rings, fejer2_rings, clenshaw_curtis_rings
 
-include("complex_powers.jl")
-export complex_powers, complex_powers!
+include("utilities/complex_powers.jl")
+export complex_powers, complex_powers!, ComplexPowers
 
-include("indexing.jl")
-export Ysize, Yrange, Yindex, deduce_limits, theta_phi, phi_theta
-export WignerHsize, WignerHindex, _WignerHindex, WignerHrange
-export WignerDsize, WignerDindex, WignerDrange
-
-include("iterators.jl")
-export D_iterator, d_iterator, sYlm_iterator, λ_iterator
-# Legacy API:
-export Diterator, diterator, Yiterator, λiterator
-
-include("associated_legendre.jl")
-export ALFRecursionCoefficients, ALFrecurse!, ALFcompute!, ALFcompute
-
-include("Hrecursion.jl")
-export H!, H_recursion_coefficients
-
-include("evaluate.jl")
-export d_prep, d_matrices, d_matrices!
-export D_prep, D_matrices, D_matrices!
-export sYlm_prep, sYlm_values, sYlm_values!
-# Legacy API:
-export d!, d, D!, Y!, dprep, Dprep, Yprep, ₛ𝐘
-
-include("weights.jl")
+include("utilities/weights.jl")
 export fejer1, fejer2, clenshaw_curtis
 
-include("ssht.jl")
-export SSHT, pixels, rotors
-
-include("map2salm.jl")
-export map2salm, map2salm!, plan_map2salm
-
-include("operators.jl")
+include("utilities/operators.jl")
 export L², Lz, L₊, L₋, R², Rz, R₊, R₋, ð, ð̄
 
-#include("rotate.jl")
-#export rotate!
+include("wigner/wigner.jl")
+export AbstractWignerMatrix, WignerMatrix, WignerDMatrix, WignerdMatrix
+export WignerCalculator, WignerDCalculator, WignerdCalculator, WignerHCalculator
+export recurrence!
+public ℓ, ℓₘᵢₙ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ
+public ell, ellmin, mpmax, mpmin, mmax, mmin
 
+# Legacy API (no legacy names exported from the top-level module)
+include("deprecated/Deprecated.jl")
+export Deprecated
 
-
-end # module
+end # module SphericalFunctions

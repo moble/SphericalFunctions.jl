@@ -1,0 +1,97 @@
+.display-light-only {
+    display: block;
+    text-align: center;
+    margin: 0 auto;
+}
+
+.display-dark-only {
+    display: none;
+}
+
+.theme--documenter-dark .display-light-only {
+    display: none;
+}
+
+.theme--documenter-dark .display-dark-only {
+    display: block;
+    text-align: center;
+    margin: 0 auto;
+}
+
+div .composition-diagram {
+    display: block;
+    text-align: center;
+    margin-top: 60px;
+    height: 130px;
+    transform: scale(1.94326);
+    transform-origin: center;
+}
+
+.composition-diagram svg text.f0 {
+    fill: currentColor;
+    font-family: 'KaTeX_AMS';
+    font-size: 9.96264px; /* Adjust as needed */
+}
+
+.composition-diagram svg text.f1 {
+    fill: currentColor;
+    font-family: 'KaTeX_Math';
+    font-style: italic;
+    font-size: 9.96264px; /* Adjust as needed */
+}
+
+.composition-diagram svg path {
+    stroke: currentColor;
+    fill: none;
+}
+
+.euler-figure2 {
+    display: block;
+    text-align: center;
+    margin: 0 auto;
+}
+
+/* Make the inline SVG scale responsively */
+.euler-figure2 svg {
+    width: min(900px, 100%);
+    height: auto;
+}
+
+/* Ensure all strokes/fills follow the page's current text color */
+.euler-figure2 svg path {
+    stroke: currentColor;
+}
+
+.euler-figure2 svg text,
+.euler-figure2 svg circle,
+.euler-figure2 svg rect {
+    fill: currentColor;
+    stroke: currentColor;
+}
+
+.euler-figure2 svg text.label {
+    font-family: 'KaTeX_Math', 'KaTeX_Main', 'KaTeX_AMS', serif !important;
+    font-style: italic !important;
+    font-weight: 400 !important; /* avoid bold */
+    font-size: 14px !important;  /* adjust to taste */
+    fill: currentColor !important;
+    dominant-baseline: middle !important;
+}
+
+.euler-figure2 svg text {
+    font-weight: 400 !important;
+}
+
+.euler-figure2 + p {
+    text-align: center;
+    font-size: 0.95em;
+    margin-top: 0.4rem;
+    margin-bottom: 1.2rem;
+    margin-left: 5rem;
+    margin-right: 5rem;
+    max-width: 100%;
+}
+
+.euler-figure2 + p em {
+    font-style: italic;
+}

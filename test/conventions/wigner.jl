@@ -19,7 +19,7 @@ with respect to ours.  For example, note that the position of ``z'`` is independ
 which appears to represent a final rotation about the ``z'`` axis.  In our convention, this
 rotation would be described by the final Euler angle, γ.
 
-On the other hand, on page 156, if ``𝔇^{(\ell)}`` obeys the representation-composition
+On the other hand, on page 156, if ``𝔇^{(ℓ)}`` obeys the representation-composition
 property, then {α, β, γ} represents the rotation {α, 0, 0}∘{0, β, 0}∘{0, 0, γ}, which is the
 same as our convention.
 
@@ -49,7 +49,7 @@ conjugation of the D function, which is consistent with our convention.
 
 # Eq. (15.8) of [Wigner](@cite Wigner_1959), implementing
 # ```math
-#     D^\ell_{m',m}(\alpha, \beta, \gamma).
+#     D^ℓ_{m',m}(α, β, γ).
 # ```
 # """
 # function D(ℓ, m′, m, α, β, γ)
@@ -62,7 +62,7 @@ conjugation of the D function, which is consistent with our convention.
 
 Eq. (15.27) of [Wigner](@cite Wigner_1959), implementing
 ```math
-    D^{(j)}(\alpha, \beta, \gamma)_{\mu',\mu}.
+    D^{(j)}(α, β, γ)_{\mu',\mu}.
 ```
 """
 function D(j, μ′, μ, α, β, γ)
@@ -104,6 +104,7 @@ end # @testmodule Wigner
 @testitem "Wigner conventions" setup=[Utilities, Wigner] begin
     using Random
     using Quaternionic: from_spherical_coordinates
+    using SphericalFunctions: Deprecated
 
     Random.seed!(1234)
     const T = Float64
@@ -116,7 +117,7 @@ end # @testmodule Wigner
         for α ∈ αrange(T)
             for β ∈ βrange(T)
                 for γ ∈ γrange(T)
-                    D = D_matrices(α, β, γ, ℓₘₐₓ)
+                    D = Deprecated.D_matrices(α, β, γ, ℓₘₐₓ)
                     i = 1
                     for j in 0:ℓₘₐₓ
                         for m′ in -j:j

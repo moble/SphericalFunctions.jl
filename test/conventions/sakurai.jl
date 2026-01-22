@@ -6,17 +6,51 @@ The conclusion here is that Sakurai's Yₗᵐ(θ, ϕ) is the same as ours, but h
 
 - On p. 154 he says that "a rotation operation affects the physical system itself, ...,
   while the coordinate axes remain *unchanged*."
-- On p. 156 he poses "``|\alpha\rangle_R = \mathcal{D}(R) | \alpha \rangle``, where
-  ``|\alpha\rangle_R`` and ``|\alpha \rangle`` stand for the kets of the rotated and
+- On p. 156 he poses "``|α\rangle_R = 𝒟(R) | α \rangle``, where
+  ``|α\rangle_R`` and ``|α \rangle`` stand for the kets of the rotated and
   original system, respectively."
-- On p. 157 he says "``\mathcal{D}(\hat{\mathbf{n}}, d\phi) = 1 - i\left( \frac{\mathbf{J}
-  \cdot \hat{\mathbf{n}}} {\hbar} \right) d\phi``"
+- On p. 157 he says "``𝒟(\hat{𝐧}, dϕ) = 1 - i\left( \frac{𝐉
+  \cdot \hat{𝐧}} {\hbar} \right) dϕ``"
 - On p. 173 he defines his Euler angles in the same way as Quaternionic.
-- On p. 192 he defines "``\mathcal{D}^{(j)}_{m',m}(R) =  \langle j,m'| \exp \left(
-  \frac{-i\mathbf{J} \cdot \hat{\mathbf{n}} \phi} {\hbar} \right) |j, m\rangle``".
+- On p. 192 he defines "``𝒟^{(j)}_{m',m}(R) =  \langle j,m'| \exp \left(
+  \frac{-i𝐉 \cdot \hat{𝐧} ϕ} {\hbar} \right) |j, m\rangle``".
 - On p. 194 he gives the expression in terms of Euler angles.
 - On p. 223 he gives an explicit formula for ``d``.
-- On p. 203 he relates ``\mathcal{D} to Y_{\ell}^m$ (note the upper index of ``m``).
+- On p. 203 he relates ``𝒟 to Y_{ℓ}^m$ (note the upper index of ``m``).
+
+
+Below (1.6.14), we find the translation operator acts as
+``\mathscr{T}_{dx'} α(x') = α(x' - dx')``.  Then Eq.
+(1.6.32)
+```math
+\mathscr{T}_{dx'} = 1 - i p\, dx',
+```
+for infinitesimal ``dx'``.  Eq. (1.7.17) gives the momentum operator
+as ``p α(x') = -i \partial_{x'} α(x')``.  Combining these,
+we can verify consistency:
+```math
+\mathscr{T}_{dx'} α(x')
+=
+α(x' - dx')
+=
+α(x') - \partial_{x'}\, α(x')\, dx',
+```
+which is exactly what we expect from Taylor expanding ``α(x' -
+dx')``.
+
+
+```math
+\begin{aligned}
+f\left(𝐑\right)
+&\to
+f\left(e^{-ϵ 𝐮/2}𝐑\right) \\
+&\approx
+f\left(𝐑\right) + ϵ \left. \frac{d}{dϵ} \right|_{ϵ=0}
+f\left(e^{-ϵ 𝐮/2}𝐑\right) \\
+&=
+f\left(𝐑\right) - i ϵ L_𝐮 f\left(𝐑\right)
+```
+
 """
 @testmodule Sakurai begin
 
@@ -32,7 +66,7 @@ import .NaiveFactorials: ❗
 Eqs. (3.5.50)-(3.5.51) of [Sakurai](@cite Sakurai_1994), p. 194,
 implementing
 ```math
-    \mathcal{D}^{(j)}_{m',m}(\alpha, \beta, \gamma).
+    𝒟^{(j)}_{m',m}(α, β, γ).
 ```
 
 See also [`d`](@ref) for Sakurai's version the Wigner d-function.
@@ -44,10 +78,10 @@ end
 @doc raw"""
     d(j, m′, m, β)
 
-Eqs. (3.5.50)-(3.5.51) of [Sakurai](@cite Sakurai_1994), p. 194,
-implementing
+Eqs. (3.5.50)-(3.5.51) of [Sakurai](@cite Sakurai_1994), p. 194
+(or Eq. (3.8.33), p. 223), implementing
 ```math
-    d^{(j)}_{m',m}(\beta).
+    d^{(j)}_{m',m}(β).
 ```
 
 See also [`𝒟`](@ref) for Sakurai's version the Wigner D-function.
@@ -91,7 +125,7 @@ end
 Eqs. (3.6.51) of [Sakurai](@cite Sakurai_1994), p. 203,
 implementing
 ```math
-    Y_{\ell}^m(\theta, \phi).
+    Y_{ℓ}^m(θ, ϕ).
 ```
 """
 function Y(ℓ, m, θ, ϕ)
@@ -115,6 +149,7 @@ end  # @testmodule Sakurai
 @testitem "Sakurai conventions" setup=[Utilities, Sakurai] begin
     using Random
     using Quaternionic: from_spherical_coordinates
+    using SphericalFunctions: Deprecated
 
     Random.seed!(1234)
     const T = Float64
@@ -145,7 +180,7 @@ end  # @testmodule Sakurai
 
             # Compare to SphericalFunctions
             let s=0
-                Y = ₛ𝐘(s, ℓₘₐₓ, T, [from_spherical_coordinates(θ, ϕ)])
+                Y = Deprecated.ₛ𝐘(s, ℓₘₐₓ, T, [from_spherical_coordinates(θ, ϕ)])
                 i = 1
                 for ℓ in 0:ℓₘₐₓ
                     for m in -ℓ:ℓ
@@ -162,7 +197,7 @@ end  # @testmodule Sakurai
         for α ∈ αrange(T)
             for β ∈ βrange(T)
                 for γ ∈ γrange(T)
-                    D = D_matrices(α, β, γ, ℓₘₐₓ)
+                    D = Deprecated.D_matrices(α, β, γ, ℓₘₐₓ)
                     i = 1
                     for j in 0:ℓₘₐₓ
                         for m′ in -j:j

@@ -22,7 +22,7 @@ import .NaiveFactorials: ❗
 Eq. (3.9) of [Goldberg et al.](@cite GoldbergEtAl_1967),
 implementing
 ```math
-    D^j_{m',m}(\alpha, \beta, \gamma).
+    D^j_{m',m}(α, β, γ).
 ```
 """
 function D(j, m′, m, α, β, γ)
@@ -63,7 +63,7 @@ end
 
 Eq. (3.1) of [Goldberg et al.](@cite GoldbergEtAl_1967), implementing
 ```math
-    {}_sY_{\ell,m}(\theta, \phi).
+    {}_sY_{ℓ,m}(θ, ϕ).
 ```
 
 Note that there is a difference in conventions between the ``Y`` of Goldberg et al. and
@@ -112,6 +112,7 @@ end  # @testmodule GoldbergEtAl
 @testitem "GoldbergEtAl conventions" setup=[Utilities, GoldbergEtAl] begin
     using Random
     using Quaternionic: from_spherical_coordinates
+    using SphericalFunctions: Deprecated
 
     Random.seed!(1234)
     const T = Float64
@@ -133,9 +134,9 @@ end  # @testmodule GoldbergEtAl
                 end
             end
 
-            # Compare to SphericalHarmonics Y
+            # Compare to SphericalFunctions Y
             for s ∈ -ℓₘₐₓ:ℓₘₐₓ
-                Y₁ = ₛ𝐘(s, ℓₘₐₓ, T, [from_spherical_coordinates(θ, ϕ)])[1,:]
+                Y₁ = Deprecated.ₛ𝐘(s, ℓₘₐₓ, T, [from_spherical_coordinates(θ, ϕ)])[1,:]
                 Y₂ = [(-1)^m * Y(s, ℓ, m, θ, ϕ) for ℓ ∈ abs(s):ℓₘₐₓ for m ∈ -ℓ:ℓ]
                 @test Y₁ ≈ Y₂ atol=ϵₐ rtol=ϵᵣ
             end
@@ -147,7 +148,7 @@ end  # @testmodule GoldbergEtAl
         for α ∈ αrange(T)
             for β ∈ βrange(T)
                 for γ ∈ γrange(T)
-                    D = D_matrices(α, β, γ, ℓₘₐₓ)
+                    D = Deprecated.D_matrices(α, β, γ, ℓₘₐₓ)
                     i = 1
                     for j in 0:ℓₘₐₓ
                         for m′ in -j:j
