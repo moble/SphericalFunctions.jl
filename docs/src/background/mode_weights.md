@@ -1,31 +1,59 @@
 # Mode weights
 
 On the [previous page](@ref sYlm_and_Dlmpm), we introduced the
-eigenfunctions of the differential operators defined on
-``\mathrm{Spin}(3)``, the spin-weighted spherical harmonics (SWSHs)
-``{}_{s}Y_{ℓ,m}(R)`` — or equivalently Wigner's 𝔇 matrices.
-
-These eigenfunctions form a complete orthonormal basis for the space
-of square-integrable functions defined on ``\mathrm{Spin}(3)``.  Thus,
-any such function ``f(R)`` with spin weight ``s`` can be expressed as
-a linear combination of these harmonics:
-```math
-f(R) = \sum_{ℓ=0}^{∞} \sum_{m=-ℓ}^{ℓ} f_{ℓ,m}\, {}_{s}Y_{ℓ,m}(R),
-```
-where the coefficients ``f_{ℓ,m}`` are called the *mode weights* of
-the function ``f``.  These mode weights can be computed from the function
-using the orthonormality of the SWSHs:
-```math
-f_{ℓ,m} = \int f(R)\, {}_{s}\bar{Y}_{ℓ,m}(R)\, dR,
-```
-where the integral is taken over ``\mathrm{Spin}(3)`` with the
-appropriate measure to ensure orthonormality.  In the special case
-``s=0``,
+eigenfunctions of [the differential operators](@ref
+background_differential_operators) defined on ``\mathrm{Spin}(3)``.
+These eigenfunctions are the spin-weighted spherical harmonics (SWSHs)
+``{}_{s}Y_{ℓ,m}(R)``, or equivalently Wigner's 𝔇 matrices.
 
 Now that we have introduced the spin-weighted spherical harmonics
 (SWSHs) as eigenfunctions of the relevant differential operators, we
-can define mode weights of a general spin-weighted function in terms of
-these harmonics.
+can define mode weights of a general spin-weighted function in terms
+of these harmonics.
+
+These eigenfunctions form a complete orthonormal basis for the space
+of square-integrable functions defined on ``\mathrm{Spin}(3)``.  Thus,
+*any* such function ``f(R)`` can be expressed as a linear combination
+of these harmonics:
+```math
+f(R) = \sum_{ℓ=0}^{∞} \sum_{s=-ℓ}^{ℓ} \sum_{m=-ℓ}^{ℓ}
+{}_{s}f_{ℓ,m}\, {}_{s}Y_{ℓ,m}(R),
+```
+where the coefficients ``{}_{s}f_{ℓ,m}`` are called the *mode weights*
+of the function ``f``.  These mode weights can be computed from the
+function using the orthogonality of the SWSHs:
+```math
+{}_{s}f_{ℓ,m}
+= \frac{π}{2} \int_{\mathrm{Spin}(3)} f(R)\, {}_{s}\bar{Y}_{ℓ,m}(R)\, dR,
+```
+where the factor in front of the integral is explained [here](@ref
+Integration-and-normalization).  Note that we have not restricted the
+spin weight ``s`` of the function ``f``; a general function on
+``\mathrm{Spin}(3)`` can have contributions from SWSHs of any spin
+weight, so ``s`` was included in the sum above.  In fact, those spin
+weights may have half-integral values as well, in which case the sum
+over ``ℓ`` must include all positive half-integral values as well as
+the integral values.
+
+However, if we restrict to functions with a *specific* spin weight
+``s``, only the SWSHs with *that* spin weight will contribute to the
+expansion, and we can simplify the expressions above to
+```math
+f(R) = \sum_{ℓ=|s|}^{∞} \sum_{m=-ℓ}^{ℓ}
+{}_{s}f_{ℓ,m}\, {}_{s}Y_{ℓ,m}(R)
+```
+and
+```math
+{}_{s}f_{ℓ,m}
+= \frac{π}{2} \int_{\mathrm{Spin}(3)} f(R)\, {}_{s}\bar{Y}_{ℓ,m}(R)\, dR.
+```
+
+!!! danger "#TODO"
+
+    Finish this section, citing the section on [functions 
+    of spherical coordinates](@ref Pulling-back-to-I𝕊) and
+    reducing to the integral over ``𝕊²``.  Refine the 
+    following section.
 
 
 ## Differential operators
