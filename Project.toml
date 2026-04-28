@@ -1,6 +1,6 @@
 name = "SphericalFunctions"
 uuid = "af6d55de-b1f7-4743-b797-0829a72cf84e"
-version = "2.2.8"
+version = "2.2.9"
 authors = ["Michael Boyle <michael.oliver.boyle@gmail.com>"]
 
 [deps]
