@@ -105,3 +105,43 @@ Equating these two expressions, we find that
 \sum_{m} |{}_{s}Y_{ℓ,m}(𝐐)|² = \frac{2ℓ+1}{4π},
 ```
 for arbitrary ``ℓ``, ``s``, and ``𝐐 ∈ \mathrm{Spin}(3)``.
+
+Now, we use this to relate the spin-weighted spherical harmonics to
+the Wigner ``𝔇`` matrices.  Recall that the SWSHs are [defined in
+terms of their eigenvalues](@ref {}_{s}Y_{ℓ,m}-as-eigenfunctions), and
+the ``𝔇`` matrices can be shown to have [similar eigenvalues](@ref
+Defining-𝔇{(ℓ)}_{m',-m}), which show that
+```math
+{}_{s}Y_{ℓ,m}(𝐐) = κ_ℓ 𝔇^{(ℓ)}_{m, s}(𝐐)
+```
+for some constant ``κ_ℓ`` independent of ``𝐐``.  We can see that the
+constants ``κ_ℓ`` cannot depend on ``m`` or ``s`` either, because the
+ladder operators ``L_±`` and ``R_±`` are linear with respect to scalar
+multiplication, so they commute with the map between ``Y`` and ``𝔇``.
+To find the constant, we also use the fact that 
+```math
+𝔇^{(ℓ)}_{m', m}(𝟏) = \delta_{m', m}.
+```
+Therefore, we can compute
+```math
+\sum_{m} |{}_{s}Y_{ℓ,m}(𝐐)|²
+= \frac{2ℓ+1}{4π}
+= \sum_{m} |κ_ℓ|²\, |𝔇^{(ℓ)}_{m, s}(𝐐)|²
+= |κ_ℓ|².
+```
+Thus, up to a phase factor, we have
+```math
+κ_ℓ = \sqrt{\frac{2ℓ+1}{4π}}.
+```
+In fact, that phase factor is just 1 conventionally, because of the
+near-universal agreement that ``Y_{ℓ,0}(θ, ϕ)`` should be real-valued,
+which we would interpret to mean that ``{}_{0}Y_{ℓ,0}(𝟏)`` is
+real-valued.  And by our expression above ``𝔇^{(ℓ)}_{m', m}(𝟏) =
+1``, which means that the constant of proportionality must also be
+real-valued.  Together with our choice for the phase factor of the
+ladder operators, this completely fixes the relationship between the
+spin-weighted spherical harmonics and the Wigner ``𝔇`` matrices:
+```math
+{}_{s}Y_{ℓ,m}(𝐐) = \sqrt{\frac{2ℓ+1}{4π}} 𝔇^{(ℓ)}_{m, s}(𝐐)
+```
+for every ``ℓ``, ``m``, ``s``, and ``𝐐``.
