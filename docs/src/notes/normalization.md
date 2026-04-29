@@ -3,11 +3,11 @@
 For any fixed values of ``ℓ`` and ``s``, the spin-weighted spherical
 harmonics normalized as usual, satisfy the relation
 ```math
-\sum_{m} |{}_{s}Y_{ℓ,m}(𝐐)|² = \frac{(2ℓ+1)}{4π},
+\sum_{m} |{}_{s}Y_{ℓ,m}(𝐐)|² = \frac{2ℓ+1}{4π},
 ```
 for every ``𝐐 ∈ \mathrm{Spin}(3)``.  This result is crucial for
-actually obtaining a specific value for the spin-weighted spherical
-harmonics, and we will derive it here.
+relating values of the spin-weighted spherical harmonics to Wigner
+``𝔇`` matrices, and we will derive it here.
 
 ---
 
@@ -102,6 +102,6 @@ integral:
 ```
 Equating these two expressions, we find that
 ```math
-\sum_{m} |{}_{s}Y_{ℓ,m}(𝐐)|² = \frac{(2ℓ+1)}{4π},
+\sum_{m} |{}_{s}Y_{ℓ,m}(𝐐)|² = \frac{2ℓ+1}{4π},
 ```
 for arbitrary ``ℓ``, ``s``, and ``𝐐 ∈ \mathrm{Spin}(3)``.
