@@ -935,16 +935,16 @@ derivatives, as a result.
 
 [Sakurai_1994](@citet) says that
 
-> [...] rotations affect physical systems, the state ket corresponding
-> to a rotated system is expected to look different from the state ket
-> corresponding to the original unrotated system. Given a rotation
-> operation ``R``, characterized by a ``3\times 3`` orthogonal matrix
-> ``R``, we associate an operator ``\mathscr{D}(R)`` in the
-> appropriate ket space such that
+> Because rotations affect physical systems, the state ket
+> corresponding to a rotated system is expected to look different from
+> the state ket corresponding to the original unrotated system.  Given
+> a rotation operation ``R``, characterized by a ``3×3`` orthogonal
+> matrix ``R``, we associate an operator ``𝒟(R)`` in the appropriate
+> ket space such that
 > ```math
-> |α\rangle_R = \mathscr{D}(R) |α\rangle,
+> |α\rangle_R = 𝒟(R) |α\rangle,
 > ```
-> ``|α\rangle_R`` and ``|α\rangle`` stand for the kets of
+> where ``|α\rangle_R`` and ``|α\rangle`` stand for the kets of
 > the rotated and original system, respectively.
 
 If the field is represented as a function ``f(𝐑)``, then rotating the
@@ -964,7 +964,7 @@ f\left(𝐑\right) - i ϵ L_𝐮 f\left(𝐑\right).
 ```
 This final expression is precisely equivalent to Sakurai's Eq. (3.1.15):
 ```math
-\mathscr{D}\left(\hat{𝐧}, dϕ \right)
+𝒟\left(\hat{𝐧}, dϕ \right)
 =
 1 - i \left( 𝐉 \cdot \hat{𝐧} \right) dϕ.
 ```
