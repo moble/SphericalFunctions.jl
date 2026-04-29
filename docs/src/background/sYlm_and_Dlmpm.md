@@ -147,7 +147,32 @@ constant factor:
 Clearly, we must choose one or the other of these norms when
 normalizing the spin-weighted spherical harmonics.  To agree with
 standard scalar spherical harmonics, the conventional choice is to use
-the ``𝕊²`` norm.
+the ``𝕊²`` norm:[^3]
+```math
+\left\| {}_{s}Y_{ℓ,m} \right\|²_{𝕊²} = 1.
+```
+Therefore, the spin-weighted spherical harmonics satisfy
+```math
+\left\| {}_{s}Y_{ℓ,m} \right\|²_{\mathrm{Spin}(3)} = \frac{π}{2}.
+```
+In fact, while this says that the SWSHs are not ortho*normal* over
+``\mathrm{Spin}(3)``, they are still orthogonal:
+```math
+\left\langle {}_{s'}Y_{ℓ,m'}
+\middle|
+{}_{s}Y_{ℓ,m} \right\rangle_{\mathrm{Spin}(3)}
+= \frac{π}{2} δ_{ℓ',ℓ} δ_{m',m} δ_{s',s}.
+```
+However, it is important to remember that the SWSHs with *different*
+spin weights are *not orthogonal* under the ``𝕊²`` inner product; all
+we can say is that *if the spin weights are the same*, we have this
+weaker orthonormality over ``𝕊²``:
+```math
+\left\langle {}_{s}Y_{ℓ',m'}
+\middle|
+{}_{s}Y_{ℓ,m} \right\rangle_{𝕊²}
+= δ_{ℓ',ℓ} δ_{m',m}.
+```
 
 [^2]: It is possible for a function to have no definite spin weight;
     to simply not be an eigenfunction of ``R_z``.  In that case,
@@ -155,11 +180,28 @@ the ``𝕊²`` norm.
     its integral over ``\mathrm{Spin}(3)`` will only pick up
     contributions from the part of that function with spin weight 0.
 
-!!! danger "#TODO"
+[^3]: Wikipedia
+    [claims](https://en.wikipedia.org/wiki/Spherical_harmonics#Orthogonality_and_normalization)
+    that there are different normalization conventions for spherical
+    harmonics, so that there is a factor of ``4π`` or ``4π/(2ℓ+1)`` on
+    the right-hand side of the orthonormality condition.  The cited
+    text does not quite say this, though; it's talking about
+    associated Legendre functions.
 
-    Finish this section, noting that SWSHs with different 
-    spin weights are not orthogonal under
-    the ``𝕊²`` inner product.
+!!! danger "Non-orthogonality of different spin weights"
+
+    SWSHs with different spin weights are not orthogonal under the
+    ``𝕊²`` inner product.  This is a common misconception, which is
+    even found in at least one textbook.  Specifically,
+    ```math
+    \left\langle {}_{s'}Y_{ℓ',m'}
+    \middle|
+    {}_{s}Y_{ℓ,m} \right\rangle_{𝕊²}
+    ≠ δ_{ℓ',ℓ}\, δ_{m',m}\, δ_{s',s}.
+    ```
+    *Note the inequality sign!*  The actual integral is a complicated
+    function that should never be used because it depends on the
+    coordinate system.
 
 
 ## Defining ``𝔇^{(ℓ)}_{m', m}``
