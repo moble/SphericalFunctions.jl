@@ -30,8 +30,9 @@ Manifest.toml
 benchmark/*.json
 benchmark/results.md
 
-# Ignore my notes and settings
+# Ignore my notes and settings (symlinks into private Notes repo)
 /notes
+docs/src/local_notes
 .vscode
 conventions.slides.json
 
