@@ -19,6 +19,8 @@ package_root = dirname(@__DIR__)
 
 # Run `make_literate.jl` to generate the literate files
 include(joinpath(@__DIR__, "make_literate.jl"))
+include("local_notes.jl")
+(notes_pages, notes_remotes) = local_notes()
 
 
 bib = CitationBibliography(
@@ -41,6 +43,7 @@ makedocs(
     plugins=[bib],
     sitename="SphericalFunctions.jl",
     modules = [SphericalFunctions, SphericalFunctions.Deprecated],
+    remotes=notes_remotes,
     format = Documenter.HTML(
         prettyurls = !("local" in ARGS),  # Use clean URLs, unless built as a "local" build
         edit_link = "main",  # Link out to "main" branch on github
@@ -98,6 +101,7 @@ makedocs(
         ],
         "index_of_docstrings.md",
         "References" => "references.md",
+        notes_pages...,
     ],
     warnonly=true,
     #doctest = false,
