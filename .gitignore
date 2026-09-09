@@ -58,3 +58,24 @@ docs/src/conventions/comparisons/tait_1868.md
 docs/src/conventions/comparisons/gibbs_1881.md
 docs/src/conventions/comparisons/wilson_1921.md
 docs/src/conventions/comparisons/whittaker_1947.md
+docs/src/conventions/comparisons/goldberg_et_al_1967.md
+docs/src/conventions/comparisons/newman_penrose_1966.md
+docs/src/conventions/comparisons/sakurai_1994.md
+docs/src/conventions/comparisons/shankar_1994.md
+docs/src/conventions/comparisons/thorne_1980.md
+docs/src/conventions/comparisons/wikipedia_2026.md
+docs/src/conventions/comparisons/zettili_2009.md
+docs/src/conventions/comparisons/edmonds_1960.md
+docs/src/conventions/comparisons/torres_del_castillo_2003.md
+docs/src/conventions/comparisons/wigner_1959.md
+docs/src/conventions/comparisons/griffiths_1995.md
+docs/src/conventions/comparisons/le_bellac_2006.md
+docs/src/conventions/comparisons/nist_dlmf_2026.md
+docs/src/conventions/comparisons/boyle_2016.md
+docs/src/conventions/comparisons/mathematica_2026.md
+docs/src/conventions/comparisons/scipy_2026.md
+docs/src/conventions/comparisons/varshalovich_1988.md
+docs/src/conventions/comparisons/sympy_2026.md
+
+# CondaPkg environment created by the optional :python test items
+test/.CondaPkg

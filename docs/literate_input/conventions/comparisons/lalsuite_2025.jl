@@ -197,23 +197,17 @@ end
 #+
 
 # We can see more-or-less by inspection that the code defines the ``D`` matrix in agreement
-# with our convention, the key line being
+# with [our convention](@ref summary_wigner_D), the key line being
 # ```c
 # cexp( -(1.0I)*mp*alpha ) * XLALWignerdMatrix( l, mp, m, beta ) * cexp( -(1.0I)*m*gam );
 # ```
-# Note that this package changed conventions in 2025 to use these signs.
+# Note that this package changed conventions in version 3.0 to use these signs.
 for (α,β,γ) ∈ αβγrange()
     for (ℓ, m′, m) ∈ ℓm′mrange(ℓₘₐₓ)
         @test LALSuite.XLALWignerDMatrix(ℓ, m′, m, α, β, γ) ≈
-            conj(Deprecated.D(ℓ, m′, m, α, β, γ)) atol=ϵₐ rtol=ϵᵣ
+            ConventionsUtilities.D(ℓ, m′, m, α, β, γ) atol=ϵₐ rtol=ϵᵣ
     end
 end
-#+
-
-# Now, just to remind ourselves, we will be changing the convention for ``D`` soon, so the
-# test above should have `conj` removed.
-@test_broken false  # We haven't flipped the conjugation of D yet
-## Remove `conj` from the test above when we do.
 #+
 
 # These successful tests show that the spin-weighted spherical harmonics and the Wigner
