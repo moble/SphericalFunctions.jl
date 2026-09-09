@@ -1,5 +1,5 @@
 md"""
-# ``L_j`` and ``R_j`` with Euler angles
+# [``L_j`` and ``R_j`` with Euler angles](@id euler_angular_momentum)
 
 This package defines the angular-momentum operators ``L_j`` and ``R_j`` in terms of elements
 of the Lie group and algebra:
@@ -22,7 +22,7 @@ operators in terms of Euler angles, including evaluating the commutators in that
 further reduce them to operators in terms of spherical coordinates.  We will find a couple
 important results that help make contact with more standard expressions:
 
-  1. Our results for ``L_x``, ``L_x``, and ``L_z`` in spherical coordinates agree with
+  1. Our results for ``L_x``, ``L_y``, and ``L_z`` in spherical coordinates agree with
      standard expressions.
   2. The commutators obey ``[L_x, L_y] = i L_z`` and cyclic permutations, in agreement with
      the standard expressions.
@@ -31,8 +31,9 @@ important results that help make contact with more standard expressions:
   5. Using the natural extension of Goldberg et al.'s SWSHs to include ``γ``, we can
      see that the natural spin-weight operator is ``R_z = i \partial_γ``.  Thus, we
      define ``R_z = s`` for a function with spin weight ``s``.
-  6. The spin-raising operator for ``R_z`` is ``\eth = R_x + i R_y``; the spin-lowering
-     operator is ``\bar{\eth} = R_x - i R_y``.
+  6. The spin-raising operator for ``R_z`` is ``\eth = R_+ = R_x + i R_y``; Newman–Penrose's
+     spin-lowering operator is ``\bar{\eth} = -R_- = -(R_x - i R_y)``, with the sign
+     explained below.
 
 ## Analytical groundwork
 
@@ -260,17 +261,17 @@ nothing  #hide
 #md # </details>
 #md # ```
 
-# ## Full expressions on ``𝕊³``
+# ## [Full expressions on ``𝕊³``](@id euler_full_S3)
 # Finally, we can actually compute the Euler components of the angular momentum operators.
 
-#md # ### ``L`` operators in terms of Euler angles
+#md # ### [``L`` operators in terms of Euler angles](@id euler_L_S3)
 @display L(𝐢)
 #-
 @display L(𝐣)
 #-
 @display L(𝐤)
 #-
-#md # ### ``R`` operators in terms of Euler angles
+#md # ### [``R`` operators in terms of Euler angles](@id euler_R_S3)
 @display R(𝐢)
 #-
 @display R(𝐣)
@@ -373,7 +374,7 @@ commutator(Rz, Rx)
 # This completes independent commutator results, which are all as we expect them to be.
 
 
-# ## Standard expressions on ``𝕊²``
+# ## [Standard expressions on ``𝕊²``](@id euler_standard_S2)
 # We can substitute ``(α, β, γ) \to (φ, θ, 0)`` to get the standard expressions for the
 # angular momentum operators on the 2-sphere.
 
@@ -401,7 +402,7 @@ commutator(Rz, Rx)
 # for historical reasons, we include it here when showing the results of the ``R`` operator
 # in Euler angles.
 
-#md # ### ``R`` operators in spherical coordinates
+#md # ### [``R`` operators in spherical coordinates](@id euler_R_S2)
 @display2 R(𝐢)
 #-
 @display2 R(𝐣)
@@ -429,19 +430,40 @@ commutator(Rz, Rx)
 #   \right\}
 #   \left\{ (\sin θ)^{-s} \eta \right\}.
 # ```
-# And in the latter form, we can see that ``R_x + i R_y`` is exactly the spin-raising
-# operator ``\eth`` as originally defined by [Newman_1966](@citet) in their Eq. (3.8).  The
-# complex-conjugate of this operator is the spin-lowering operator ``\bar{\eth}`` for
-# ``R_z``.  *By definition* of raising and lowering operators, this means that ``[R_z, \eth]
-# = \eth`` and ``[R_z, \bar{\eth}] = -\bar{\eth}``.  We can verify these results by
-# computing the commutators directly from the expressions above:
+# And in the latter form, we can see that ``R_x + i R_y = R_+`` is exactly the spin-raising
+# operator ``\eth`` as originally defined by [Newman_1966](@citet) in their Eq. (3.8).  Their
+# spin-lowering operator ``\bar{\eth}`` is the complex-conjugate *operator* of ``\eth``,
+# i.e., ``\bar{\eth}\eta = \overline{\eth \bar{\eta}}``.  Because ``R_x`` and ``R_y`` each
+# carry an explicit factor of ``i``, conjugating the operator flips their signs, and we find
+# ```math
+# \bar{\eth} = -\left(R_x - i R_y\right) = -R_-,
+# \qquad
+# \bar{\eth}\eta
+# = -\left[
+#     i \frac{1}{\sin θ} \frac{\partial}{\partial ϕ}
+#     + \frac{s}{\tan θ}
+#     + \frac{\partial}{\partial θ}
+#   \right] \eta
+# = -(\sin θ)^{-s} \left\{
+#     \frac{\partial}{\partial θ}
+#     - i \frac{1}{\sin θ} \frac{\partial}{\partial ϕ}
+#   \right\}
+#   \left\{ (\sin θ)^{s} \eta \right\},
+# ```
+# which is again exactly Newman and Penrose's Eq. (3.8).  The minus sign is real: ``R_-``
+# has the Condon–Shortley-positive ladder coefficient on the spin-weighted spherical
+# harmonics, whereas ``\bar{\eth}`` lowers ``s`` with a negative coefficient — Eq. (2.7b) of
+# [GoldbergEtAl_1967](@citet).  *By definition* of raising and lowering operators, ``[R_z,
+# R_\pm] = \pm R_\pm``, and therefore ``[R_z, \eth] = \eth`` and ``[R_z, \bar{\eth}] =
+# -\bar{\eth}``.  We can verify these results by computing the commutators directly from the
+# expressions above:
 # ```math
 # \begin{aligned}
-# [R_z, \eth]
-#   &= [R_z, R_x] + i [R_z, R_y] = i R_y - i i R_x = R_x + i R_y = \eth,
+# [R_z, R_x + i R_y]
+#   &= [R_z, R_x] + i [R_z, R_y] = i R_y - i i R_x = R_x + i R_y,
 # \\
-# [R_z, \bar{\eth}]
-#   &= [R_z, R_x] - i [R_z, R_y] = i R_y + i i R_x = -R_x + i R_y = -\bar{\eth}.
+# [R_z, R_x - i R_y]
+#   &= [R_z, R_x] - i [R_z, R_y] = i R_y + i i R_x = -\left(R_x - i R_y\right).
 # \end{aligned}
 # ```
 #

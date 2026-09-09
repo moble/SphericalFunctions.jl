@@ -1,5 +1,5 @@
 md"""
-# Metrics and integration
+# [Metrics and integration](@id metrics_and_integration)
 
 As something of an exercise, we just work through the basic definitions of metrics and
 volume forms in spherical coordinates using SymPy, to verify the volume-form factor that we
@@ -193,6 +193,10 @@ S3_surface_area = sympy.integrate(
     (α, 0, 2π)
 )
 
+# This is ``2π^2``, the volume of the unit 3-sphere, which confirms the normalization of the
+# invariant measure on ``\mathrm{Spin}(3)`` quoted on the [Details](@ref conv_haar_measure)
+# page — including the factor of ``1/8`` in the volume-form factor above.
+#
 # And finally, we can restrict back to ``\mathrm{SO}(3)`` by taking ``γ ∈ [0, 2π]`` (while
 # keeping ``α ∈ [0, 2π]`` and ``β ∈ [0, π]``), and integrating over that range:
 SO3_volume = sympy.integrate(
@@ -205,3 +209,5 @@ SO3_volume = sympy.integrate(
     ),
     (α, 0, 2π)
 )
+
+# which is ``π^2``, half the volume of ``\mathrm{Spin}(3)``, as expected for the double cover.
