@@ -1,0 +1,68 @@
+name: scheduled
+
+# This package may go untouched for months at a time.  This workflow
+# runs every two months (and on demand) to make sure it still installs
+# and passes its tests on the current and LTS releases of Julia, that
+# the documentation still builds, and that the optional Python
+# cross-checks in the conventions comparison pages (test items tagged
+# `:python`, which need PythonCall/CondaPkg and are skipped in regular
+# CI) still agree with the current releases of SymPy and SciPy.
+
+on:
+  schedule:
+    - cron: '0 6 1 */2 *'  # 06:00 UTC on the first day of every second month
+  workflow_dispatch:
+
+env:
+  JULIA_NUM_THREADS: auto
+
+jobs:
+
+  tests:
+    name: Julia ${{ matrix.version }} - ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        version:
+          - 'lts'
+          - '1'
+        os:
+          - ubuntu-latest
+          - macOS-latest
+          - windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: ${{ matrix.version }}
+          show-versioninfo: true
+      - uses: julia-actions/cache@v2
+      - uses: julia-actions/julia-buildpkg@v1
+      - name: Full test suite
+        uses: julia-actions/julia-runtest@v1
+      - name: Python cross-checks (test items tagged :python)
+        # `test/runtests.jl` treats a tag on the command line as an include filter, so this
+        # runs *only* the `:python` items.  CondaPkg installs the Python packages listed in
+        # `test/CondaPkg.toml` on first use.
+        uses: julia-actions/julia-runtest@v1
+        with:
+          test_args: ':python'
+
+  docs:
+    name: Documentation build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1'
+          show-versioninfo: true
+      - uses: julia-actions/cache@v2
+      - uses: julia-actions/julia-buildpkg@v1
+      - name: Build docs (no deploy)
+        # `deploydocs` does nothing for a scheduled or manual run, so this only checks that
+        # the documentation builds.
+        run: |
+          julia --project=docs -e 'using Pkg; Pkg.instantiate()'
+          julia --project=docs --color=yes docs/make.jl
