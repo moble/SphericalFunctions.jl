@@ -206,9 +206,17 @@ end
 # ```
 # with ``k_1 = \max(0, m+s)`` and ``k_2 = \min(ℓ+m, ℓ+s)``.  We check below that this
 # agrees with the package, before using it in the differential tests.
+#
+# We write the phase ``e^{imϕ}`` as `cis(m * ϕ)` rather than `exp(𝒾 * m * ϕ)` because
+# `Base.exp(::Complex)` short-circuits to `Complex(exp(real(z)), imag(z))` whenever
+# `iszero(imag(z))`.  That branch is correct for numbers, but it is only accurate to *first*
+# order in the imaginary part, so under automatic differentiation at ``ϕ = 0`` it silently
+# discards every derivative beyond the first — which would break the second-order
+# ``\bar{\eth}\eth`` test below.  `cis` computes `Complex(cos, sin)` unconditionally, and
+# so differentiates correctly to all orders.
 function ₛYₗₘ(s, ℓ, m, θ, ϕ)
     T = float(typeof(θ))
-    (-1)^s * √((2ℓ+1) / (4T(π))) * exp(𝒾 * m * ϕ) *
+    (-1)^s * √((2ℓ+1) / (4T(π))) * cis(m * ϕ) *
     sum(
         (-1)^k * T(√((ℓ+m)❗ * (ℓ-m)❗ * (ℓ-s)❗ * (ℓ+s)❗) / ((ℓ+m-k)❗ * (ℓ+s-k)❗ * (k)❗ * (k-s-m)❗)) *
         cos(θ/2)^(2ℓ+m+s-2k) * sin(θ/2)^(2k-s-m)

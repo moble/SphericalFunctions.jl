@@ -1,0 +1,21 @@
+# Python packages used by the optional PythonCall cross-checks in the conventions comparison
+# pages (test items tagged `:python`).  These test items are skipped by default and in
+# regular CI; they run in the scheduled workflow (`.github/workflows/scheduled.yml`) or when
+# explicitly requested with `julia --project=. scripts/test.jl :python`.
+#
+# These live in the `[dev.deps]` section of the *package root* rather than in
+# `test/CondaPkg.toml`, for two reasons:
+#
+#   * A test item runs in a sandbox environment that is mirrored into a temporary directory
+#     containing only `Project.toml` and `Manifest.toml`, so a `CondaPkg.toml` beside
+#     `test/Project.toml` is never seen.  `CondaPkg` does, however, read the `CondaPkg.toml`
+#     of every dependency it finds, and the package under test is present in that sandbox as
+#     a `dev`ed dependency pointing back here.
+#
+#   * `[dev.deps]` is read only for a package that is being developed or tested, so ordinary
+#     users who install `SphericalFunctions` from the registry never pay for SciPy or SymPy.
+
+[dev.deps]
+python = ">=3.10,<4"
+sympy = ">=1.12"
+scipy = ">=1.15"

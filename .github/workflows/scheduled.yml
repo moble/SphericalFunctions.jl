@@ -44,7 +44,7 @@ jobs:
       - name: Python cross-checks (test items tagged :python)
         # `test/runtests.jl` treats a tag on the command line as an include filter, so this
         # runs *only* the `:python` items.  CondaPkg installs the Python packages listed in
-        # `test/CondaPkg.toml` on first use.
+        # the `[dev.deps]` section of the top-level `CondaPkg.toml` on first use.
         uses: julia-actions/julia-runtest@v1
         with:
           test_args: ':python'
