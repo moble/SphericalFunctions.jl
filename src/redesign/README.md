@@ -406,7 +406,7 @@ if Nᵣ = 1 stays > 2× slower, add coefficient precomputation to the checklist.
 Three parallel efforts touch disjoint files: this memo, `TODO.md`, and the private notes repo
 (interface); `docs/src/conventions/{summary,details,outline}.md` and
 `docs/literate_input/conventions/calculations/` (conventions); `docs/literate_input/
-conventions/comparisons/`, `comparisons.md`, `references.bib`, `test/CondaPkg.toml`, a scheduled
+conventions/comparisons/`, `comparisons.md`, `references.bib`, `CondaPkg.toml`, a scheduled
 CI workflow, and the deletion of `test/conventions/` (comparisons).  The comparisons work
 depends on the conventions work (its `@ref` targets and oracle) and on this memo (it deletes
 `test/conventions/{boyle2016,varshalovich}.jl`, cited above; their contents move to
