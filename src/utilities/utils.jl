@@ -28,7 +28,6 @@ Base.parent(M::OffsetMat) = M.parent
 
 # Note that the loggamma and logbinomial functions below are not used directly in the
 # package, but are used in sqrtbinomial, which *is* used.
-loggamma(a, ::Type{T}) where {T<:DoubleFloats.MultipartFloat} = DoubleFloats.loggamma(T(a))
 loggamma(a, ::Type{T}) where T = SpecialFunctions.loggamma(T(a))
 function logbinomial(n::T, k::T, S=float(T)) where {T<:Integer}
     if k == 0 || k == n

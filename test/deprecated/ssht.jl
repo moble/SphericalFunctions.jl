@@ -62,7 +62,7 @@ end
 @testitem "Preliminaries: Direct ℓₘₐₓ" begin
     let s=0, ℓₘₐₓ=65
         import SphericalFunctions: Deprecated
-        @test_warn """ "Direct" method for s-SHT is only """ Deprecated.SSHT(s, ℓₘₐₓ; method="Direct")
+        @test_logs (:warn, r"\"Direct\" method for s-SHT is only") match_mode=:any Deprecated.SSHT(s, ℓₘₐₓ; method="Direct")
     end
 end
 

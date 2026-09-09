@@ -5,7 +5,6 @@ using FastTransforms: ifft, irfft
 using Quaternionic: Quaternionic, from_spherical_coordinates
 using StaticArrays: @SVector
 using SpecialFunctions
-using DoubleFloats
 using LinearAlgebra: Diagonal, Bidiagonal
 using FixedSizeArrays: FixedSizeVectorDefault, FixedSizeVector
 
