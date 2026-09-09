@@ -1,0 +1,9 @@
+# Python packages used by the optional PythonCall cross-checks in the conventions comparison
+# pages (test items tagged `:python`).  These test items are skipped by default and in
+# regular CI; they run in the scheduled workflow (`.github/workflows/scheduled.yml`) or when
+# explicitly requested with `julia --project=. scripts/test.jl :python`.
+
+[deps]
+python = ">=3.10,<4"
+sympy = ">=1.12"
+scipy = ">=1.15"
