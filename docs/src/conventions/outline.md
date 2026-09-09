@@ -1,4 +1,11 @@
-# Outline
+# Outline and working notes
+
+!!! warning "Scratch page"
+    This page is not part of the rendered navigation.  It holds the
+    original outline for the conventions pages and assorted working
+    notes that were *not* promoted to the [Summary](@ref "Summary") or
+    [Details](@ref "Details") pages.  Anything here that contradicts
+    those pages is stale; the settled conventions live there.
 
 * Three-dimensional Euclidean space
   - Cartesian coordinates ``(x, y, z)`` => ℝ³
@@ -87,7 +94,7 @@ an orthonormal basis of a product of ``L^2`` spaces is given by the
 product of the orthonormal bases of the individual spaces.
 Furthermore, on page 354, they point out that ``\{(1/\sqrt{2π})
 e^{imϕ}\}`` is an orthonormal basis of ``L^2(0,2π)``, while the
-set ``\{1/c_{n,m} P_n^m(\cos θ)`` is an orthonormal basis of
+set ``\{1/c_{n,m} P_n^m(\cos θ)\}`` is an orthonormal basis of
 ``L^2(0, π)`` in the ``θ`` coordinate.  Therefore, the product
 of these two sets is an orthonormal basis of the product space
 ``L^2\left((0,2π) \times (0, π)\right)``, which forms a coordinate
@@ -96,76 +103,11 @@ space for ``𝕊²``.  I would probably modify this to point out that
 out that you can throw on another factor of ``𝕊¹`` to cover ``𝕊³``,
 which happens to give us the Wigner D-matrices.
 
-We first define the rotor that takes ``(\hat{x}, \hat{y}, \hat{z})``
-onto ``(\hat{θ}, \hat{ϕ}, \hat{r})``.  Then, we can invert
-that, so that given a rotor that specifies such a rotation exactly, we
-can get the spherical coordinates — or specifically ``\sin θ``,
-``\cos θ``, and ``\exp(iϕ)``.
-
-Then, with the universally agreed-upon ``Y`` as given in terms of
-spherical coordinates, we can rewrite it directly to work with
-quaternion components, and then it immediately applies to general
-rotations, which allows us to figure out where the ``s`` should go.
-That is, we can essentially derive ``{}_sY`` from the universal
-formula for ``Y``.
-
-Then, we can simply follow Wigner around Eq. (15.21) to derived a
-transformation law in the form
-```math
-{}_sY_{ℓ,m'}(R_{θ', ϕ'}) = \sum_m M_{m',m}(R)
-{}_sY_{ℓ,m}(R_{θ, ϕ}),
-```
-for some matrix ``M``.  Note that I have written this as if the
-``{}_sY`` functions are column vectors.  The reason this happens is
-because I want to write ``R_{θ', ϕ'} = R\, R_{θ, ϕ}``,
-rather than swapping the order of the rotations on the right-hand
-side.
-
-The big problem here is that Wigner, in his Eq. (15.21) defines the
-transformation matrix as if the eigenfunctions formed a row vector
-instead of a column vector, which means that his matrix is transposed
-compared to what I want to write.  I suppose maybe other authors then
-just consider the inverse rotation, so that they can work with the
-conjugate transpose, which is why we see the relative conjugate.
-
-* Since ``Y`` is universal, let's start with that as non-negotiable,
-  and see if we can derive the relationship to ``𝔇``.
-* ``R_{θ, ϕ}`` is a unit quaternion that rotates the point
-  described by Cartesian coordinates (0,0,1) onto the point described
-  by spherical coordinates ``(θ, ϕ)``.
-* Just textually, it makes the most sense to write
-  ```math
-  R_{θ', ϕ'} = R\, R_{θ, ϕ}
-  ```
-  for some rotation ``R``.  Now, we just need to interpret ``R``.
-* Again, just textually, it makes the most sense to write
-  ```math
-  Y_{ℓ,m'}(θ', ϕ') = \sum_m 𝔇^{(ℓ)}_{m',m}(R)
-  Y_{ℓ,m}(θ, ϕ),
-  ```
-  or, generalizing to spin-weighted spherical harmonics
-  ```math
-  {}_{s}Y_{ℓ,m'}(R_{θ', ϕ'}) = \sum_m 𝔇^{(ℓ)}_{m',m}(R)
-  {}_{s}Y_{ℓ,m}(R_{θ, ϕ}).
-  ```
-* We also have that ``𝔇`` obeys the representation
-  property, so
-  ```math
-  𝔇^{(ℓ)}_{m',m''}(R_{θ', ϕ'})
-  = \sum_{m} 𝔇^{(ℓ)}_{m',m}(R)
-  𝔇^{(ℓ)}_{m,m''}(R_{θ, ϕ}).
-  ```
-  - There is no reason that I can see to introduce a conjugation
-  - The fact that ``m''`` appears on both sides of the equation means
-    that it must correspond to ``s`` — though we have to check the
-    behavior under final rotation to determine the sign.
-
-```math
-{}_{s}Y_{ℓ,m}(R_{θ, ϕ})
-\propto
-𝔇^{(ℓ)}_{m,\propto s}(R_{θ, ϕ})
-```
-
+The derivation of the transformation law and of the relation between
+``{}_sY`` and ``𝔇`` that used to be sketched here is now carried out
+in full on the [Details](@ref conv_wigner_D) page; see in particular
+the [rotation law](@ref conv_rotation_law) and the [definition of the
+spin-weighted spherical harmonics](@ref conv_swsh).
 
 ## collapsible markdown?
 
@@ -183,68 +125,6 @@ println("hello world!")
 
 
 # More notes
-
-
-## Spherical harmonics
-
-Fortunately, there does not seem to be any disagreement in the physics
-literature about the definition of the spherical harmonics; everyone
-uses the Condon-Shortley convention.  Or at least, they say they do.
-The problem arises when people define the spherical harmonics in terms
-of the Legendre polynomials, for which there is a sign ambiguity.
-Therefore, to ensure that we are using the same conventions, we need
-to go back to the original definition of the spherical harmonics by
-Condon and Shortley.
-
-### Condon-Shortley phase
-
-The [Condon-Shortley](@cite CondonShortley_1935) phase convention is a
-choice of phase factors in the definition of the spherical harmonics
-that requires the coefficients in
-```math
-L_{\pm} |ℓ,m\rangle = α^{\pm}_{ℓ,m} |ℓ, m \pm 1\rangle
-```
-to be real and positive.  The reasoning behind this choice is
-explained more fully in Section 2 of [Ufford and Shortley
-(1932)](@cite UffordShortley_1932).  As a more practical matter, the
-Condon-Shortley phase describes signs chosen in the expression for
-spherical harmonics.  The key expression is Eq. (15) of section 4³
-(page 52) of [Condon-Shortley](@cite CondonShortley_1935):
-```math
-\Theta(ℓ, m) = (-1)^ℓ \sqrt{\frac{2ℓ+1}{2} \frac{(ℓ+m)!}{(ℓ-m)!}}
-\frac{1}{2^ℓ ℓ!} \frac{1}{\sin^mθ}
-\frac{d^{ℓ-m}}{d(\cos θ)^{ℓ-m}} \sin^{2ℓ}θ.
-```
-When multiplied by Eq. (5) ``\Phi(m) = e^{imϕ} / \sqrt{2π}``,
-this gives the spherical harmonic function.  The right-hand side of
-the expression above is usually immediately replaced by a simpler
-expression using Legendre polynomials, but this just shifts sign
-ambiguity into the definition of the Legendre polynomials.  Instead,
-we can expand the above expression directly for the first few ``ℓ``
-values and/or use automatic differentiation to actually test their
-original expression as such against the function implemented in this
-package.  The first few values are given in a footnote to Condon and
-Shortley's Eq. (15) (and have been verified separately by hand and by
-computation with SymPy):
-```math
-\begin{aligned}
-\Theta(0,0) &= \sqrt{\frac{1}{2}} \\
-\Theta(1,0) &= \sqrt{\frac{3}{2}} \cos θ &
-\Theta(1,\pm1) &= \mp \sqrt{\frac{3}{4}} \sin θ \\
-\Theta(2,0) &= \sqrt{\frac{5}{8}} (2\cos^2θ - \sin^2θ) &
-\Theta(2,\pm1) &= \mp \sqrt{\frac{15}{4}} \cos θ \sin θ &
-\Theta(2,\pm2) &= \sqrt{\frac{15}{16}} \sin^2θ \\
-\Theta(3,0) &= \sqrt{\frac{7}{8}} (2\cos^3θ - 3\cos θ\sin^2θ) &
-\Theta(3,\pm1) &= \mp \sqrt{\frac{21}{32}} (4\cos^2θ\sin θ - \sin^3θ) &
-\Theta(3,\pm2) &= \sqrt{\frac{105}{16}} \cos θ \sin^2θ &
-\Theta(3,\pm3) &= \mp \sqrt{\frac{35}{32}} \sin^3θ
-\end{aligned}
-```
-These are tested, along with the results from automatic
-differentiation, every time this package is updated.  The result is
-perfect agreement, so that we can definitively say that ***the
-spherical-harmonic functions provided by this package obey the
-Condon-Shortley phase convention.***
 
 ## Angular-momentum operators
 
@@ -289,7 +169,7 @@ L_z &= -i\hbar \left( x \frac{\partial}{\partial y} - y \frac{\partial}{\partial
 We can transform these to use spherical coordinates and obtain
 ```math
 \begin{aligned}
-L_x &= -i\hbar \left( \sin ϕ \frac{\partial}{\partial θ} + \cot θ \cos ϕ \frac{\partial}{\partial ϕ} \right), \\
+L_x &= i\hbar \left( \sin ϕ \frac{\partial}{\partial θ} + \cot θ \cos ϕ \frac{\partial}{\partial ϕ} \right), \\
 L_y &= -i\hbar \left( \cos ϕ \frac{\partial}{\partial θ} - \cot θ \sin ϕ \frac{\partial}{\partial ϕ} \right), \\
 L_z &= -i\hbar \frac{\partial}{\partial ϕ}.
 \end{aligned}
@@ -337,76 +217,15 @@ L_z &= -i\hbar \frac{\partial}{\partial α}.
 \end{aligned}
 ```
 
+!!! note
+    The definitions from Boyle (2016) quoted just above use the
+    *opposite* sign for the right operator (there called ``K``) from
+    the one settled on the [Details](@ref conv_L_R_definitions) page,
+    where ``R_𝐮 f(𝐑) = -i\, d/dϵ\, f(𝐑 e^{-ϵ𝐮/2})``.  The
+    Condon–Shortley check of the ladder coefficients that used to
+    follow here is now derived there as well.
 
-## Wigner ``𝔇`` and ``d`` matrices
-
-Wigner's Eqs. (11.18) and (11.19) define the real orthogonal
-transformation ``𝐑`` by
-```math
-x'_i = R_{ij} x_j
-```
-and the operator ``𝐏_{𝐑}`` to act on a function
-``f`` such that
-```math
-𝐏_{𝐑} f(x'_1, \ldots) = f(x_1, \ldots).
-```
-Then, his Eq. (15.5) presumably implies
-```math
-Y_{ℓ,m}(ϑ', φ')
-= 𝐏_{\{α, β, γ\}} Y_{ℓ,m}(ϑ, φ)
-= \sum_{m'} 𝔇^{(ℓ)}(\{α, β, γ\})_{m',m}
-  Y_{ℓ,m'}(ϑ, φ),
-```
-where ``\{α, β, γ\}`` takes ``(ϑ, φ)`` to
-``(ϑ', φ')``.  In any case, we can now leave behind this
-``𝐏`` notation and just look at the beginning and end of the
-equation above as the critical relationship in Wigner's notation.
-
-
-Eq. (44b) of [Boyle (2016)](@cite Boyle_2016) says
-```math
-L_{\pm} 𝔇^{(ℓ)}_{m',m}(𝐑)
-= \sqrt{(ℓ \mp m')(ℓ \pm m' + 1)} 𝔇^{(ℓ)}_{m' \pm 1, m}(𝐑).
-```
-while Eq. (21) relates the Wigner D-matrix to the spin-weighted spherical harmonics as
-```math
-{}_{s}Y_{ℓ,m}(𝐑)
-= (-1)^s \sqrt{\frac{2ℓ+1}{4π}} 𝔇^{(ℓ)}_{m,-s}(𝐑).
-```
-Plugging the latter into the former, we get
-```math
-L_{\pm} {}_{s}Y_{ℓ,m}(𝐑)
-= \sqrt{(ℓ \mp m)(ℓ \pm m + 1)} {}_{s}Y_{ℓ,m \pm 1}(𝐑).
-```
-That is, in our conventions we have
-```math
-α^{\pm}_{ℓ,m} = \sqrt{(ℓ \mp m)(ℓ \pm m + 1)},
-```
-which is always real and positive, and thus consistent with the Condon-Shortley phase
-convention.
-
-
-### Properties
-
-* ``D^j_{m'm}(α,β,γ) = (-1)^{m'-m} D^j_{-m',-m}(α,β,γ)^*``
-* ``(-1)^{m'-m}D^{j}_{mm'}(α,β,γ)=D^{j}_{m'm}(γ,β,α)``
-* ``d_{m',m}^{j}=(-1)^{m-m'}d_{m,m'}^{j}=d_{-m,-m'}^{j}``
-
-```math
-\begin{aligned}
-d_{m',m}^{j}(π)        &= (-1)^{j-m}  δ_{m',-m} \\[6pt]
-d_{m',m}^{j}(π-β)  &= (-1)^{j+m'}  d_{m',-m}^{j}(β)\\[6pt]
-d_{m',m}^{j}(π+β)  &= (-1)^{j-m}  d_{m',-m}^{j}(β)\\[6pt]
-d_{m',m}^{j}(2π+β) &= (-1)^{2j}    d_{m',m}^{j}(β)\\[6pt]
-d_{m',m}^{j}(-β)     &= d_{m,m'}^{j}(β) = (-1)^{m'-m} d_{m',m}^{j}(β)
-\end{aligned}
-```
-
-
-
-
-
-
+## Rotor scraps
 
 ```math
 \begin{gather}
@@ -443,3 +262,102 @@ multiplying it by itself:
 That is, ``𝐯' = 𝐑\, 𝐯\, 𝐑^{-1}`` has the same norm as ``𝐯``,
 which means that ``𝐯'`` is a rotation of ``𝐯``.  Given the constraint
 on the norm of ``𝐑``, we can rewrite it as
+
+## Representation theory / harmonic analysis (moved from Details)
+
+  - Representations show up in Fourier analysis on groups
+  - Peter-Weyl theorem
+    - Generalizes Fourier analysis to compact groups
+    - Has three parts, [as given by Wikipedia](https://en.wikipedia.org/wiki/Peter%E2%80%93Weyl_theorem):
+      1. "The matrix coefficients of irreducible representations of
+         ``G`` are dense in the space ``C(G)`` of continuous
+         complex-valued functions on ``G``, and thus also in the space
+         ``L^2(G)`` of square-integrable functions."
+      2. Unitary representations of ``G`` are completely reducible.
+      3. "The regular representation of ``G`` on ``L^2(G)`` decomposes
+         as the direct sum of all irreducible unitary representations.
+         Moreover, the matrix coefficients of the irreducible unitary
+         representations form an orthonormal basis of ``L^2(G)``."
+  - Representation theory of ``\mathbf{Spin}(3)``
+    - Show how the Lie algebra is represented by the angular-momentum operators
+    - Show how the Lie group is represented by the Wigner D-matrices
+    - Demonstrate that ``𝔇`` is a representation
+    - Demonstrate its behavior under left and right rotation
+    - Demonstrate orthonormality
+  - Representation theory of ``\mathbf{SO}(3)``
+    - There are several places in [Folland](@cite Folland_2016) (e.g.,
+      above corollary 5.48) where he mentions that representations of
+      a quotient group are just representations that are trivial
+      (evidently meaning mapping everything to the identity matrix) on
+      the factor.  I can't find anywhere that he explains this
+      explicitly, but it seems easy enough to show.  He might do it
+      using characters.
+    - For ``\mathbf{Spin}(3)`` and ``\mathbf{SO}(3)``, the factor
+      group is just ``\{1, -1\}``.  Presumably, every representation
+      acting on ``1`` will give the identity matrix, so that's
+      trivial.  So we just need a criterion for when a representation
+      is trivial on ``-1``.  Noting that ``\exp(π \vec{v}) = -1``
+      for any ``\vec{v}``, I think we can show that this requires
+      ``m \in \mathbb{Z}``.
+    - Basically, the point is that the representations of
+      ``\mathbf{SO}(3)`` are just the integer representations of
+      ``\mathbf{Spin}(3)``.
+  - Restrict to homogeneous space (S³ -> S²)
+    - The circle group is a closed (normal?) subgroup of
+      ``\mathbf{Spin}(3)``, which we might implement as initial
+      multiplication about a particular axis.
+    - In Eq. (2.47) [Folland (2016)](@cite Folland_2016) defines a
+      functional taking a function on the group to a function on the
+      homogeneous space by integrating over the factor (the circle
+      group).  This gives you the spherical harmonics, but *not* the
+      spin-weighted spherical harmonics — because the spin-weighted
+      spherical harmonics cannot be defined on the 2-sphere.
+    - Spin weight comes from Fourier analysis on the subgroup.
+    - Representation matrices transfer to the homogeneous space, with
+      sparsity patterns
+
+Theorem 2.16 of [Hanson-Yakovlev](@cite HansonYakovlev_2002) says that
+an orthonormal basis of a product of ``L^2`` spaces is given by the
+product of the orthonormal bases of the individual spaces.
+Furthermore, on page 354, they point out that ``\{(1/\sqrt{2π})
+e^{imϕ}\}`` is an orthonormal basis of ``L^2(0,2π)``, while the
+set ``\{1/c_{n,m} P_n^m(\cos θ)\}`` is an orthonormal basis of
+``L^2(0, π)`` in the ``θ`` coordinate.  Therefore, the product
+of these two sets is an orthonormal basis of the product space
+``L^2\left((0,2π) \times (0, π)\right)``, which forms a coordinate
+space for ``𝕊²``.  I would probably modify this to point out that
+``(0,2π)`` is really ``𝕊¹``, and then we could extend it to point
+out that you can throw on another factor of ``𝕊¹`` to cover ``𝕊³``,
+which happens to give us the Wigner D-matrices.
+
+## Recursion relations (moved from Details)
+
+[Gumerov and Duraiswami (2001)](@cite Gumerov_2001) derive their
+recursion relations by differentiating solutions of the Helmholtz
+equation ``\nabla^2 ψ + k^2 ψ = 0`` as ``\tfrac{1}{k} \nabla
+ψ``.  More precisely, they differentiate both sides of the equation
+relating one solution to its rotated form — which naturally involves
+Wigner's ``𝔇`` matrix.  Using orthogonal basis functions
+for the solution, this allows them to equate terms on the two sides
+proportional to a given basis function, which leaves them with
+expressions involving sums of only the ``𝔇`` matrices and
+some coefficients depending on the indices of the basis functions (and
+hence of ``𝔇``) on both sides of the equation.  Since
+``\nabla`` is a 3-vector operator, this gives them three relations.
+
+This, of course, is happening in 3-D space, since ``ψ`` is a
+function of location in the Helmholtz equation.  It seems likely to
+me, however, that we could use the 4-D (quaternionic) version of the
+functions.  Note that G&D use ``\partial_z`` and ``\partial_x \pm i
+\partial_y`` as their operators to differentiate the functions — that
+is, the derivatives are with respect to Cartesian coordinates, which
+may be more similar to the right-derivative defined above.  However, I
+don't know that we'll necessarily be able to achieve the same results
+with just angular-momentum operators, since their operators do involve
+moving off of the sphere.  Maybe we'd need to move off of the sphere
+in 4-D space to get comparable results.  Or maybe just use something
+like ``𝐫 ∧ L``, which should also have 3 degrees of freedom.
+
+The SWSHs/``𝔇`` functions can be naturally promoted to
+functions not just on the 3-sphere, but also in 4-D space just by
+allowing the quaternions to be non-unit quaternions.

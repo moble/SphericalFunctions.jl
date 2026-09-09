@@ -15,7 +15,7 @@ important for (a) comparing to other sources, and (b) performing
 Euler angles.
 
 
-## Three-dimensional space
+## [Three-dimensional space](@id conv_three_dimensional_space)
 
 The space we are working in is naturally three-dimensional Euclidean
 space, so we start with a
@@ -42,6 +42,8 @@ g_{ij} = \left( \begin{array}{ccc}
 Note that, because the points of the space are in one-to-one
 correspondence with the vectors, we will frequently use a vector to
 label a point in space.
+
+### [Spherical coordinates](@id conv_spherical_coordinates)
 
 We will be working on the sphere, so it will be very convenient to use
 spherical coordinates ``(r, θ, ϕ)``.  We choose the standard
@@ -78,7 +80,7 @@ g_{i'j'}
 The unit coordinate vectors in spherical coordinates are then
 ```math
 \begin{aligned}
-𝐫 &= \sin θ \cos ϕ 𝐱 + \sin θ \sin ϕ 𝐲 + \cos θ 𝐳, \\
+𝐧 &= \sin θ \cos ϕ 𝐱 + \sin θ \sin ϕ 𝐲 + \cos θ 𝐳, \\
 \boldsymbol{θ} &= \cos θ \cos ϕ 𝐱 + \cos θ \sin ϕ 𝐲 - \sin θ 𝐳, \\
 \boldsymbol{ϕ} &= -\sin ϕ 𝐱 + \cos ϕ 𝐲,
 \end{aligned}
@@ -88,17 +90,17 @@ notation simple.  Conversely, we can express the Cartesian basis
 vectors in terms of the spherical basis vectors as
 ```math
 \begin{aligned}
-𝐱 &= \sin θ \cos ϕ 𝐫 + \cos θ \cos ϕ \boldsymbol{θ} - \sin ϕ \boldsymbol{ϕ}, 
+𝐱 &= \sin θ \cos ϕ 𝐧 + \cos θ \cos ϕ \boldsymbol{θ} - \sin ϕ \boldsymbol{ϕ}, 
 \\
-𝐲 &= \sin θ \sin ϕ 𝐫 + \cos θ \sin ϕ \boldsymbol{θ} + \cos ϕ \boldsymbol{ϕ},
+𝐲 &= \sin θ \sin ϕ 𝐧 + \cos θ \sin ϕ \boldsymbol{θ} + \cos ϕ \boldsymbol{ϕ},
 \\
-𝐳 &= \cos θ 𝐫 - \sin θ \boldsymbol{θ}.
+𝐳 &= \cos θ 𝐧 - \sin θ \boldsymbol{θ}.
 \end{aligned}
 ```
 
 One seemingly obvious — but extremely important — fact is that the
 unit basis frame ``(𝐱, 𝐲, 𝐳)`` can be rotated onto
-``(\boldsymbol{θ}, \boldsymbol{ϕ}, 𝐫)`` by first
+``(\boldsymbol{θ}, \boldsymbol{ϕ}, 𝐧)`` by first
 rotating through the "polar" angle ``θ`` about the ``𝐲``
 axis, and then through the "azimuthal" angle ``ϕ`` about the
 ``𝐳`` axis.  This becomes important when we consider
@@ -120,7 +122,7 @@ Restricting to the unit sphere, we obtain the usual surface element
 Note that ``\int_{𝕊²} d^2\Omega = 4π``.
 
 
-## Four-dimensional space: Quaternions and rotations
+## [Four-dimensional space: Quaternions and rotations](@id conv_quaternions)
 
 ### Geometric algebra
 
@@ -208,7 +210,7 @@ equally correct by the isomorphism.
       geometric algebra text, like [Doran and Lasenby](@cite
       DoranLasenby_2010).
 
-### Quaternions and Euler angles
+### [Quaternions and Euler angles](@id Quaternions-and-Euler-angles)
 
 Note that there are different conventions for the signs of the ``(𝐢,
 𝐣, 𝐤)`` basis.  Everyone agrees that ``𝐢² = 𝐣² = 𝐤² = -1``, but
@@ -298,11 +300,11 @@ cover the space of rotations.  This and the inclusion of ``R``
 identify precisely how this coordinate system extends the standard
 Euler angles.
 
-Note that it would also be reasonable to limit ``γ`` to ``2π``,
-while allowing ``β`` to range up to ``2π`` to cover the entire space
-of quaternions.  This is just somewhat more delicate to compute, and
-is simply not conventional.  Also, using ``γ ∈ [0,4π)`` integrates
-nicely with our [framework of a telescope](@ref Domain) with ``γ``
+Note that it would also be reasonable to limit ``γ`` to ``2π``, while
+allowing ``β`` to range up to ``2π`` to cover the entire space of
+quaternions.  This is just somewhat more delicate to compute, and is
+simply not conventional.  Also, using ``γ ∈ [0,4π)`` integrates nicely
+with our [framework of a telescope](@ref background_domain) with ``γ``
 representing the rotation about its line of sight; a full ``4π``
 rotation is required for the polarizer to explore the full range of
 states of half-integer spin fields.
@@ -359,6 +361,8 @@ unit basis vectors in quaternion coordinates are
 \end{aligned}
 ```
 
+### [Invariant measure](@id conv_haar_measure)
+
 Again, integration involves a square-root of the determinant of the
 metric, which reduces to ``R^3 \sin β / 8``.  The integral over the
 entire space of quaternions is then
@@ -367,20 +371,33 @@ entire space of quaternions is then
 = \int_{-\infty}^\infty \int_{-\infty}^\infty \int_{-\infty}^\infty \int_{-\infty}^\infty f\, dW\, dX\, dY\, dZ
 = \int_0^\infty \int_0^{2π} \int_0^{π} \int_0^{4π} f\, \frac{R^3}{8} \sin β\, dR\, dα\, dβ\, dγ.
 ```
-Restricting to the unit sphere, we can simplify this to
+Restricting to the unit sphere ``R=1``, we obtain the measure on
+``\mathrm{Spin}(3)``,
 ```math
 \int_{\mathrm{Spin}(3)} f\, d^3\Omega
-= \int_0^{2π} \int_0^{π} \int_0^{4π} f\, \sin β\, dα\, dβ\, dγ,
+= \frac{1}{8} \int_0^{2π} \int_0^{π} \int_0^{4π} f\, \sin β\, dα\, dβ\, dγ,
 ```
-where ``\int_{\mathrm{Spin}(3)} d^3\Omega = 2π^2``.  Finally,
-restricting to the space of rotations, we can further simplify this to
+where ``\int_{\mathrm{Spin}(3)} d^3\Omega = 2π^2`` is the volume of
+the unit 3-sphere.  This measure is inherited from the Euclidean
+metric of ``\mathbb{R}^4``, which is invariant under multiplication by
+unit quaternions on either side; it is therefore the (bi-invariant)
+Haar measure of the group, and it is the measure we use whenever we
+integrate over ``\mathrm{Spin}(3)`` — in particular for the
+orthogonality of the Wigner ``𝔇`` matrices [below](@ref
+conv_D_orthogonality).  Finally, restricting to the space of rotations
+by limiting ``γ`` to ``[0, 2π)``, we can further simplify this to
 ```math
 \int_{\mathrm{SO}(3)} f\, d^3\Omega
-= \int_0^{2π} \int_0^{π} \int_0^{2π} f\, \sin β\, dα\, dβ\, dγ,
+= \frac{1}{8} \int_0^{2π} \int_0^{π} \int_0^{2π} f\, \sin β\, dα\, dβ\, dγ,
 ```
-where ``\int_{\mathrm{SO}(3)} d^3\Omega = π^2``.
+where ``\int_{\mathrm{SO}(3)} d^3\Omega = π^2``.  (Many references
+instead normalize the measure on ``\mathrm{SO}(3)`` to ``8π^2`` by
+omitting the factor of ``1/8``, or to ``1``; only the relative
+normalizations matter below.)  These volume factors are verified
+symbolically on the [metrics and integration](@ref
+metrics_and_integration) page.
 
-## Rotations
+## [Rotations](@id conv_rotations)
 
 We restrict to a unit quaternion ``𝐑``, for which ``W^2 + X^2 + Y^2 +
 Z^2 = 1``.  Given this constraint we can, without loss of generality,
@@ -432,7 +449,7 @@ a double cover of the rotation group: negating ``𝐑`` results in the
 same rotation.  Thus, for any rotation, there are two (precisely
 opposite) quaternions that represent it.
 
-### Euler angles and spherical coordinates
+### [Euler angles and spherical coordinates](@id conv_euler_angles)
 
 Now that we understand how rotations work, we can provide geometric
 intuition for the expressions given above for Euler angles.  The Euler
@@ -456,12 +473,12 @@ rotated into the plane spanned by the unit basis vectors
 that point.  If ``γ = 0`` the rotation is precise, meaning that
 ``𝐱`` is rotated onto ``\boldsymbol{θ}`` and ``𝐲`` onto
 ``\boldsymbol{ϕ}``; if ``γ ≠ 0`` then they are rotated within
-that plane by the angle ``γ`` about the ``𝐫`` axis.
+that plane by the angle ``γ`` about the ``𝐧`` axis.
 Thus, we identify the spherical coordinates ``(θ, ϕ)`` with
 the Euler angles ``(α, β, γ) = (ϕ, θ, 0)``.
 
 
-## Rotation and angular-momentum operators
+## [Rotation and angular-momentum operators](@id conv_operators)
 
 ### Complex-valued functions
 
@@ -542,7 +559,7 @@ of ``\mathrm{Spin}(3)`` on the argument to the function.  Therefore,
 we need to consider the general behavior of functions under such
 actions.
 
-### Finite rotations
+### [Finite rotations](@id conv_finite_rotations)
 
 We work with functions ``f: A \to \mathbb{C}``, where ``A`` is either
 the group of unit quaternions, or the full algebra of quaternions.
@@ -653,7 +670,7 @@ and since this is a scalar function it has no effect on the value.  Of
 course, we will see below that changing by a phase proportional to
 ``α`` is the defining feature of a *spin-weighted* function.
 
-### Differential rotations
+### [Differential rotations](@id conv_L_R_definitions)
 
 We now define a pair of operators that differentiate a function with
 respect to infinitesimal rotations we apply to the functions
@@ -753,91 +770,749 @@ R_\pm &= R_𝐱 \pm i R_𝐲.
 \end{aligned}
 ```
 
-* TODO: Impose ``R_z = s``
-* TODO: Impose Condon-Shortley condition (positive, real eigenvalues of ``R_\pm``)
-* TODO: Show how the following happens
-
-Using these relations, we can actually solve for the constants
-``\lambda`` and ``\rho`` up to a sign.  We find that
+To pin down ``\lambda`` and ``\rho``, suppose the raising operator for
+``L_z`` is some linear combination ``L_+ = a L_𝐱 + b L_𝐲 + c L_𝐳``.
+Using the commutator relation above together with ``[𝐤, 𝐢] = 2𝐣``
+and ``[𝐤, 𝐣] = -2𝐢``, we find
+```math
+[L_z, L_+] = \lambda \left( a L_𝐲 - b L_𝐱 \right).
+```
+Setting this equal to ``L_+`` requires ``c = 0``, ``a = -\lambda b``,
+and ``b = \lambda a``, which together imply
+```math
+\lambda^2 = -1
+\qquad \text{and} \qquad
+L_+ \propto L_𝐱 + \lambda L_𝐲.
+```
+Thus the mere *existence* of ladder operators forces ``\lambda = \pm
+i``, and the sign of ``\lambda`` is tied to which of the two
+combinations we choose to call the raising operator.  Adopting the
+universal convention
+```math
+L_\pm = L_𝐱 \pm i L_𝐲
+```
+therefore fixes ``\lambda = i``.  The same argument for the right
+operators, with the extra minus sign in their commutator relation,
+gives ``[R_z, R_+] = -\rho\, (a R_𝐲 - b R_𝐱)``, hence ``\rho^2 =
+-1`` and ``R_+ \propto R_𝐱 - \rho R_𝐲``.  Adopting the analogous
+convention
+```math
+R_\pm = R_𝐱 \pm i R_𝐲
+```
+fixes ``\rho = -i``.  We therefore have
 ```math
 \begin{aligned}
 \lambda &= i, \\
-\rho &= -i.
+\rho &= -i,
 \end{aligned}
 ```
+which are the values used in the definitions given in the
+[Summary](@ref summary_L_R_definitions).  Two consequences deserve
+emphasis, both of which will be borne out below.  First, ``L`` then
+coincides with the standard angular-momentum operator of quantum
+mechanics (``L_z = -i\partial_\phi`` on the sphere), with the standard
+commutation relations ``[L_a, L_b] = i\epsilon_{abc} L_c``.  Second,
+``R`` obeys exactly the *same* commutation relations, and its fiducial
+component is ``R_z = i\partial_γ``, which we will find to have
+eigenvalue ``+s`` on a function of spin weight ``s``.  The opposite
+sign for ``\rho`` — as used, for example, in the body-fixed operators
+of
+[Wikipedia](https://en.wikipedia.org/wiki/Wigner_D-matrix#Properties_of_the_Wigner_D-matrix)
+and in earlier versions of this package — leads to "anomalous"
+commutation relations with an extra minus sign and to an eigenvalue of
+``-s``.
 
-
-### Angular-momentum operators in Euler angles
-
-  - Express angular momentum operators in terms of Euler angles
-    - We just rewrite the ``R`` in the Lie definitions in terms of
-      Euler angles, multiply by ``\exp(θ/2)``, rederive the new
-      Euler angles from that result, and use the chain rule
-  - Show for both the three- and two-spheres
-  - Show how they act on functions on the three-sphere
-
-The idea here is to express, e.g., $e^{θ 𝐞_i /
-2}𝐑_{α, β, γ}$ in quaternion components, then
-solve for the new Euler angles $𝐑_{α', β', γ'}$
-in terms of the quaternion components, where these new angles all
-depend on $θ$.  We then use the chain rule to express
-$\partial_θ$ in terms of $\partial_{α'}$, etc., which become
-$\partial_α$, etc., when $θ=0$.
-
-
+Once the constants are fixed, the commutator relations read
 ```math
-\begin{aligned}
-  L_i f(𝐑_{α, β, γ})
-  &=
-  \left. -𝐳 \frac{\partial} {\partial θ} f \left( e^{θ 𝐞_i / 2} 𝐑_{α, β, γ} \right) \right|_{θ=0} \\
-  &=
-  \left. -𝐳 \frac{\partial} {\partial θ} f \left( 𝐑_{α', β', γ'} \right) \right|_{θ=0} \\
-  &=
-  \left. -𝐳 \left[ \frac{\partial α'} {\partial θ}\frac{\partial} {\partial α'} + \frac{\partial β'} {\partial θ}\frac{\partial} {\partial β'} + \frac{\partial γ'} {\partial θ}\frac{\partial} {\partial γ'} \right] f \left( 𝐑_{α', β', γ'} \right) \right|_{θ=0} \\
-  &=
-  -𝐳 \left[ \frac{\partial α'} {\partial θ}\frac{\partial} {\partial α} + \frac{\partial β'} {\partial θ}\frac{\partial} {\partial β} + \frac{\partial γ'} {\partial θ}\frac{\partial} {\partial γ} \right]_{θ=0} f \left( 𝐑_{α, β, γ} \right) \\
-  K_i f(𝐑_{α, β, γ})
-  &=
-  -𝐳 \left[ \frac{\partial α''} {\partial θ}\frac{\partial} {\partial α} + \frac{\partial β''} {\partial θ}\frac{\partial} {\partial β} + \frac{\partial γ''} {\partial θ}\frac{\partial} {\partial γ} \right]_{θ=0} f \left( 𝐑_{α, β, γ} \right),
-\end{aligned}
+[L_𝔤, L_𝔥] = \frac{i}{2} L_{[𝔤, 𝔥]},
+\qquad
+[R_𝔤, R_𝔥] = \frac{i}{2} R_{[𝔤, 𝔥]},
+\qquad
+[L_𝔤, R_𝔥] = 0,
 ```
+and the Casimir operators ``L^2 = L_𝐱^2 + L_𝐲^2 + L_𝐳^2`` and
+``R^2`` commute with everything.  In fact ``L^2 = R^2``, because both
+equal the Laplacian on ``\mathrm{Spin}(3)`` up to a constant factor —
+see the [section on Laplacians](@ref conv_laplacians).
 
+### [Angular-momentum operators in Euler angles](@id conv_L_R_euler)
+
+Having defined ``L`` and ``R`` in terms of the group structure, we can
+express them in any coordinate system on ``\mathrm{Spin}(3)``.  The
+most useful is the system of Euler angles, because it makes contact
+with the standard expressions in the literature.  The procedure is
+mechanical: write ``e^{-ϵ𝐮/2}\, 𝐑_{α, β, γ}`` (or ``𝐑_{α, β, γ}\,
+e^{-ϵ𝐮/2}``) in terms of its components, extract the new Euler angles
+``(α', β', γ')`` as functions of ``ϵ``, differentiate at ``ϵ=0``, and
+apply the chain rule.  This is carried out symbolically on the
+[``L_j`` and ``R_j`` with Euler angles](@ref euler_angular_momentum)
+page, which also verifies the commutation relations claimed above.
+The results are collected in the [Summary](@ref summary_L_R_euler);
+the essential ones are
+```math
+L_𝐤 = -i \frac{\partial}{\partial α}
+\qquad \text{and} \qquad
+R_𝐤 = i \frac{\partial}{\partial γ}.
+```
+Restricting to spin-weight-0 functions via ``(α, β, γ) = (ϕ, θ, 0)``
+reproduces the textbook expressions for ``L_x``, ``L_y``, ``L_z``, and
+``L_\pm`` in spherical coordinates, as shown [there](@ref "``L``
+operators in spherical coordinates").  The ``R`` operators have no
+analog on the 2-sphere: their expressions retain derivatives with
+respect to ``γ``, which is the first sign that spin-weighted functions
+cannot be defined on ``𝕊²``.
+
+## [Wigner's 𝔇 matrices](@id conv_wigner_D)
+
+### [Rotation operators](@id conv_rotation_operator)
+
+[Sakurai_1994](@citet) says that
+
+> Because rotations affect physical systems, the state ket
+> corresponding to a rotated system is expected to look different from
+> the state ket corresponding to the original unrotated system.  Given
+> a rotation operation ``R``, characterized by a ``3×3`` orthogonal
+> matrix ``R``, we associate an operator ``𝒟(R)`` in the appropriate
+> ket space such that
+> ```math
+> |α\rangle_R = 𝒟(R) |α\rangle,
+> ```
+> where ``|α\rangle_R`` and ``|α\rangle`` stand for the kets of
+> the rotated and original system, respectively.
+
+In our setting the "kets" are complex-valued functions on
+``\mathrm{Spin}(3)``, and we saw [above](@ref conv_finite_rotations)
+that rotating the *field* by ``𝐑`` while leaving the coordinates
+fixed means rotating the *argument* by ``𝐑^{-1}``.  We therefore
+define the rotation operator ``U(𝐑)`` by
+```math
+\left[U(𝐑) f\right](𝐐) = f\left(𝐑^{-1}\, 𝐐\right).
+```
+A short calculation shows that ``U(𝐑_1)\, U(𝐑_2) = U(𝐑_1 𝐑_2)``, so
+``U`` is a representation of ``\mathrm{Spin}(3)`` on the space of
+functions.  It is unitary with respect to the inner product defined by
+the [invariant measure](@ref conv_haar_measure), and it commutes with
+every right operator ``R_𝐮`` (left and right multiplication commute).
+For an infinitesimal rotation we have
 ```math
 \begin{aligned}
-𝐑_{α, β, γ}
+\left[U\left(e^{ϵ 𝐮/2}\right) f\right](𝐑)
 &=
-  R\, \cos\frac{β}{2} \cos\frac{α+γ}{2}
-  -R\, \sin\frac{β}{2} \sin\frac{α-γ}{2} 𝐢
-  + R\, \sin\frac{β}{2} \cos\frac{α-γ}{2} 𝐣
-  + R\, \cos\frac{β}{2} \sin\frac{α+γ}{2} 𝐤.
-\\
-e^{θ 𝐮 / 2} 𝐑_{α, β, γ}
-&= \left(\cos\frac{θ}{2} + 𝐮 \sin\frac{θ}{2}\right) 𝐑_{α, β, γ}
-\\
+f\left(e^{-ϵ 𝐮/2}𝐑\right) \\
+&\approx
+f\left(𝐑\right) + ϵ \left. \frac{d}{dϵ} \right|_{ϵ=0}
+f\left(e^{-ϵ 𝐮/2}𝐑\right) \\
 &=
-  R\, \cos\frac{θ}{2} \cos\frac{β}{2} \cos\frac{α+γ}{2}
-  -R\, \cos\frac{θ}{2} \sin\frac{β}{2} \sin\frac{α-γ}{2} 𝐢
-  + R\, \cos\frac{θ}{2} \sin\frac{β}{2} \cos\frac{α-γ}{2} 𝐣
-  + R\, \cos\frac{θ}{2} \cos\frac{β}{2} \sin\frac{α+γ}{2} 𝐤
-\\
-&\quad +
-  R\, \sin\frac{θ}{2}\cos\frac{β}{2} \cos\frac{α+γ}{2} 𝐮
-  -R\, \sin\frac{θ}{2}\sin\frac{β}{2} \sin\frac{α-γ}{2} 𝐮𝐢
-  + R\, \sin\frac{θ}{2}\sin\frac{β}{2} \cos\frac{α-γ}{2} 𝐮𝐣
-  + R\, \sin\frac{θ}{2}\cos\frac{β}{2} \sin\frac{α+γ}{2} 𝐮𝐤
+f\left(𝐑\right) - i ϵ L_𝐮 f\left(𝐑\right),
 \end{aligned}
 ```
+which is precisely Sakurai's Eq. (3.1.15),
+```math
+𝒟\left(\hat{𝐧}, dϕ \right)
+=
+1 - i \left( 𝐉 \cdot \hat{𝐧} \right) dϕ,
+```
+with ``𝐉 \to 𝐋``.  Exponentiating, ``U(e^{ϑ 𝐮/2}) = \exp(-i ϑ
+L_𝐮)``, and in particular for Euler angles
+```math
+U(𝐑_{α, β, γ})
+= \exp[-iα L_z]\, \exp[-iβ L_y]\, \exp[-iγ L_z].
+```
+This is the operator whose matrix elements every source in our
+priority list (LALSuite, Wikipedia, Sakurai, Shankar, Zettili,
+Varshalovich et al.) uses to define Wigner's ``𝔇`` matrices; we do
+the same.
 
+### [Definition](@id conv_wigner_D_definition)
+
+Let ``|ℓ, m\rangle`` denote an orthonormal set of simultaneous
+eigenfunctions of ``L^2``, ``L_z``, and ``R_z``, with eigenvalues
+``ℓ(ℓ+1)``, ``m``, and some fixed ``s``.  (The value of ``s`` is
+irrelevant here because ``U(𝐑)`` commutes with ``R_z``; for integer
+``ℓ`` we may take ``s=0``, so that the ``|ℓ, m\rangle`` are just the
+ordinary spherical harmonics defined [below](@ref
+conv_spherical_harmonics).)  Because ``U(𝐑)`` commutes with ``L^2``,
+it maps the ``(2ℓ+1)``-dimensional eigenspace of ``L^2`` to itself,
+and we define Wigner's ``𝔇`` matrix as the matrix of ``U(𝐑)`` in this
+basis — Sakurai's Eq. (3.5.42):
+```math
+𝔇^{(ℓ)}_{m',m}(𝐑)
+=
+\langle ℓ, m' | U(𝐑) | ℓ, m \rangle,
+\qquad \text{equivalently} \qquad
+U(𝐑)\, |ℓ, m\rangle = \sum_{m'} |ℓ, m'\rangle\, 𝔇^{(ℓ)}_{m',m}(𝐑).
+```
+Here ``ℓ \in \{0, \tfrac{1}{2}, 1, \tfrac{3}{2}, \ldots\}`` and ``m',
+m \in \{-ℓ, -ℓ+1, \ldots, ℓ\}``, so that ``ℓ``, ``m'``, and ``m`` are
+either all integers or all half-integers.  Three points about this
+definition deserve emphasis, because they are exactly the points on
+which the literature disagrees:
+
+1. **Argument.** ``𝔇`` is a function of the rotation ``𝐑`` itself —
+   the rotation applied to the *field* — not of its inverse.
+2. **Index order.** The first index ``m'`` is attached to the bra,
+   and will be found below to pair with the *first* Euler angle ``α``
+   and with the *left* operators ``L``; the second index ``m`` is
+   attached to the ket, and pairs with the *last* Euler angle ``γ``
+   and the *right* operators ``R``.
+3. **Conjugation.** With ``U`` as defined above, ``𝔇`` carries phases
+   ``e^{-i m' α}`` and ``e^{-i m γ}`` — see below.  Several sources
+   (including [Wigner](@cite Wigner_1959), [Edmonds](@cite
+   Edmonds_2016), [Goldberg et al.](@cite GoldbergEtAl_1967), and
+   [Boyle (2016)](@cite Boyle_2016), whose convention was used by
+   versions of this package before 3.0) define a matrix that is the
+   complex conjugate of this one, possibly with additional signs
+   ``(-1)^{m'-m}`` or transposition.  The comparisons pages record the
+   precise relationship for each source.
+
+### [Basic properties](@id conv_D_symmetries)
+
+Because ``U`` is a unitary representation, ``𝔇`` is too — Sakurai's
+Eq. (3.5.46):
+```math
+𝔇^{(ℓ)}(𝐑_1\, 𝐑_2) = 𝔇^{(ℓ)}(𝐑_1)\, 𝔇^{(ℓ)}(𝐑_2),
+\qquad
+𝔇^{(ℓ)}(𝟏) = 𝟙,
+\qquad
+𝔇^{(ℓ)}(𝐑^{-1}) = 𝔇^{(ℓ)}(𝐑)^{-1} = 𝔇^{(ℓ)}(𝐑)^\dagger,
+```
+where the products are matrix products in the indices ``(m', m)``.
+Since ``e^{π 𝐮} = -𝟏`` for any unit vector ``𝐮``, and ``U(e^{π𝐮/2}) =
+\exp(-iπ L_𝐮)`` has eigenvalues ``e^{-iπ m}`` on the eigenspace of
+``L^2``, we also have
+```math
+𝔇^{(ℓ)}(-𝐑) = (-1)^{2ℓ}\, 𝔇^{(ℓ)}(𝐑).
+```
+That is, for integer ``ℓ`` the two quaternions representing a given
+rotation give the same matrix, so ``𝔇^{(ℓ)}`` is a representation of
+``\mathrm{SO}(3)``; for half-integer ``ℓ`` it is a genuine
+representation of ``\mathrm{Spin}(3)`` only, and changes sign under a
+rotation through ``2π``.  This is the group-theoretic reason that the
+Euler angle ``γ`` must range over ``[0, 4π)`` to cover
+``\mathrm{Spin}(3)``.
+
+The other basic symmetry follows from the reality of the ``d`` matrix
+introduced below and the structure of the phases:
+```math
+\overline{𝔇^{(ℓ)}_{m',m}(𝐑)}
+=
+(-1)^{m'-m}\, 𝔇^{(ℓ)}_{-m',-m}(𝐑).
+```
+Note that ``m'-m`` is always an integer, so this holds for
+half-integer ``ℓ`` as well.
+
+### [Euler-angle form and the ``d`` matrix](@id conv_wigner_d_formula)
+
+Using the Euler-angle factorization of ``U`` and the eigenvalue
+property of ``L_z`` on the basis kets, we find — Sakurai's Eq.
+(3.5.50) —
 ```math
 \begin{aligned}
-α &= \arctan\frac{Z}{W} + \arctan\frac{-X}{Y} &&\in [0, 2π), \\
-β &= 2\arccos\sqrt{\frac{W^2+Z^2}{W^2+X^2+Y^2+Z^2}} &&\in [0, 2π], \\
-γ &= \arctan\frac{Z}{W} - \arctan\frac{-X}{Y} &&\in [0, 2π),
+𝔇^{(ℓ)}_{m',m}(α, β, γ)
+&=
+\langle ℓ, m' |
+    \exp[-iL_z α]\exp[-iL_y β]\exp[-iL_z γ]
+| ℓ, m \rangle \\
+&=
+e^{-i m' α}\, d^{(ℓ)}_{m',m}(β)\, e^{-i m γ},
 \end{aligned}
 ```
+where the "small" ``d`` matrix is
+```math
+d^{(ℓ)}_{m',m}(β)
+=
+\langle ℓ, m' | \exp[-iL_y β] | ℓ, m \rangle.
+```
+We derive the phases very explicitly.  Recall that in general
+```math
+\left(\left\langle ψ | A\, B\, C | \chi \right\rangle\right)^\ast
+=
+\left\langle \chi | C^\dag\, B^\dag\, A^\dag | ψ \right\rangle,
+\qquad
+\left( e^{-i ϵ L_u} \right)^\dag
+=
+e^{i ϵ L_u^\dag}
+=
+e^{i ϵ L_u},
+```
+so that ``\langle ℓ, m' | e^{-iαL_z} = \left(e^{iαL_z} |ℓ, m'\rangle
+\right)^\dagger = e^{-i m' α} \langle ℓ, m'|``, and similarly on the
+right.  Because ``L_y = (L_+ - L_-)/2i`` has purely imaginary matrix
+elements in the standard basis (whose ladder coefficients are real and
+positive — the Condon–Shortley convention discussed below), ``d`` is
+real.  Wigner's explicit formula for it is
+```math
+d^{(ℓ)}_{m',m}(β)
+=
+\sum_{k}
+(-1)^{k - m + m'}
+\frac{\sqrt{(ℓ+m)!\,(ℓ-m)!\,(ℓ+m')!\,(ℓ-m')!}}
+     {(ℓ+m-k)!\,k!\,(ℓ-m'-k)!\,(k-m+m')!}
+\left(\cos\frac{β}{2}\right)^{2ℓ+m-m'-2k}
+\left(\sin\frac{β}{2}\right)^{2k-m+m'},
+```
+where the sum runs over all integers ``k`` for which the factorials
+have non-negative arguments, namely ``\max(0, m-m') \leq k \leq
+\min(ℓ+m, ℓ-m')``.  This is the form given by [Sakurai (Eq.
+3.8.33)](@cite Sakurai_1994), [Zettili (Eq. 7.56)](@cite
+Zettili_2009), and
+[Wikipedia](https://en.wikipedia.org/wiki/Wigner_D-matrix#Wigner_(small)_d-matrix),
+and it is the form implemented by [LALSuite](@cite LALSuite_2018).
+The simplest cases are
+```math
+d^{(1/2)}(β) =
+\begin{pmatrix}
+  \cos\frac{β}{2} & -\sin\frac{β}{2} \\
+  \sin\frac{β}{2} & \phantom{-}\cos\frac{β}{2}
+\end{pmatrix},
+\qquad
+d^{(1)}(β) =
+\begin{pmatrix}
+  \frac{1+\cos β}{2} & -\frac{\sin β}{\sqrt{2}} & \frac{1-\cos β}{2} \\
+  \frac{\sin β}{\sqrt{2}} & \cos β & -\frac{\sin β}{\sqrt{2}} \\
+  \frac{1-\cos β}{2} & \frac{\sin β}{\sqrt{2}} & \frac{1+\cos β}{2}
+\end{pmatrix},
+```
+with rows indexed by ``m'`` and columns by ``m``, both *decreasing*
+from ``ℓ`` to ``-ℓ`` (the usual textbook layout).  The ``d`` matrix
+satisfies
+```math
+\begin{aligned}
+d^{(ℓ)}_{m',m}(β) &= (-1)^{m'-m}\, d^{(ℓ)}_{m,m'}(β) = d^{(ℓ)}_{-m,-m'}(β), \\
+d^{(ℓ)}_{m',m}(-β) &= d^{(ℓ)}_{m,m'}(β), \\
+d^{(ℓ)}_{m',m}(π - β) &= (-1)^{ℓ+m'}\, d^{(ℓ)}_{m',-m}(β), \\
+d^{(ℓ)}_{m',m}(π) &= (-1)^{ℓ-m}\, δ_{m',-m}, \\
+d^{(ℓ)}_{m',m}(2π + β) &= (-1)^{2ℓ}\, d^{(ℓ)}_{m',m}(β),
+\end{aligned}
+```
+which are the standard relations found, e.g., on Wikipedia.  Note
+that this package does not compute ``d`` from the formula above, which
+is numerically disastrous for large ``ℓ``; the formula is the
+*definition* against which the recursive algorithms (documented in
+the Notes) are tested.
 
+### [Differential relations](@id conv_D_differential)
 
-### Laplacians
+Viewed as functions on ``\mathrm{Spin}(3)``, the matrix elements of
+``𝔇`` are eigenfunctions of our differential operators.  The
+representation property gives ``𝔇_{m',m}(𝐑\, e^{-ϵ𝐮/2}) = \sum_k
+𝔇_{m',k}(𝐑)\, 𝔇_{k,m}(e^{-ϵ𝐮/2})``, and ``𝔇_{k,m}(e^{-ϵ𝐮/2}) =
+\langle ℓ, k| e^{iϵL_𝐮} |ℓ, m\rangle``, so differentiating the
+definitions of ``R_𝐮`` and (similarly) ``L_𝐮`` yields
+```math
+R_𝐮\, 𝔇^{(ℓ)}_{m',m} = \sum_k 𝔇^{(ℓ)}_{m',k}\, (J_𝐮)_{k,m},
+\qquad
+L_𝐮\, 𝔇^{(ℓ)}_{m',m} = -\sum_k (J_𝐮)_{m',k}\, 𝔇^{(ℓ)}_{k,m},
+```
+where ``(J_𝐮)_{k,m} = \langle ℓ, k | L_𝐮 | ℓ, m \rangle`` are the
+standard ``(2ℓ+1)``-dimensional angular-momentum matrices.  Inserting
+the standard matrix elements of ``J_z`` and ``J_\pm`` gives
+```math
+\begin{aligned}
+L^2\, 𝔇^{(ℓ)}_{m',m} &= R^2\, 𝔇^{(ℓ)}_{m',m} = ℓ(ℓ+1)\, 𝔇^{(ℓ)}_{m',m}, \\
+L_z\, 𝔇^{(ℓ)}_{m',m} &= -m'\, 𝔇^{(ℓ)}_{m',m},
+&
+R_z\, 𝔇^{(ℓ)}_{m',m} &= m\, 𝔇^{(ℓ)}_{m',m}, \\
+L_\pm\, 𝔇^{(ℓ)}_{m',m} &= -\sqrt{(ℓ \pm m')(ℓ \mp m' + 1)}\, 𝔇^{(ℓ)}_{m' \mp 1, m},
+&
+R_\pm\, 𝔇^{(ℓ)}_{m',m} &= \sqrt{(ℓ \mp m)(ℓ \pm m + 1)}\, 𝔇^{(ℓ)}_{m', m \pm 1}.
+\end{aligned}
+```
+These can be checked directly on the Euler-angle form: ``L_z =
+-i\partial_α`` acting on ``e^{-im'α}`` gives ``-m'``, while ``R_z =
+i\partial_γ`` acting on ``e^{-imγ}`` gives ``m``.  The minus sign and
+the reversed direction of the ``L`` ladder are unavoidable
+consequences of defining ``𝔇`` through matrix elements of ``U(𝐑)``:
+as a function of its argument, ``𝔇_{m',m}`` behaves like a *row* of
+expansion coefficients rather than like a basis function.  It is the
+complex conjugate ``\overline{𝔇_{m',m}}`` that behaves like a
+wavefunction, with ``L_z`` eigenvalue ``+m'`` and ``R_z`` eigenvalue
+``-m`` — which is exactly why the spin-weighted spherical harmonics
+below are proportional to ``\overline{𝔇_{m,-s}}``.  (Wikipedia states
+the same fact in the language of the symmetric top: it is
+``D^{j\ast}_{m'm}`` that is the eigenfunction of the space-fixed
+``𝒥_z`` with eigenvalue ``m'`` and of the body-fixed ``𝒫_z = -R_z``
+with eigenvalue ``m``.)
+
+### [Orthogonality and completeness](@id conv_D_orthogonality)
+
+By the Peter–Weyl theorem (Schur orthogonality), the matrix elements
+of the irreducible unitary representations form a complete orthogonal
+basis of ``L^2(\mathrm{Spin}(3))``.  With the [invariant measure](@ref
+conv_haar_measure) normalized to total volume ``2π^2``, the
+orthogonality relation reads
+```math
+\int_{\mathrm{Spin}(3)}
+  \overline{𝔇^{(ℓ')}_{m'_1, m_1}(𝐑)}\,
+  𝔇^{(ℓ)}_{m', m}(𝐑)\,
+  d^3Ω
+=
+\frac{2π^2}{2ℓ+1}\, δ_{ℓ', ℓ}\, δ_{m'_1, m'}\, δ_{m_1, m}.
+```
+Restricting the sum over ``ℓ`` to integers gives the corresponding
+statement for ``\mathrm{SO}(3)``, whose volume in this normalization
+is ``π^2``.  This is the sense in which the ``𝔇`` matrices generalize
+Fourier analysis from the circle to the rotation group, and it is the
+basis of the spin-weighted spherical-harmonic transforms implemented
+in this package.
+
+## [Spherical harmonics and spin-weighted spherical harmonics](@id conv_harmonics)
+
+### [Spherical harmonics](@id conv_spherical_harmonics)
+
+Fortunately, there does not seem to be any disagreement in the physics
+literature about the definition of the spherical harmonics ``Y_{ℓ,
+m}(θ, ϕ)``; everyone uses the Condon–Shortley convention, and our
+``Y_{ℓ,m}`` is the standard one.  The only place where care is needed
+is that many sources *define* ``Y_{ℓ,m}`` in terms of associated
+Legendre functions, for which there is a sign ambiguity ``(-1)^m``
+that is sometimes absorbed into the Legendre function and sometimes
+not.  To be unambiguous, we go back to the original.
+
+The [Condon–Shortley](@cite CondonShortley_1935) phase convention is
+a choice of phase factors in the definition of the spherical harmonics
+that requires the coefficients in
+```math
+L_{\pm} |ℓ,m\rangle = α^{\pm}_{ℓ,m} |ℓ, m \pm 1\rangle
+```
+to be real and positive, together with the requirement that
+``Y_{ℓ,0}`` be real and positive on the positive ``𝐳`` axis.  The
+reasoning behind this choice is explained more fully in Section 2 of
+[Ufford and Shortley (1932)](@cite UffordShortley_1932).  As a
+practical matter, Condon and Shortley's Eq. (15) of section 4³ (page
+52) gives
+```math
+\Theta(ℓ, m) = (-1)^ℓ \sqrt{\frac{2ℓ+1}{2} \frac{(ℓ+m)!}{(ℓ-m)!}}
+\frac{1}{2^ℓ ℓ!} \frac{1}{\sin^mθ}
+\frac{d^{ℓ-m}}{d(\cos θ)^{ℓ-m}} \sin^{2ℓ}θ,
+```
+and the spherical harmonic is ``Y_{ℓ,m}(θ, ϕ) = \Theta(ℓ, m)\,
+\Phi(m)`` with ``\Phi(m) = e^{imϕ} / \sqrt{2π}`` from their Eq. (5).
+This expression is tested directly against this package (see the
+Condon–Shortley comparison page), so we can definitively say that
+***the spherical-harmonic functions provided by this package obey the
+Condon–Shortley phase convention***.  For example,
+```math
+Y_{0,0} = \frac{1}{\sqrt{4π}},
+\qquad
+Y_{1,0} = \sqrt{\frac{3}{4π}} \cos θ,
+\qquad
+Y_{1,\pm 1} = \mp \sqrt{\frac{3}{8π}} \sin θ\, e^{\pm iϕ}.
+```
+
+An equivalent closed form that avoids Legendre functions altogether —
+and is the ``s=0`` case of the general expression for spin-weighted
+spherical harmonics given below — is
+```math
+\begin{aligned}
+  Y_{ℓ,m}(θ, ϕ)
+  &=
+  \sqrt{\frac{2ℓ+1}{4π}}\, e^{imϕ}
+  \sum_{k = k_1}^{k_2}
+  \frac{(-1)^k\, ℓ!\, [(ℓ+m)!(ℓ-m)!]^{1/2}}
+  {(ℓ+m-k)!\,(ℓ-k)!\,k!\,(k-m)!}
+  \left(\cos\frac{θ}{2}\right)^{2ℓ+m-2k}
+  \left(\sin\frac{θ}{2}\right)^{2k-m},
+\end{aligned}
+```
+where ``k_1 = \max(0, m)`` and ``k_2 = \min(ℓ+m, ℓ)``.
+
+Now, ``Y_{ℓ,m}`` is a function on ``𝕊²``, but we have argued that the
+natural domain for everything in this package is ``\mathrm{Spin}(3)``.
+We lift it in the obvious way: for a unit quaternion ``𝐑`` that
+rotates ``𝐳`` onto the direction with spherical coordinates ``(θ,
+ϕ)`` — that is, for ``𝐑 = 𝐑_{θ, ϕ}\, e^{γ 𝐤 / 2}`` with any ``γ`` —
+we define ``Y_{ℓ,m}(𝐑) = Y_{ℓ,m}(θ, ϕ)``.  The lifted function is
+independent of ``γ``, so ``R_z Y_{ℓ,m} = 0``: the spherical harmonics
+have spin weight zero.  Comparing the closed form above with Wigner's
+formula for ``d``, we find
+```math
+Y_{ℓ,m}(𝐑)
+=
+\sqrt{\frac{2ℓ+1}{4π}}\, \overline{𝔇^{(ℓ)}_{m,0}(𝐑)},
+```
+which is the standard relation (e.g., on
+[Wikipedia](https://en.wikipedia.org/wiki/Wigner_D-matrix#Relation_to_spherical_harmonics_and_Legendre_polynomials)),
+and — recalling the [differential relations](@ref conv_D_differential)
+— is consistent with ``L_z Y_{ℓ,m} = m Y_{ℓ,m}`` and ``R_z Y_{ℓ,m} =
+0``.  The complex conjugate is essential; without it the sign of ``m``
+would be wrong.
+
+### [Rotation of spherical harmonics](@id conv_rotation_law)
+
+The definition of ``𝔇`` as the matrix of ``U(𝐑)`` in the basis
+``|ℓ, m\rangle`` is precisely the statement of how spherical
+harmonics transform under rotation:
+```math
+\left[U(𝐑)\, Y_{ℓ,m}\right](𝐐)
+=
+Y_{ℓ,m}\left(𝐑^{-1}\, 𝐐\right)
+=
+\sum_{m'} 𝔇^{(ℓ)}_{m',m}(𝐑)\, Y_{ℓ,m'}(𝐐).
+```
+In words: the field ``Y_{ℓ,m}`` rotated by ``𝐑`` is a combination of
+the unrotated ``Y_{ℓ,m'}`` with coefficients given by the *column*
+``m`` of ``𝔇(𝐑)``.  Using unitarity, the same law can be written
+with the rotation in the other position,
+```math
+Y_{ℓ,m}\left(𝐑\, 𝐐\right)
+=
+\sum_{m'} \overline{𝔇^{(ℓ)}_{m,m'}(𝐑)}\, Y_{ℓ,m'}(𝐐),
+```
+which is the form given by Wigner (his Eq. A.8) and is the one that
+arises when evaluating the harmonics at a rotated *point*.  The first
+form — with ``𝐑^{-1}`` in the argument and no conjugate — is the one
+used by Sakurai, Le Bellac, Torres del Castillo, and Zettili, and we
+take it as canonical.  Exactly the same law holds for the
+spin-weighted spherical harmonics defined below, with ``Y`` replaced
+by ``{}_sY``, because ``U(𝐑)`` commutes with ``R_z``.
+
+### [Spin-weighted functions](@id conv_spin_weight)
+
+[Newman_1966](@citet) define the spherical tangent basis vectors as
+```math
+m^\mu = \frac{1}{\sqrt{2}} \left(
+    \boldsymbol{θ} + i \boldsymbol{ϕ}
+\right)^\mu
+```
+and discuss spin weight in terms of the rotation
+```math
+(m^\mu)' = e^{iψ} m^\mu,
+```
+where the tangent basis rotates but we are "keeping the coordinates
+fixed".  They then define a function ``\eta`` to have spin weight
+``s`` if it transforms as
+```math
+\eta' = e^{isψ} \eta.
+```
+Such functions are generally the result of contracting a tensor field
+with some number of ``m^\mu`` and some number of ``\bar{m}^\mu``
+vectors (though spinor extensions resulting in half-integer spin
+weights are also possible).
+
+This definition shows that it is *impossible* to define
+spin-weighted functions on the 2-sphere alone; the 2-sphere includes
+no information about the directions of basis vectors in its tangent
+space.  Instead, spin-weighted functions live on the "unit tangent
+bundle" of the 2-sphere, which is homeomorphic to the 3-sphere — the
+space of unit quaternions.  Thus, we think of spin-weighted functions
+as functions on ``\mathrm{Spin}(3)``, and frequently discuss them in
+terms of Euler angles.
+
+As we saw [above](@ref conv_euler_angles), the basis ``m^\mu``
+corresponds to the Euler angles ``(ϕ, θ, 0)``, while ``(m^\mu)'``
+corresponds to ``(ϕ, θ, -ψ)``.  Written as a function of Euler
+angles, the defining transformation becomes
+```math
+\eta(ϕ, θ, -ψ) = e^{isψ} \eta(ϕ, θ, 0),
+\qquad \text{or} \qquad
+\eta(α, β, γ) = e^{-isγ} \eta(α, β, 0),
+```
+and, independently of the choice of Euler angles,
+```math
+\eta\left(𝐐\, e^{γ 𝐤/2}\right) = e^{-isγ}\, \eta(𝐐).
+```
+This is the crucial definition giving us the behavior of spin-weighted
+functions: applying ``R_z = i\partial_γ`` we find
+```math
+R_z\, \eta = s\, \eta,
+```
+so ***spin-weighted functions are eigenfunctions of ``R_z`` with
+eigenvalue equal to the spin weight***.  It was to make this sign
+come out positive that we chose ``\rho = -i`` in the definition of
+``R``.
+
+The spin-raising and -lowering operators — canonically denoted ``\eth``
+and ``\bar{\eth}`` — were introduced by [Newman and Penrose](@cite
+Newman_1966) in their Eq. (3.8) as
+```math
+\begin{aligned}
+\eth \eta &= -\sin^s θ \left\{
+        \frac{\partial}{\partial θ}
+        + \frac{i}{\sin θ} \frac{\partial}{\partial ϕ}
+    \right\} \left(\eta \sin^{-s} θ\right), \\
+\bar{\eth} \eta &= -\sin^{-s} θ \left\{
+        \frac{\partial}{\partial θ}
+        - \frac{i}{\sin θ} \frac{\partial}{\partial ϕ}
+    \right\} \left(\eta \sin^{s} θ\right).
+\end{aligned}
+```
+These expressions look like operators on the 2-sphere, but that
+appearance is misleading: they depend on ``s``, which encodes the
+missing information about the tangent basis.  Writing out the
+Euler-angle expressions for ``R_𝐱`` and ``R_𝐲``, replacing
+``\partial_γ`` by ``-is`` (as is legitimate when acting on a function
+of definite spin weight), and converting the remaining angles to
+spherical coordinates — see the [calculation page](@ref euler_R_S2) —
+we find that these are just the ladder operators of ``R_z``:
+```math
+\eth = R_+ = R_𝐱 + i R_𝐲,
+\qquad
+\bar{\eth} = -R_- = -\left(R_𝐱 - i R_𝐲\right).
+```
+The minus sign in the second relation is real and worth remembering.
+It arises because ``\bar{\eth}`` is defined as the complex-conjugate
+*operator* of ``\eth`` (``\bar{\eth}\eta = \overline{\eth\bar{\eta}}``),
+and ``R_\pm`` contain an explicit factor of ``i``, so that
+``\overline{R_+ \bar{\eta}} = -R_- \eta``.  As a result ``R_-`` has
+the Condon–Shortley-positive coefficient ``R_- {}_sY_{ℓ,m} =
++\sqrt{(ℓ+s)(ℓ-s+1)}\, {}_{s-1}Y_{ℓ,m}``, whereas Newman–Penrose's
+operator has ``\bar{\eth}\, {}_sY_{ℓ,m} = -\sqrt{(ℓ+s)(ℓ-s+1)}\,
+{}_{s-1}Y_{ℓ,m}``, exactly as in Eq. (2.7b) of [Goldberg et
+al.](@cite GoldbergEtAl_1967), and ``\bar{\eth}\eth\, {}_sY_{ℓ,m} =
+-(ℓ-s)(ℓ+s+1)\, {}_sY_{ℓ,m}``.  Since the literature on spin-weighted
+functions universally uses Newman–Penrose's ``\bar{\eth}``, we keep
+their sign and simply note that ``\bar{\eth} \neq R_-``.  Either way,
+``[R_z, \eth] = \eth`` and ``[R_z, \bar{\eth}] = -\bar{\eth}``.
+
+### [Spin-weighted spherical harmonics](@id conv_swsh)
+
+We now have everything needed to define the spin-weighted spherical
+harmonics as functions on ``\mathrm{Spin}(3)``.  We require ``{}_sY_{ℓ,m}``
+to be a simultaneous eigenfunction of ``L^2``, ``L_z``, and ``R_z``
+with eigenvalues ``ℓ(ℓ+1)``, ``m``, and ``s``, normalized in the
+standard way, with phases fixed by the Condon–Shortley requirement
+that *both* sets of ladder operators have real, positive coefficients:
+```math
+\begin{aligned}
+L_\pm\, {}_sY_{ℓ,m} &= \sqrt{(ℓ \mp m)(ℓ \pm m + 1)}\, {}_sY_{ℓ,m \pm 1}, \\
+R_\pm\, {}_sY_{ℓ,m} &= \sqrt{(ℓ \mp s)(ℓ \pm s + 1)}\, {}_{s \pm 1}Y_{ℓ,m}.
+\end{aligned}
+```
+The [differential relations](@ref conv_D_differential) show that
+``\overline{𝔇^{(ℓ)}_{m,-s}}`` has exactly the required eigenvalues, so
+``{}_sY_{ℓ,m} = c_{ℓ,s}\, \overline{𝔇^{(ℓ)}_{m,-s}}`` for some
+constants ``c_{ℓ,s}``, which the ladder conditions relate to one
+another.  Because ``R_\pm`` contain an explicit factor of ``i``, they
+do not commute with complex conjugation; rather ``R_+ \bar{g} =
+-\overline{R_- g}``, and therefore
+```math
+R_+ \overline{𝔇^{(ℓ)}_{m,-s}}
+= -\overline{R_- 𝔇^{(ℓ)}_{m,-s}}
+= -\sqrt{(ℓ-s)(ℓ+s+1)}\; \overline{𝔇^{(ℓ)}_{m,-s-1}},
+```
+while ``L_+ \overline{𝔇^{(ℓ)}_{m,-s}} = +\sqrt{(ℓ-m)(ℓ+m+1)}\,
+\overline{𝔇^{(ℓ)}_{m+1,-s}}``.  Positivity of the ``L_+`` coefficient
+is thus automatic, but positivity of the ``R_+`` coefficient requires
+``c_{ℓ,s+1} = -c_{ℓ,s}``: the phase must alternate with ``s``.
+Identifying the ``s=0`` case with the standard spherical harmonics
+fixes ``c_{ℓ,0} = \sqrt{(2ℓ+1)/4π}``, and we obtain the definition
+```math
+\boxed{
+{}_sY_{ℓ,m}(𝐑)
+=
+(-1)^s \sqrt{\frac{2ℓ+1}{4π}}\; \overline{𝔇^{(ℓ)}_{m,-s}(𝐑)}
+}
+```
+The factor ``(-1)^s`` is therefore not an arbitrary phase: it is the
+Condon–Shortley convention applied to ``R_\pm``, and it is exactly the
+factor that appears in the standard expressions of the
+gravitational-wave literature — [LALSuite](@cite LALSuite_2018), the
+NINJA paper [AjithEtAl_2011](@cite), and (up to their differing
+``𝔇`` convention) [Goldberg et al.](@cite GoldbergEtAl_1967).  In
+Euler angles, ``\overline{𝔇_{m,-s}(ϕ, θ, γ)} = e^{imϕ}\, d_{m,-s}(θ)\,
+e^{-isγ}``, so restricting to ``γ=0`` gives the familiar
+```math
+{}_sY_{ℓ,m}(θ, ϕ)
+=
+(-1)^s \sqrt{\frac{2ℓ+1}{4π}}\; d^{(ℓ)}_{m,-s}(θ)\, e^{imϕ},
+```
+and inserting Wigner's formula for ``d`` gives the explicit expression
+```math
+\begin{aligned}
+  {}_{s}Y_{ℓ,m}(θ, ϕ)
+  &=
+  (-1)^s\sqrt{\frac{2ℓ+1}{4π}}\, e^{imϕ}
+  \sum_{k = k_1}^{k_2}
+  \frac{(-1)^k[(ℓ+m)!(ℓ-m)!(ℓ-s)!(ℓ+s)!]^{1/2}}
+  {(ℓ+m-k)!\,(ℓ+s-k)!\,k!\,(k-s-m)!}
+  \left(\cos\frac{θ}{2}\right)^{2ℓ+m+s-2k}
+  \left(\sin\frac{θ}{2}\right)^{2k-s-m},
+\end{aligned}
+```
+where ``k_1 = \max(0, m+s)`` and ``k_2 = \min(ℓ+m, ℓ+s)``.  This is
+Eq. (II.7)–(II.8) of the NINJA paper and the expression coded in
+LALSuite; both are tested against this package on the comparisons
+pages.  Again, this package does not *use* this form; it is shown here
+to make comparison with other sources easy.
+
+Summarizing the properties of ``{}_sY_{ℓ,m}`` that follow directly
+from those of ``𝔇``:
+```math
+\begin{aligned}
+L^2\, {}_sY_{ℓ,m} &= ℓ(ℓ+1)\, {}_sY_{ℓ,m},
+\qquad
+L_z\, {}_sY_{ℓ,m} = m\, {}_sY_{ℓ,m},
+\qquad
+R_z\, {}_sY_{ℓ,m} = s\, {}_sY_{ℓ,m}, \\
+{}_sY_{ℓ,m}\left(𝐑\, e^{γ𝐤/2}\right) &= e^{-isγ}\, {}_sY_{ℓ,m}(𝐑),
+\qquad
+{}_sY_{ℓ,m}\left(𝐑^{-1}\, 𝐐\right) = \sum_{m'} 𝔇^{(ℓ)}_{m',m}(𝐑)\, {}_sY_{ℓ,m'}(𝐐), \\
+\overline{{}_sY_{ℓ,m}} &= (-1)^{m+s}\, {}_{-s}Y_{ℓ,-m},
+\qquad
+{}_sY_{ℓ,m}(-𝐑) = (-1)^{2ℓ}\, {}_sY_{ℓ,m}(𝐑), \\
+\int_{\mathrm{Spin}(3)} \overline{{}_{s'}Y_{ℓ',m'}}\; {}_sY_{ℓ,m}\; d^3Ω
+&= \frac{π}{2}\, δ_{ℓ',ℓ}\, δ_{m',m}\, δ_{s',s},
+\qquad
+\int_{𝕊^2} \overline{{}_{s}Y_{ℓ',m'}(θ,ϕ)}\; {}_sY_{ℓ,m}(θ,ϕ)\; \sin θ\, dθ\, dϕ
+= δ_{ℓ',ℓ}\, δ_{m',m}.
+\end{aligned}
+```
+The first orthogonality relation is the natural one on
+``\mathrm{Spin}(3)``; the second is the conventional one, which
+integrates over the 2-sphere at fixed ``γ`` and is valid only when
+both functions have the *same* spin weight (functions of different
+spin weight are not orthogonal on ``𝕊²``, and the integral is not even
+coordinate-independent).  The conjugation relation is the one given by
+Goldberg et al. (their Eq. 2.6); note that the exponent ``m+s`` is
+always an integer.
+
+### [Half-integer indices](@id conv_swsh_half_integer)
+
+Everything above is valid when ``ℓ``, ``m``, and ``s`` are all
+half-integers, with one exception: the factor ``(-1)^s`` is then ``\pm
+i``, and a branch must be chosen.  It is worth being precise about
+what is and is not forced here.  The ladder conditions determine all
+the ``{}_sY_{ℓ,m}`` for a given ``ℓ`` up to one overall phase ``c_ℓ``,
+and there is no ``s=0`` member to anchor it.  Requiring the
+conjugation relation ``\overline{{}_sY_{ℓ,m}} = (-1)^{m+s}\,
+{}_{-s}Y_{ℓ,-m}`` to hold as written forces ``c_ℓ`` to be real, so
+``c_ℓ = \pm 1``; requiring the standard product formula (with real
+Clebsch–Gordan coefficients) to hold across integer and half-integer
+``ℓ`` forces the same sign for every half-integer ``ℓ``.  Nothing
+forces that one remaining global sign, because ``(-1)^{2s}`` is itself
+multiplicative.  This is the exact analog of the arbitrary choice
+"``Y_{ℓ,0}`` is positive at the north pole" in the integer case.  We
+choose the principal branch,
+```math
+(-1)^s \equiv e^{iπ s} = i^{2s},
+```
+so that the definition above is well defined for all ``s``, and the
+anchor condition can be stated uniformly as
+```math
+{}_sY_{ℓ,-s}(𝟏) = i^{2s} \sqrt{\frac{2ℓ+1}{4π}}
+```
+(recall that ``𝔇^{(ℓ)}(𝟏)`` is the identity, so only ``m=-s``
+survives at ``𝐑=𝟏``).  The same branch is used for the prefactor of
+the explicit formula above.
+
+A related trap: using the conjugation symmetry of ``𝔇``, the
+definition can be rewritten without a complex conjugate as
+```math
+{}_sY_{ℓ,m}(𝐑)
+=
+(-1)^s (-1)^{m+s} \sqrt{\frac{2ℓ+1}{4π}}\; 𝔇^{(ℓ)}_{-m,s}(𝐑)
+=
+e^{iπ(m+2s)} \sqrt{\frac{2ℓ+1}{4π}}\; 𝔇^{(ℓ)}_{-m,s}(𝐑).
+```
+For integer indices this is simply ``(-1)^m \sqrt{(2ℓ+1)/4π}\,
+𝔇^{(ℓ)}_{-m,s}(𝐑)``, which is a perfectly good alternative form.  For
+half-integer ``s``, however, the naive replacement ``e^{iπ(m+2s)} \to
+(-1)^m = e^{iπm}`` is off by ``(-1)^{2s} = -1``.  We therefore treat
+the conjugate form as *the* definition and the ``𝔇_{-m,s}`` form as an
+integer-index corollary.
+
+## [Laplacians](@id conv_laplacians)
 
 [Bander_1966](@citet) show that Wigner's D matrices (extended to the
 full space of quaternions with arbitrary norm) are harmonic with
@@ -855,7 +1530,10 @@ and
 ```
 These imply that the restriction to the space of unit quaternions is
 not harmonic with respect to the Laplacian on the 3-sphere, but is an
-eigenfunction with eigenvalue ``-ℓ(ℓ+2)``.
+eigenfunction with eigenvalue ``-2ℓ(2ℓ+2) = -4ℓ(ℓ+1)``, because the
+matrix elements of ``𝔇^{(ℓ)}`` are homogeneous polynomials of degree
+``2ℓ`` in ``(W, X, Y, Z)``.  (Recall that ``𝔇^{(1/2)}`` is linear in
+the components of the quaternion.)
 
 ```math
 \frac{1}{r^{n-1}} \frac{\partial}{\partial r} \left( r^{n-1} \frac{\partial f}{\partial r} \right)
@@ -925,243 +1603,23 @@ varies just as rapidly with latitude but not at all with longitude.
 tensor calculus in the 3-ball, and have a lot formulas for
 derivatives, as a result.
 
-* TODO: Show the relationship between the spherical Laplacian and the
-  angular momentum operator.
-* TODO: Show how ``D`` matrices are harmonic with respect to the
-  Laplacian on the 3-sphere.
 
-
-## Wigner's 𝔇 matrices
-
-[Sakurai_1994](@citet) says that
-
-> Because rotations affect physical systems, the state ket
-> corresponding to a rotated system is expected to look different from
-> the state ket corresponding to the original unrotated system.  Given
-> a rotation operation ``R``, characterized by a ``3×3`` orthogonal
-> matrix ``R``, we associate an operator ``𝒟(R)`` in the appropriate
-> ket space such that
-> ```math
-> |α\rangle_R = 𝒟(R) |α\rangle,
-> ```
-> where ``|α\rangle_R`` and ``|α\rangle`` stand for the kets of
-> the rotated and original system, respectively.
-
-If the field is represented as a function ``f(𝐑)``, then rotating the
-field by ``e^{ϵ 𝐮/2}`` is equivalent to rotating the argument
-of the function by ``e^{-ϵ 𝐮/2}``:
+Carrying the general-``n`` calculation above through with degree
+``2ℓ`` in ``n=4`` dimensions gives ``2ℓ(2ℓ+2) f / r^2``, so on the unit
+3-sphere ``\Delta_{\mathrm{Spin}(3)}\, 𝔇^{(ℓ)}_{m',m} = -4ℓ(ℓ+1)\,
+𝔇^{(ℓ)}_{m',m}``.  Comparing with the eigenvalue ``ℓ(ℓ+1)`` of the
+Casimir operators, we see that
 ```math
-\begin{aligned}
-f\left(𝐑\right)
-&\to
-f\left(e^{-ϵ 𝐮/2}𝐑\right) \\
-&\approx
-f\left(𝐑\right) + ϵ \left. \frac{d}{dϵ} \right|_{ϵ=0}
-f\left(e^{-ϵ 𝐮/2}𝐑\right) \\
-&=
-f\left(𝐑\right) - i ϵ L_𝐮 f\left(𝐑\right).
-\end{aligned}
+\Delta_{\mathrm{Spin}(3)} = -4 L^2 = -4 R^2,
 ```
-This final expression is precisely equivalent to Sakurai's Eq. (3.1.15):
-```math
-𝒟\left(\hat{𝐧}, dϕ \right)
-=
-1 - i \left( 𝐉 \cdot \hat{𝐧} \right) dϕ.
-```
+which is the group-theoretic reason that ``L^2 = R^2``: both are the
+Laplacian of the bi-invariant metric, and the Laplacian commutes with
+both left and right multiplication.
 
-Now, we can write the eigenkets of ``L^2`` and ``L_z`` as ``|ℓ,
-m\rangle``, where the eigenvalues are ``ℓ(ℓ+1)`` and ``m``,
-respectively.  Finally, define the 𝔇 matrix as (Eq. 3.5.42)
-```math
-𝔇^{(ℓ)}_{m',m}(R)
-=
-\langle ℓ, m' | 𝔇(R) | ℓ, m \rangle.
-```
-Sakurai notes the important result that (Eq. 3.5.46)
-```math
-𝔇^{(ℓ)}_{m'',m}(R_1\, R_2)
-=
-\sum_{m'} 𝔇^{(ℓ)}_{m'',m'}(R_1) 𝔇^{(ℓ)}_{m',m}(R_2),
-```
-and we can readily find the essential behavior with respect to the
-first and last Euler angles (Eq. 3.5.50):
-```math
-\begin{aligned}
-𝔇^{(ℓ)}_{m',m}(α, β, γ)
-&=
-\langle ℓ, m' |
-    \exp[-iL_z α]\exp[-iL_y β]\exp[-iL_z γ]
-| ℓ, m \rangle \\
-&=
-\exp[-i(m' α+mγ)]
-\langle ℓ, m' | \exp[-iL_y β] | ℓ, m \rangle.
-\end{aligned}
-```
-To belabor this point, recall that in general
-```math
-\left(\left\langle ψ | A\, B\, C | \chi \right\rangle\right)^\ast
-=
-\left\langle \chi | C^\dag\, B^\dag\, A^\dag | ψ \right\rangle,
-```
-and
-```math
-\left( e^{-i ϵ L_u} \right)^\dag
-=
-e^{i ϵ L_u^\dag}
-=
-e^{i ϵ L_u}.
-```
-Together with the eigenvalue property for the ``L_z`` operator acting
-on a ket, this allows us to derive the above result by factoring out
-the first and last operators.
-
-Now we are left with the middle operator, which we use to define
-```math
-\begin{aligned}
-d^{(ℓ)}_{m',m}(β)
-&=
-\langle ℓ, m' | \exp[-iL_y β] | ℓ, m \rangle.
-\end{aligned}
-```
-Using
-```math
-L_y = (L₊ − L₋) / (2i)
-```
-we can expand
-```math
-\exp[-iL_y β]
-=
-Σ_k (-iL_y β)^k / k!
-=
-Σ_k (L₋ - L₊)^k (β/2)^k / k!
-```
-
-Now, writing ``d_+(X) = [L_+, X]``, Eq. (9) of https://arxiv.org/pdf/1707.03861 says
-```math
-(L₋ - L₊)^k = \sum_{j=0}^k \binom{k}{j} \left((L₋ - d_+)^j 1\right) (-L₊)^{k-j}
-```
-The sum will automatically be zero unless ``m+k-j ≤ ℓ`` — which means ``j ≥ m+k-ℓ``
-```math
-(-L₊)^{k-j}|ℓ,m\rangle = (-1)^{k-j} \sqrt{\frac{(ℓ+m+k-j)!}{(ℓ+m)!}\,\frac{(ℓ-m)!}{(ℓ-m-k+j)!}} |ℓ,m+k-j\rangle
-```
-
-``[L₊, L₋] = 2 L_z``
-
-``[L_z, L_\pm] = \pm L_\pm``
-
-I wonder if there's a nicer approach using the symmetry transformation
-Edmonds notes in Sec. 4.5 (and credits to Wigner) — or the presumably
-equivalent one McEwen and Wiaux use (and credit to Risbo):
-```math
-\exp\left[ β 𝐣 / 2 \right]
-=
-\exp\left[ π 𝐤 / 4 \right]
-\exp\left[ π 𝐣 / 4 \right]
-\exp\left[ β 𝐤 / 2 \right]
-\exp\left[ -π 𝐣 / 4 \right]
-\exp\left[ -π 𝐤 / 4 \right]
-```
-The 𝔇 matrices corresponding to the ``𝐤`` rotations are simple
-phases, which converts the problem into one of finding the 𝔇 matrices
-for the ``𝐣`` rotations through angles of ``\pm π/2`` — which are
-presumably simpler to compute.  See, e.g., Varshalovich's Eq.
-4.16.(5), where they are given by purely combinatorial terms.
-
-
-##  Representation theory / harmonic analysis
-  - Representations show up in Fourier analysis on groups
-  - Peter-Weyl theorem
-    - Generalizes Fourier analysis to compact groups
-    - Has three parts, [as given by Wikipedia](https://en.wikipedia.org/wiki/Peter%E2%80%93Weyl_theorem):
-      1. "The matrix coefficients of irreducible representations of
-         ``G`` are dense in the space ``C(G)`` of continuous
-         complex-valued functions on ``G``, and thus also in the space
-         ``L^2(G)`` of square-integrable functions."
-      2. Unitary representations of ``G`` are completely reducible.
-      3. "The regular representation of ``G`` on ``L^2(G)`` decomposes
-         as the direct sum of all irreducible unitary representations.
-         Moreover, the matrix coefficients of the irreducible unitary
-         representations form an orthonormal basis of ``L^2(G)``."
-  - Representation theory of ``\mathbf{Spin}(3)``
-    - Show how the Lie algebra is represented by the angular-momentum operators
-    - Show how the Lie group is represented by the Wigner D-matrices
-    - Demonstrate that ``𝔇`` is a representation
-    - Demonstrate its behavior under left and right rotation
-    - Demonstrate orthonormality
-  - Representation theory of ``\mathbf{SO}(3)``
-    - There are several places in [Folland](@cite Folland_2016) (e.g.,
-      above corollary 5.48) where he mentions that representations of
-      a quotient group are just representations that are trivial
-      (evidently meaning mapping everything to the identity matrix) on
-      the factor.  I can't find anywhere that he explains this
-      explicitly, but it seems easy enough to show.  He might do it
-      using characters.
-    - For ``\mathbf{Spin}(3)`` and ``\mathbf{SO}(3)``, the factor
-      group is just ``\{1, -1\}``.  Presumably, every representation
-      acting on ``1`` will give the identity matrix, so that's
-      trivial.  So we just need a criterion for when a representation
-      is trivial on ``-1``.  Noting that ``\exp(π \vec{v}) = -1``
-      for any ``\vec{v}``, I think we can show that this requires
-      ``m \in \mathbb{Z}``.
-    - Basically, the point is that the representations of
-      ``\mathbf{SO}(3)`` are just the integer representations of
-      ``\mathbf{Spin}(3)``.
-  - Restrict to homogeneous space (S³ -> S²)
-    - The circle group is a closed (normal?) subgroup of
-      ``\mathbf{Spin}(3)``, which we might implement as initial
-      multiplication about a particular axis.
-    - In Eq. (2.47) [Folland (2016)](@cite Folland_2016) defines a
-      functional taking a function on the group to a function on the
-      homogeneous space by integrating over the factor (the circle
-      group).  This gives you the spherical harmonics, but *not* the
-      spin-weighted spherical harmonics — because the spin-weighted
-      spherical harmonics cannot be defined on the 2-sphere.
-    - Spin weight comes from Fourier analysis on the subgroup.
-    - Representation matrices transfer to the homogeneous space, with
-      sparsity patterns
-
-Theorem 2.16 of [Hanson-Yakovlev](@cite HansonYakovlev_2002) says that
-an orthonormal basis of a product of ``L^2`` spaces is given by the
-product of the orthonormal bases of the individual spaces.
-Furthermore, on page 354, they point out that ``\{(1/\sqrt{2π})
-e^{imϕ}\}`` is an orthonormal basis of ``L^2(0,2π)``, while the
-set ``\{1/c_{n,m} P_n^m(\cos θ)`` is an orthonormal basis of
-``L^2(0, π)`` in the ``θ`` coordinate.  Therefore, the product
-of these two sets is an orthonormal basis of the product space
-``L^2\left((0,2π) \times (0, π)\right)``, which forms a coordinate
-space for ``𝕊²``.  I would probably modify this to point out that
-``(0,2π)`` is really ``𝕊¹``, and then we could extend it to point
-out that you can throw on another factor of ``𝕊¹`` to cover ``𝕊³``,
-which happens to give us the Wigner D-matrices.
-
-## Recursion relations
-
-[Gumerov and Duraiswami (2001)](@cite Gumerov_2001) derive their
-recursion relations by differentiating solutions of the Helmholtz
-equation ``\nabla^2 ψ + k^2 ψ = 0`` as ``\tfrac{1}{k} \nabla
-ψ``.  More precisely, they differentiate both sides of the equation
-relating one solution to its rotated form — which naturally involves
-Wigner's ``𝔇`` matrix.  Using orthogonal basis functions
-for the solution, this allows them to equate terms on the two sides
-proportional to a given basis function, which leaves them with
-expressions involving sums of only the ``𝔇`` matrices and
-some coefficients depending on the indices of the basis functions (and
-hence of ``𝔇``) on both sides of the equation.  Since
-``\nabla`` is a 3-vector operator, this gives them three relations.
-
-This, of course, is happening in 3-D space, since ``ψ`` is a
-function of location in the Helmholtz equation.  It seems likely to
-me, however, that we could use the 4-D (quaternionic) version of the
-functions.  Note that G&D use ``\partial_z`` and ``\partial_x \pm i
-\partial_y`` as their operators to differentiate the functions — that
-is, the derivatives are with respect to Cartesian coordinates, which
-may be more similar to the right-derivative defined above.  However, I
-don't know that we'll necessarily be able to achieve the same results
-with just angular-momentum operators, since their operators do involve
-moving off of the sphere.  Maybe we'd need to move off of the sphere
-in 4-D space to get comparable results.  Or maybe just use something
-like ``𝐫 ∧ L``, which should also have 3 degrees of freedom.
-
-The SWSHs/``𝔇`` functions can be naturally promoted to
-functions not just on the 3-sphere, but also in 4-D space just by
-allowing the quaternions to be non-unit quaternions.
+!!! note "Not conventions"
+    Nothing in this section is a convention; it is included only
+    because the Laplacian provides a useful cross-check on the
+    normalizations above.  The relationship between the Laplacian on
+    ``𝕊²`` and ``L^2`` (namely ``\Delta_{𝕊^2} = -L^2`` on
+    spin-weight-0 functions) follows from the restriction of the
+    result above.

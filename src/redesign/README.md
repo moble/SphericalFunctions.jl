@@ -273,8 +273,11 @@ the two exponents is odd, so D(−R) = −D(R) is automatic — the double cover
 without any branch choice.  The singular fallbacks zp = 1 (β = π) and zm = 1 (β = 0) are
 harmless because the corresponding d entries vanish.
 
-The (−1)^s prefactor on sYlm is ±i for half-integer s; the conventions pages must name one
-of the two equivalent integer forms as the definition (they differ by (−1)^{2s}).
+The (−1)^s prefactor on sYlm is ±i for half-integer s.  **Resolved by the conventions pages
+(details.md, "Half-integer indices", 2026-09-08):** the principal branch (−1)^s ≡ e^{iπs} = i^{2s}
+is chosen, the conjugate form ₛYₗₘ = (−1)^s √((2ℓ+1)/4π) conj(𝔇_{m,−s}) is *the* definition,
+and the 𝔇_{−m,s} form is an integer-index corollary (it is off by (−1)^{2s} otherwise).
+`fill_Y!` must implement the conjugate form with `i^(2s)` computed from the integer `2s`.
 
 ### 5.5 Verification
 
@@ -412,7 +415,7 @@ depends on the conventions work (its `@ref` targets and oracle) and on this memo
 Hand-offs from this memo:
 
 - To conventions: the two forms of the sYlm relation differ by (−1)^{2s} for half-integer s
-  (§5.4); name one as the definition and fix the branch of (−1)^s.
+  (§5.4); name one as the definition and fix the branch of (−1)^s.  **Done** — see §5.4.
 - To comparisons: implement §6 Stage 1 in the Varshalovich and Boyle 2016 pages; keep
   `WignerDElement` half-integer capable; the (14)/(15) forms in `varshalovich.jl` are the
   correct ones, the notes' transcriptions are not.
