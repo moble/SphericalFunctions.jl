@@ -2,8 +2,11 @@ md"""
 # Blanchet (2024)
 
 !!! info "Summary"
-    Blanchet's  definition of the spherical harmonics agrees with the definition used in the
-    `SphericalFunctions` package.
+    Blanchet's definition of the spin-weight ``-2`` spherical
+    harmonics agrees with the definition used in the
+    `SphericalFunctions` package.  His ``d^{ℓm}`` is not a full Wigner
+    ``d`` matrix — it has only two labels — but is precisely the
+    single column ``d^{(ℓ)}_{m,2}`` in this package's conventions.
 
 Luc Blanchet is one of the pre-eminent researchers in post-Newtonian approximations, and has
 written a "living" review article on the subject [Blanchet_2024](@cite), which he has kept
@@ -111,12 +114,29 @@ s = -2
 # explicit expressions grow rapidly with ``ℓ``.
 for (θ, ϕ) ∈ θϕrange()
     for (ℓ, m) ∈ ℓmrange(abs(s), ℓₘₐₓ)
-        @test Blanchet.Yˡᵐ₋₂(ℓ, m, θ, ϕ) ≈ SphericalFunctions.Deprecated.Y(s, ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+        @test Blanchet.Yˡᵐ₋₂(ℓ, m, θ, ϕ) ≈ ConventionsUtilities.Y(s, ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
 
 # These successful tests show that Blanchet's expression agrees with ours.
+#
+# Blanchet's ``d^{ℓm}`` is not a Wigner ``d`` matrix: it has only the
+# two labels ``(ℓ, m)``, because it is only used to express
+# ``Y^{ℓ,m}_{-2}``.  Comparing his Eq. (184a) with our own expression
+# for the spin-weighted harmonics in spherical coordinates,
+# ```math
+#   {}_{s}Y_{ℓ,m}(θ, ϕ) = (-1)^s \sqrt{\frac{2ℓ+1}{4π}}\, d^{(ℓ)}_{m,-s}(θ)\, e^{imϕ},
+# ```
+# at ``s = -2`` — where ``(-1)^s = 1`` — identifies his ``d^{ℓm}`` as the single column
+# ``m' = m``, ``m = 2`` of ours.  We can check that directly:
+for θ ∈ θrange()
+    for (ℓ, m) ∈ ℓmrange(abs(s), ℓₘₐₓ)
+        @test Blanchet.d(ℓ, m, θ) ≈ ConventionsUtilities.d(ℓ, m, -s, θ) atol=ϵₐ rtol=ϵᵣ
+    end
+end
+#+
 
+# That is, ``d^{ℓm}(θ) = d^{(ℓ)}_{m,2}(θ)``.
 
 end  #hide

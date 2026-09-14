@@ -19,13 +19,20 @@ In general, the *left* Lie derivative of a function ``f(𝐐)`` over the
 unit quaternions with respect to a generator of rotation ``𝐠`` is
 defined as
 ```math
-L_𝐠(f)\{𝐐\} := -\frac{i}{2}
-    \left. \frac{df\left(e^{ϵ\,𝐠}\, 𝐐\right)}{d ϵ} \right|_{ϵ=0}.
+L_𝐠(f)\{𝐐\} := i
+    \left. \frac{df\left(e^{-ϵ\,𝐠/2}\, 𝐐\right)}{d ϵ} \right|_{ϵ=0}.
 ```
 Note that the exponential multiplies ``𝐐`` *on the left* — hence the
-name.  We will see below that this agrees with the usual definition of
-the angular-momentum from physics, except that in *quantum* physics a
-factor of ``\hbar`` is usually included.
+name.  The half-angle in the exponent is the usual quaternionic one:
+``e^{-ϵ𝐠/2}`` is the rotation through ``-ϵ`` about ``𝐠``.  This is
+precisely the definition used throughout the [conventions
+summary](@ref summary_L_R_definitions); the prefactor ``i`` is not an
+arbitrary choice, but is [derived](@ref conv_L_R_definitions) — up to
+its sign — from the mere requirement that raising and lowering
+operators exist, with the sign then fixed by the standard convention
+``L_\pm = L_x \pm i L_y``.  We will see below that this agrees with
+the usual definition of the angular momentum from physics, except that
+in *quantum* physics a factor of ``\hbar`` is usually included.
 
 So, for example, a rotation about the ``𝐳`` axis has the quaternion
 ``𝐤`` as its generator of rotation, and ``L_𝐤`` defined in this way
@@ -43,33 +50,45 @@ In just the same way, we can define the *right* Lie derivative of a
 function ``f(𝐐)`` over the unit quaternions with respect to a
 generator of rotation ``𝐠`` as
 ```math
-R_𝐠(f)\{𝐐\} := -\frac{i}{2}
-    \left. \frac{df\left(𝐐\, e^{-ϵ\,𝐠}\right)}{d ϵ} \right|_{ϵ=0}.
+R_𝐠(f)\{𝐐\} := -i
+    \left. \frac{df\left(𝐐\, e^{-ϵ\,𝐠/2}\right)}{d ϵ} \right|_{ϵ=0}.
 ```
 Note that the exponential multiplies ``𝐐`` *on the right* — hence the
-name.  Also observe that
+name — and that the prefactor is ``-i`` here, in contrast to the
+``+i`` for ``L``.  That relative sign is again [derived rather than
+assumed](@ref conv_L_R_definitions): it is what makes ``R_\pm = R_x
+\pm i R_y`` the raising and lowering operators for ``R_z``, and it is
+what gives ``R`` the *same* commutation relations as ``L`` (below) and
+the eigenvalue ``+s`` — rather than ``-s`` — on a function of spin
+weight ``s``.
+
+Also observe that
 ```math
-𝐐\, e^{-ϵ\,𝐠}
-= 𝐐\, e^{-ϵ\,𝐠}\, 𝐐⁻¹\, 𝐐
-= e^{-ϵ\,𝐐\, 𝐠\, 𝐐⁻¹}\, 𝐐
+𝐐\, e^{-ϵ\,𝐠/2}
+= 𝐐\, e^{-ϵ\,𝐠/2}\, 𝐐⁻¹\, 𝐐
+= e^{-ϵ\,𝐐\, 𝐠\, 𝐐⁻¹/2}\, 𝐐
 ```
 and
 ```math
-e^{ϵ\,𝐠}\, 𝐐
-= 𝐐\, 𝐐⁻¹\, e^{-ϵ\,𝐠}\, 𝐐
-= 𝐐\, e^{-ϵ\,𝐐⁻¹\, 𝐠\, 𝐐},
+e^{-ϵ\,𝐠/2}\, 𝐐
+= 𝐐\, 𝐐⁻¹\, e^{-ϵ\,𝐠/2}\, 𝐐
+= 𝐐\, e^{-ϵ\,𝐐⁻¹\, 𝐠\, 𝐐/2},
 ```
 which mean that
 ```math
-R_𝐠(f)\{𝐐\} = L_{-𝐐\, 𝐠\, 𝐐⁻¹}(f)\{𝐐\}
+R_𝐠(f)\{𝐐\} = -L_{𝐐\, 𝐠\, 𝐐⁻¹}(f)\{𝐐\}
 \qquad \text{and} \qquad
-L_𝐠(f)\{𝐐\} = R_{-𝐐⁻¹\, 𝐠\, 𝐐}(f)\{𝐐\}.
+L_𝐠(f)\{𝐐\} = -R_{𝐐⁻¹\, 𝐠\, 𝐐}(f)\{𝐐\}.
 ```
-That is, the right Lie derivative with respect to ``𝐠`` is equal to
+That is, the right Lie derivative with respect to ``𝐠`` is *minus*
 the left Lie derivative with respect to the "rotated" version of the
-algebra element ``-𝐠``, and vice versa.  But the arguments *depend on
-the value* ``𝐐``, which means, for example, that commutator
-expressions can't be evaluated by simple static substitution.
+algebra element ``𝐠``, and vice versa — which is the relation ``R_𝐠
+= -L_{𝐐\, 𝐠\, 𝐐^{-1}}`` quoted in the [summary](@ref
+summary_L_R_definitions), identifying ``R`` as (minus) the
+angular-momentum operator expressed in the body-fixed frame.  But the
+arguments *depend on the value* ``𝐐``, which means, for example, that
+commutator expressions can't be evaluated by simple static
+substitution.
 
 This ``R_𝐠`` operator is less common in physics, because it
 represents the dependence of the function on the choice of frame (or
@@ -82,10 +101,25 @@ relevant in discussions of spin-weighted spherical functions.  In
 particular, ``R_z`` is the spin-weight operator — meaning that when it
 acts on a spin-weighted spherical harmonic of spin weight ``s``, it
 returns ``s`` times that same function.  Moreover, the operators
-``R_\pm`` correspond (up to a sign) to the spin-raising and -lowering
-operators ``\eth`` and ``\bar{\eth}`` originally introduced by
-[Newman_1966](@citet), as explained in greater detail by
-[Boyle_2016](@citet).
+``R_\pm`` are the spin-raising and -lowering operators ``\eth`` and
+``\bar{\eth}`` originally introduced by [Newman_1966](@citet); with
+the conventions settled [here](@ref summary_spin_weight) the
+identification is
+```math
+\eth = R_+
+\qquad \text{and} \qquad
+\bar{\eth} = -R_-,
+```
+the minus sign being peculiar to Newman and Penrose.
+
+!!! warning "Sign of the right operator"
+    [Boyle_2016](@citet) — and versions of this package before 3.0 —
+    define a right operator ``K`` with the *opposite* sign to the
+    ``R`` used here: ``K = -R``, so that ``K_z\, {}_sY_{ℓ,m} = -s\,
+    {}_sY_{ℓ,m}``, ``\eth = -K_-``, and ``\bar{\eth} = K_+``.  Those
+    statements are equivalent to the ones above, but the intermediate
+    quantities differ in sign; the [conventions](@ref
+    conv_L_R_definitions) pages are the authority for this package.
 
 Note that these definitions are *extremely* general, in that they can
 be used for *any* Lie group, and for any complex-valued function on
@@ -127,15 +161,19 @@ relations
 ```
 where ``[𝐚,𝐛]`` is the commutator of the two generators, which can
 be obtained directly as the commutator of the corresponding
-quaternions.  Note that these two equations have the same signs.  The
-factors of ``i/2`` are inherited directly from the definitions of
-``L_𝐠`` and ``R_𝐠`` given above.  Note the subtle sign difference in
-the exponents in those definitions.  The fact that these two
-commutator relations have the same sign results from the fact that the
-quaternions are multiplied in opposite orders in the two cases.  There
-are overall arbitrary sign choices; we choose these purely for
-conventional reasons, to reproduce the standard ``L`` operator and to
-produce similar commutators for ``R``.[^1]
+quaternions.  Note that these two equations have the same signs, and
+that the factors of ``i/2`` are inherited directly from the
+definitions of ``L_𝐠`` and ``R_𝐠`` given above.  This sameness is
+not an accident of notation: multiplying the quaternions in opposite
+orders flips the sign of the bracket, and the opposite sign of the
+prefactor in the two definitions (``+i`` for ``L``, ``-i`` for ``R``)
+flips it back.  Had we used the same prefactor for both, ``R`` would
+obey "anomalous" commutation relations with an extra minus sign.  The
+remaining freedom is an overall sign in each definition, which is
+fixed — as [derived in detail](@ref conv_L_R_definitions) — by
+demanding ``L_\pm = L_x \pm i L_y`` and ``R_\pm = R_x \pm i R_y``,
+thereby reproducing the standard ``L`` operator and giving ``R``
+matching commutators.[^1]
 
 [^1]:
     In fact, we can define the left and right Lie derivative operators
@@ -143,13 +181,14 @@ produce similar commutators for ``R``.[^1]
     corresponding Lie algebra.  And in all cases (at least for
     finite-dimensional Lie algebras) we obtain the same commutator
     relations. The only potential difference is that it may not make
-    sense to use the coefficient ``i/2`` in general; it was chosen
-    here for consistency with the standard angular-momentum operators.
-    If that coefficient is changed in the definitions of the Lie
+    sense to use the prefactors ``\pm i`` — or the quaternionic
+    half-angle ``e^{-ϵ𝐠/2}`` — in general; they were chosen here for
+    consistency with the standard angular-momentum operators.  If
+    those prefactors are changed in the definitions of the Lie
     derivatives, the only change to the commutator relations would be
-    the substitution of that coefficient.  The presence of an ``i`` is
-    important to ensure that the operators are Hermitian when acting on
-    appropriate function spaces.
+    the corresponding substitution.  The presence of an ``i`` is
+    important to ensure that the operators are Hermitian when acting
+    on appropriate function spaces.
 
 Again, these results are valid for general (finite-dimensional) Lie
 groups, but a particularly interesting case is in application to the
@@ -184,8 +223,9 @@ relations
 \qquad
 [R_z, R_\pm] = \pm R_\pm.
 ```
-These allow us to solve, up to an overall factor, for those operators
-in terms of the basic generators:
+As shown [in detail elsewhere](@ref conv_L_R_definitions), these allow
+us to solve for those operators *up to overall signs* in terms of the
+basic generators:
 ```math
 L_\pm = L_x \pm i L_y
 \qquad
@@ -202,7 +242,8 @@ relations
 [R_+, R_-] = 2R_z.
 ```
 
-In the functions [listed below](#Module-functions), these operators
-are returned as matrices acting on vectors of mode weights.  As such,
-we can actually evaluate these commutators as given to cross-validate
-the expressions and those functions.
+In the [functions this package provides](@ref
+interface_differential_operators), these operators are returned as
+matrices acting on vectors of mode weights.  As such, we can actually
+evaluate these commutators as given to cross-validate the expressions
+and those functions.

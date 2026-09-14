@@ -193,7 +193,7 @@ S3_surface_area = sympy.integrate(
     (α, 0, 2π)
 )
 
-# This is ``2π^2``, the volume of the unit 3-sphere, which confirms the normalization of the
+# This is the volume of the unit 3-sphere, which confirms the normalization of the
 # invariant measure on ``\mathrm{Spin}(3)`` quoted on the [Details](@ref conv_haar_measure)
 # page — including the factor of ``1/8`` in the volume-form factor above.
 #
@@ -210,4 +210,4 @@ SO3_volume = sympy.integrate(
     (α, 0, 2π)
 )
 
-# which is ``π^2``, half the volume of ``\mathrm{Spin}(3)``, as expected for the double cover.
+# which is half the volume of ``\mathrm{Spin}(3)``, as expected for the double cover.

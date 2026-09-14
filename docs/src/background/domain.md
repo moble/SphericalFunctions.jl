@@ -2,12 +2,12 @@
 
 This package deals with standard spherical harmonics, spin-weighted
 spherical harmonics, and Wigner's 𝔇 matrices.  The key question is
-what domains these functions are defined on — what their arguments
-are.  Here, we will argue that it's best to use quaternions for all
-three.  The rest of this package and documentation use the language of
-quaternions, though we make contact with the more traditional
-parameterizations in terms of spherical coordinates and Euler angles
-as needed.
+what domains these functions are defined on — that is, what type of
+arguments they take.  Here, I argue that it's best to use quaternions
+for all three.  The rest of this package and documentation use the
+language of quaternions, though we will make contact with the more
+traditional parameterizations in terms of spherical coordinates and
+Euler angles as needed.
 
 ## Three functions on two domains
 
@@ -43,7 +43,7 @@ fact, I wrote an entire paper that gets very deep into the details
 about this point [Boyle_2016](@cite).  It may seem odd that
 spin-weighted spherical functions cannot be defined on the sphere
 ``𝕊²``, when they're written in terms of spherical coordinates.  The
-key subtlety here is that the spherical coordinates ``(θ, ϕ)``
+crucial subtlety here is that the spherical coordinates ``(θ, ϕ)``
 implicitly define a conventional choice of tangent basis.  But spin
 weight is *defined* in terms of what happens to a function when you
 rotate that tangent basis.  Thus, if we start from spherical
@@ -58,10 +58,20 @@ spherical harmonics [Newman_1966](@cite) are simply proportional to
 Wigner's 𝔇 matrices,
 ```math
 {}_{s}Y_{ℓ,m}(θ, ϕ, ψ)
-= (-1)^s \sqrt{\frac{2ℓ+1}{4π}} \, 𝔇^{(ℓ)}_{m, -s}(ϕ, θ, ψ),
+= (-1)^s \sqrt{\frac{2ℓ+1}{4π}} \, \overline{𝔇^{(ℓ)}_{m, -s}(ϕ, θ, ψ)},
 ```
-so we might as well think of them as being parameterized in the same
-way.
+where ``(ϕ, θ, ψ)`` are read as the Euler angles ``(α, β, γ)``.  So we
+might as well think of them as being parameterized in the same way.
+
+!!! note "The conjugate"
+    The complex conjugate here is essential.  The sources cited above
+    — and versions of this package before 3.0 — use a ``𝔇`` that is
+    the complex conjugate of the one [settled on here](@ref
+    summary_wigner_D), which is why the same relation appears in them
+    *without* the bar.  See the [conventions summary](@ref
+    summary_swsh) for the settled definition, and the
+    [comparisons](@ref "Comparisons") for how each source relates to
+    it.
 
 ## The geometric picture
 
@@ -92,12 +102,14 @@ photon.
 
 Imagining that we had a polarizing telescope measuring some other kind
 of field with spin ``s``, the complex combination would vary as
-``e^{isψ}``.  (This is important for gravitational-wave astronomy with
-spin-2 fields.  In principle, we could also consider neutrino
-telescopes with spin-1/2 polarization.)  And since we could have
+``e^{isψ}``.  (This is important for gravitational-wave astronomy,
+which feature fields with spin between -2 and +2, inclusive.  In
+principle, we could use the same framework to consider neutrino
+telescopes with spin-1/2 polarization.) And since we could have
 half-integer spins, we actually need to consider not just the rotation
-group ``\mathrm{SO}(3)``, but its double cover ``\mathrm{Spin}(3)
-\cong \mathrm{SU}(2)``, to fully capture the behavior of general
+group ``\mathrm{SO}(3)`` (which is topologically ``ℝℙ³``), but its
+double cover ``\mathrm{Spin}(3) \cong \mathrm{SU}(2)`` (which is
+topologically ``𝕊³``), to fully capture the behavior of general
 fields.
 
 ## Unification in ``\mathrm{Spin}(3)``
@@ -152,9 +164,9 @@ details.
 
 Assuming the functions have been defined on ``\mathrm{Spin}(3)``, we
 can push them forward to functions on the sphere ``𝕊²``.[^1]  Given a
-choice of a special point in ``𝕊²`` — conventionally the north pole
-``𝐳`` — we can map ``𝐐 ∈ \mathrm{Spin}(3)`` to ``𝕊²`` simply by
-using it to rotate ``𝐳`` to ``π(𝐐) = 𝐐\, 𝐳\, 𝐐⁻¹``.  For any
+choice of a special point in ``𝕊²`` — conventionally called the north
+pole ``𝐳`` — we can map ``𝐐 ∈ \mathrm{Spin}(3)`` to ``𝕊²`` simply
+by using it to rotate ``𝐳`` to ``π(𝐐) = 𝐐\, 𝐳\, 𝐐⁻¹``.  For any
 particular point ``𝐧 ∈ 𝕊²``, the set of all rotors that map to that
 point (its preimage) is of the form
 ```math
@@ -168,12 +180,14 @@ the telescope polarizer about the optical axis.
 [^1]: Okay, technically we'll use more structure than just ``𝕊²``.
     We're picking out a special point in that space, and assuming the
     action of ``\mathrm{Spin}(3)`` on that point to define the
-    mapping.  Elsewhere, I criticize the usual approach because it
-    ignores the fundamental importance of the choice of tangent basis
-    at each point.  This pushforward to ``𝕊²`` also uses some extra
-    structure — perhaps reinforcing the notion that spin-weighted
-    functions really should just be thought of as functions on
-    ``\mathrm{Spin}(3)``.
+    mapping.  So really ``𝕊²`` as written above really represents a
+    [pointed space](https://en.wikipedia.org/wiki/Pointed_space) of
+    ``𝕊²`` with basepoint ``𝐳``.  Elsewhere, I criticize the usual
+    approach because it ignores the fundamental importance of the
+    choice of tangent basis at each point, sweeping it under the rug.
+    This pushforward to ``𝕊²`` also uses some extra structure —
+    perhaps reinforcing the notion that spin-weighted functions really
+    should just be thought of as functions on ``\mathrm{Spin}(3)``.
 
 Now, for any function ``f(𝐐)`` on ``\mathrm{Spin}(3)``, we can define
 the pushforward function on ``𝕊²`` by taking a point to the average
@@ -189,11 +203,11 @@ where ``𝐐`` is any rotor such that ``π(𝐐) = 𝐧``.  The choice of
 ``𝐐`` does not matter because the integral averages over all possible
 choices.  Also, given the behavior ``e^{isψ}`` described above, we
 know that only fields with ``s=0`` will have nonzero values under this
-operation.  Thus, only functions with spin weight 0 can be pushed
-forward to nontrivial functions on ``𝕊²``.  And again, because the
-standard scalar spherical harmonics are precisely the spin-weighted
-spherical harmonics with ``s=0``, they can be pushed forward in this
-way.
+operation.  Therefore, **only functions with spin weight 0 can be
+pushed forward to nontrivial functions on ``𝕊²``**.  And again,
+because the standard scalar spherical harmonics are precisely the
+spin-weighted spherical harmonics with ``s=0``, they can be pushed
+forward in this way.
 
 This is effectively the only continuous way to push functions forward
 to *all of* ``𝕊²``.  For functions with nonzero spin-weight, we need
@@ -202,7 +216,7 @@ a reference direction to specify the tangent basis.  However, the
 tells us this cannot be done continuously over the entire sphere.
 Originally, the spin-weighted spherical harmonics were not defined on
 ``𝕊²``, but the spherical coordinates — which are topologically the
-cylinder ``I×𝕊¹``.
+cylinder ``I×𝕊¹``, for which there is no such obstruction.
 
 ## Pulling back to ``I×𝕊¹``
 

@@ -14,8 +14,8 @@ This is certainly the natural realm for these operators, but it is not the commo
 particular, virtually all textbooks and papers on the subject define these operators in
 terms of the standard spherical coordinates on the 2-sphere, rather than quaternions or even
 Euler angles.  In particular, the standard forms are essentially always given in terms of
-the Cartesian basis, as in ``L_x``, ``L_y``, and ``L_z`` — though some times the first two
-are expressed as ``L_{\pm} = L_x \pm i L_y``.
+the Cartesian basis, as in ``L_x``, ``L_y``, and ``L_z`` — though the first two are often
+combined so that they can be expressed as ``L_{\pm} = L_x \pm i L_y``.
 
 Here, we will use SymPy to just grind through the algebra of expressing the angular-momentum
 operators in terms of Euler angles, including evaluating the commutators in that form, and
@@ -35,19 +35,25 @@ important results that help make contact with more standard expressions:
      spin-lowering operator is ``\bar{\eth} = -R_- = -(R_x - i R_y)``, with the sign
      explained below.
 
+!!! note
+    This page is *only* here to show the comparisons between this package's conventions and
+    more standard ones in the literature.  Nothing within this package relies on Euler
+    angles to do calculations in any way.
+
 ## Analytical groundwork
 
-We start by defining a new set of Euler angles according to
+We start by defining a new set of Euler angles — depending on whether we are interested in
+the left- or right-Lie derivative, respectively — according to either
 ```math
 𝐑_{α', β', γ'}
 = e^{-ϵ 𝐮 / 2} 𝐑_{α, β, γ}
 \qquad \text{or} \qquad
 𝐑_{α', β', γ'}
-= 𝐑_{α, β, γ} e^{-ϵ 𝐮 / 2}
+= 𝐑_{α, β, γ} e^{-ϵ 𝐮 / 2},
 ```
-where ``𝐮`` will be each of the basis quaternions, and each of ``α'``,
-``β'``, and ``γ'`` is a function of ``α``, ``β``, ``γ``, and
-``ϵ``.  Then, we note that the chain rule tells us that
+respectively.  Here, ``𝐮`` will be each of the basis quaternions, and each of ``α'``,
+``β'``, and ``γ'`` is a function of ``α``, ``β``, ``γ``, and ``ϵ``.  Then, we note that the
+chain rule tells us that
 ```math
 \frac{\partial}{\partial ϵ}
 =
@@ -56,8 +62,8 @@ where ``𝐮`` will be each of the basis quaternions, and each of ``α'``,
 + \frac{\partial γ'}{\partial ϵ} \frac{\partial}{\partial γ'},
 ```
 which we will use to convert the general expression for the angular-momentum operators in
-terms of ``\partial_ϵ`` into an expression in terms of derivatives with respect to
-these new Euler angles:
+terms of ``\partial_ϵ`` into an expression in terms of derivatives with respect to these new
+Euler angles:
 ```math
 \begin{align}
   L_j f(𝐑_{α, β, γ})
@@ -97,11 +103,11 @@ or for ``R_j``:
 \end{align}
 ```
 
-So the objective is to find the new Euler angles, differentiate with respect to
-``ϵ``, and then evaluate at ``ϵ = 0``.  We do this by first multiplying
-``𝐑_{α, β, γ}`` and ``e^{-ϵ 𝐮 / 2}`` in the desired
-order, then expanding the results in terms of its quaternion components, and then computing
-the new Euler angles in terms of those components according to the usual expression.
+So the objective is to find the new Euler angles, differentiate with respect to ``ϵ``, and
+then evaluate at ``ϵ = 0``.  We do this by first multiplying ``𝐑_{α, β, γ}`` and
+``e^{-ϵ 𝐮 / 2}`` in the desired order, then expanding the results in terms of its quaternion
+components, and then computing the new Euler angles in terms of those components according
+to the usual expression.
 
 """
 
@@ -399,10 +405,10 @@ commutator(Rz, Rx)
 #
 # Now, note that including ``\partial_γ`` for an expression on the 2-sphere doesn't
 # actually make any sense: ``γ`` isn't even a coordinate for the 2-sphere!  However,
-# for historical reasons, we include it here when showing the results of the ``R`` operator
-# in Euler angles.
+# for historical reasons (comparison to older references), it's included here when showing
+# the results of the ``R`` operator in Euler angles.
 
-#md # ### [``R`` operators in spherical coordinates](@id euler_R_S2)
+#md # ### [``R`` operators in "spherical" coordinates](@id euler_R_S2)
 @display2 R(𝐢)
 #-
 @display2 R(𝐣)
@@ -436,8 +442,9 @@ commutator(Rz, Rx)
 # i.e., ``\bar{\eth}\eta = \overline{\eth \bar{\eta}}``.  Because ``R_x`` and ``R_y`` each
 # carry an explicit factor of ``i``, conjugating the operator flips their signs, and we find
 # ```math
+# \begin{gather}
 # \bar{\eth} = -\left(R_x - i R_y\right) = -R_-,
-# \qquad
+# \\
 # \bar{\eth}\eta
 # = -\left[
 #     i \frac{1}{\sin θ} \frac{\partial}{\partial ϕ}
@@ -449,9 +456,10 @@ commutator(Rz, Rx)
 #     - i \frac{1}{\sin θ} \frac{\partial}{\partial ϕ}
 #   \right\}
 #   \left\{ (\sin θ)^{s} \eta \right\},
+# \end{gather}
 # ```
 # which is again exactly Newman and Penrose's Eq. (3.8).  The minus sign is real: ``R_-``
-# has the Condon–Shortley-positive ladder coefficient on the spin-weighted spherical
+# has the positive ladder coefficient of Condon–Shortley on the spin-weighted spherical
 # harmonics, whereas ``\bar{\eth}`` lowers ``s`` with a negative coefficient — Eq. (2.7b) of
 # [GoldbergEtAl_1967](@citet).  *By definition* of raising and lowering operators, ``[R_z,
 # R_\pm] = \pm R_\pm``, and therefore ``[R_z, \eth] = \eth`` and ``[R_z, \bar{\eth}] =
@@ -472,9 +480,11 @@ commutator(Rz, Rx)
 # angular-momentum operators acting on general functions on the 3-sphere.  The standard
 # expressions appear arbitrarily, and are not even well defined as functions on the 2-sphere
 # because they also need input from tangent space of the sphere — which is not part of the
-# 2-sphere proper.  On the other hand, the expressions from the 3-sphere are mathematically
-# and physically well defined and intuitive.  Note that the latter is complete in itself; it
-# can stand alone without reference to the 2-sphere.  Rather, what we have done here is just
-# shown the connection to the inadequate standard presentation.  But it is important to
-# recognize that our complete treatment on ``\mathrm{Spin}(3)`` is the more fundamental one,
-# and can be used without reference to the older treatment.
+# 2-sphere proper.  (Although, as discussed elsewhere in this documentation, it *is*
+# possible to define them on the spherical coordinate space ``I×𝕊¹``.)  On the other hand,
+# the expressions from the 3-sphere are mathematically and physically well defined and
+# intuitive.  Note that the latter is complete in itself; it can stand alone without
+# reference to the 2-sphere.  Rather, what we have done here is just shown the connection to
+# the inadequate standard presentation.  But it is important to recognize that our complete
+# treatment on ``\mathrm{Spin}(3)`` is the more fundamental one, and can be used without
+# reference to the older treatment.

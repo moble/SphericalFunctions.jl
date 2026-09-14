@@ -29,12 +29,11 @@ bib = CitationBibliography(
 )
 
 using SphericalFunctions
-using SphericalFunctions.Deprecated
 
 DocMeta.setdocmeta!(
     SphericalFunctions,
     :DocTestSetup,
-    :(using SphericalFunctions; using SphericalFunctions.Deprecated);
+    :(using SphericalFunctions);
     recursive=true,
     warn=false,
 )
@@ -42,7 +41,7 @@ DocMeta.setdocmeta!(
 makedocs(
     plugins=[bib],
     sitename="SphericalFunctions.jl",
-    modules = [SphericalFunctions, SphericalFunctions.Deprecated],
+    modules = [SphericalFunctions],
     remotes=notes_remotes,
     format = Documenter.HTML(
         prettyurls = !("local" in ARGS),  # Use clean URLs, unless built as a "local" build
@@ -57,7 +56,6 @@ makedocs(
             "background/operators.md",
             "background/sYlm_and_Dlmpm.md",
             "background/mode_weights.md",
-            "background/transformations.md",
         ],
         "Interface" => [
             "interface/wigner_matrices.md",
@@ -69,7 +67,6 @@ makedocs(
         "Conventions" => [
             "conventions/summary.md",
             "conventions/details.md",
-            "conventions/comparisons.md",
             "Comparisons" => map(
                 s -> joinpath("conventions", "comparisons", s),
                 sort(
@@ -96,14 +93,12 @@ makedocs(
             "development/index.md",
             "development/literate_testitems.md",
         ],
-        "Deprecated" => [
-            "deprecated/index.md",
-        ],
         "index_of_docstrings.md",
         "References" => "references.md",
         notes_pages...,
     ],
     warnonly=true,
+    # warnonly=false,
     #doctest = false,
     #draft=true,  # Skips running code in the docs for speed
 )

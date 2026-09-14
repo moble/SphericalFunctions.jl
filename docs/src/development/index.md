@@ -2,64 +2,58 @@
 
 ## Running tests
 
-You can run all tests with coverage and process that coverage *from
-the package root* with:
+The suite is made of [TestItems.jl](https://github.com/julia-vscode/TestItems.jl)
+test items, so any of the usual runners will do.  Day to day, the quickest is
+the `juliati` command-line runner, from the package root:
 
 ```bash
-julia --project=. scripts/test.jl
+juliati                        # everything
+juliati --filter 'ComplexPowers'
+juliati --filter ':slow'
+juliati --filter '!:slow'
 ```
 
-Optionally, at the end of this command, specify names of individual
-tests to run (in quotes if there are spaces), tags of tests to run
-(which must start with a colon), or files to run all tests in (which
-must end with `.jl`).  If any are specified, only matching tests or
-files will be run.  By default, all tests in all files will be run.
+VS Code's Julia extension lists the same items in its Testing panel
+and runs them individually, and the `julia` MCP server exposes them to
+editors and agents.  All three keep worker processes warm between
+runs, so repeated runs skip Julia's startup and most compilation.
 
-Optionally, either with or without any of the above specifications,
-add `--skip` followed by one or more tests, tags, or files to skip.
-These override any inclusion criteria specified earlier in the
-command.  Note that everything before `--skip` constitutes inclusion
-criteria; everything after constitutes exclusion criteria.
-
-The names of individual tests or files can be given as regex patterns
-(probably in quotes), and all such matches will be via `occursin`
-matching, so that partial matches will work.  Tags must be given
-exactly as they appear in the code (including the colon).
-
-Note that any test with the `:skipci` tag will be skipped whenever the
-environment variable `CI` is set to "true" (which is the case on
-GitHub Actions), unless it is explicitly included in the command line
-as a test to run.
-
-Here are some example invocations:
+For coverage, and for the whole suite in one go, there is a script:
 
 ```bash
-# Run all tests in all files (except those tagged :skipci if CI=true)
-julia --project=. scripts/test.jl
-
-# Run everything in complex_powers.jl
-julia --project=. scripts/test.jl complex_powers.jl
-
-# Run only the ComplexPowers test
-julia --project=. scripts/test.jl ComplexPowers
-
-# Run everything in complex_powers.jl except ComplexPowers (or :skipci if CI=true)
-julia --project=. scripts/test.jl complex_powers.jl --skip ComplexPowers
-
-# Run everything in every file except ComplexPowers (or :skipci if CI=true)
-julia --project=. scripts/test.jl --skip ComplexPowers
-
-# Run only tests tagged :fast
-julia --project=. scripts/test.jl :fast
-
-# Run everything except tests tagged :slow (or :skipci if CI=true)
-julia --project=. scripts/test.jl --skip :slow
+julia -t auto scripts/test.jl            # the whole suite
+julia -t auto scripts/test.jl --coverage # ... and write lcov.info
 ```
+
+Finally, `Pkg.test` works, because `test/runtests.jl` is a thin shim
+over `@run_package_tests`:
+
+```julia
+using Pkg
+Pkg.test("SphericalFunctions")
+Pkg.test("SphericalFunctions"; test_args=[":python"])  # only the `:python` items
+```
+
+That shim supports filtering by tag only, written as `:sometag`;
+richer filtering belongs to `juliati` rather than to a hand-written
+argument parser.  Items tagged `:skipci` are skipped automatically
+when the environment variable `CI` is `"true"`, unless that tag is
+what was asked for — they need something continuous integration does
+not have, such as a Python environment.
+
+Which files are searched for test items is set by
+`JuliaTestItems.toml` in the package root: `src/`, `test/`, and the
+Literate sources under `docs/literate_input/`.  The generated copies
+under `docs/src/` and `docs/build/` are deliberately not searched, and
+neither is `notes/`, which is a symbolic link to a separate
+repository.
 
 
 ## Writing tests and coverage
 
-Tags can be added to individual test items, which can then be used either in the VS Code interface or the command line to include or exclude certain tests.
+Tags can be added to individual test items, which can then be used
+either in the VS Code interface or the command line to include or
+exclude certain tests.
 
 ```julia
 @testitem "My testitem" tags=[:skipci, :slow] begin
