@@ -252,8 +252,8 @@ moves the entire ``ϵ`` dependence onto the *conjugated* factor:
   d𝐏.
 ```
 Because that factor is conjugated, the ``i`` in the definition of
-``L_𝐳`` effectively becomes ``-i``, so the eigenvalue ``+m'`` carried
-by ``Y_{ℓ,m'}`` comes back with the opposite sign.  The result is that
+``L_𝐳`` effectively becomes ``-i``, so the eigenvalue ``+m'`` of
+``Y_{ℓ,m'}`` comes back with the opposite sign.  The result is that
 ``𝔇`` satisfies
 ```math
 \begin{aligned}

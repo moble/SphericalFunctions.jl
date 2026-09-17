@@ -2,46 +2,125 @@ md"""
 # Goldberg et al. (1967)
 
 !!! info "Summary"
-    Goldberg et al.'s spin-weighted spherical harmonics differ from ours by a factor of
-    ``(-1)^m``.  Their Wigner ``D`` matrix is defined as a function of the *inverse*
-    rotation, and is related to ours by
+    Goldberg et al. use the same conventions as we do for spherical
+    coordinates and Euler angles.  Their Wigner ``D`` matrix is
+    defined as a function of the *inverse* rotation, and is related to
+    ours by
     ```math
-    D^{j}_{m',m}(α, β, γ)\big|_{\text{Goldberg}}
-    = \overline{𝔇^{(j)}_{m',m}(γ, β, α)}
-    = (-1)^{m+m'}\, \overline{𝔇^{(j)}_{m,m'}(α, β, γ)}.
+    D^{j}_{m',m}(α, β, γ)\big|_{\text{Goldberg}} =
+    \overline{𝔇^{(j)}_{m',m}(γ, β, α)} = (-1)^{m+m'}\,
+    \overline{𝔇^{(j)}_{m,m'}(α, β, γ)}.
     ```
-    Their spin-raising and -lowering operators ``\eth`` and ``\bar{\eth}`` agree with ours,
-    including the minus sign in ``\bar{\eth}\, {}_sY_{ℓ,m} = -\sqrt{(ℓ+s)(ℓ-s+1)}\,
+    Their spin-raising and -lowering operators ``\eth`` and
+    ``\bar{\eth}`` agree with ours, including the minus sign in
+    ``\bar{\eth}\, {}_sY_{ℓ,m} = -\sqrt{(ℓ+s)(ℓ-s+1)}\,
     {}_{s-1}Y_{ℓ,m}``.
 
-[GoldbergEtAl_1967](@citet) presented the first paper specifically about spin-weighted
-spherical harmonics (after [Newman_1966](@citet) introduced them; see [the previous
-page](@ref "Newman-Penrose (1966)")), and the first to relate them to the Wigner
-D-matrices.  Their spherical coordinates are the standard physicists' coordinates, and
-their ``\eth`` and ``\bar{\eth}`` are those of Newman and Penrose.
+[GoldbergEtAl_1967](@citet) presented the first paper specifically
+about spin-weighted spherical harmonics (after [Newman_1966](@citet)
+introduced them; see [the previous page](@ref "Newman-Penrose
+(1966)")), and the first to relate them to the Wigner D-matrices.
+They also used functional symmetry to introduce what we recognize
+geometrically as the right-Lie derivative operator.
+
+## Coordinates and derivative operators
+
+Goldberg et al. start out by saying that they work in
+"three-dimensional Euclidean space with polar  coordinates ``r, θ,
+ϕ``".  They write down Newman-Penrose's operator acting on a field of
+spin weight ``s`` as
+```math
+\eth \eta = - (\sin\theta)^s \left[ \frac{\partial}{\partial\theta}
++i \csc\theta \frac{\partial}{\partial\phi} \right] (\sin\theta)^{-s}
+\eta.
+```
+
+They then "define a rotation ``R(α, β, γ)`` of Euler angles ``α, β,
+γ`` as being composed of ``γ`` about ``OZ`` followed by ``β`` about
+``OY`` and then ``α`` about ``OZ``", noting that "this procedure is
+clearly equivalent to the more usual one of a  rotation ``γ`` around
+``OZ``, followed by ``β`` around ``OY'`` and finally ``α`` around
+``OZ''``."  This agrees precisely with our definition.
+
+They then go on to define operators "familiar from the theory of the
+symmetric top".  Unfortunately, this section contains a small mess of
+sign errors.  Their *corrected* Eqs. (3.16) read
+```math
+L_z = -i \frac{\partial}{\partial\alpha},
+\qquad
+L_{\pm} = \pm e^{\pm i \alpha} \left(
+    \frac{\partial}{\partial\beta}
+    \pm i \cot \beta \frac{\partial}{\partial\alpha}
+    \mp i \csc \beta \frac{\partial}{\partial\gamma}
+\right),
+```
+where the correction is to flip the sign of that last term in
+parentheses.  With that correction, we have perfect agreement between
+[this package's ``L`` operators in Euler coordinates](@ref euler_L_S3)
+and Goldberg's.
+
+They then construct a second set of operators by swapping ``α`` and
+``-γ``, though even that statement has a typo in the original, and the
+swapping is done incorrectly.  Their *corrected* Eqs. (3.18) read
+```math
+K_z = i \frac{\partial}{\partial\gamma},
+\qquad
+K_{\pm} = \pm e^{\mp i \gamma} \left(
+    \frac{\partial}{\partial\beta}
+    \mp i \cot \beta \frac{\partial}{\partial\gamma}
+    \pm i \csc \beta \frac{\partial}{\partial\alpha}
+\right),
+```
+where the corrections are to flip the sign in the exponent and in the
+middle term in parentheses.  We those corrections, we still have some
+strange disagreement.  With ``R`` as [our right-Lie derivative](@ref
+euler_R_S3), we have
+```math
+K_z = R_z, \qquad K_{\pm} = -R_{\pm}.
+```
+
+It's also worth noting that there is an incorrect factor of ``i`` in
+the upper line of Eq. (3.20), but the second line is correct.  They
+then find the relationship between ``K_+`` and ``\eth`` — but have yet
+another sign error.  Their *corrected* [Eq. (3.21)] reads
+```math
+[K_+ D^{l}_{-sm}]_{\alpha=\phi, \beta=\theta, \gamma=0}
+=
+-\eth D^{l}_{-sm} (\phi\theta 0),
+```
+where the correction is the sign on the right-hand side.  Including
+this corrected sign, and remembering that ``K_+ = -R_+``, we see that
+this agrees with [this package's relationship ``R_+ = \eth``](@ref
+summary_spin_weight).
 
 ## Spin-weighted spherical harmonics
 
 They give the explicit expression [Eq. (3.1)]
 ```math
+\begin{aligned}
 {}_sY_{ℓ,m}(θ, ϕ)
-=
+&=
 \left[ \frac{(ℓ+m)!\,(ℓ-m)!\,(2ℓ+1)}{(ℓ+s)!\,(ℓ-s)!\,4π} \right]^{1/2}
-\left(\sin\tfrac{θ}{2}\right)^{2ℓ}
+\left(\sin\tfrac{θ}{2}\right)^{2ℓ} \\
+&\times
 \sum_r \binom{ℓ-s}{r} \binom{ℓ+s}{r+s-m}
 (-1)^{ℓ-r-s}\, e^{imϕ} \left(\cot\tfrac{θ}{2}\right)^{2r+s-m},
+\end{aligned}
 ```
 where the sum runs over all ``r`` for which the binomial coefficients are nonzero.  They
-also record the conjugation symmetry [Eq. (2.6)]
+also record the conjugation symmetry [Eq. (2.6), though with a missing minus sign on the
+last index]
 ```math
 \overline{{}_sY_{ℓ,m}} = (-1)^{m+s}\, {}_{-s}Y_{ℓ,-m},
 ```
 and the action of the Newman–Penrose operators, with the minus sign in the lowering
-relation [Eq. (2.7b)]
+relation [Eqs. (2.7a) and (2.7b)]
 ```math
+\begin{gather}
 \eth\, {}_sY_{ℓ,m} = \sqrt{(ℓ-s)(ℓ+s+1)}\, {}_{s+1}Y_{ℓ,m},
-\qquad
+\\
 \bar{\eth}\, {}_sY_{ℓ,m} = -\sqrt{(ℓ+s)(ℓ-s+1)}\, {}_{s-1}Y_{ℓ,m},
+\end{gather}
 ```
 so that ``\bar{\eth}\eth\, {}_sY_{ℓ,m} = -(ℓ-s)(ℓ+s+1)\, {}_sY_{ℓ,m}``.  These are exactly
 the relations on [our summary page](@ref summary_swsh) — but the explicit expression (3.1)
@@ -120,7 +199,6 @@ We begin by writing code that implements the formulas from Goldberg et al.  We e
 the formulas in a module so that we can test them against the `SphericalFunctions` package.
 """
 
-# TODO: Confirm the equation number of the ð (raising) relation, presumably (2.7a), and of the ð definition.  #src
 using TestItems: @testitem  #hide
 @testitem "Goldberg et al. conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
 

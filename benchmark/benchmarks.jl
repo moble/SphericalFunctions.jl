@@ -32,10 +32,9 @@ end
 SUITE["wigner"] = BenchmarkGroup(["recursions"])
 for ℓₘₐₓ in (8, 64), m′ₘₐₓ in unique((ℓₘₐₓ, 2)), Nᵣ in (1, 64)
     R⃗ = randn(rng, Rotor{Float64}, Nᵣ)
-    calc = WignerDCalculator(ℓₘₐₓ, Float64; m′ₘₐₓ, m′ₘᵢₙ=-m′ₘₐₓ, Nᵣ)
+    calc = WignerDCalculator(R⃗, ℓₘₐₓ; m′ₘₐₓ, m′ₘᵢₙ=-m′ₘₐₓ)
     SUITE["wigner"]["D sweep", ℓₘₐₓ, m′ₘₐₓ, Nᵣ] = @benchmarkable begin
-        recurrence!($calc, $R⃗, 0)
-        for ℓ in 1:$ℓₘₐₓ
+        for ℓ in 0:$ℓₘₐₓ
             recurrence!($calc, ℓ)
         end
     end
@@ -55,10 +54,9 @@ end
 ### that; this can.
 for ℓₘₐₓ in (15//2, 127//2), Nᵣ in (1, 64)
     R⃗ = randn(rng, Rotor{Float64}, Nᵣ)
-    calc = WignerDCalculator(ℓₘₐₓ, Float64; Nᵣ)
+    calc = WignerDCalculator(R⃗, ℓₘₐₓ)
     SUITE["wigner"]["D sweep (half-integer)", ℓₘₐₓ, Nᵣ] = @benchmarkable begin
-        recurrence!($calc, $R⃗, 1//2)
-        for ℓ in (3//2):($ℓₘₐₓ)
+        for ℓ in (1//2):($ℓₘₐₓ)
             recurrence!($calc, ℓ)
         end
     end
@@ -69,7 +67,7 @@ SUITE["sYlm"] = BenchmarkGroup(["harmonics"])
 let R = randn(rng, Rotor{Float64}), s = -2
     for ℓₘₐₓ in (8, 64)
         SUITE["sYlm"]["sYlm", ℓₘₐₓ] = @benchmarkable sYlm($R, $ℓₘₐₓ, $s)
-        calc = sYlmCalculator(ℓₘₐₓ, abs(s))
+        calc = sYlmCalculator(R, ℓₘₐₓ, abs(s))
         Y = Vector{ComplexF64}(undef, Ysize(abs(s), ℓₘₐₓ))
         SUITE["sYlm"]["sYlm! reusing a calculator", ℓₘₐₓ] =
             @benchmarkable sYlm!($Y, $calc, $R, $s)

@@ -97,7 +97,7 @@ spherical-harmonic relation, our conventions give ``\sqrt{4π/(2ℓ+1)}\, Y_{ℓ
 \overline{𝔇_{m,0}(ϕ, θ, 0)} = e^{imϕ} d_{m,0}(θ)``, whereas
 ``\overline{𝔇_{0,m}(0, θ, ϕ)} = e^{imϕ} d_{0,m}(θ) = (-1)^m e^{imϕ} d_{m,0}(θ)``; and the
 explicit example gives ``-\sin θ / \sqrt{2}`` where ``d_{0,1}(θ) = +\sin θ/\sqrt{2}`` but
-``d_{1,0}(θ) = -\sin θ/\sqrt{2}``.  So the plain conjugate fails both, and the second
+``d_{1,0}(θ) = -\sin θ/\sqrt{2}``.  So the plain conjugate violates both, and the second
 candidate satisfies both.  We therefore take
 ```math
 \mathtt{WignerD[\{j, m_1, m_2\}, ψ, θ, ϕ]} = 𝔇^{(j)}_{-m_1,-m_2}(ψ, θ, ϕ)

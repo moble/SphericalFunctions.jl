@@ -56,10 +56,9 @@ end
 
 function bench(ℓₘₐₓ, m′ₘₐₓ, Nᵣ)
     angles = fill(T(β), Nᵣ)
-    w = WignerHCalculator(ℓₘₐₓ, T; m′ₘₐₓ, Nᵣ)
+    w = WignerHCalculator(angles, ℓₘₐₓ; m′ₘₐₓ)  # `angles::Vector{T}` fixes the element type
     function run()
-        recurrence!(w, angles, 0)
-        for ℓ ∈ 1:ℓₘₐₓ
+        for ℓ ∈ 0:ℓₘₐₓ
             recurrence!(w, ℓ)
         end
     end

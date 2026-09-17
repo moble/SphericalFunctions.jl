@@ -23,6 +23,18 @@ include("local_notes.jl")
 (notes_pages, notes_remotes) = local_notes()
 
 
+# Documenter treats a broken doctest, a dead cross-reference or a missing docstring as an
+# error, by default.  That is what we want from a normal build and from CI, so the default
+# here is to fail.  While drafting, though, the `LiveServer` loop in `scripts/docs.jl` has
+# to survive half-written pages, so that script sets the environment variable below.  A
+# one-off lenient build can also be had with
+#
+#   julia --project=docs docs/make.jl warnonly
+#
+const warnonly = ("warnonly" in ARGS) || get(ENV, "SPHERICALFUNCTIONS_DOCS_WARNONLY", "false") == "true"
+@info "Building with warnonly=$warnonly"
+
+
 bib = CitationBibliography(
     joinpath(docs_src_dir, "references.bib");
     #style=:authoryear,
@@ -97,8 +109,7 @@ makedocs(
         "References" => "references.md",
         notes_pages...,
     ],
-    warnonly=true,
-    # warnonly=false,
+    warnonly=warnonly,
     #doctest = false,
     #draft=true,  # Skips running code in the docs for speed
 )

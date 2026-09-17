@@ -437,10 +437,11 @@ commutator(Rz, Rx)
 #   \left\{ (\sin θ)^{-s} \eta \right\}.
 # ```
 # And in the latter form, we can see that ``R_x + i R_y = R_+`` is exactly the spin-raising
-# operator ``\eth`` as originally defined by [Newman_1966](@citet) in their Eq. (3.8).  Their
-# spin-lowering operator ``\bar{\eth}`` is the complex-conjugate *operator* of ``\eth``,
-# i.e., ``\bar{\eth}\eta = \overline{\eth \bar{\eta}}``.  Because ``R_x`` and ``R_y`` each
-# carry an explicit factor of ``i``, conjugating the operator flips their signs, and we find
+# operator ``\eth`` as originally defined by [Newman_1966](@citet) in their Eq. (3.8).
+# Their spin-lowering operator ``\bar{\eth}`` is the complex-conjugate *operator* of
+# ``\eth``, i.e., ``\bar{\eth}\eta = \overline{\eth \bar{\eta}}``.  Because ``R_x`` and
+# ``R_y`` each include an explicit factor of ``i``, conjugating the operator flips their
+# signs, and we find
 # ```math
 # \begin{gather}
 # \bar{\eth} = -\left(R_x - i R_y\right) = -R_-,

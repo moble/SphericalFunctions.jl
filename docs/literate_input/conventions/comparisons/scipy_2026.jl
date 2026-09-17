@@ -1,16 +1,17 @@
 md"""
 # SciPy (2026)
 
-!!! info "Summary"
-    SciPy's `sph_harm_y` agrees with the spherical harmonics used in the
-    `SphericalFunctions` package.  Note that its arguments are ordered `(n, m, theta, phi)`
-    with `theta` the *polar* angle, unlike the legacy `sph_harm(m, n, theta, phi)`, in which
-    `theta` was the azimuthal angle.
+!!! info "Summary" SciPy's `sph_harm_y` agrees with the spherical
+    harmonics used in the `SphericalFunctions` package.  Note that its
+    arguments are ordered `(n, m, theta, phi)` with `theta` the
+    *polar* angle, unlike the [legacy `sph_harm(m, n, theta,
+    phi)`](https://docs.scipy.org/doc/scipy-1.16.2/reference/generated/scipy.special.sph_harm.html),
+    in which `theta` was the azimuthal angle.
 
 [SciPy](@cite SciPy_2026) is the standard scientific library for Python.  Its spherical
 harmonics are provided by
-[`scipy.special.sph_harm_y`](https://docs.scipy.org/doc/scipy/reference/generated/scipy.special.sph_harm_y.html),
-whose documentation (SciPy 1.18.1, accessed 2026-09-08) gives the signature
+[`scipy.special.sph_harm_y`](https://docs.scipy.org/doc/scipy-1.18.0/reference/generated/scipy.special.sph_harm_y.html),
+whose documentation (SciPy 1.18.0, accessed 2026-09-16) gives the signature
 ```python
 scipy.special.sph_harm_y(n, m, theta, phi, *, diff_n=0)
 ```
@@ -20,23 +21,32 @@ Y_n^m(θ, φ)
 =
 \sqrt{\frac{2n+1}{4π} \frac{(n-m)!}{(n+m)!}}\; P_n^m(\cos θ)\, e^{imφ},
 ```
-"where ``P_n^m`` denotes the associated Legendre polynomials (unnormalized)".  The
+"where ``P_n^m`` are the (unnormalized) associated Legendre polynomials.".  The
 documentation notes that
 
-> In SciPy `theta` is the polar angle and `phi` is the azimuthal angle.  It is common to see
-> the opposite convention.
+> In SciPy `theta` is the polar angle and `phi` is the azimuthal
+> angle.  It is common to see the opposite convention, that is,
+> `theta` as the azimuthal angle and `phi` as the polar angle.
 
 and that
 
-> SciPy's spherical harmonics include the Condon–Shortley phase because it is part of
-> `sph_legendre_p`.
+> SciPy's spherical harmonics include the Condon–Shortley phase
+> because it is part of
+> [`sph_legendre_p`](https://docs.scipy.org/doc/scipy-1.18.0/reference/generated/scipy.special.sph_legendre_p.html).
 
-That is, the associated Legendre polynomial carries the Condon–Shortley phase, ``P_n^m(x) =
-(-1)^m (1-x^2)^{m/2} \frac{d^m}{dx^m} P_n(x)`` with ``P_n`` the Legendre polynomial, so we
-expect agreement with [our spherical harmonics](@ref summary_spherical_harmonics).  For
-negative ``m`` we use the standard relation [DLMF 14.9.3](https://dlmf.nist.gov/14.9#E3),
-``P_n^{-m}(x) = (-1)^m \frac{(n-m)!}{(n+m)!} P_n^m(x)``, which is what `sph_legendre_p`
-evaluates to.
+That is, the [associated Legendre
+polynomial](https://docs.scipy.org/doc/scipy-1.18.0/reference/generated/scipy.special.assoc_legendre_p.html)
+includes the Condon–Shortley phase,
+```math
+P_n^m(x) = (-1)^m (1-x^2)^{m/2} \frac{d^m}{dx^m} P_n(x)
+```
+with ``P_n`` the Legendre polynomial, so we expect agreement with [our spherical
+harmonics](@ref summary_spherical_harmonics).  For negative ``m`` we use the standard
+relation [DLMF 14.9.3](https://dlmf.nist.gov/14.9#E3),
+```math
+P_n^{-m}(x) = (-1)^m \frac{(n-m)!}{(n+m)!} P_n^m(x),
+```
+which is what `assoc_legendre_p` evaluates to.
 
 The legacy function
 [`scipy.special.sph_harm`](https://docs.scipy.org/doc/scipy-1.15.0/reference/generated/scipy.special.sph_harm.html)
@@ -44,8 +54,8 @@ had the signature `sph_harm(m, n, theta, phi)`, with `theta` the *azimuthal* ang
 the *polar* angle — the definition there reads ``Y_n^m(θ, φ) = \sqrt{\ldots}\, e^{imθ}
 P_n^m(\cos φ)`` — and was deprecated in SciPy 1.15.0 ("This function is deprecated and will
 be removed in SciPy 1.17.0.  Please use `scipy.special.sph_harm_y` instead.").  Apart from
-the argument order, the two functions agree.  SciPy does not provide Wigner's ``D``
-matrices.
+the argument order and naming, the two functions agree.  SciPy does not provide Wigner's
+``D`` matrices.
 
 ## Implementing formulas
 

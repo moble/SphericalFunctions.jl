@@ -15,7 +15,7 @@ md"""
 
 In their 1966 paper, [Newman_1966](@citet), Newman and Penrose first introduced the
 spin-weighted spherical harmonics, ``{}_sY_{ℓ m}``.  They use the standard (physicists')
-convention for spherical coordinates and introduce the stereographic coordinate
+convention for spherical coordinates and introduce the stereographic coordinate [Eq. (3.8)]
 ```math
 ζ = e^{iϕ} \cot\frac{θ}{2}.
 ```
@@ -48,7 +48,7 @@ terms of behavior of a quantity under rotation of ``m^\mu`` in its own plane as
   + i \left(\cos ψ\csc θ \partial_ϕ + \sin ψ\partial_θ\right)
 \right],
 ```
-and a quantity ``\eta`` has spin weight ``s`` if it transforms as
+and a quantity ``\eta`` has spin weight ``s`` if it transforms as [Eq. (3.3)]
 ```math
 \eta' = e^{i s ψ} \eta.
 ```
@@ -106,7 +106,7 @@ package.
 ## Spin-weighted spherical harmonics
 
 Newman and Penrose then compute the spin-weighted spherical harmonics, up to normalization,
-as
+as [Eq. (3.21)]
 ```math
 {}_sY_{ℓ, m}
 \propto
@@ -116,7 +116,7 @@ as
 \binom{ℓ-s}{p} \binom{ℓ+s}{p+s-m},
 ```
 where the sum is over all integers ``p`` such that the binomial coefficients are nonzero.
-Note that, because ``ζ`` carries a factor ``e^{iϕ}``, this expression is proportional to
+Note that, because ``ζ`` includes a factor ``e^{iϕ}``, this expression is proportional to
 ``e^{i(m-s)ϕ}`` rather than ``e^{imϕ}``: it is referred to the tangent basis defined by the
 stereographic coordinate, which is rotated relative to the ``(\boldsymbol{θ},
 \boldsymbol{ϕ})`` basis by the angle ``ϕ``.  Since Newman and Penrose only give this
@@ -129,8 +129,6 @@ We begin by writing code that implements the formulas from Newman and Penrose.  
 encapsulate the formulas in a module so that we can test them against the
 `SphericalFunctions` package.
 """
-
-# TODO: Confirm Newman-Penrose equation numbers for the spin-weight definition and the ζ-sum.  #src
 
 using TestItems: @testitem  #hide
 @testitem "Newman-Penrose conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
@@ -306,10 +304,12 @@ end
 
 # Finally, we compare Newman and Penrose's ``ζ``-expression to the package.  Since they
 # only give it up to proportionality, we determine the constant of proportionality — which
-# turns out to be ``(-1)^ℓ e^{-isϕ} \sqrt{4π / [(2ℓ+1)(ℓ+m)!(ℓ-m)!]}`` — and assert it
-# exactly.  The ``e^{-isϕ}`` is the rotation from the stereographic tangent basis to the
-# ``(\boldsymbol{θ}, \boldsymbol{ϕ})`` basis, as discussed above.  Because ``ζ`` itself
-# diverges at the north pole, we again use the pole-avoiding `BigFloat` grid.
+# turns out to be ``(-1)^ℓ \sqrt{4π / [(2ℓ+1)(ℓ+m)!(ℓ-m)!]}`` — and assert it exactly.
+# (Newman and Penrose encapsulate this as ``a_{l,m}``, but only say its "exact values are
+# inessential for our purposes".)  There is also factor of ``e^{-isϕ}`` to account for the
+# rotation from the stereographic tangent basis to the ``(\boldsymbol{θ}, \boldsymbol{ϕ})``
+# basis, as discussed above.  Because ``ζ`` itself diverges at the north pole, we again use
+# the pole-avoiding `BigFloat` grid.
 for (θ, ϕ) ∈ θϕs_big
     for (s, ℓ, m) ∈ sℓmrange(ℓₘₐₓ, sₘₐₓ)
         c = (-1)^ℓ * exp(-𝒾 * s * ϕ) * √(4big(π) / ((2ℓ+1) * factorial(ℓ+m) * factorial(ℓ-m)))

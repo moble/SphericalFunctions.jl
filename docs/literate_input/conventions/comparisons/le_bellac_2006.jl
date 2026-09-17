@@ -49,7 +49,6 @@ We begin by writing code that implements the formulas from Le Bellac.  We encaps
 formulas in a module so that we can test them against the `SphericalFunctions` package.
 """
 
-# TODO: Confirm whether Le Bellac gives an explicit d-matrix formula; if so, transcribe and test it.  #src
 using TestItems: @testitem  #hide
 @testitem "Le Bellac conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
 

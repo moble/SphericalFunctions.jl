@@ -54,14 +54,21 @@ symmetry](@ref summary_wigner_D) ``\overline{𝔇_{\mu',\mu}} = (-1)^{\mu'-\mu}
 𝔇_{-\mu',-\mu}`` of our matrices, the relation in the summary box follows, and is tested
 below.
 
-Wigner's relation to the spherical harmonics, Eq. (A.11), can be written as
+Wigner relates the spherical harmonics to ``d``, Eq. (A.11), as
 ```math
-Y_{ℓ}^{m}(θ, ϕ)
+Y_{l,m}(ϑ, ϕ)
 =
-c\, (-1)^m\, 𝔇^{(ℓ)}(ϕ, θ, 0)_{m 0},
+\mathrm{const}\, (-1)^m\, e^{imϕ}\, \mathbf{d}^{(l)}(ϑ)_{m 0},
 ```
-for a positive normalization constant ``c`` — note the factor ``(-1)^m``, which does not
-appear in [our relation](@ref summary_spherical_harmonics) ``Y_{ℓ,m} = \sqrt{(2ℓ+1)/4π}\,
+for a positive normalization constant that does not depend on ``m``.
+This is equivalent to    
+```math
+Y_{l,m}(ϑ, ϕ)
+=
+\mathrm{const}\, (-1)^m\, e^{imϕ}\, 𝔇^{(l)}(ϕ, ϑ, 0)_{m0}.
+```
+Note the factor ``(-1)^m``, which does not appear in [our
+relation](@ref summary_spherical_harmonics) ``Y_{ℓ,m} = \sqrt{(2ℓ+1)/4π}\,
 \overline{𝔇_{m,0}}``.  In fact, with the relation between Wigner's ``𝔇`` and ours given
 above, ``(-1)^m 𝔇^{(ℓ)}(ϕ, θ, 0)_{m0}|_{\text{Wigner}} = \overline{𝔇_{m,0}(ϕ, θ, 0)}``, so
 the two relations are the same and Wigner's spherical harmonics are the standard ones.  We

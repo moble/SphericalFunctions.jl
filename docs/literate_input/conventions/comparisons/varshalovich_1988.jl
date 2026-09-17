@@ -11,20 +11,21 @@ md"""
     agree with the complex conjugate of the half-integer ``𝔇`` of [Boyle (2016)](@ref
     "Boyle (2016)"), providing an independent reference for half-integer indices.
 
-[Varshalovich_1988](@citet) is the encyclopedic reference on the quantum theory of angular
-momentum, and has a fairly decent comparison of definitions related to the rotation matrix by
-previous authors.  Varshalovich et al. define their Euler angles (scheme B, page 22) in the
-same way we do, except that they specify that this describes the rotation *of the coordinate
-system*.
+[Varshalovich_1988](@citet) is the encyclopedic reference on the
+quantum theory of angular momentum, and has a fairly decent comparison
+of definitions related to the rotation matrix by previous authors.
+Varshalovich et al. define their Euler angles (Sec. 1.4.1, scheme B,
+page 22) in the same way we do, except that they specify that this
+describes the rotation *of the coordinate system*.
 
 ## Angular-momentum operators and the rotation operator
 
-Varshalovich et al. define the ``\hat{J}`` operators as follows:
+Varshalovich et al. define, in Sec. 2.1.1, the ``\hat{J}`` operators as follows:
 
-> In quantum mechanics the total angular momentum operator ``\hat{J}`` is defined as an
+> In quantum mechanics the *total angular momentum operator* ``\hat{J}`` is defined as an
 > operator which generates transformations of wave functions (state vectors) and quantum
-> operators under infinitesimal rotations of the coordinate system (see Eqs. 2.1.(1) and
-> 2.1.(2)).
+> operators under infinitesimal rotations of the coordinate system (see [the following
+> equation]).
 >
 > A transformation of an arbitrary wave function ``\Psi`` under rotation of the coordinate
 > system through an infinitesimal angle ``δ \omega`` about an axis ``𝐧`` may be written as
@@ -33,7 +34,7 @@ Varshalovich et al. define the ``\hat{J}`` operators as follows:
 > ```
 > where ``\hat{J}`` is the total angular momentum operator.
 
-Eq. 1.4.(31) defines the operator
+Eq. 1.4(31) defines the operator
 ```math
 \hat{D}(α, β, γ)
 =
@@ -41,14 +42,14 @@ e^{-iα \hat{J}_z}
 e^{-iβ \hat{J}_y}
 e^{-iγ \hat{J}_z},
 ```
-which is [our ``U(𝐑_{α,β,γ})``](@ref summary_wigner_D).  Eq. 4.1.(1) defines the Wigner
+which is [our ``U(𝐑_{α,β,γ})``](@ref summary_wigner_D).  Eq. 4.1(1) defines the Wigner
 D-functions according to
 ```math
 \langle J M | \hat{D}(α, β, γ) | J' M' \rangle
 =
 δ_{J J'} D^J_{M M'}(α, β, γ),
 ```
-and Eq. 4.3.(1) states
+and Eq. 4.3(1) states
 ```math
 D^J_{M M'}(α, β, γ)
 =
@@ -56,16 +57,18 @@ e^{-i M α}
 d^J_{M M'}(β)
 e^{-i M' γ},
 ```
-with the ``d`` function given in Eq. 4.3.1(2) as
+with the ``d`` function given in Eq. 4.3(2) as
 ```math
+\begin{aligned}
 d^J_{MM'}(β)
-=
+&=
 (-1)^{J-M'}
-\sqrt{(J+M)!\,(J-M)!\,(J+M')!\,(J-M')!}
-\sum_k (-1)^k
+\sqrt{(J+M)!\,(J-M)!\,(J+M')!\,(J-M')!} \\
+&\quad \times \sum_k (-1)^k
 \frac{\left(\cos\frac{β}{2}\right)^{M+M'+2k}
       \left(\sin\frac{β}{2}\right)^{2J-M-M'-2k}}
      {k!\,(J-M-k)!\,(J-M'-k)!\,(M+M'+k)!}.
+\end{aligned}
 ```
 Note that Varshalovich et al. label the indices ``M`` and ``M'``, in the opposite order to
 our ``m'`` and ``m``; with ``(M, M') = (m', m)`` these are precisely [our
@@ -84,7 +87,7 @@ D^{1/2}_{-1/2, -1/2} &= e^{iα/2} \cos\tfrac{β}{2}\, e^{iγ/2}.
 
 Sec. 4.8.2 (page 92) relates elements with half-integer indices to those with the
 neighboring integer indices, by way of the Clebsch–Gordan series for the product of a
-spin-``1/2`` matrix with an integer-``J`` matrix.  Specifically, Eqs. 4.8.2(14) and (15) read
+spin-``1/2`` matrix with an integer-``J`` matrix.  Specifically, Eqs. 4.8(14) and (15) read
 ```math
 \begin{aligned}
 D^J_{M M'}
@@ -106,7 +109,7 @@ given here are the ones that we have verified numerically against the closed-for
 expression; earlier transcriptions of these equations in the author's notes contained sign
 errors.)  Tables 4.3–4.12 list the ``d^J_{MM'}`` explicitly for ``J \leq 9/2``; we
 transcribe below the entries with ``M \geq 1/2``, and obtain the rows with ``M < 0`` from
-``d^J_{MM'} = (-1)^{M-M'} d^J_{-M,-M'}``.  The closed form 4.3.1(2), the recursions,
+``d^J_{MM'} = (-1)^{M-M'} d^J_{-M,-M'}``.  The closed form 4.3(2), the recursions,
 and the tables are all valid for half-integer ``J``, which makes Varshalovich et al. an
 independent reference for the half-integer matrices computed by the algorithm of [Boyle
 (2016)](@ref "Boyle (2016)"), whose matrices are the complex conjugates of ours.
@@ -134,7 +137,7 @@ spherical components and the corresponding basis vectors, which they define as
 \end{aligned}
 ```
 Then, in Sec. 4.2 they define ``\hat{𝐉}`` as the operator of angular momentum of the rigid
-symmetric top.  They then give in Eq. (6) the "covariant spherical coordinates of
+symmetric top.  They then give in Eqs. 4.2(6) the "covariant spherical coordinates of
 ``\hat{𝐉}`` in the non-rotating (lab-fixed) system" as
 ```math
 \begin{gathered}
@@ -146,7 +149,7 @@ symmetric top.  They then give in Eq. (6) the "covariant spherical coordinates o
   \hat{J}_0 = - i \frac{\partial}{\partial α},
 \end{gathered}
 ```
-and in Eq. (7) the "contravariant components of ``\hat{𝐉}`` in the rotating (body-fixed)
+and in Eqs. 4.2(7) the "contravariant components of ``\hat{𝐉}`` in the rotating (body-fixed)
 system" as
 ```math
 \begin{gathered}
@@ -219,7 +222,6 @@ closed form and the tables are also needed on the [Boyle (2016)](@ref "Boyle (20
 we define them in a test module that both pages can use.
 """
 
-# TODO: Confirm the section/page of the quoted definition of Ĵ (Sec. 1.4?) and of Eq. (12) for the commutators.  #src
 using TestItems: @testmodule, @testitem  #hide
 @testmodule Varshalovich begin  #hide
 

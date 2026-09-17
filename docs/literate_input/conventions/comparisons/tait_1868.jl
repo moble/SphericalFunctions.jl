@@ -51,8 +51,17 @@ rotation ``θ`` about the new position of the line originally coinciding with ``
 ``k'``.
 
 So this is what would probably now be called the ``z-y'-z''`` convention for Euler angles
-``(ψ, θ, ϕ)``, which is equivalent to ``(ϕ, θ, ψ)`` in the ``z-y-z``
-convention used here.
+``(ψ, θ, ϕ)``: each rotation is about an axis of the body, as carried along by the
+preceding rotations.  [Our own convention](@ref summary_euler_angles) is stated the other
+way round, as rotations about *fixed* axes — ``γ`` about ``𝐳``, then ``β`` about ``𝐲``,
+then ``α`` about ``𝐳`` — but the two descriptions give the same quaternion product
+``e^{α𝐤/2}\, e^{β𝐣/2}\, e^{γ𝐤/2}``.  Tait's angles are therefore ours *in the same
+order*,
+```math
+(α, β, γ) = (ψ, θ, ϕ),
+```
+and it is only when his rotations are re-expressed about the fixed axes that the list
+reverses, to ``ϕ``, ``θ``, ``ψ``.
 
 Indeed, Tait goes on to derive (somewhat laboriously) the expression for the quaternion:
 

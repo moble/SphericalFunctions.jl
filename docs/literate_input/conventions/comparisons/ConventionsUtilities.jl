@@ -1,8 +1,7 @@
 @testmodule ConventionsUtilities begin
     import FastDifferentiation
     import SphericalFunctions
-    import SphericalFunctions.Deprecated
-    using Quaternionic: Rotor
+    using Quaternionic: Rotor, from_euler_angles, from_spherical_coordinates
 
     const 𝒾 = im
 
@@ -53,20 +52,18 @@
     # functions, so that the pages state relations to the settled conventions rather than to
     # whatever the code happens to compute today.
     #
-    # The scalar `Deprecated.Y` and `Deprecated.d` already agree with the settled conventions.
-    # `Deprecated.D`, however, still carries the pre-3.0 convention, which is the complex
-    # conjugate of the settled one, 𝔇ˡₘ′ₘ(α, β, γ) = exp(-𝒾 m′ α) dˡₘ′ₘ(β) exp(-𝒾 m γ).  The
-    # `conj` below compensates for that.
-    #
-    # TODO: Remove the `conj` calls in `D` when `Deprecated.D!` is flipped to the settled
-    # convention (item 4 of the implementation checklist in `src/redesign/README.md`).  The
-    # `@test_broken` in the "ConventionsUtilities reference conventions" testitem below will
-    # start passing at that point, as a reminder.
-    Y(s, ℓ, m, θ, ϕ) = Deprecated.Y(s, ℓ, m, θ, ϕ)
-    Y(ℓ, m, θ, ϕ) = Deprecated.Y(ℓ, m, θ, ϕ)
-    d(ℓ, m′, m, β) = Deprecated.d(ℓ, m′, m, β)
-    D(ℓ, m′, m, α, β, γ) = conj(Deprecated.D(ℓ, m′, m, α, β, γ))
-    D(ℓ, m′, m, R::Rotor) = conj(Deprecated.D_matrices(R, ℓ)[Deprecated.WignerDindex(ℓ, m′, m)])
+    # `D`, `d` and `Y` are the package's own v3 functions, which implement the settled
+    # conventions 𝔇ˡₘ′ₘ(α, β, γ) = exp(-𝒾 m′ α) dˡₘ′ₘ(β) exp(-𝒾 m γ) and
+    # ₛYₗₘ = (-1)^s √((2ℓ+1)/4π) conj(𝔇ˡₘ,₋ₛ); the "reference conventions" testitem below pins
+    # them to those formulas, to the explicit d⁽¹⁾ matrix, and to the explicit sum for ₛYₗₘ.
+    function Y(s, ℓ, m, θ, ϕ)
+        R = Rotor(from_spherical_coordinates(θ, ϕ))
+        SphericalFunctions.sYlm(R, ℓ, s)[SphericalFunctions.Yindex(ℓ, m, abs(s))]
+    end
+    Y(ℓ, m, θ, ϕ) = Y(0, ℓ, m, θ, ϕ)
+    d(ℓ, m′, m, β) = SphericalFunctions.d(β, ℓ)[ℓ][m′, m]
+    D(ℓ, m′, m, α, β, γ) = D(ℓ, m′, m, Rotor(from_euler_angles(α, β, γ)))
+    D(ℓ, m′, m, R::Rotor) = SphericalFunctions.D(R, ℓ)[ℓ][m′, m]
 
 end
 
@@ -115,7 +112,6 @@ end
     # "Summary" page, so that the pages are guaranteed to compare against the *documented*
     # conventions.
     import .ConventionsUtilities: D, d, Y, 𝒾
-    import SphericalFunctions.Deprecated
     import Quaternionic: from_euler_angles
 
     ϵₐ = 100eps()
@@ -163,9 +159,4 @@ end
             @test Y(ℓ, m, θ, ϕ) ≈ √((2ℓ+1)/(4π)) * conj(D(ℓ, m, 0, ϕ, θ, 0)) atol=ϵₐ rtol=ϵᵣ
         end
     end
-
-    # Reminder: `Deprecated.D` still carries the pre-3.0 (conjugate) convention.  When it is
-    # flipped, this test will start passing, and the `conj` in `ConventionsUtilities.D` should
-    # be removed.
-    @test_broken Deprecated.D(1, 1, 0, 0.3, 0.4, 0.5) ≈ D(1, 1, 0, 0.3, 0.4, 0.5)
 end
