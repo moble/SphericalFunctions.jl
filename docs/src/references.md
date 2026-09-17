@@ -4,7 +4,7 @@ The most important routine in this package is the computation of the 𝔇 matric
 — or more specifically, of terms proportional to parts of the 𝔇 matrices.  This
 mostly follows the treatment of [Gumerov_2015](@citet) (with minor modifications
 to account for errors in their presentation, as described
-[here](@ref "Steps to compute ``H``")).  To seed
+[here](@ref "Steps to compute ``H`` (redesigned)")).  To seed
 the recursions they present, we also need to calculate the associated Legendre
 functions.  This is now done using the "fully normalized column-wise recurrence
 formula" (fnCWF) given by Eqs. (12)—(14) of [Xing_2019](@citet).  This improves

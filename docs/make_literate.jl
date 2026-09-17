@@ -57,15 +57,15 @@ end
 
 # Make "lalsuite_SphericalHarmonics.c" available in the docs
 let
-    inputfile = joinpath(literate_input, "conventions", "comparisons", "lalsuite_SphericalHarmonics.c")
-    outputfile = joinpath(docs_src_dir, "conventions", "comparisons", "lalsuite_SphericalHarmonics.c")
+    inputfile = joinpath(literate_input, "30-conventions", "10-comparisons", "lalsuite_SphericalHarmonics.c")
+    outputfile = joinpath(docs_src_dir, "30-conventions", "10-comparisons", "lalsuite_SphericalHarmonics.c")
     ensure_in_gitignore(relpath(replace(outputfile, ".c"=>".md"), package_root))
     lalsource = read(
-        joinpath(literate_input, "conventions", "comparisons", "lalsuite_SphericalHarmonics.c"),
+        joinpath(literate_input, "30-conventions", "10-comparisons", "lalsuite_SphericalHarmonics.c"),
         String
     )
     write(
-        joinpath(docs_src_dir, "conventions", "comparisons", "lalsuite_SphericalHarmonics.md"),
+        joinpath(docs_src_dir, "30-conventions", "10-comparisons", "lalsuite_SphericalHarmonics.md"),
         "# LALSuite: Spherical Harmonics original source code\n"
         * "The official repository is [here]("
         * "https://git.ligo.org/lscsoft/lalsuite/-/blob/22e4cd8fff0487c7b42a2c26772ae9204c995637/lal/lib/utilities/SphericalHarmonics.c"

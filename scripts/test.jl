@@ -2,7 +2,7 @@
 #   julia -t auto scripts/test.jl
 # or to run with coverage as
 #   julia -t auto scripts/test.jl --coverage
-# See docs/src/development/index.md for more information.
+# See docs/src/60-development/01-index.md for more information.
 
 import Dates
 println("Running tests starting at ", Dates.format(Dates.now(), "HH:MM:SS"), ".")

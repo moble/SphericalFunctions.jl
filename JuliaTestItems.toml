@@ -1,6 +1,6 @@
 # Where test items are looked for.  Scanning every `.jl` file is the
 # right default for most packages, but not this one:
-# `docs/src/conventions/comparisons` holds generated output, so it
+# `docs/src/30-conventions/10-comparisons` holds generated output, so it
 # should not be searched.  Listing the three trees that do hold test
 # items is clearer than excluding the ones that do not.
 #

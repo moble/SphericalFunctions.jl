@@ -64,46 +64,46 @@ makedocs(
     pages = [
         "index.md",
         "Background" => [
-            "background/domain.md",
-            "background/operators.md",
-            "background/sYlm_and_Dlmpm.md",
-            "background/mode_weights.md",
+            "10-background/01-domain.md",
+            "10-background/02-operators.md",
+            "10-background/03-sYlm_and_Dlmpm.md",
+            "10-background/04-mode_weights.md",
         ],
         "Interface" => [
-            "interface/wigner_matrices.md",
-            "interface/sYlm.md",
-            "interface/transformations.md",
-            "interface/operators.md",
-            "interface/utilities.md",
+            "20-interface/01-wigner_matrices.md",
+            "20-interface/02-sYlm.md",
+            "20-interface/03-transformations.md",
+            "20-interface/04-operators.md",
+            "20-interface/05-utilities.md",
         ],
         "Conventions" => [
-            "conventions/summary.md",
-            "conventions/details.md",
+            "30-conventions/01-summary.md",
+            "30-conventions/02-details.md",
             "Comparisons" => map(
-                s -> joinpath("conventions", "comparisons", s),
+                s -> joinpath("30-conventions", "10-comparisons", s),
                 sort(
                     filter(
                         s -> s != "lalsuite_SphericalHarmonics.md",
-                        readdir(joinpath(docs_src_dir, "conventions", "comparisons"))
+                        readdir(joinpath(docs_src_dir, "30-conventions", "10-comparisons"))
                     )
                 )
             ),
             "Calculations" => map(
-                s -> joinpath("conventions", "calculations", s),
-                sort(readdir(joinpath(docs_src_dir, "conventions", "calculations")))
+                s -> joinpath("30-conventions", "20-calculations", s),
+                sort(readdir(joinpath(docs_src_dir, "30-conventions", "20-calculations")))
             ),
         ],
         "API" => [
-            "api/internal.md",
-            "api/functions.md",
+            "40-api/01-internal.md",
+            "40-api/02-functions.md",
         ],
         "Notes" => map(
-            s -> joinpath("notes", s),
-            sort(readdir(joinpath(docs_src_dir, "notes")))
+            s -> joinpath("50-notes", s),
+            sort(readdir(joinpath(docs_src_dir, "50-notes")))
         ),
         "Development" => [
-            "development/index.md",
-            "development/literate_testitems.md",
+            "60-development/01-index.md",
+            "60-development/02-literate_testitems.md",
         ],
         "index_of_docstrings.md",
         "References" => "references.md",

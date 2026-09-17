@@ -1,21 +1,11 @@
 # Introduction
 
-1. TODO: Figure out how to define conventions for the operators programmatically.
-
-2. TODO: Finalize my conventions
-
-3. TODO: Finish comparisons, using final conventions
-
-4. TODO: Review front matter; make consistent with new conventions
-
-8. TODO: Enable both `m′ₘₐₓ` and `mₘₐₓ` limits
-
-5. TODO: Try to create a simpler interface `D(ℓₘₐₓ, R)` and `D!` that can operate just on that return value (with optional `m′ₘₐₓ, mₘₐₓ`)
-
-6. TODO: Make return values a special object that can iterate and be indexed, returning `OffsetArray`s of views into the underlying `Vector`.
-
-7. TODO: Break iterations into more-reusable pieces
-
+```@meta
+CurrentModule = SphericalFunctions
+DocTestSetup = quote
+    using SphericalFunctions, Quaternionic
+end
+```
 
 This is a Julia package for evaluating and transforming Wigner's 𝔇
 matrices, and spin-weighted spherical harmonics ``{}_{s}Y_{ℓ,m}``
@@ -32,6 +22,131 @@ on regular or distorted grids.  This package also includes functions
 enabling efficient "analysis" (decomposition into mode coefficients)
 of functions evaluated on regular grids to high order and accuracy.
 
+
+## Quick start
+
+A handful of functions cover most first uses of the package.  Each returns values for
+*every* ``ℓ`` up to a given ``ℓₘₐₓ``, rather than for one ``ℓ`` at a time, because the
+recursion relations described in the next section produce them that way.
+
+The most direct of them is [`D`](@ref), which gives Wigner's ``𝔇^{(ℓ)}_{m',m}`` matrices for
+a single rotation.  Its result is indexed by ``ℓ`` first, and then by the two matrix indices,
+each of which runs over its own natural range — so there is no index arithmetic to get wrong:
+
+```jldoctest quickstart
+julia> using SphericalFunctions, Quaternionic
+
+julia> R = from_spherical_coordinates(π/3, π/4);  # the point (θ, ϕ), as a rotation
+
+julia> ℓₘₐₓ = 8;
+
+julia> 𝔇 = D(R, ℓₘₐₓ);
+
+julia> size(𝔇[3])  # each block is (2ℓ+1)×(2ℓ+1)
+(7, 7)
+
+julia> firstindex(𝔇[3], 1), lastindex(𝔇[3], 1)  # and is indexed as 𝔇[ℓ][m′, m]
+(-3, 3)
+
+julia> 𝔇[1][0, 0] ≈ cos(π/3)  # for m′ = m = 0 the phases drop out, leaving d = cos β
+true
+```
+
+The [Wigner matrix interface](@ref interface_wigner_matrices) describes what `D` returns in
+full, including the half-integer case.
+
+Wigner's ``d^{(ℓ)}_{m',m}`` matrices are the factor of ``𝔇`` that depends on the single Euler
+angle ``β``, and they are real.  Accordingly, [`d`](@ref) takes that angle in place of a
+rotation, and is otherwise used exactly like `D`:
+
+```jldoctest quickstart
+julia> 𝔡 = d(π/3, ℓₘₐₓ);
+
+julia> eltype(𝔡[3])
+Float64
+
+julia> round(𝔡[2][1, -1], digits=12)
+0.5
+```
+
+The same page documents `d` beside `D`, along with the other ways of giving ``β``.
+
+The spin-weighted spherical harmonics are given by [`sYlm`](@ref), which takes the spin
+weight ``s`` as a third argument.  A harmonic has only one index besides ``ℓ``, so the
+result here is a single flat vector, in the canonical ordering of mode weights
+`[ₛYₗₘ for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ for m ∈ -ℓ:ℓ]`, where the lower limit defaults to ``|s|`` because
+every harmonic below it vanishes.  [`Yindex`](@ref) gives the position of any one mode in
+that vector.  The spin-weight-zero case is common enough to have its own name, [`Ylm`](@ref):
+
+```jldoctest quickstart
+julia> Y = sYlm(R, ℓₘₐₓ, -2);  # spin weight -2, so ℓ starts at 2
+
+julia> length(Y) == Ysize(2, ℓₘₐₓ)
+true
+
+julia> Yindex(2, -2, 2)  # the first mode, (ℓ, m) = (2, -2), counting from ℓₘᵢₙ = 2
+1
+
+julia> sum(abs2, Y[Yindex(3, -3, 2):Yindex(3, 3, 2)]) ≈ 7 / (4π)  # Σₘ |ₛYₗₘ|² = (2ℓ+1)/4π
+true
+
+julia> Ylm(R, ℓₘₐₓ)[Yindex(0, 0)] ≈ 1 / √(4π)  # here ℓ starts at 0, and Y₀₀ = 1/√(4π)
+true
+```
+
+The [spin-weighted harmonic interface](@ref interface_sYlm) describes both functions, and the
+dense matrix of harmonics for many rotations at once.
+
+Each of the functions above allocates its entire result and fills it, which is convenient at
+moderate ``ℓₘₐₓ`` and wasteful at large ``ℓₘₐₓ``: storing every matrix up to ``ℓₘₐₓ`` takes
+``O(ℓₘₐₓ^3)`` numbers, while the recursion that produces them needs only the current ``ℓ``.
+A *calculator* holds just that much.  Iterating one walks through the values of ``ℓ`` in
+turn, handing back the block for each, which is how to reach large ``ℓₘₐₓ`` without ever
+holding every matrix at once:
+
+```jldoctest quickstart
+julia> calc = WignerDCalculator(R, ℓₘₐₓ);
+
+julia> norms = Float64[];
+
+julia> for (ℓ, 𝔇ˡ) ∈ calc
+           push!(norms, sum(abs2, 𝔇ˡ))  # each 𝔇ˡ is unitary, so this is 2ℓ+1
+       end
+
+julia> norms ≈ [2ℓ + 1 for ℓ ∈ 0:ℓₘₐₓ]
+true
+```
+
+The block the loop is handed is a view into the calculator, which the next step overwrites,
+so `copy` it if it has to outlive the iteration.  The calculators themselves, the `set_R!`
+family that points an existing calculator at a new rotation, and the restricted form of the
+iteration are all described on the [Wigner matrix interface](@ref interface_wigner_matrices)
+page; an [`sYlmCalculator`](@ref) does the same for the harmonics.
+
+Finally, a calculator built from a *vector* of rotations evaluates all of them together,
+adding the rotation index to the front of each block.  Handing the whole batch to the
+library, rather than writing the loop over rotations yourself, is what makes that worth
+doing: the recursion is sequential in every index a single rotation has — each ``ℓ`` comes
+from the one before, and each element of a matrix from its neighbours — so the rotation index
+is the only one along which the same arithmetic can be done independently:
+
+```jldoctest quickstart
+julia> rotors = [from_spherical_coordinates(θ, π/4) for θ ∈ range(0, π, 8)];
+
+julia> batch = WignerDCalculator(rotors, ℓₘₐₓ);
+
+julia> for (ℓ, 𝔇ˡ) ∈ batch
+           @assert axes(𝔇ˡ) == (1:8, -ℓ:ℓ, -ℓ:ℓ)  # now indexed as 𝔇ˡ[iᵣ, m′, m]
+       end
+
+julia> size(batch[ℓₘₐₓ])
+(8, 17, 17)
+```
+
+How much that arrangement is worth, and the structure of the recursion it follows from, are
+described under [Reusing the workspace](@ref interface_wigner_matrices).
+
+
 These quantities are computed using recursion relations, which makes
 it possible to compute to very high ℓ values.  Unlike direct
 evaluation of individual elements, which would generally cause
@@ -47,6 +162,12 @@ memory — though it is far slower.  Also note that
 work, and achieve significantly greater accuracy (but no greater ℓ
 range) than `Float64`.  In all cases, results are typically accurate
 to roughly ℓ times the precision of the underlying float type.
+
+Half-integer ``ℓ, m', m`` — the representations of ``𝐒𝐩𝐢𝐧(3)`` that
+do not descend to ``𝐒𝐎(3)`` — are supported by ``𝔇``, ``d`` and the
+spin-weighted harmonics, at the same accuracy and essentially the same
+speed as integer indices: pass a `Rational` with denominator 2, as in
+`D(R, 7//2)`.  See [Half-integer indices](@ref half_integer_wigner).
 
 The conventions for this package diverge from its predecessors found
 [here](https://moble.github.io/spherical_functions/) and
