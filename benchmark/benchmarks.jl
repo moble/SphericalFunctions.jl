@@ -67,7 +67,7 @@ SUITE["sYlm"] = BenchmarkGroup(["harmonics"])
 let R = randn(rng, Rotor{Float64}), s = -2
     for ℓₘₐₓ in (8, 64)
         SUITE["sYlm"]["sYlm", ℓₘₐₓ] = @benchmarkable sYlm($R, $ℓₘₐₓ, $s)
-        calc = sYlmCalculator(R, ℓₘₐₓ, abs(s))
+        calc = sYlmCalculator(R, ℓₘₐₓ, s)
         Y = Vector{ComplexF64}(undef, Ysize(abs(s), ℓₘₐₓ))
         SUITE["sYlm"]["sYlm! reusing a calculator", ℓₘₐₓ] =
             @benchmarkable sYlm!($Y, $calc, $R, $s)

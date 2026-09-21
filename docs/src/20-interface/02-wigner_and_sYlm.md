@@ -16,7 +16,7 @@ rotation.  But their accurate and efficient computation is
 surprisingly subtle.  This package implements the current
 state-of-the-art techniques for their fast and accurate computation,
 based on the [``H`` recursion](@ref "Algorithm for computing ``H``
-(redesigned)") introduced by [Gumerov_2001](@citet).
+(redesigned)") introduced by [Gumerov_2015](@citet).
 
 The convention used here is that
 ```math
@@ -97,15 +97,18 @@ each with its natural range:
 ```julia
 𝔇[ℓ][m′, m]  # for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ and m′,m ∈ -ℓ:ℓ
 ```
-There is no index arithmetic to get wrong: for integer ``ℓ``, `𝔇[ℓ]`
-is an
-[`OffsetMatrix`](https://juliaarrays.github.io/OffsetArrays.jl/stable/)
-whose axes are just `-ℓ:ℓ`.  (For half-integer ``ℓ`` it is a
-[`WignerMatrix`](@ref) instead, which is designed to act just like an
-`OffsetMatrix`, but can deal with half-integer indices; see
-[Half-integer indices](@ref interface_half_integers).)  Note that
-`ℓₘᵢₙ=0` for integers but `ℓₘᵢₙ=1//2` for half-integers.  To get the
-underlying `Matrix`, call `parent(𝔇[ℓ])`.
+There is no index arithmetic to get wrong: `𝔇[ℓ]` is a
+[`WignerMatrix`](@ref) whose axes are just `-ℓ:ℓ`, and the outer
+container is a [`WignerSeries`](@ref).  Note that `ℓₘᵢₙ=0` for
+integers but `ℓₘᵢₙ=1//2` for half-integers.
+
+A block is deliberately **not** an `AbstractMatrix`, so linear algebra
+does not apply to it directly; [`strided`](@ref) gives a 1-based
+`StridedArray` view of the same storage, which BLAS takes at full
+speed, and [`relabel`](@ref) puts the natural indices back on the
+result.  `Matrix(𝔇[ℓ])` gives an independent copy.  The reasons for
+that arrangement, which is new in version 3, are set out under
+[Containers](@ref) below.
 
 For the ``d`` matrices the interface is the same, except that the
 argument is the angle ``β`` rather than a rotor, and the values are
@@ -138,24 +141,42 @@ efficient than calling `sYlm` repeatedly for each spin weight:
 sY = sYlm(R, ℓₘₐₓ, -2:2)
 ```
 
-A harmonic has only one index besides ``ℓ``, so there is no matrix to
-index into here, and the result is a single flat `Vector` of `Complex`
-numbers ordered by ``ℓ`` and then by ``m``:
+A harmonic has only one index besides ``ℓ``, so a block is a vector
+rather than a matrix, but the result is indexed the same way as
+``𝔇``: by ``ℓ`` first, then naturally.  It is a
+[`HarmonicValues`](@ref), and `sY[ℓ][m]` is one value.  A whole
+collection of rotors may be given instead of one, and the spin weight
+may be a range, which between them give a block four possible shapes:
+
+| built for | `sY[ℓ]` is indexed |
+|---|---|
+| one rotor, one spin weight | `[m]` |
+| many rotors, one spin weight | `[iᵣ, m]` |
+| one rotor, a range of spin weights | `[s, m]` |
+| many rotors, a range of spin weights | `[iᵣ, s, m]` |
+
+Underneath, the values are held in one array whose *last* axis is the
+modes in the canonical ordering described by [`Ysize`](@ref),
+[`Yindex`](@ref) and [`Yrange`](@ref), and whose leading axes are the
+rotors and spin weights.  [`strided`](@ref) hands that array back:
+
 ```julia
-[sY[Yindex(ℓ, m, abs(s))] for ℓ ∈ abs(s):ℓₘₐₓ for m ∈ -ℓ:ℓ] == sY
+strided(sY)[Yindex(ℓ, m, abs(s))] == sY[ℓ][m]
 ```
-This is the canonical ordering of mode weights, described by
-[`Ysize`](@ref), [`Yindex`](@ref) and [`Yrange`](@ref), and wrapped by
-[`ModeWeights`](@ref) so that the index arithmetic need not be done by
-hand.  Modes with ``ℓ < |s|`` do not exist (or are inherently zero),
-so by default the vector starts at ``ℓ = |s|``.  Pass `ℓₘᵢₙ=0` to get
-a vector that starts at ``ℓ = 0`` instead, with zeros in the
-nonexistent modes; this is the layout that some downstream packages
-use for every spin weight at once.  For ``s = 0`` these are the
-ordinary scalar spherical harmonics ``Y_{ℓ,m}``, which [`Ylm`](@ref)
-gives without the redundant argument: `Ylm(R, ℓₘₐₓ)` is exactly
-`sYlm(R, ℓₘₐₓ, 0)`, and starts at ``ℓ = 0`` because no modes are
-missing there.
+
+That flat form is what a product with a vector of mode weights takes,
+to synthesize a function at the rotors; [`sYlm_matrix`](@ref) is the
+direct spelling of it for those who want the bare array, and
+[`ModeWeights`](@ref) is the container for the weights themselves.
+
+Modes with ``ℓ < |s|`` do not exist (or are inherently zero), so by
+default ``ℓ`` starts at ``|s|``.  Pass `ℓₘᵢₙ=0` to start at ``ℓ = 0``
+instead, with zeros in the nonexistent modes; this is the layout that
+some downstream packages use for every spin weight at once.  For ``s =
+0`` these are the ordinary scalar spherical harmonics ``Y_{ℓ,m}``,
+which [`Ylm`](@ref) gives without the redundant argument: `Ylm(R,
+ℓₘₐₓ)` is exactly `sYlm(R, ℓₘₐₓ, 0)`, and starts at ``ℓ = 0`` because
+no modes are missing there.
 
 
 ## Iterating over ``ℓ`` and reusing the storage
@@ -220,7 +241,10 @@ s)`.
 !!! danger
     Each `𝔇ˡ` block is a *view* into the storage kept in the
     calculator.  The next step of the loop overwrites it, so you
-    cannot keep a block between steps unless you `copy` it.
+    cannot keep a block between steps unless you `copy` it.  The same
+    applies to [`strided`](@ref) of a block, which aliases that
+    storage rather than copying it; `Matrix`, `Array` and `collect`
+    are the forms that survive.
 
 `copy` keeps the block's natural indices, while `collect` gives an
 ordinary 1-based array; `collect` applied to the calculator itself
@@ -266,28 +290,60 @@ values and restart the loop over ``ℓ``.  Each block of an
 that it is `ₛYₗ[iᵣ, m]`, or `ₛYₗ[iᵣ, s, m]` for a range of spin
 weights.
 
-Finally, an `sYlmCalculator` also accepts real angles ``θ`` in place
-of rotors, either at construction or later through [`set_θ!`](@ref),
-and then evaluates the harmonics at ``(θ, ϕ=0)``:
+## [The real harmonics ``{}_sλ_{ℓ,m}(θ)``](@id interface_real_harmonics)
+
+A calculator also accepts real angles ``θ`` in place of rotors, either
+at construction or later through [`set_θ!`](@ref), and then evaluates
+the harmonics at ``(θ, ϕ=0)``.  That is the
+``{}_{s}λ_{ℓ,m}(θ)`` the ring-based transforms need — one ring of the
+sphere for each angle, which is why a whole vector of them is the
+natural input:
 ```julia
-calculator = sYlmCalculator(θ⃗, ℓₘₐₓ, -2)      # a vector of angles, or one θ
+calculator = sλlmCalculator(θ⃗, ℓₘₐₓ, -2)      # a vector of angles, or one θ
 for (ℓ, ₛλₗ) ∈ calculator
     # ₛλₗ[iᵣ, m] for iᵣ ∈ 1:length(θ⃗), m ∈ -ℓ:ℓ
 end
 ```
-For integer spin weight the values there are real, though they are
-still stored as complex numbers with zero imaginary part.  This is the
-``{}_{s}λ_{ℓ,m}(θ)`` that ring-based transforms need — one ring of the
-sphere for each angle, which is why a whole vector of them is the
-natural input.  Angles fix the element type exactly as rotors do, and
-`set_θ!` requires the same agreement as `set_R!`, so a `BigFloat`
-calculator wants `big(θ)` rather than a bare literal.
+An [`sλlmCalculator`](@ref) stores its values as *real* numbers, and
+[`sλlm`](@ref), [`sλlm!`](@ref) and [`sλlm_matrix`](@ref) are the flat
+forms of it.  Everything else is as it is for the complex family: the
+same blocks, the same iteration, the same half-integer spellings, and
+the same containers, which are generic in the number type.
+
+The two flavours share one struct, [`HarmonicCalculator`](@ref),
+exactly as [`WignerDCalculator`](@ref) and [`WignerdCalculator`](@ref)
+do — and for the same reason.  The underlying ``H`` recursion is real
+either way; it is only the factor ``e^{-i(mα - sγ)}`` that ever makes a
+result complex, and an angle sets ``α = γ = 0``.  So the real flavour
+runs precisely the same recursion, allocates no phase tables at all,
+and writes half as many numbers.
+
+The definition is
+
+```math
+{}_sλ_{ℓ,m}(θ) = {}_sY_{ℓ,m}(θ, 0) \big/ i^{2s},
+```
+
+which is real for both kinds of index.  For an integer spin weight the
+factor ``i^{2s} = (-1)^s`` is already part of the definition of
+``{}_sY_{ℓ,m}`` itself, so ``{}_sλ_{ℓ,m}`` is simply the harmonic at
+``ϕ = 0``, as the literature writes it.  For a half-odd spin weight
+``i^{2s}`` is ``\pm i``, so ``{}_sY_{ℓ,m}(θ, 0)`` is imaginary rather
+than real, and dividing that constant phase out is what leaves a real
+function behind.
+
+A `Rotor` is refused, by the constructor and by [`set_R!`](@ref)
+alike: it specifies the angles ``α`` and ``γ``, whose phases a real
+calculator has nowhere to put.  Use an `sYlmCalculator` for that.
+Angles fix the element type exactly as rotors do, and `set_θ!`
+requires the same agreement as `set_R!`, so a `BigFloat` calculator
+wants `big(θ)` rather than a bare literal.
 
 ## The underlying ``H`` recursion
 
 All of these calculators are built on a [`WignerHCalculator`](@ref),
 which computes the real, symmetric ``H`` wedge that the
-[Gumerov–Duraiswami](@cite Gumerov_2006) recursion produces before any
+[Gumerov–Duraiswami](@cite Gumerov_2015) recursion produces before any
 phases are applied.  It is available directly for the rare cases where
 the wedge itself is needed — probably as an optimization:
 ```julia
@@ -319,11 +375,51 @@ denominator is exactly 2:
 𝔡 = d(β, 7//2)
 calculator = sYlmCalculator(R, 7//2, -3//2:3//2)
 ```
-The containers that come back in place of the `OffsetArray`s, the
-index type behind them, and the handful of places where the
-half-integer case genuinely differs are all described on the
+The containers that come back are the same ones as for integer
+indices.  The index type behind them, and the handful of places where
+the half-integer case genuinely differs, are described on the
 [half-integer page](@ref interface_half_integers).
 
+
+## [Rotating and evaluating mode weights](@id mode_weight_operations)
+
+Two products tie the containers together.  Multiplying a
+[`ModeWeights`](@ref) by the Wigner matrices of a rotor rotates it,
+and multiplying by the harmonics at some rotors evaluates it there:
+
+```julia
+w′ = D(R, ℓₘₐₓ) * w              # the weights of f′(𝐐) = f(𝐑⁻¹𝐐)
+f  = sYlm(R, ℓₘₐₓ, s) * w         # the value of f at R
+f⃗  = sYlm(R⃗, ℓₘₐₓ, s) * w        # ... and at each of many rotors
+```
+
+The calculator forms, `WignerDCalculator(R, ℓₘₐₓ) * w` and
+`sYlmCalculator(R, ℓₘₐₓ, s) * w`, compute the same things one ``ℓ`` at a
+time rather than materializing every block.
+
+Rotation is an ordinary matrix–vector product on each ``ℓ`` block, with
+**no complex conjugate** — see [Rotation of mode
+weights](@ref conv_rotation_of_modes) for the derivation.  Because
+version 2 used the conjugate convention for ``𝔇``, code ported from it
+must *drop* a `conj` rather than add one.  The matrices must cover the
+weights' range of ``ℓ``, which is not the same as matching it, and
+their blocks must be whole: a ``𝔇`` built with the `m′ₘₐₓ` or `mₘₐₓ`
+restrictions cannot rotate anything, because every ``m`` mixes into
+every ``m′``.
+
+!!! warning
+    Evaluation is spelled `*` and **not** `⋅`.  `⋅` is
+    `LinearAlgebra.dot`, which conjugates its first argument;
+    evaluation must not conjugate the harmonics.  Calling `dot` on
+    these types raises an error saying so, rather than quietly
+    returning an answer with the wrong phase.  For the conjugating
+    inner product of two sets of mode weights, `dot(w₁, w₂)` is still
+    what you want.
+
+```@autodocs
+Modules = [SphericalFunctions]
+Pages = ["mode_weights/operations.jl"]
+```
 
 ## Docstrings
 
@@ -338,6 +434,12 @@ WignerDCalculator
 WignerdCalculator
 WignerHCalculator
 sYlmCalculator
+YlmCalculator
+sλlm
+sλlm!
+sλlm_matrix
+sλlmCalculator
+HarmonicCalculator
 recurrence!
 eachℓ
 eachell
@@ -347,22 +449,38 @@ set_θ!
 ```
 
 
-## Containers
+## [Containers](@id interface_containers)
 
-The types that `D`, `d` and `calc[ℓ]` return for half-integer ``ℓ``,
-and the abstract type they share with the workspaces below.
+The types that `D`, `d`, `sYlm` and `calc[ℓ]` return, for either kind
+of index, and the abstract types they share with the workspaces below.
+
+These containers are deliberately **not** `AbstractArray`s.  Half-odd
+indices cannot satisfy that interface at all — `axes` must be integer
+ranges, and `-3//2:3//2` is not one — but the reason they are not
+arrays on the integer path either is a sharper one.  Through version
+2 the integer path returned `OffsetArray`s, and an `OffsetArray` with
+non-trivial offsets *accepts* `*` and `mul!` and returns silently
+wrong answers: a product of two blocks comes back as a 1-based
+`Matrix` of mostly zeros, and an adjoint product comes back holding
+uninitialized memory.  Refusing to be an `AbstractMatrix` turns that
+silence into a `MethodError` at the call site, and [`strided`](@ref)
+is what a caller reaches for once they actually mean it.
 
 ```@docs
+strided
+relabel
 AbstractWignerMatrix
 WignerMatrix
 WignerDMatrix
 WignerdMatrix
 WignerMatrixBatch
-WignerVector
-WignerVectorBatch
+DegreeBlock
+DegreeBlockBatch
 SpinMatrix
 SpinMatrixBatch
 WignerSeries
+HarmonicValues
+SphericalFunctions.AbstractModeContainer
 WignerCalculator
 ```
 

@@ -2,6 +2,7 @@
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 DocumenterCitations = "daee34ce-89f3-4625-b898-19384cb65244"
+DocumenterInterLinks = "d12716ef-a0f6-4df4-a9f1-a5a34e75c656"
 FastDifferentiation = "eb9bf01b-bf85-4b60-bf87-ee5de06c00be"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"

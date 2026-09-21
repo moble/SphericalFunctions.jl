@@ -58,7 +58,7 @@
     # those formulas, to the explicit d⁽¹⁾ matrix, and to the explicit sum for ₛYₗₘ.
     function Y(s, ℓ, m, θ, ϕ)
         R = Rotor(from_spherical_coordinates(θ, ϕ))
-        SphericalFunctions.sYlm(R, ℓ, s)[SphericalFunctions.Yindex(ℓ, m, abs(s))]
+        SphericalFunctions.sYlm(R, ℓ, s)[ℓ][m]
     end
     Y(ℓ, m, θ, ϕ) = Y(0, ℓ, m, θ, ϕ)
     d(ℓ, m′, m, β) = SphericalFunctions.d(β, ℓ)[ℓ][m′, m]

@@ -12,7 +12,12 @@ start = time()  # We'll display the total after everything has finished
 using Documenter
 using Literate
 using DocumenterCitations
+using DocumenterInterLinks
 
+links = InterLinks(
+    "Quaternionic" => "https://moble.github.io/Quaternionic.jl/stable/",
+    "Julia" => "https://docs.julialang.org/en/v1/",
+)
 
 docs_src_dir = joinpath(@__DIR__, "src")
 package_root = dirname(@__DIR__)
@@ -51,7 +56,7 @@ DocMeta.setdocmeta!(
 )
 
 makedocs(
-    plugins=[bib],
+    plugins=[links, bib],
     sitename="SphericalFunctions.jl",
     modules = [SphericalFunctions],
     remotes=notes_remotes,
@@ -70,8 +75,8 @@ makedocs(
             "10-background/04-mode_weights.md",
         ],
         "Interface" => [
-            "20-interface/01-wigner_matrices.md",
-            "20-interface/02-sYlm.md",
+            "20-interface/01-half_integers.md",
+            "20-interface/02-wigner_and_sYlm.md",
             "20-interface/03-transformations.md",
             "20-interface/04-operators.md",
             "20-interface/05-utilities.md",

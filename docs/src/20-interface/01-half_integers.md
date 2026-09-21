@@ -88,28 +88,33 @@ to convert one back.
 
 ## What the calls return
 
-With integers, several functions return [`OffsetArray`](@ref
-OffsetArrays.OffsetArray)s, enabling direct indexing by the natural
-``m`` and ``m'`` values.  Unfortunately — though understandably —
-`OffsetArray`s cannot use non-integer axes.  Instead, this package
-provides a small family of containers that behave similarly to
-`OffsetArray`s, but can indexed by `Rational`s or `HalfOddInteger`s.
+Nothing, which is the point.  Through version 2 the integer path
+returned [`OffsetArray`](@ref OffsetArrays.OffsetArray)s, so that a
+block could be indexed by its natural ``m`` and ``m'``; half-odd
+indices could not be handled that way, because `OffsetArray`s cannot
+use non-integer axes, and this package grew its own family of
+containers for them.  Since version 3 those containers are what *every*
+call returns, whichever kind of index is in play, so there is no table
+of correspondences to learn:
 
-| call | integer index | half-integer index |
-|---|---|---|
-| `D(R, ℓₘₐₓ)`, `d(β, ℓₘₐₓ)` | `OffsetVector` of blocks | [`WignerSeries`](@ref) of blocks |
-| a block of `D` | `OffsetMatrix` | [`WignerDMatrix`](@ref) |
-| a block of `d` | `OffsetMatrix` | [`WignerdMatrix`](@ref) |
-| either, over a batch of rotors | `OffsetArray` | [`WignerMatrixBatch`](@ref) |
-| a block of an `sYlmCalculator`, one spin weight | `OffsetVector` | [`WignerVector`](@ref) |
-| the same, over a batch of rotors | `OffsetMatrix` | [`WignerVectorBatch`](@ref) |
-| a block of a range of spin weights | `OffsetMatrix` | [`SpinMatrix`](@ref) |
-| the same, over a batch of rotors | `OffsetArray` | [`SpinMatrixBatch`](@ref) |
+| call | what comes back |
+|---|---|
+| `D(R, ℓₘₐₓ)`, `d(β, ℓₘₐₓ)` | a [`WignerSeries`](@ref) of blocks |
+| a block of `D` | [`WignerDMatrix`](@ref) |
+| a block of `d` | [`WignerdMatrix`](@ref) |
+| either, over a batch of rotors | [`WignerMatrixBatch`](@ref) |
+| `sYlm(R, ℓₘₐₓ, s)` | [`HarmonicValues`](@ref) |
+| a block of an `sYlmCalculator`, one spin weight | [`DegreeBlock`](@ref) |
+| the same, over a batch of rotors | [`DegreeBlockBatch`](@ref) |
+| a block of a range of spin weights | [`SpinMatrix`](@ref) |
+| the same, over a batch of rotors | [`SpinMatrixBatch`](@ref) |
 
-The flat vector that [`sYlm`](@ref) returns is an ordinary `Vector` in
-both cases, because it is reached through [`Yindex`](@ref) rather than
-through its axes, and that indexing holds for half-odd indices exactly
-as it does for integers.
+The reason for retiring the `OffsetArray`s from the integer path is not
+uniformity but safety, and is set out under [Containers](@ref
+interface_containers): an `OffsetArray` with non-trivial offsets accepts
+`*` and `mul!` and returns silently wrong answers.  [`strided`](@ref) is
+the explicit route to a plain 1-based array, for either kind of index,
+and [`relabel`](@ref) is the way back.
 
 ``ℓ`` runs over `1//2, 3//2, …, ℓₘₐₓ`, so `ℓₘᵢₙ` is `1//2` rather than
 `0`, and that is where a loop over a calculator begins.  Indexing a
@@ -120,15 +125,13 @@ These containers support `[m′, m]` (or `[iᵣ, m′, m]` where relevant),
 `axes`, `size`, `size(w, d)`, `length`, `ndims`, `eltype`, `parent`,
 `copy`, `similar`, `collect`, `Array`, `Matrix`, `==`, iteration and
 `show`, and a `WignerMatrixBatch` additionally gives `w[iᵣ]` — a
-[`WignerMatrix`](@ref) view of one rotor's block, which the integer
-path has no equivalent of.  They are deliberately **not**
-`AbstractMatrix`es, because half-integer axes cannot satisfy that
-interface, so linear algebra does not apply to them directly:
-operations like `B'`, `B * C`, `lu(B)` and the like are
-`MethodError`s, and broadcasting (`B .+ 1`) returns an ordinary
-1-based `Matrix`, dropping the natural indices.  You must call
-`Matrix(B)` first when you want to do arithmetic on a block as a
-matrix.
+[`WignerMatrix`](@ref) view of one rotor's block.  They are
+deliberately **not** `AbstractMatrix`es, so linear algebra does not
+apply to them directly: operations like `B'`, `B * C`, `lu(B)` and the
+like are `MethodError`s, and broadcasting (`B .+ 1`) returns an
+ordinary 1-based `Matrix`, dropping the natural indices.  Call
+[`strided`](@ref) for a 1-based view of the same storage, on which
+BLAS works at full speed, or `Matrix(B)` for an independent copy.
 
 ## ``β``, the double cover, and the ``H`` wedge
 

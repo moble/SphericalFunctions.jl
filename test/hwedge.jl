@@ -1,5 +1,5 @@
 @testitem "HWedge" setup=[EncodeDecode] begin
-    using SphericalFunctions: HWedge, HWedge_size, Nᵣ, ℓ, ℓₘᵢₙ, m′ₘᵢₙ, m′ₘₐₓ
+    using SphericalFunctions: HWedge, HWedge_size, Nᵣ, ℓ, ℓₘᵢₙ, m′ₘᵢₙ, m′ₘₐₓ, half_integer
     using .EncodeDecode: encode, decode
 
     # We will fill the HWedge with integers that encode their indices.  By iterating over
@@ -61,7 +61,7 @@
         end
     end
 
-    for ℓₘₐₓ ∈ (5, 9//2)
+    for ℓₘₐₓ ∈ (5, half_integer(9//2))  # an `Int` and a `HalfOddInteger`
         for Nᵣ ∈ (1, 2, 3, 7)
             for m′ₘₐₓ ∈ ℓₘᵢₙ(ℓₘₐₓ):ℓₘₐₓ
                 for m′ₘᵢₙ in -ℓₘₐₓ:-ℓₘᵢₙ(ℓₘₐₓ)

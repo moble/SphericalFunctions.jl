@@ -1,11 +1,14 @@
-"""
-This module provides functions for encoding a (small) set of (small) integers into a single
-integer, and decoding them back again.  This is useful for storing those integers in data
-structures that only accept single integers or floats, such as HWedge.
-"""
+# This module provides functions for encoding a (small) set of (small) integers into a single
+# integer, and decoding them back again.  This is useful for storing those integers in data
+# structures that only accept single integers or floats, such as HWedge.
 @testmodule EncodeDecode begin
+    using SphericalFunctions: HalfOddInteger
+
     encode(i::Int) = i + 50
     encode(i::Rational) = numerator(i) + 50
+    # Without this a `HalfOddInteger` falls through to the varargs method below, which calls
+    # `encode` on it again, and so on until the stack runs out.
+    encode(i::HalfOddInteger) = i.numerator + 50
     function encode(i...)
         output = 0
         max_integers = log10(typemax(output)) ÷ 2

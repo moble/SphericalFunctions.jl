@@ -6,7 +6,6 @@ volume forms in spherical coordinates using SymPy, to verify the volume-form fac
 use when integrating on the sphere.  We then extend this to three-dimensional spherical
 coordinates.
 
-
 """
 
 #src # Do this first just to hide stdout of the conda installation step.

@@ -51,8 +51,7 @@ that carefully laid out the conventions used in that source.
 
 
 
-The
-documentation for my package has a whole section collecting all of
+The documentation for my package has a whole section collecting all of
 these different pages.
 
 

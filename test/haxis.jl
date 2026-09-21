@@ -1,5 +1,5 @@
 @testitem "HAxis" setup=[EncodeDecode] begin
-    using SphericalFunctions: HAxis, Nᵣ, ℓ, ℓₘᵢₙ, maxℓ, m′ₘᵢₙ, m′ₘₐₓ, mₘᵢₙ, mₘₐₓ
+    using SphericalFunctions: HAxis, Nᵣ, ℓ, ℓₘᵢₙ, maxℓ, m′ₘᵢₙ, m′ₘₐₓ, mₘᵢₙ, mₘₐₓ, half_integer
     using .EncodeDecode: encode, decode
 
     # HAxis stores only the m′=ℓₘᵢₙ axis (0 or 1/2), with m ranging from ℓₘᵢₙ to ℓₘₐₓ.
@@ -74,7 +74,7 @@
     end
 
     # Test both integer and half-integer ℓ
-    for ℓₘₐₓ ∈ (5, 9//2)
+    for ℓₘₐₓ ∈ (5, half_integer(9//2))  # an `Int` and a `HalfOddInteger`
         for Nᵣ ∈ (1, 2, 3, 7)
             IT = typeof(ℓₘₐₓ)
             RT = Float64

@@ -10,7 +10,7 @@ See also: [`complex_powers`](@ref)
 """
 function complex_powers!(zpowers, z)
     Base.require_one_based_indexing(zpowers)
-    @fastmath @inbounds begin
+    @inbounds begin
         M = length(zpowers)
         if M == 0
             return zpowers
@@ -31,9 +31,26 @@ function complex_powers!(zpowers, z)
         end
         zpowers[2] = z
         clock = θ
-        dc = -2 * sqrt(z).im^2
+        # dc = -2 (Im √z)² = Re z - |z| = -(Im z)² / (Re z + |z|).  The last form is the
+        # one used here: it avoids `Base.sqrt(::Complex)`, whose `nextfloat` rules out
+        # element types such as `ForwardDiff.Dual`, and it is free of the cancellation that
+        # `Re z - |z|` suffers when `z` is near 1 (which is exactly the small-angle case).
+        # `Re z ≥ 0` and `Im z ≥ 0` here, so the denominator cannot cancel.
+        # `modulus` must be computed with a fused multiply-add.  A one-ulp error here
+        # feeds `dc` — which the comment above has just gone to some trouble to keep free
+        # of cancellation — and the recurrence below then amplifies it linearly in `m`.
+        # Measured at m = 4096, ϕ = 0.3: `√(abs2(z))` gives 9.1e-14, this gives 7.7e-15.
+        # (`hypot` does not help; nor does a `muladd` in the recurrence loop itself.)
+        modulus = √(muladd(z.re, z.re, z.im*z.im))
+        dc = -z.im^2 / (z.re + modulus)
         t = 2 * dc
-        dz = dc * (1 + 2 * z) + 1im * sqrt(-dc * (2 + dc))
+        # The imaginary part of `dz` is √(-dc (2 + dc)), which equals
+        # `Im z · √((2 + dc) / (Re z + |z|))` because `-dc = (Im z)² / (Re z + |z|)` and
+        # `Im z ≥ 0` here.  That form is used because the square root's argument is then
+        # near 1 rather than near 0: `√` has an infinite derivative at 0, so the direct
+        # form gives a `NaN` derivative under automatic differentiation at `z = 1` — which
+        # is exactly the phase the ring-based transforms use, at `ϕ = 0`.
+        dz = dc * (1 + 2 * z) + 1im * (z.im * sqrt((2 + dc) / (z.re + modulus)))
         for m in 2:M
             zpowers[m+1] = zpowers[m] + dz
             zpowers[m] *= clock
@@ -154,7 +171,13 @@ ComplexPowers(cisθ::T, factor_phase=true) where {T} = ComplexPowers{T}(cisθ, f
 function Base.iterate(cp::ComplexPowers{T}) where {T}
     z⁰ = one(T)
     δc = cp.τ / 2
-    δz = δc + im * √(-δc * (2 + δc)) * (cp.z¹.im ≥ 0 ? 1 : -1)
+    # `δz` is `z¹ - 1`, whose imaginary part is `√(-δc (2 + δc)) sgn(Im z¹)` — but that is
+    # just `Im z¹` itself, because `-δc = 1 - Re z¹` and `|z¹| = 1`.  Using `Im z¹` directly
+    # is exact rather than a square root of a cancelled difference, and it avoids `√` at an
+    # argument of exactly zero, whose infinite derivative would otherwise make every
+    # `ForwardDiff.Dual` partial `NaN` at `z = 1` — the ϕ = 0 case that the ring-based
+    # transforms use.
+    δz = δc + im * cp.z¹.im
     Φ = 1 + 0im
     z⁰, (z⁰, δz, Φ)
 end

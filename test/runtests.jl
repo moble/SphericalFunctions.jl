@@ -1,121 +1,60 @@
-# See docs/src/development/index.md for details of how to run tests with this script.
-
-# This is to ensure that, even run as a script, Ctrl-C will actually interrupt the tests.
-Base.exit_on_sigint(false)
+# This file exists only for the things that insist on calling `Pkg.test`: the registry, CI
+# actions like `julia-actions/julia-runtest`, downstream integration testing, and `] test`
+# habits.  It is not the day-to-day runner — see docs/src/60-development/01-index.md.
+#
+# Day to day, use `juliati` (the TestItemApp command-line runner), the `julia` MCP server, or
+# an editor's test-item support.  Those can filter by name, file or tag, run items in
+# parallel, keep worker processes warm between runs, and report per-item results; none of
+# that is worth reimplementing here.
 
 using TestItemRunner
-using ArgParse
 
-function parse_commandline()
-    settings = ArgParseSettings(
-        description = """Run selected tests from the SphericalFunctions.jl test suite.
-        
-        \ua0
-
-        See docs/src/development/index.md for details of how to run tests with this script.
-
-        \ua0
-        
-        The RUN and SKIP arguments may be names of individual tests (in quotes if there are
-        spaces), tags (which must be prefixed by `:`) that are given in the `@testitem`, or
-        files (which must end with `.jl`).  Note that SKIP takes precedence over RUN if both
-        are specified; a test matching both a run and a skip filter will be skipped.  Any
-        test with the `:skipci` tag will be skipped whenever the environment variable `CI`
-        is set to "true" (which is the case on, e.g., GitHub Actions).
-        """,
-        usage = "julia test/runtests.jl [-h] [RUN...] [--skip SKIP...]",
-    )
-    @add_arg_table! settings begin
-        # Collect everything before the optional `--skip`
-        "run"
-            nargs    = '*'
-            help = "names, tags, or files to run"
-        # Collect everything after the optional `--skip`
-        "--skip"
-            nargs    = '*'
-            default  = String[]
-            help = "names, tags, or files to skip"
-    end
-    parsed_args = parse_args(settings)
-    run_files = Tuple(Regex(s) for s ∈ parsed_args["run"] if endswith(s, ".jl"))
-    run_tags = Tuple(Symbol(s[2:end]) for s ∈ parsed_args["run"] if startswith(s, ":"))
-    run_tests = Tuple(Regex(s) for s ∈ parsed_args["run"] if !endswith(s, ".jl") && !startswith(s, ":"))
-    skip_files = Tuple(Regex(s) for s ∈ parsed_args["skip"] if endswith(s, ".jl"))
-    skip_tags = Tuple(Symbol(s[2:end]) for s ∈ parsed_args["skip"] if startswith(s, ":"))
-    skip_tests = Tuple(Regex(s) for s ∈ parsed_args["skip"] if !endswith(s, ".jl") && !startswith(s, ":"))
-    return run_files, run_tags, run_tests, skip_files, skip_tags, skip_tests
-end
-
-const run_files, run_tags, run_tests, skip_files, skip_tags, skip_tests = parse_commandline()
-
-# Get the `CI` environment variable, defaulting to "false" if not set
+# `Pkg.test(...; test_args)` arrives here as `ARGS`.  The only filtering this shim supports is
+# by tag — written as `:sometag` — because that is all the CI workflows use.
 const CI = get(ENV, "CI", "false") == "true"
+const requested_tags = Symbol[Symbol(a[2:end]) for a ∈ ARGS if startswith(a, ":")]
 
-# Create the function that will filter which tests to run
-function filter(testitem)
-    # Destructure the input NamedTuple.  Note that `filename` is the full path to the file
-    # containing the test item, and `name` is the full string used to name the test item,
-    # while `tags` is a vector of `Symbol`s that can be used to tag test items.
-    (; filename, name, tags) = testitem
-
-    for skip ∈ skip_files
-        if occursin(skip, filename)
-            @info "Skipping test '$name' in file '$(relpath(filename))' " *
-                "due to skip filter '$skip'."
-            return false
-        end
+function testfilter(testitem)
+    (; tags) = testitem
+    if !isempty(requested_tags)
+        # An explicit request wins, including over the `:skipci` rule below.
+        return any(∈(tags), requested_tags)
     end
-
-    for skip ∈ skip_tags
-        if skip ∈ tags
-            @info "Skipping test '$name' tagged '$skip' due to skip filter."
-            return false
-        end
-    end
-
-    for skip ∈ skip_tests
-        if occursin(skip, name)
-            @info "Skipping test '$name' due to skip filter '$skip'."
-            return false
-        end
-    end
-
-    if !isempty(run_files) || !isempty(run_tags) || !isempty(run_tests)
-        for run ∈ run_files
-            if occursin(run, filename)
-                # @warn "Dry run: including test '$name' in file '$(relpath(filename))' " *
-                #     "due to run filter '$run'."
-                # return false
-                return true
-            end
-        end
-        for run ∈ run_tags
-            if run ∈ tags
-                # @warn "Dry run: including test '$name' tagged '$run' due to run filter."
-                # return false
-                return true
-            end
-        end
-        for run ∈ run_tests
-            if occursin(run, name)
-                # @warn "Dry run: including test '$name' due to run filter '$run'."
-                # return false
-                return true
-            end
-        end
-        # @info "Excluding test '$name' in file '$(relpath(filename))' because " *
-        #     "it does not match any requested tests."
-        return false
-    end
-
-    if CI && :skipci ∈ tags && :skipci ∉ run_tags
-        @info "Skipping test '$name' tagged ':skipci' because `CI` is true."
-        return false
-    end
-
-    return true
+    # Items tagged `:skipci` need something CI does not have (a Python environment, say).
+    !(CI && :skipci ∈ tags)
 end
 
-@info "Filtering tests with" run_files run_tags run_tests skip_files skip_tags skip_tests CI
+@run_package_tests verbose = true filter = testfilter
 
-@run_package_tests verbose=true filter=filter
+# Including the test files is not needed for discovery — `@run_package_tests` finds them on
+# its own — but it makes `Pkg.test` parse each one, so a syntax error shows up here rather
+# than as a silently missing test item.
+include("aqua.jl")
+include("complex_powers.jl")
+include("haxis.jl")
+include("hwedge.jl")
+include("operators.jl")
+include("strided.jl")
+include("weights.jl")
+include("mode_weights/indexing.jl")
+include("mode_weights/containers.jl")
+include("mode_weights/operations.jl")
+include("mode_weights/mode_weights.jl")
+include("sYlm/real_harmonics.jl")
+include("sYlm/sYlm.jl")
+include("ssht/map2salm.jl")
+include("ssht/ssht.jl")
+include("utilities/combinatorics.jl")
+include("utilities/encoder.jl")
+include("utilities/explicit_operators.jl")
+include("utilities/explicit_wigner_matrices.jl")
+include("utilities/naive_factorial.jl")
+include("utilities/utilities.jl")
+include("wigner/H_calculator.jl")
+include("wigner/calculators.jl")
+include("wigner/half_integer.jl")
+include("wigner/half_integer_oracle.jl")
+include("wigner/iteration.jl")
+include("wigner/properties.jl")
+include("wigner/recurrence.jl")
+include("wigner/robustness.jl")

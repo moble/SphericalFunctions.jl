@@ -1,3 +1,40 @@
+### Index arithmetic
+#
+# Indices are `Integer`s or `HalfOddInteger`s — together, `HalfInteger`.  Because a sum or
+# difference of two `HalfOddInteger`s is an `Int`, and adding an `Int` to one gives back a
+# `HalfOddInteger`, every coefficient, loop bound and storage offset below is integer
+# arithmetic for *both* index types, while being written exactly as the references write it.
+# For an integer index type the expressions are literally the ones a purely integer
+# implementation would use, so that path is unchanged down to the last bit.
+
+"""
+    δ²(ℓ, m)
+
+``(ℓ - m)(ℓ + m + 1)``, the square of Gumerov and Duraiswami's ``d^ℓ_m`` coefficient (up to
+its sign; see [`sgn`](@ref)).  Both factors are `Integer`s for integer and half-integer
+indices alike, so this is exact, and the value handed to `sqrt` is the same one a purely
+integer implementation computes.
+"""
+@inline δ²(ℓ, m) = (ℓ - m) * (ℓ + m + 1)
+
+"""
+    sgn(m)
+
+Eq. (44) in Gumerov and Duraiswami (2015).  Note that they define `sgn` differently from the
+usual definition — including from Julia's `sign` — at 0, where this is ``+1``.
+"""
+@inline sgn(m) = ifelse(m ≥ 0, 1, -1)
+
+"""
+    ϵ(m)
+
+Eq. (7) in Gumerov and Duraiswami (2015): ``ε(m) = (-1)^m`` for ``m > 0``, and ``1``
+otherwise.  The half-integer extension ``ε(m) = (-1)^{⌊m⌋}`` for ``m > 0`` is the unique one
+that keeps the ``H``-form of the ``m′`` ladder in Gumerov and Duraiswami's shape (see the v3
+design memo, §5.2).  The single expression below serves both index types.
+"""
+@inline ϵ(m) = ifelse(m > 0 && isodd(floor(Int, m)), -1, 1)
+
 """
     HWedge{IT, RT, ST} <: AbstractWignerMatrix{IT, RT, ST}
 
@@ -100,9 +137,6 @@ function Base.setproperty!(H::HWedge{IT}, s::Symbol, ℓ::IIT) where {IT, IIT}
         if IIT !== IT
             error("Cannot change ℓ from type $IT to type $IIT; they must be the same.")
         end
-        if IT <: Rational && denominator(ℓ) ≠ 2
-            error("For IT=$IT <: Rational, ℓ=$ℓ must have denominator 2")
-        end
         if ℓ < ℓₘᵢₙ(IT)
             error("Cannot set ℓ=$ℓ less than ℓₘᵢₙ=$(ℓₘᵢₙ(IT)).")
         end
@@ -121,20 +155,24 @@ function Base.setproperty!(H::HWedge{IT}, s::Symbol, ℓ::IIT) where {IT, IIT}
     end
 end
 
+# Recompute the row offsets; called once per `H.ℓ = ℓ` assignment, hence once per
+# `recurrence!`.  Row `m′` holds the `ℓ - |m′| + 1` elements `m ∈ |m′|:ℓ`, each `Nᵣ` wide.
 function HWedge_row_index!(row_index, Nᵣ::Int, ℓ::IT, m′ₘₐₓ::IT, m′ₘᵢₙ::IT) where {IT}
     index = 1
-    for (i, m′) ∈ enumerate(m′ₘᵢₙ:m′ₘₐₓ)
+    i = 1
+    for m′ ∈ m′ₘᵢₙ:m′ₘₐₓ
         @inbounds row_index[i] = index
-        index += Nᵣ * (Int(ℓ - abs(m′)) + 1)
+        index += Nᵣ * ((ℓ - abs(m′)) + 1)
+        i += 1
     end
     row_index
 end
 
 function HWedge_size(ℓ::IT, m′ₘₐₓ::IT, m′ₘᵢₙ::IT) where {IT}
     let ℓₘᵢₙ = ℓₘᵢₙ(IT)
-        Int(
-            (ℓₘᵢₙ - m′ₘᵢₙ) * (2ℓ + m′ₘᵢₙ + ℓₘᵢₙ + 1)
-            - (ℓₘᵢₙ - m′ₘₐₓ - 1) * (2ℓ - m′ₘₐₓ - ℓₘᵢₙ + 2)
+        (
+            (ℓₘᵢₙ - m′ₘᵢₙ) * ((2ℓ + 1) + (m′ₘᵢₙ + ℓₘᵢₙ))
+            - (ℓₘᵢₙ - m′ₘₐₓ - 1) * ((2ℓ + 2) - (m′ₘₐₓ + ℓₘᵢₙ))
         ) ÷ 2
     end
 end
@@ -147,7 +185,7 @@ function Base.checkbounds(::Type{Bool}, w::HWedge, i::Int)
     i ≥ 1 && i ≤ length(w)
 end
 function Base.checkbounds(::Type{Bool}, w::HWedge{IT}, iᵣ::Int, m′::IT, m::IT) where {IT}
-    iᵣ > 0 && iᵣ ≤ Nᵣ(w) && m ≥ abs(m′) && m′ ≥ m′ₘᵢₙ(w) && m′ ≤ m′ₘₐₓ(w)
+    iᵣ > 0 && iᵣ ≤ Nᵣ(w) && abs(m′) ≤ m ≤ ℓ(w) && m′ₘᵢₙ(w) ≤ m′ ≤ m′ₘₐₓ(w)
 end
 
 @propagate_inbounds function Base.getindex(w::HWedge, i::Int)
@@ -156,6 +194,12 @@ end
     end
     @inbounds Base.parent(w)[i]
 end
+# See the note on `Rational` indexing in `wigner_matrix.jl`.
+@propagate_inbounds Base.getindex(w::HWedge{IT}, iᵣ::Int, m′::Rational, m::Rational) where
+    {IT<:HalfOddInteger} = w[iᵣ, HalfOddInteger(m′), HalfOddInteger(m)]
+@propagate_inbounds Base.setindex!(w::HWedge{IT}, v, iᵣ::Int, m′::Rational, m::Rational) where
+    {IT<:HalfOddInteger} = (w[iᵣ, HalfOddInteger(m′), HalfOddInteger(m)] = v)
+
 @propagate_inbounds function Base.getindex(w::HWedge{IT}, iᵣ::Int, m′::IT, m::IT) where {IT}
     @boundscheck if !checkbounds(Bool, w, iᵣ, m′, m)
         throw(BoundsError(w, (iᵣ, m′, m)))
@@ -178,18 +222,114 @@ end
     @inbounds Base.parent(w)[i] = v
 end
 
+function Base.summary(io::IO, H::HWedge{IT, RT}) where {IT, RT}
+    print(
+        io,
+        "HWedge{$IT, $RT} for ℓ=$(ℓ(H)) with m′=$(m′ₘᵢₙ(H)):$(m′ₘₐₓ(H)), ",
+        "m=abs(m′):$(ℓ(H)), and iᵣ=1:$(Nᵣ(H))"
+    )
+end
+Base.show(io::IO, H::HWedge) = summary(io, H)
 function Base.show(io::IO, ::MIME"text/plain", H::HWedge{IT, RT, ST}) where {IT, RT, ST}
+    summary(io, H)
+    print(io, " stored in\n", summary(parent(H)), ", currently using\n")
     let ℓ = ℓ(H), m′ₘᵢₙ = m′ₘᵢₙ(H), m′ₘₐₓ = m′ₘₐₓ(H), Nᵣ = Nᵣ(H)
-        print(
-            io,
-            "SphericalFunctions.HWedge{$IT, $RT} for ℓ=$(ℓ) with m′=$(m′ₘᵢₙ:m′ₘₐₓ), ",
-            "m=abs(m′):$(ℓ), and iᵣ=1:$(Nᵣ) stored in\n",
-            summary(parent(H)), ", currently using\n"
-        )
         i = row_index(H)[Int(m′ₘₐₓ - m′ₘᵢₙ) + 1] + Nᵣ * (Int(ℓ - abs(m′ₘₐₓ)) + 1) - 1
         show(io, MIME("text/plain"), parent(H)[begin:i])
     end
 end
+
+"""
+    transpose_sign(m′, m)
+
+Sign ``σ`` relating the transposed element of the ``H`` matrix to the original:
+``H_{m,m′} = σ H_{m′,m}`` and ``H_{-m′,-m} = σ H_{m′,m}``.  For integer indices
+``σ ≡ 1``; for half-integer indices ``σ = sgn(m) sgn(m′)``, with ``sgn(0) = 1``; see the
+notes on the [``H`` recursion](@ref "Algorithm for computing ``H`` (redesigned)").
+
+Which rule applies is settled by the index *type*, so each specialization compiles to a
+constant or to two cheap comparisons.
+"""
+@inline transpose_sign(m′::Integer, m::Integer) = 1
+@inline transpose_sign(m′::HalfOddInteger, m::HalfOddInteger) = sgn(m) * sgn(m′)
+
+"""
+    wedge_source(m′, m, m′ₘₐₓ)
+
+Return `(a, b, σ)` such that ``H_{m′,m} = σ H_{a,b}``, where `(a, b)` lies in the stored
+wedge ``b ≥ |a|``, ``|a| ≤ m′ₘₐₓ``.
+
+This is the *only* place in the package that encodes the symmetries
+``H_{m′,m} = H_{-m,-m′} = σ H_{m,m′} = σ H_{-m′,-m}`` of the ``H`` matrix; every read of an
+element outside the stored wedge must go through it.
+
+An `ArgumentError` is thrown if no stored element can supply the requested one, which
+happens only when both ``|m′|`` and ``|m|`` exceed `m′ₘₐₓ`.
+"""
+@inline function wedge_source(m′::IT, m::IT, m′ₘₐₓ::IT) where {IT}
+    if abs(m′) ≤ m′ₘₐₓ
+        if m ≥ abs(m′)
+            return (m′, m, 1)
+        elseif -m ≥ abs(m′)
+            return (-m′, -m, transpose_sign(m′, m))
+        end
+    end
+    if abs(m) ≤ m′ₘₐₓ
+        if m′ ≥ abs(m)
+            return (m, m′, transpose_sign(m′, m))
+        elseif -m′ ≥ abs(m)
+            return (-m, -m′, 1)
+        end
+    end
+    wedge_source_error(m′, m, m′ₘₐₓ)
+end
+
+# Off the hot path, and deliberately `@noinline` so that the formatting of the indices costs
+# nothing in the branch that never throws.
+@noinline function wedge_source_error(m′, m, m′ₘₐₓ)
+    throw(ArgumentError(
+        "H[$m′, $m] cannot be obtained from a wedge with "
+        * "m′ₘₐₓ=$m′ₘₐₓ; both |m′| and |m| exceed m′ₘₐₓ."
+    ))
+end
+
+"""
+    wedge_offset(H::HWedge, a, b)
+    wedge_offset(H::HWedge, a, b, m′ₘᵢₙ)
+
+Zero-based linear offset of the first rotor's element ``H_{a,b}`` in `parent(H)`, for a
+stored wedge element (``b ≥ |a|``).  Element `iᵣ` is at
+`parent(H)[wedge_offset(H, a, b) + iᵣ]`.
+
+The four-argument form takes `m′ₘᵢₙ(H)` from the caller, which hoists it out of a loop.
+"""
+@inline function wedge_offset(H::HWedge, a, b, m′ₘᵢₙ)
+    @inbounds row_index(H)[(a - m′ₘᵢₙ) + 1] + Nᵣ(H) * (b - abs(a)) - 1
+end
+@inline wedge_offset(H::HWedge{IT}, a::IT, b::IT) where {IT} =
+    wedge_offset(H, a, b, m′ₘᵢₙ(H))
+
+"""
+    wedge_value(H::HWedge, iᵣ, m′, m)
+
+Value of ``H_{m′,m}`` for rotor `iᵣ`, for *any* ``|m′|, |m| ≤ ℓ`` (at least one of them
+``≤ m′ₘₐₓ``), read from the stored wedge through [`wedge_source`](@ref).
+
+`m′` and `m` are of the wedge's own index type, so a wrong-parity index — a whole number for
+a half-integer wedge, say — cannot be expressed, let alone silently floored onto a
+neighbouring element.
+"""
+@inline function wedge_value(H::HWedge{IT}, iᵣ::Int, m′::IT, m::IT) where {IT}
+    @boundscheck if !(iᵣ > 0 && iᵣ ≤ Nᵣ(H))
+        throw(BoundsError(H, (iᵣ, m′, m)))
+    end
+    a, b, σ = wedge_source(m′, m, m′ₘₐₓ(H))
+    @boundscheck if !(abs(a) ≤ b ≤ ℓ(H) && m′ₘᵢₙ(H) ≤ a ≤ m′ₘₐₓ(H))
+        throw(BoundsError(H, (iᵣ, m′, m)))
+    end
+    @inbounds σ * parent(H)[wedge_offset(H, a, b, m′ₘᵢₙ(H)) + iᵣ]
+end
+
 
 # Explicit HWedge index formula, assuming no iᵣ:
 # (
@@ -237,9 +377,6 @@ function Base.setproperty!(H::HAxis{IT}, s::Symbol, ℓ::IIT) where {IT, IIT}
         if IIT !== IT
             error("Cannot change ℓ from type $IT to type $IIT; they must be the same.")
         end
-        if IT <: Rational && denominator(ℓ) ≠ 2
-            error("For IT=$IT <: Rational, ℓ=$ℓ must have denominator 2")
-        end
         if ℓ < ℓₘᵢₙ(IT)
             error("Cannot set ℓ=$ℓ less than ℓₘᵢₙ=$(ℓₘᵢₙ(IT)).")
         end
@@ -257,10 +394,10 @@ function Base.checkbounds(::Type{Bool}, w::HAxis, i::Int)
     i ≥ 1 && i ≤ length(w)
 end
 function Base.checkbounds(::Type{Bool}, w::HAxis{IT}, iᵣ::Int, m::IT) where {IT}
-    iᵣ ≤ Nᵣ(w) && ℓₘᵢₙ(w) ≤ m ≤ ℓ(w)
+    iᵣ > 0 && iᵣ ≤ Nᵣ(w) && ℓₘᵢₙ(w) ≤ m ≤ ℓ(w)
 end
 function Base.checkbounds(::Type{Bool}, w::HAxis{IT}, iᵣ::Int, m′::IT, m::IT) where {IT}
-    iᵣ ≤ Nᵣ(w) && m′ == ℓₘᵢₙ(w) && ℓₘᵢₙ(w) ≤ m ≤ ℓ(w)
+    iᵣ > 0 && iᵣ ≤ Nᵣ(w) && m′ == ℓₘᵢₙ(w) && ℓₘᵢₙ(w) ≤ m ≤ ℓ(w)
 end
 
 @propagate_inbounds function Base.getindex(w::HAxis, i::Int)
@@ -305,14 +442,12 @@ end
     @inbounds Base.parent(w)[i] = v
 end
 
+function Base.summary(io::IO, H::HAxis{IT, RT}) where {IT, RT}
+    print(io, "HAxis{$IT, $RT} for ℓ=$(ℓ(H)) with m=$(ℓₘᵢₙ(H)):$(ℓ(H)), and iᵣ=1:$(Nᵣ(H))")
+end
+Base.show(io::IO, H::HAxis) = summary(io, H)
 function Base.show(io::IO, ::MIME"text/plain", H::HAxis{IT, RT}) where {IT, RT}
-    let ℓ = ℓ(H), ℓₘᵢₙ = ℓₘᵢₙ(H), Nᵣ = Nᵣ(H)
-        print(
-            io,
-            "SphericalFunctions.HAxis{$IT, $RT} for ℓ=$(ℓ) with ",
-            "m=$(ℓₘᵢₙ):$(ℓ), and iᵣ=1:$(Nᵣ)\n",
-            "Stored in ",
-        )
-        show(io, MIME("text/plain"), parent(H))
-    end
+    summary(io, H)
+    print(io, "\nStored in ")
+    show(io, MIME("text/plain"), parent(H))
 end

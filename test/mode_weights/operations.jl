@@ -1,0 +1,153 @@
+# Tests of the container products in `src/mode_weights/operations.jl`:
+#
+#     𝔇 * w   rotates mode weights
+#     Y * w   evaluates the function at the rotor(s)
+#
+# Both are bilinear — neither conjugates — which is the single most consequential detail here,
+# and is what the "does not conjugate" item below pins against a future "fix".
+
+@testitem "Rotating mode weights: the defining property" begin
+    using Quaternionic: Rotor, RotorF64
+    using Random
+
+    rng = Random.Xoshiro(20260920)
+    # `w(R)` is already pinned against the closed-form harmonics elsewhere, so it serves as an
+    # independent oracle here: no new reference is needed.
+    for T ∈ (Float64,), s ∈ (-2, 0, 1), ℓₘᵢₙ ∈ (abs(s), 0)
+        ℓₘₐₓ = 4
+        w = ModeWeights(randn(rng, Complex{T}, Ysize(ℓₘᵢₙ, ℓₘₐₓ)), s, ℓₘᵢₙ, ℓₘₐₓ)
+        R = randn(rng, Rotor{T}); Q = randn(rng, Rotor{T})
+        # measured worst case 3e-15 over this sweep; 1e-10 is a wide safety margin
+        ϵ = 1e-10
+        @test isapprox((D(R, ℓₘₐₓ) * w)(Q), w(inv(R) * Q); atol=ϵ, rtol=ϵ)
+        # the rotation changes neither the spin weight nor the range of ℓ
+        rot = D(R, ℓₘₐₓ) * w
+        @test rot isa ModeWeights
+        @test spin(rot) == s
+        @test SphericalFunctions.ℓₘᵢₙ(rot) === ℓₘᵢₙ && SphericalFunctions.ℓₘₐₓ(rot) === ℓₘₐₓ
+    end
+end
+
+@testitem "Rotating mode weights: group structure" begin
+    using Quaternionic: Rotor, RotorF64
+    using LinearAlgebra: norm
+    using Random
+
+    rng = Random.Xoshiro(77)
+    ϵ = 1e-10
+    for ℓₘₐₓ ∈ (4, 7//2)
+        s = ℓₘₐₓ isa Rational ? 1//2 : -2
+        ℓₘᵢₙ = abs(s)
+        w = ModeWeights(randn(rng, ComplexF64, Ysize(ℓₘᵢₙ, ℓₘₐₓ)), s, ℓₘᵢₙ, ℓₘₐₓ)
+        R₁ = randn(rng, RotorF64); R₂ = randn(rng, RotorF64)
+
+        # Left multiplication by a representation composes with no transpose or inverse
+        @test isapprox(strided(D(R₁,ℓₘₐₓ) * (D(R₂,ℓₘₐₓ) * w)),
+                       strided(D(R₁*R₂, ℓₘₐₓ) * w); atol=ϵ, rtol=ϵ)
+        @test isapprox(strided(D(one(RotorF64), ℓₘₐₓ) * w), strided(w); atol=ϵ, rtol=ϵ)
+        @test isapprox(strided(D(inv(R₁), ℓₘₐₓ) * (D(R₁, ℓₘₐₓ) * w)),
+                       strided(w); atol=ϵ, rtol=ϵ)
+        # 𝔇 is unitary, so each ℓ block keeps its norm
+        rot = D(R₁, ℓₘₐₓ) * w
+        for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ
+            @test isapprox(norm(strided(rot[ℓ, :])), norm(strided(w[ℓ, :])); atol=ϵ, rtol=ϵ)
+        end
+        # The double cover: 𝔇(-R) = (-1)^{2ℓ} 𝔇(R), exactly
+        sign = ℓₘₐₓ isa Rational ? -1 : 1
+        @test strided(D(-R₁, ℓₘₐₓ) * w) == sign .* strided(D(R₁, ℓₘₐₓ) * w)
+        # A rotation is block-diagonal in ℓ and touches nothing but m, so it commutes with ð
+        @test isapprox(strided(ð(D(R₁,ℓₘₐₓ) * w)), strided(D(R₁,ℓₘₐₓ) * ð(w)); atol=ϵ, rtol=ϵ)
+    end
+end
+
+@testitem "Rotating mode weights: refusals and the calculator" begin
+    using Quaternionic: Rotor, RotorF64
+    using LinearAlgebra: mul!
+    using Random
+
+    rng = Random.Xoshiro(88)
+    ℓₘₐₓ = 4
+    w = ModeWeights(randn(rng, ComplexF64, Ysize(2, ℓₘₐₓ)), -2, 2, ℓₘₐₓ)
+    R = randn(rng, RotorF64)
+
+    # `D` starts at ℓ=0 while `w` starts at |s|, so containment is what is required
+    @test D(R, ℓₘₐₓ) * w isa ModeWeights
+    @test strided(D(R, ℓₘₐₓ + 3) * w) == strided(D(R, ℓₘₐₓ) * w)
+    @test_throws "ℓ range of" D(R, 2) * w
+    # A restricted block cannot rotate: every m mixes into every m′
+    @test_throws "needs the whole" D(R, ℓₘₐₓ; m′ₘₐₓ=2) * w
+    # Kinds may not be mixed
+    wh = ModeWeights(randn(rng, ComplexF64, Ysize(1//2, 7//2)), 1//2)
+    @test_throws "must be of one kind" D(R, ℓₘₐₓ) * wh
+    # A batched calculator rotates by one rotor, not many
+    @test_throws "Nᵣ=" WignerDCalculator(randn(rng, RotorF64, 3), ℓₘₐₓ) * w
+
+    # The calculator streams, and agrees with the series exactly: `D` copies the same blocks
+    @test strided(WignerDCalculator(R, ℓₘₐₓ) * w) == strided(D(R, ℓₘₐₓ) * w)
+    # `mul!` writes into a correctly labelled destination ...
+    dst = similar(w)
+    @test strided(mul!(dst, D(R, ℓₘₐₓ), w)) == strided(D(R, ℓₘₐₓ) * w)
+    @test strided(mul!(similar(w), WignerDCalculator(R, ℓₘₐₓ), w)) == strided(dst)
+    # ... but not into a mislabelled one, and not in place
+    @test_throws "changes neither" mul!(ModeWeights(zeros(ComplexF64, Ysize(2, ℓₘₐₓ)), 1, 2, ℓₘₐₓ),
+                                        D(R, ℓₘₐₓ), w)
+    @test_throws "aliases the input" mul!(w, D(R, ℓₘₐₓ), w)
+end
+
+@testitem "Evaluating mode weights: the four shapes" begin
+    using Quaternionic: Rotor, RotorF64
+    using Random
+
+    rng = Random.Xoshiro(123)
+    s, ℓₘₐₓ = -2, 4
+    w = ModeWeights(randn(rng, ComplexF64, Ysize(abs(s), ℓₘₐₓ)), s)
+    R = randn(rng, RotorF64); R⃗ = randn(rng, RotorF64, 3)
+    ϵ = 1e-10
+
+    # One rotor, one spin: bit-exact against `w(R)`, which uses the same reduction
+    @test sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ=abs(s)) * w == w(R)
+    # Many rotors
+    @test isapprox(sYlm(R⃗, ℓₘₐₓ, s; ℓₘᵢₙ=abs(s)) * w, [w(r) for r ∈ R⃗]; atol=ϵ, rtol=ϵ)
+    # A spin range selects `w`'s own row, in both the single and batched shapes
+    @test isapprox(sYlm(R, ℓₘₐₓ, -2:2) * w, w(R); atol=ϵ, rtol=ϵ)
+    @test isapprox(sYlm(R⃗, ℓₘₐₓ, -2:2) * w, [w(r) for r ∈ R⃗]; atol=ϵ, rtol=ϵ)
+    # Harmonics wider in ℓ than the weights give the same answer
+    @test isapprox(sYlm(R, ℓₘₐₓ + 2, s; ℓₘᵢₙ=abs(s)) * w, w(R); atol=ϵ, rtol=ϵ)
+    # The calculator streams; its per-ℓ partial sums associate differently, hence ≈
+    @test isapprox(sYlmCalculator(R, ℓₘₐₓ, s) * w, w(R); atol=ϵ, rtol=ϵ)
+    @test isapprox(sYlmCalculator(R⃗, ℓₘₐₓ, s) * w, [w(r) for r ∈ R⃗]; atol=ϵ, rtol=ϵ)
+    # And it is the same product `sYlm_matrix` documents as `f = Y * f̃`
+    @test isapprox(sYlm_matrix(R⃗, ℓₘₐₓ, s; ℓₘᵢₙ=abs(s)) * strided(w),
+                   sYlm(R⃗, ℓₘₐₓ, s; ℓₘᵢₙ=abs(s)) * w; atol=ϵ, rtol=ϵ)
+
+    # Refusals
+    # same ℓ range, so only the spin weight differs and only that check can fire
+    w1 = ModeWeights(randn(rng, ComplexF64, Ysize(abs(s), ℓₘₐₓ)), 1, abs(s), ℓₘₐₓ)
+    @test_throws "spin weight" sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ=abs(s)) * w1
+    @test_throws "ℓ range of" sYlm(R, 3, s; ℓₘᵢₙ=abs(s)) * w
+end
+
+@testitem "Evaluating mode weights does not conjugate" begin
+    using Quaternionic: Rotor, RotorF64
+    using LinearAlgebra: dot
+    using Random
+
+    rng = Random.Xoshiro(4321)
+    s, ℓₘₐₓ = -2, 3
+    w = ModeWeights(randn(rng, ComplexF64, Ysize(abs(s), ℓₘₐₓ)), s)
+    R = randn(rng, RotorF64)
+    Y = sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ=abs(s))
+
+    # The bilinear product is the right one ...
+    @test Y * w == w(R)
+    # ... and the conjugating one is demonstrably different, by far more than any tolerance
+    @test abs(dot(strided(Y), strided(w)) - w(R)) > 1e-6
+    # ... so `dot` on these types errors rather than quietly answering with the wrong phase.
+    # This is the tombstone: it stops a future maintainer "fixing" a MethodError by adding the
+    # harmful non-conjugating method.
+    @test_throws "conjugates its first argument" dot(Y, w)
+    @test_throws "conjugates its first argument" dot(w, Y)
+    @test_throws "conjugates its first argument" dot(sYlmCalculator(R, ℓₘₐₓ, s), w)
+    # The conjugating inner product of two sets of weights is still available and unchanged
+    @test dot(w, w) ≈ sum(abs2, strided(w))
+end

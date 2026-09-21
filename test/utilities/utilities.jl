@@ -1,6 +1,6 @@
 @testsnippet Utilities begin
 
-ℓmrange(ℓₘᵢₙ, ℓₘₐₓ) = eachrow(SphericalFunctions.Deprecated.Yrange(ℓₘᵢₙ, ℓₘₐₓ))
+ℓmrange(ℓₘᵢₙ, ℓₘₐₓ) = [(ℓ, m) for ℓ in ℓₘᵢₙ:ℓₘₐₓ for m in -ℓ:ℓ]
 ℓmrange(ℓₘₐₓ) = ℓmrange(0, ℓₘₐₓ)
 function sℓmrange(ℓₘₐₓ, sₘₐₓ)
     sₘₐₓ = min(abs(sₘₐₓ), ℓₘₐₓ)
@@ -49,7 +49,8 @@ function Rrange(::Type{T}, n=15) where T
     invsqrt2 = inv(√T(2))
     [
         [
-            sign*R
+            # `sign*R` promotes to `Quaternion`; these are rotations, so say so.
+            Rotor{T}(sign*R)
             for R in [
                 Rotor{T}(1);
                 [Rotor{T}(𝐯) for 𝐯 in (𝐢,𝐣,𝐤)];
@@ -98,6 +99,39 @@ function sYlm(s::Int, ell::Int, m::Int, theta::T, phi::T) where {T<:Real}
             for k in k_min:k_max
         )) *
         cis(m * phi)
+end
+
+"""
+    sYlm_pixels(s, ℓ, m, pixels)
+
+The closed-form `sYlm` above, evaluated on a whole list of `(θ, ϕ)` pixels, with the
+pixel-independent factorials hoisted out of the loop.  That is about 40 times faster, which
+is what makes pixel-by-pixel comparisons against a transform affordable; it is the same
+transcription of the conventions-page formula, so it owes nothing to the package.
+
+Checked against `sYlm` itself in the "SSHT synthesis" test item.
+"""
+function sYlm_pixels(s::Int, ℓ::Int, m::Int, p::AbstractVector{<:AbstractVector{T}}) where {T}
+    kmin, kmax = max(0, m + s), min(ℓ + m, ℓ + s)
+    𝒩 = sqrt(
+        factorial(big(ℓ + m)) * factorial(big(ℓ - m))
+        * factorial(big(ℓ - s)) * factorial(big(ℓ + s))
+    )
+    c = T[
+        (-1)^k * 𝒩 / (
+            factorial(big(ℓ + m - k)) * factorial(big(ℓ + s - k))
+            * factorial(big(k)) * factorial(big(k - s - m))
+        )
+        for k in kmin:kmax
+    ]
+    pre = T(-1)^(-s) * sqrt((2ℓ + 1) / (4 * T(π)))
+    map(p) do θϕ
+        sθ, cθ = sincos(θϕ[1] / 2)
+        pre * sum(
+            c[k-kmin+1] * cθ^(2ℓ + m + s - 2k) * sθ^(2k - s - m)
+            for k in kmin:kmax
+        ) * cis(m * θϕ[2])
+    end
 end
 
 ε(j,k,l) = ifelse(

@@ -1,10 +1,4 @@
-# Eq. (44) in Gumerov and Duraiswami (2015).  Note that they define `sgn` as follows, which
-# is different from the usual definition, including from Julia's `sign` function, at 0:
-sgn(m) = ifelse(m ≥ 0, 1, -1)
-
-# Eq. (7) in Gumerov and Duraiswami (2015)
-# ϵ(m) = (m ≥ 0 ? (-1)^m : 1)
-ϵ(m) = ifelse(m > 0 && isodd(m), -1, 1)
+# `sgn`, `ϵ` and `δ²` are defined in `wigner_H.jl`.
 
 
 @doc raw"""
@@ -123,8 +117,11 @@ function recurrence_step4!(
 ) where {IT<:Signed, NT, T}
     @inbounds let √=sqrt∘T, ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
         for m′ ∈ 1:min(ℓ, m′ₘₐₓ)-1
-            # Note that the signs of m′ and m are always +1, so we leave them out of the
-            # calculations of d̄ in this function.
+            # Note that the signs of m′ and m are always +1 for *integer* indices, so we
+            # leave them out of the calculations of d̄ in this function.  They are not for
+            # half-integer indices, where sgn(m′-1) = -1 at m′ = 1/2 (see the v3 design
+            # memo, §5.2); this function is integer-only, and the batched engine's
+            # `recurrence_step4!` applies the sign.
             d̄ₗᵐ′ = √((ℓ-m′)*(ℓ+m′+1))
             d̄ₗᵐ′⁻¹ = √((ℓ-m′+1)*(ℓ+m′))
             for m ∈ (m′+1):ℓ-1
@@ -158,8 +155,8 @@ Compute the values of ``H^{ℓ}_{m'-1,m}``, from the values of ``H^{ℓ}_{m',m-1
 function recurrence_step5!(
     Hˡ::AbstractWignerMatrix{IT, NT}, sinβ::T, cosβ::T
 ) where {IT<:Signed, NT, T}
-    @inbounds let √=sqrt∘T, ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
-        for m′ ∈ 0:-1:-min(ℓ, m′ₘₐₓ)+1
+    @inbounds let √=sqrt∘T, ℓ=ℓ(Hˡ), m′ₘᵢₙ=m′ₘᵢₙ(Hˡ)
+        for m′ ∈ 0:-1:max(-ℓ, m′ₘᵢₙ)+1
             d̄ₗᵐ′ = sgn(m′) * √((ℓ-m′)*(ℓ+m′+1))
             d̄ₗᵐ′⁻¹ = sgn(m′-1) * √((ℓ-m′+1)*(ℓ+m′))
             for m ∈ -(m′-1):ℓ-1
@@ -191,14 +188,24 @@ been computed.
 
 Assuming that `Hˡ` has already been computed as much as possible by the recurrence
 relations, this function imposes the symmetries, rather than recalculating terms.
-Specifically, the recurrence relations will calculate the terms for all `m`, and `m′ ≥
-abs(m)`, and this function will complete the calculations using the symmetries
+Specifically, steps 1–5 fill the wedge `m ≥ abs(m′)` for `abs(m′) ≤ m′ₘₐₓ`, and this
+function completes the requested block using the symmetries
 ```math
 \begin{aligned}
 H^ℓ_{m′, m} &= H^ℓ_{m, m′}, \\
 H^ℓ_{m′, m} &= H^ℓ_{-m′, -m}.
 \end{aligned}
 ```
+
+!!! note "Half-integer indices"
+
+    Both of those symmetries acquire the sign ``σ = \mathrm{sgn}(m)\,\mathrm{sgn}(m')`` for
+    half-integer indices (see [`transpose_sign`](@ref) and the notes on the
+    [``H`` recursion](@ref "Algorithm for computing ``H`` (redesigned)")); only
+    ``H^ℓ_{m′, m} = H^ℓ_{-m, -m′}`` is sign-free.  This
+    function is therefore restricted to integer indices.  The batched engine never runs
+    step 6 at all: every out-of-wedge element is read through
+    [`wedge_source`](@ref), which already accounts for ``σ``.
 
 """
 function recurrence_step6!(Hˡ::AbstractWignerMatrix{IT, NT}) where {IT<:Signed, NT}
@@ -210,8 +217,15 @@ function recurrence_step6!(Hˡ::AbstractWignerMatrix{IT, NT}) where {IT<:Signed,
             for m′ ∈ -min(m′ₘₐₓ, m):min(m′ₘₐₓ, m)
                 Hˡ[-m′, -m] = Hˡ[m′, m]
             end
-            for m′ ∈ -min(m′ₘₐₓ, m-1):min(m′ₘₐₓ, m-1)
-                Hˡ[m, m′] = Hˡ[-m, -m′] = Hˡ[m′, m]
+            # Rows ±m of the transposed region exist only when |m| ≤ m′ₘₐₓ.  Without this
+            # guard, a matrix with 0 < m′ₘₐₓ < ℓ writes past the end of its own block — and
+            # the enclosing `@inbounds` turns that into silent corruption rather than a
+            # `BoundsError` (the v3 design memo, bug B2, which was fixed in the batched
+            # engine by always computing the symmetric wedge).
+            if m ≤ m′ₘₐₓ
+                for m′ ∈ -min(m′ₘₐₓ, m-1):min(m′ₘₐₓ, m-1)
+                    Hˡ[m, m′] = Hˡ[-m, -m′] = Hˡ[m′, m]
+                end
             end
         end
     end
@@ -246,8 +260,11 @@ complex phases related to the `m′` and `m` indices.
 
 """
 function convert_H_to_D!(Hˡ::AbstractWignerMatrix{IT, NT}, eⁱᵅ::NT, eⁱᵞ::NT) where {IT<:Signed, NT<:Complex}
-    # NOTE: This function will have to be modified to work for Rational indices because the
-    # phases will not be integer powers; we'll have to incorporate √eⁱᵅ and √eⁱᵞ.
+    # For half-integer indices this form does not apply, because e^{-im′α} and e^{-imγ} are
+    # not integer powers of eⁱᵅ and eⁱᵞ.  No square roots are needed to fix that, though:
+    # m′ ± m *are* integers, so e^{i(m′α+mγ)} = z₊^{m′+m} z₋^{m′-m} with
+    # z₊ = e^{i(α+γ)/2}, z₋ = e^{i(α-γ)/2} (the v3 design memo, §5.4).  That is what the
+    # batched `materialize!` implements, for both index types at once.
     @inbounds let ℓ=ℓ(Hˡ), ℓₘᵢₙ=ℓₘᵢₙ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
         ϕᵞ = ComplexPowers(eⁱᵞ)
         ϕᵅ = ComplexPowers(eⁱᵅ)
