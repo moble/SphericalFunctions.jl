@@ -376,7 +376,8 @@ end
     recurrence!(calc, R, ℓ)
     recurrence!(calc, ℓ)
 
-Compute the Wigner quantities for index ``ℓ`` in the calculator `calc`.
+Compute the quantities for index ``ℓ`` in the calculator `calc`, and return the block holding
+them.
 
 In the first form, the rotor data `R` is stored in the calculator first.  For a calculator
 with `Nᵣ` rotors, `R` is an `AbstractVector` of length `Nᵣ`; for `Nᵣ = 1` a single element is
@@ -386,10 +387,39 @@ quantities that depend only on ``β``, such as ``d`` and ``H`` — the angle ``�
 
 In the second form, the rotor data from the previous call is reused.  Successive calls with
 ``ℓ, ℓ+1, ℓ+2, …`` are the cheap path: each costs ``O(N_r ℓ^2)``.  Requesting a smaller ``ℓ``
-than the current one restarts the recurrence from ``ℓ_{min}``.
+than the current one restarts the recurrence from ``ℓ_{min}``, so a loop that reads two
+neighbouring ``ℓ`` together pays that restart at every step.
 
-Returns `calc`; the result is then available as `calc[ℓ]` (for [`DCalculator`](@ref) and
-[`dCalculator`](@ref)) or `calc.Hˡ` (for [`HCalculator`](@ref)).
+This is the only way to read a calculator by hand — the calculators are not indexed — and it
+is what iterating one calls for each ``ℓ``:
+
+```julia
+for ℓ ∈ 2:ℓₘₐₓ
+    𝔇ˡ = recurrence!(calc, ℓ)
+    # 𝔇ˡ[m′, m] for m′, m ∈ -ℓ:ℓ
+end
+```
+
+What comes back depends on the calculator, and in every case it is indexed by the natural
+ranges rather than from 1:
+
+| calculator | block |
+|---|---|
+| [`DCalculator`](@ref), [`dCalculator`](@ref) | [`WignerMatrix`](@ref), `[m′, m]` |
+| [`sYlmCalculator`](@ref) for one spin weight | [`DegreeBlock`](@ref), `[m]` |
+| [`sYlmCalculator`](@ref) for a range of them | [`SpinMatrix`](@ref), `[s, m]` |
+| [`HCalculator`](@ref) | [`HWedge`](@ref), `[m′, m]` for ``m ≥ \\|m′\\|`` |
+
+With `Nᵣ > 1` each gains a leading rotor index, so that the first is `[iᵣ, m′, m]`.  One spin
+weight of a block that holds several is `ₛYₗ[s, :]`.
+
+!!! warning
+    For every calculator but [`HCalculator`](@ref) the block is a *view* into storage that the
+    next call overwrites, so `copy` it if it must outlive the step (the copy keeps the natural
+    indices), or `collect` it for an ordinary 1-based array.  An `HCalculator` is the
+    exception, and the sharper case: its wedge is one mutable object handed back by identity,
+    so even a `copy` of the wedge shares the numbers it wraps — use `copy(parent(Hˡ))` or read
+    the values out before stepping on.
 
 A phase given as a `Complex` number must have unit modulus (to within rounding), and is used
 as given; an angle given as a `Real` is converted to the calculator's number type.
@@ -447,7 +477,7 @@ function recurrence!(w::HCalculator{IT, RT}, ℓ) where {IT<:Signed, RT}
     recurrence_step5!(w)  # Hˡₘ′ₘ₋₁, Hˡₘ′₊₁ₘ, Hˡₘ′ₘ₊₁ -> Hˡₘ′₋₁ₘ
     # Step 6 (the symmetries) is never applied to the wedge itself; elements outside the
     # wedge are read through `wedge_value`/`wedge_source` when the results are materialized.
-    w
+    Hˡ(w)
 end
 
 # The half-integer driver.  The only differences from the integer one are that the axis is
@@ -463,7 +493,7 @@ function recurrence!(w::HCalculator{IT, RT}, ℓ) where {IT<:HalfOddInteger, RT}
     recurrence_seed!(w)   # h⃗ʲ₀ₘ -> Hˡ₊₁⁄₂ₘ, Hˡ₋₁⁄₂ₘ
     recurrence_step4!(w)  # Hˡₘ′ₘ₋₁, Hˡₘ′₋₁ₘ, Hˡₘ′ₘ₊₁ -> Hˡₘ′₊₁ₘ
     recurrence_step5!(w)  # Hˡₘ′ₘ₋₁, Hˡₘ′₊₁ₘ, Hˡₘ′ₘ₊₁ -> Hˡₘ′₋₁ₘ
-    w
+    Hˡ(w)
 end
 
 

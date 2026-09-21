@@ -365,8 +365,23 @@ function recurrence!(c::HarmonicCalculator{IT}, ℓ) where {IT}
     let ℓ = convert(IT, ℓ)
         recurrence!(c.H, ℓ)
         materialize!(c, ℓ)
+        current_block(c, ℓ)
     end
-    c
+end
+
+# The block for the ``ℓ`` just computed: one spin weight's row when the calculator serves a
+# single spin weight, and the whole spin axis when it serves a range.  Which of the two is a
+# type parameter, so the choice is made at compile time and each method has one concrete
+# return type.
+function current_block(
+    c::HarmonicCalculator{IT, RT, NT, ST, S}, ℓ::IT
+) where {IT, RT, NT, ST, S<:IntegerHalf}
+    spin_row(c, ℓ, 1)
+end
+function current_block(
+    c::HarmonicCalculator{IT, RT, NT, ST, S}, ℓ::IT
+) where {IT, RT, NT, ST, S<:AbstractUnitRange}
+    spin_block(c, ℓ)
 end
 
 # (-1)^s, as e^{iπs} = i^{2s}; for integer s this is ±1.

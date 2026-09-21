@@ -823,7 +823,7 @@ end
     # It computes exactly what the spin-weight-zero sYlmCalculator does
     ref = sYlmCalculator(R, ℓₘₐₓ, 0)
     for ℓ ∈ 0:ℓₘₐₓ
-        @test recurrence!(calc, ℓ)[ℓ] == recurrence!(ref, ℓ)[ℓ]
+        @test recurrence!(calc, ℓ) == recurrence!(ref, ℓ)
     end
     # ... and agrees with the one-shot `Ylm`
     Y = Ylm(R, ℓₘₐₓ)

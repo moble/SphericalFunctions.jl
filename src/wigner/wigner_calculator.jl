@@ -281,9 +281,14 @@ function recurrence!(c::WignerCalculator{IT}, ℓ) where {IT}
     let ℓ = convert(IT, ℓ)
         recurrence!(c.H, ℓ)
         materialize!(c, ℓ)
+        current_block(c, ℓ)
     end
-    c
 end
+
+# The block for the ``ℓ`` just computed, restricted to the m′ and m limits the calculator was
+# built with.
+current_block(c::WignerCalculator{IT}, ℓ::IT) where {IT} =
+    block(c, ℓ, m′range(c, ℓ), mrange(c, ℓ))
 
 # Ranges of m′ and m in the block for a given ℓ
 m′range(c::WignerCalculator, ℓ) = max(-ℓ, c.m′ₘᵢₙ):min(ℓ, c.m′ₘₐₓ)
@@ -422,7 +427,7 @@ See also [`d`](@ref) and [`sYlm`](@ref).
 function D(R::Rotor{T}, ℓₘₐₓ::IT; kwargs...) where {T<:Real, IT<:IntegerHalf}
     calc = DCalculator(R, ℓₘₐₓ; kwargs...)
     WignerSeries(
-        [copy(recurrence!(calc, ℓ)[ℓ]) for ℓ ∈ ℓₘᵢₙ(IT):ℓₘₐₓ], ℓₘᵢₙ(IT), ℓₘₐₓ
+        [copy(recurrence!(calc, ℓ)) for ℓ ∈ ℓₘᵢₙ(IT):ℓₘₐₓ], ℓₘᵢₙ(IT), ℓₘₐₓ
     )
 end
 
@@ -442,7 +447,7 @@ used).
 function d(β::Union{Real, Complex, Rotor}, ℓₘₐₓ::IT; kwargs...) where {IT<:IntegerHalf}
     calc = dCalculator(β, ℓₘₐₓ; kwargs...)
     WignerSeries(
-        [copy(recurrence!(calc, ℓ)[ℓ]) for ℓ ∈ ℓₘᵢₙ(IT):ℓₘₐₓ], ℓₘᵢₙ(IT), ℓₘₐₓ
+        [copy(recurrence!(calc, ℓ)) for ℓ ∈ ℓₘᵢₙ(IT):ℓₘₐₓ], ℓₘᵢₙ(IT), ℓₘₐₓ
     )
 end
 

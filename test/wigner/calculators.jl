@@ -213,7 +213,7 @@ end
     # Full-range reference blocks for `R`, copied out for every ℓ
     function full_blocks(Ctor)
         calc = Ctor(R, ℓₘₐₓ)
-        OffsetVector([copy(recurrence!(calc, ℓ)[ℓ]) for ℓ in 0:ℓₘₐₓ], 0:ℓₘₐₓ)
+        OffsetVector([copy(recurrence!(calc, ℓ)) for ℓ in 0:ℓₘₐₓ], 0:ℓₘₐₓ)
     end
 
     for (name, Ctor) in (("DCalculator", DCalculator), ("dCalculator", dCalculator))
@@ -320,17 +320,17 @@ end
     # Arbitrary ℓ order: backwards restarts, forwards advances, both reproduce the
     # sequential results exactly
     function check_order(batched, data)
-        ref = OffsetVector([copy(recurrence!(batched, ℓ)[ℓ]) for ℓ in 0:ℓₘₐₓ], 0:ℓₘₐₓ)
+        ref = OffsetVector([copy(recurrence!(batched, ℓ)) for ℓ in 0:ℓₘₐₓ], 0:ℓₘₐₓ)
         for ℓ in (4, 0, 7, 7, 2, 5, 1, 6, 3, 3, 0, 7)
-            @test recurrence!(batched, ℓ)[ℓ] == ref[ℓ]
+            @test recurrence!(batched, ℓ) == ref[ℓ]
         end
         # Re-setting the rotor data and jumping straight to ℓ
         for ℓ in (7, 3, 0)
-            @test recurrence!(batched, data, ℓ)[ℓ] == ref[ℓ]
+            @test recurrence!(batched, data, ℓ) == ref[ℓ]
         end
         # And from a fresh calculator of the same shape
         fresh = similar(batched)
-        @test recurrence!(fresh, data, ℓₘₐₓ)[ℓₘₐₓ] == ref[ℓₘₐₓ]
+        @test recurrence!(fresh, data, ℓₘₐₓ) == ref[ℓₘₐₓ]
     end
 
     @testset "DCalculator" begin
@@ -504,7 +504,7 @@ end
     calcd = dCalculator(R, ℓₘₐₓ)
     for input in (0.3, cis(0.3), R)
         # Deliberately *not* an `AbstractMatrix`: see the note on `AbstractWignerMatrix`.
-        blk = recurrence!(calcd, input, 1)[1]
+        blk = recurrence!(calcd, input, 1)
         @test blk isa WignerMatrix && eltype(blk) === Float64
     end
 end
@@ -532,7 +532,7 @@ end
             @test 𝔇[ℓ] isa WignerMatrix && eltype(𝔇[ℓ]) === ComplexF64
             @test axes(𝔇[ℓ]) == (-ℓ:ℓ, -ℓ:ℓ)
             @test parent(𝔇[ℓ]) isa Matrix{ComplexF64}  # a copy, not a view
-            @test 𝔇[ℓ] == recurrence!(calc, R, ℓ)[ℓ]
+            @test 𝔇[ℓ] == recurrence!(calc, R, ℓ)
         end
         # Each block is an independent copy: computing more matrices, for a different rotor,
         # changes nothing
@@ -573,7 +573,7 @@ end
             @test dβ[ℓ] isa WignerMatrix && eltype(dβ[ℓ]) === Float64
             @test axes(dβ[ℓ]) == (-ℓ:ℓ, -ℓ:ℓ)
             @test parent(dβ[ℓ]) isa Matrix{Float64}  # a copy, not a view
-            @test dβ[ℓ] == recurrence!(calc, β, ℓ)[ℓ]
+            @test dβ[ℓ] == recurrence!(calc, β, ℓ)
         end
         # Independent copies
         snapshot = deepcopy(dβ)
@@ -744,7 +744,7 @@ end
         for Ctor in (DCalculator, dCalculator)
             calc = Ctor(R, IT(3))
             @test calc.ℓ isa Base.RefValue{IT}
-            @test recurrence!(calc, IT(2))[IT(2)] == recurrence!(Ctor(R, 3), 2)[2]
+            @test recurrence!(calc, IT(2)) == recurrence!(Ctor(R, 3), 2)
         end
     end
 end

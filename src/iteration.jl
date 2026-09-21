@@ -129,8 +129,7 @@ end
 
 @inline function Base.iterate(e::EachEll{C, IT, Nothing}, ℓ::IT=e.ℓₘᵢₙ) where {C, IT}
     ℓ > e.ℓₘₐₓ && return nothing
-    recurrence!(e.calc, ℓ)
-    (ℓ => e.calc[ℓ], ℓ + 1)
+    (ℓ => recurrence!(e.calc, ℓ), ℓ + 1)
 end
 @inline function Base.iterate(e::EachEll{C, IT, S}, ℓ::IT=e.ℓₘᵢₙ) where {C, IT, S<:IntegerHalf}
     ℓ > e.ℓₘₐₓ && return nothing

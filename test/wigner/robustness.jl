@@ -505,12 +505,12 @@ end
 
     # 𝔇 for 8 rotors on 8 tasks, each with its own calculator, vs serial results
     calc = DCalculator(Rs[1], ℓₘₐₓ)
-    serial = [[copy(recurrence!(calc, R, ℓ)[ℓ]) for ℓ in 0:ℓₘₐₓ] for R in Rs]
+    serial = [[copy(recurrence!(calc, R, ℓ)) for ℓ in 0:ℓₘₐₓ] for R in Rs]
     recurrence!(calc, Rs[1], ℓₘₐₓ)  # leave the template holding data while the tasks run
     tasks = map(Rs) do R
         Threads.@spawn begin
             c = similar(calc)
-            [copy(recurrence!(c, R, ℓ)[ℓ]) for ℓ in 0:ℓₘₐₓ]
+            [copy(recurrence!(c, R, ℓ)) for ℓ in 0:ℓₘₐₓ]
         end
     end
     parallel = fetch.(tasks)
@@ -520,7 +520,7 @@ end
     # The same with a batched d calculator and interleaved ℓ orders
     βs = [rand(rng, 2) .* π for _ in 1:8]
     calcd = dCalculator(βs[1], ℓₘₐₓ)
-    seriald = [[copy(recurrence!(calcd, β, ℓ)[ℓ]) for ℓ in 0:ℓₘₐₓ] for β in βs]
+    seriald = [[copy(recurrence!(calcd, β, ℓ)) for ℓ in 0:ℓₘₐₓ] for β in βs]
     tasksd = map(enumerate(βs)) do (i, β)
         Threads.@spawn begin
             c = similar(calcd)
@@ -528,7 +528,7 @@ end
             order = isodd(i) ? (0:ℓₘₐₓ) : (ℓₘₐₓ:-1:0)
             out = Vector{Any}(undef, ℓₘₐₓ + 1)
             for ℓ in order
-                out[ℓ + 1] = copy(recurrence!(c, β, ℓ)[ℓ])
+                out[ℓ + 1] = copy(recurrence!(c, β, ℓ))
             end
             out
         end
@@ -538,7 +538,7 @@ end
 
     # Raw H engines in parallel, compared through wedge_value
     calcH = HCalculator(βs[1][1], ℓₘₐₓ; m′ₘₐₓ=6)
-    wedge(c, ℓ) = [wedge_value(c.Hˡ, 1, m′, m) for m′ in -min(ℓ, 6):min(ℓ, 6), m in -ℓ:ℓ]
+    wedge(H, ℓ) = [wedge_value(H, 1, m′, m) for m′ in -min(ℓ, 6):min(ℓ, 6), m in -ℓ:ℓ]
     serialH = [[wedge(recurrence!(calcH, β[1], ℓ), ℓ) for ℓ in 0:ℓₘₐₓ] for β in βs]
     tasksH = map(βs) do β
         Threads.@spawn begin

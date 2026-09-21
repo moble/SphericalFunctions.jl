@@ -131,7 +131,7 @@ end
     for m′ₘₐₓ in (ℓₘₐₓ, 4)
         # The reference: every ℓ in increasing order, from a single set of rotor data
         sequential = HCalculator(β⃗, ℓₘₐₓ; m′ₘₐₓ)
-        reference = [wedge(recurrence!(sequential, ℓ).Hˡ) for ℓ in 0:ℓₘₐₓ]
+        reference = [wedge(recurrence!(sequential, ℓ)) for ℓ in 0:ℓₘₐₓ]
         @test all(!isempty, reference)
 
         # Reusing the rotor data.  Every result must be identical to the sequential one:
@@ -140,7 +140,8 @@ end
         # arithmetic is performed in every case.
         calc = HCalculator(β⃗, ℓₘₐₓ; m′ₘₐₓ)
         for ℓ in order
-            @test recurrence!(calc, ℓ) === calc
+            # The wedge comes back by identity — it is one mutable object, not a view
+            @test recurrence!(calc, ℓ) === calc.Hˡ
             @test SphericalFunctions.ℓ(calc) == ℓ
             @test calc.Hˡ.ℓ == ℓ
             @test wedge(calc.Hˡ) == reference[ℓ+1]
@@ -337,7 +338,7 @@ end
         # so `fresh` needs none of its own — and its results must therefore be
         # `calc`'s own values exactly, which every comparison below relies on.
         fresh = similar(calc)
-        wedges = [wedge(recurrence!(fresh, ℓ).Hˡ) for ℓ in 0:6]
+        wedges = [wedge(recurrence!(fresh, ℓ)) for ℓ in 0:6]
 
         # `fill!(NaN)` poisons every buffer, so the recurrence has to rebuild everything it
         # reads; the results must be unchanged, and no NaN may survive in the used region.
@@ -363,9 +364,9 @@ end
         # Other fill values, and supplying the rotor data again after a fill
         @test fill!(calc, 7) === calc
         @test all(==(7), parent(calc.Hˡ))
-        @test wedge(recurrence!(calc, 3).Hˡ) == wedges[4]
+        @test wedge(recurrence!(calc, 3)) == wedges[4]
         fill!(calc, NaN)
-        @test wedge(recurrence!(calc, β⃗, 5).Hˡ) == wedges[6]
+        @test wedge(recurrence!(calc, β⃗, 5)) == wedges[6]
     end
 
     # Signaling NaNs: with `MathChecker.Checked` storage any arithmetic on a poisoned entry
@@ -377,7 +378,7 @@ end
         NC = checked(T; precision=false, nan=true, inf=false)
         β⃗ = T[0, 0.1, 1.2, 2.9, π]
         reference = HCalculator(β⃗, 6; m′ₘₐₓ=3)
-        wedges = [wedge(recurrence!(reference, ℓ).Hˡ) for ℓ in 0:6]
+        wedges = [wedge(recurrence!(reference, ℓ)) for ℓ in 0:6]
 
         # The calculator's element type is its angles' own, so the checked type is asked for
         # by giving the same angles as `NC` values.

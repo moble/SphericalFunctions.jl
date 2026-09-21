@@ -697,7 +697,7 @@ end
         for s ∈ sr
             @test b[s, :] isa DegreeBlock
             @test collect(b[s, :]) == collect(calc[J, s])
-            @test collect(b[s, :]) == collect(recurrence!(sYlmCalculator(R, J, s), J)[J])
+            @test collect(b[s, :]) == collect(recurrence!(sYlmCalculator(R, J, s), J))
         end
         @test collect(b) == Matrix(b) == Array(b) == [b[s, m] for s ∈ sr, m ∈ -J:J]
         @test collect(Iterators.take(b, length(b))) == vec(Matrix(b))

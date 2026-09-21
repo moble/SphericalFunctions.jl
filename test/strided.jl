@@ -98,7 +98,7 @@ end
     # contiguity is not required and is not present for ℓ < ℓₘₐₓ.
     calc = DCalculator(randn(rng, Rotor{Float64}), ℓₘₐₓ)
     for ℓ ∈ 0:ℓₘₐₓ
-        A = strided(recurrence!(calc, ℓ)[ℓ])
+        A = strided(recurrence!(calc, ℓ))
         @test A isa StridedArray
         @test stride(A, 1) == 1
     end
@@ -116,7 +116,7 @@ end
     @test one_rotor isa StridedArray
     @test stride(one_rotor, 1) == N
     single = DCalculator(rotors[2], ℓₘₐₓ)
-    reference = strided(recurrence!(single, ℓₘₐₓ)[ℓₘₐₓ])
+    reference = strided(recurrence!(single, ℓₘₐₓ))
     @test one_rotor == reference
     # The generic fallback gives the same answer BLAS would
     @test one_rotor * one_rotor ≈ reference * reference

@@ -137,7 +137,7 @@ end
         @test snapshot(eachℓ(calc)) == full
         @test snapshot(eachell(calc)) == full  # the ASCII alias is the same function
         # ... and so is the manual `recurrence!`/`calc[ℓ]` loop this is built on
-        manual = [ℓ => copy(recurrence!(calc, ℓ)[ℓ]) for ℓ ∈ keys(calc)]
+        manual = [ℓ => copy(recurrence!(calc, ℓ)) for ℓ ∈ keys(calc)]
         @test manual == full
     end
 
@@ -145,7 +145,7 @@ end
     calc = sYlmCalculator(rotors[2], 5, -2:2)
     for s ∈ -2:2
         iterated = snapshot(eachℓ(calc, s))
-        manual = [ℓ => copy(recurrence!(calc, ℓ)[ℓ, s]) for ℓ ∈ keys(eachℓ(calc, s))]
+        manual = [ℓ => copy((recurrence!(calc, ℓ); calc[ℓ, s])) for ℓ ∈ keys(eachℓ(calc, s))]
         @test iterated == manual
     end
 
@@ -215,10 +215,10 @@ end
     @test set_β!(H₁, β) === H₁
     H₂ = HCalculator(β, ℓₘₐₓ)
     for ℓ ∈ 0:ℓₘₐₓ
-        @test wedge(recurrence!(H₁, ℓ).Hˡ) == wedge(recurrence!(H₂, ℓ).Hˡ)
+        @test wedge(recurrence!(H₁, ℓ)) == wedge(recurrence!(H₂, ℓ))
     end
-    wedgeᵣ = wedge(recurrence!(set_β!(H₁, R), ℓₘₐₓ).Hˡ)  # the rotor again, to 2.75 eps
-    wedgeᵦ = wedge(recurrence!(H₂, ℓₘₐₓ).Hˡ)
+    wedgeᵣ = wedge(recurrence!(set_β!(H₁, R), ℓₘₐₓ))  # the rotor again, to 2.75 eps
+    wedgeᵦ = wedge(recurrence!(H₂, ℓₘₐₓ))
     @test maximum(abs.(wedgeᵣ .- wedgeᵦ)) ≤ 8eps()
 
     # `set_θ!`, the entry point to the real functions ₛλₗₘ(θ) = ₛYₗₘ(θ, 0)
@@ -904,7 +904,9 @@ end
     @test length(collect(eachℓ(calcY; ℓₘᵢₙ=1))) == 3
     @test length(collect(eachℓ(calcY, 1))) == 4
     @test_throws "not among them" eachℓ(calcY, 2)
-    @test_throws "not among them" recurrence!(sYlmCalculator(R, 3, 1), 0)[0, 0]
+    calc1 = sYlmCalculator(R, 3, 1)
+    recurrence!(calc1, 0)
+    @test_throws "not among them" calc1[0, 0]
 
     # An HCalculator's only block is the wedge itself — one mutable object handed back
     # by identity, which `copy` cannot preserve — so it is not iterable at all.  The error
@@ -919,7 +921,7 @@ end
     @test occursin("recurrence!", err.msg)
     @test occursin("DCalculator", err.msg)
     # And that manual loop is unaffected
-    @test recurrence!(calcH, 2).Hˡ.ℓ == 2
+    @test recurrence!(calcH, 2).ℓ == 2
 
     # Neither refusal touches the calculators that are iterable
     @test length(collect(DCalculator(R, 3))) == 4
