@@ -20,7 +20,7 @@
 # The index type of a calculator, which is also its key type.
 indextype(::Type{<:WignerCalculator{IT}}) where {IT} = IT
 indextype(::Type{<:HarmonicCalculator{IT}}) where {IT} = IT
-indextype(::Type{<:WignerHCalculator{IT}}) where {IT} = IT
+indextype(::Type{<:HCalculator{IT}}) where {IT} = IT
 indextype(c) = indextype(typeof(c))
 
 # The calculators that yield one block per ℓ, and so need to be told nothing beyond the ℓ
@@ -95,12 +95,12 @@ function eachℓ(c::HarmonicCalculator{IT}, s; ℓₘᵢₙ=nothing, ℓₘₐ�
         each_ℓ_helper(c, IT, ℓₘᵢₙ, ℓₘₐₓ, s)
     end
 end
-function eachℓ(w::WignerHCalculator, args...; kwargs...)
+function eachℓ(w::HCalculator, args...; kwargs...)
     error(
-        "A WignerHCalculator is not iterable: its wedge is one mutable object handed back by "
+        "An HCalculator is not iterable: its wedge is one mutable object handed back by "
         * "identity, rather than a view that `copy` can preserve.  Step it with "
-        * "`recurrence!(calc, ℓ)` and read `calc.Hˡ`, or use a WignerDCalculator or "
-        * "WignerdCalculator, which are iterable."
+        * "`recurrence!(calc, ℓ)` and read `calc.Hˡ`, or use a DCalculator or "
+        * "dCalculator, which are iterable."
     )
 end
 

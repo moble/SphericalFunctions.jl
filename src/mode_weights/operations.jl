@@ -135,7 +135,7 @@ end
 
 Rigidly rotate the mode weights `w`, giving the weights of ``f′(𝐐) = f(𝐑^{-1} 𝐐)`` — the
 function actively rotated by the rotor whose Wigner matrices `𝔇` (a [`WignerSeries`](@ref)
-from [`D`](@ref)) or `calc` (a [`WignerDCalculator`](@ref)) hold.  Mode by mode,
+from [`D`](@ref)) or `calc` (a [`DCalculator`](@ref)) hold.  Mode by mode,
 ```math
 f′_{ℓ,m′} = \\sum_m 𝔇^{(ℓ)}_{m′,m}(𝐑)\\, f_{ℓ,m},
 ```

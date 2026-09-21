@@ -80,14 +80,14 @@ end
     wh = ModeWeights(randn(rng, ComplexF64, Ysize(1//2, 7//2)), 1//2)
     @test_throws "must be of one kind" D(R, ℓₘₐₓ) * wh
     # A batched calculator rotates by one rotor, not many
-    @test_throws "Nᵣ=" WignerDCalculator(randn(rng, RotorF64, 3), ℓₘₐₓ) * w
+    @test_throws "Nᵣ=" DCalculator(randn(rng, RotorF64, 3), ℓₘₐₓ) * w
 
     # The calculator streams, and agrees with the series exactly: `D` copies the same blocks
-    @test strided(WignerDCalculator(R, ℓₘₐₓ) * w) == strided(D(R, ℓₘₐₓ) * w)
+    @test strided(DCalculator(R, ℓₘₐₓ) * w) == strided(D(R, ℓₘₐₓ) * w)
     # `mul!` writes into a correctly labelled destination ...
     dst = similar(w)
     @test strided(mul!(dst, D(R, ℓₘₐₓ), w)) == strided(D(R, ℓₘₐₓ) * w)
-    @test strided(mul!(similar(w), WignerDCalculator(R, ℓₘₐₓ), w)) == strided(dst)
+    @test strided(mul!(similar(w), DCalculator(R, ℓₘₐₓ), w)) == strided(dst)
     # ... but not into a mislabelled one, and not in place
     @test_throws "changes neither" mul!(ModeWeights(zeros(ComplexF64, Ysize(2, ℓₘₐₓ)), 1, 2, ℓₘₐₓ),
                                         D(R, ℓₘₐₓ), w)

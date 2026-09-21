@@ -1,5 +1,5 @@
 """
-    WignerHCalculator(β, ℓₘₐₓ; m′ₘₐₓ=ℓₘₐₓ)
+    HCalculator(β, ℓₘₐₓ; m′ₘₐₓ=ℓₘₐₓ)
 
 Engine for the Gumerov–Duraiswami recurrences, computing the ``H`` wedge (see [`HWedge`](@ref))
 for one value of ``ℓ`` at a time, for `Nᵣ` rotors simultaneously.
@@ -14,23 +14,23 @@ values are supplied by [`set_β!`](@ref).  The wedge is stored for ``|m′| ≤ 
 
 The element type is the rotor data's own: an angle given as a `Float32` gives a `Float32`
 calculator, and there is no argument to override that.  To compute in another type, convert
-the data — `WignerHCalculator(Double64(β), ℓₘₐₓ)` — which says what is meant, that these are
+the data — `HCalculator(Double64(β), ℓₘₐₓ)` — which says what is meant, that these are
 the values to treat as exact.  `floattype(calc)` reports the type in use.
 
-This is the low-level engine shared by [`WignerDCalculator`](@ref), [`WignerdCalculator`](@ref)
+This is the low-level engine shared by [`DCalculator`](@ref), [`dCalculator`](@ref)
 and the spin-weighted spherical harmonics; most users will want one of those instead.
 
 # Usage
 
 ```julia
-calc = WignerHCalculator(rotors, ℓₘₐₓ)
+calc = HCalculator(rotors, ℓₘₐₓ)
 for ℓ ∈ 0:ℓₘₐₓ
     recurrence!(calc, ℓ)            # advance to the next ℓ (cheap when sequential)
     H = calc.Hˡ                     # HWedge for the current ℓ; H[iᵣ, m′, m] for m ≥ |m′|
 end
 ```
 
-Unlike [`WignerDCalculator`](@ref) and the other calculators built on it, this one is not
+Unlike [`DCalculator`](@ref) and the other calculators built on it, this one is not
 iterable: its wedge is one mutable object handed back by identity, rather than a view that
 `copy` can preserve.
 
@@ -40,7 +40,7 @@ construction.
 
 # Half-integer indices
 
-Passing a `Rational` `ℓₘₐₓ` with denominator 2 — `WignerHCalculator(β, 7//2)` — gives a
+Passing a `Rational` `ℓₘₐₓ` with denominator 2 — `HCalculator(β, 7//2)` — gives a
 calculator for half-integer ``ℓ, m′, m``.  Then `m′ₘₐₓ` must also be a half-integer, and
 `recurrence!(calc, ℓ)` accepts only half-integer `ℓ`.  The recurrence is the same one:
 the ``m'=0`` axis is run at the *integer* order ``j = ℓ - 1/2``, the rows ``m' = ±1/2`` are
@@ -54,7 +54,7 @@ Because half-integer ``d`` has period ``4π`` in ``β``, a rotor or an angle ``�
 it unambiguously, but a bare phase ``e^{iβ}`` determines ``β`` only modulo ``2π`` and hence
 ``d`` only up to the double-cover sign ``(-1)^{2ℓ}``; the branch ``β ∈ (-π, π]`` is used.
 """
-struct WignerHCalculator{IT, RT<:Real, ST}
+struct HCalculator{IT, RT<:Real, ST}
     # The axes are always *integer*-indexed: for half-integer ℓ they encode the order
     # j = ℓ - 1/2, and `OffsetArray`-like half-integer labels would buy nothing.
     h⃗ᵃ::HAxis{Int, RT}
@@ -69,10 +69,10 @@ struct WignerHCalculator{IT, RT<:Real, ST}
     axes_valid::Base.RefValue{Bool}  # h⃗ˡ and h⃗ˡ⁺¹ hold correct data for their ℓ labels
 end
 
-function WignerHCalculator(β, ℓₘₐₓ::Rational; kwargs...)
-    WignerHCalculator(β, half_integer(ℓₘₐₓ); half_integer_kwargs(kwargs)...)
+function HCalculator(β, ℓₘₐₓ::Rational; kwargs...)
+    HCalculator(β, half_integer(ℓₘₐₓ); half_integer_kwargs(kwargs)...)
 end
-function WignerHCalculator(β, ℓₘₐₓ::IT; m′ₘₐₓ::IT=ℓₘₐₓ) where {IT<:IntegerHalf}
+function HCalculator(β, ℓₘₐₓ::IT; m′ₘₐₓ::IT=ℓₘₐₓ) where {IT<:IntegerHalf}
     # `rotor_basetype` is called in argument position so that the element type reaches
     # `allocate_H` as a type rather than as a value, which is what keeps the result
     # inferrable.
@@ -105,7 +105,7 @@ function allocate_H(
     Nₕ = IT <: HalfOddInteger ? Nᵣ : 0
     cβ½ = FixedSizeVector{RT}(undef, Nₕ)
     sβ½ = FixedSizeVector{RT}(undef, Nₕ)
-    WignerHCalculator{IT, RT, typeof(parent(Hˡ))}(
+    HCalculator{IT, RT, typeof(parent(Hˡ))}(
         h⃗ᵃ, h⃗ᵇ, Hˡ, eⁱᵝ, cβ½, sβ½, ℓₘₐₓ, m′ₘₐₓ, Ref(false), Ref(false)
     )
 end
@@ -114,14 +114,14 @@ end
 # no calculator stores the rotor it was given: `eⁱᵝ` alone would fix `β` only modulo 2π, and
 # so would flip the double-cover sign (-1)^{2ℓ} on the half-integer path.  The half-angle
 # copies are no-ops on the integer path, where those buffers have length zero.
-function Base.similar(w::WignerHCalculator{IT, RT}) where {IT, RT}
+function Base.similar(w::HCalculator{IT, RT}) where {IT, RT}
     w′ = allocate_H(IT, RT, w.ℓₘₐₓ, w.m′ₘₐₓ, Nᵣ(w))
     copyto!(w′.eⁱᵝ, w.eⁱᵝ)
     copyto!(w′.cβ½, w.cβ½)
     copyto!(w′.sβ½, w.sβ½)
     w′
 end
-function Base.similar(w::WignerHCalculator{IT, RT}, β) where {IT, RT}
+function Base.similar(w::HCalculator{IT, RT}, β) where {IT, RT}
     if nrotors(β) != Nᵣ(w)
         error("This calculator handles Nᵣ=$(Nᵣ(w)) rotors, but got $(nrotors(β)).")
     end
@@ -129,21 +129,21 @@ function Base.similar(w::WignerHCalculator{IT, RT}, β) where {IT, RT}
     set_rotors!(allocate_H(IT, RT, w.ℓₘₐₓ, w.m′ₘₐₓ, Nᵣ(w)), β)
 end
 
-ℓ(w::WignerHCalculator) = Hˡ(w).ℓ
-ℓₘᵢₙ(w::WignerHCalculator{IT}) where {IT} = ℓₘᵢₙ(IT)
-ℓₘₐₓ(w::WignerHCalculator) = w.ℓₘₐₓ
-m′ₘₐₓ(w::WignerHCalculator) = w.m′ₘₐₓ
-floattype(::WignerHCalculator{IT, RT}) where {IT, RT} = RT
-m′ₘᵢₙ(w::WignerHCalculator) = -w.m′ₘₐₓ
-Nᵣ(w::WignerHCalculator) = Nᵣ(Hˡ(w))
+ℓ(w::HCalculator) = Hˡ(w).ℓ
+ℓₘᵢₙ(w::HCalculator{IT}) where {IT} = ℓₘᵢₙ(IT)
+ℓₘₐₓ(w::HCalculator) = w.ℓₘₐₓ
+m′ₘₐₓ(w::HCalculator) = w.m′ₘₐₓ
+floattype(::HCalculator{IT, RT}) where {IT, RT} = RT
+m′ₘᵢₙ(w::HCalculator) = -w.m′ₘₐₓ
+Nᵣ(w::HCalculator) = Nᵣ(Hˡ(w))
 
-h⃗ˡ(w::WignerHCalculator) = w.swapH[] ? w.h⃗ᵇ : w.h⃗ᵃ
-h⃗ˡ⁺¹(w::WignerHCalculator) = w.swapH[] ? w.h⃗ᵃ : w.h⃗ᵇ
-Hˡ(w::WignerHCalculator) = w.Hˡ
-eⁱᵝ(w::WignerHCalculator) = w.eⁱᵝ
+h⃗ˡ(w::HCalculator) = w.swapH[] ? w.h⃗ᵇ : w.h⃗ᵃ
+h⃗ˡ⁺¹(w::HCalculator) = w.swapH[] ? w.h⃗ᵃ : w.h⃗ᵇ
+Hˡ(w::HCalculator) = w.Hˡ
+eⁱᵝ(w::HCalculator) = w.eⁱᵝ
 
 """
-    fill!(w::WignerHCalculator, v)
+    fill!(w::HCalculator, v)
 
 Fill every internal buffer of `w` (both axes and the wedge) with the value `v`, and mark the
 axis data as invalid.  The stored rotor data — the phases `e^{iβ}` and, on the half-integer
@@ -152,7 +152,7 @@ everything it needs.  Useful for testing that no uninitialized storage is ever r
 everything the recurrence is responsible for writing is poisoned, while everything the rotor
 data consists of is preserved.
 """
-function Base.fill!(w::WignerHCalculator{IT, RT}, v::Real) where {IT, RT}
+function Base.fill!(w::HCalculator{IT, RT}, v::Real) where {IT, RT}
     let v = convert(RT, v)
         fill!(parent(w.h⃗ᵃ), v)
         fill!(parent(w.h⃗ᵇ), v)
@@ -162,7 +162,7 @@ function Base.fill!(w::WignerHCalculator{IT, RT}, v::Real) where {IT, RT}
     w
 end
 
-function increment_axes!(w::WignerHCalculator)
+function increment_axes!(w::HCalculator)
     # The data that is now stored as h⃗ˡ(w) will get swapped below so that it will be
     # returned by h⃗ˡ⁺¹(w), so we need to increment its ℓ value twice.
     let h⃗ˡ = h⃗ˡ(w)
@@ -175,18 +175,18 @@ function increment_axes!(w::WignerHCalculator)
 end
 
 """
-    axis_ℓ(w::WignerHCalculator, ℓ)
+    axis_ℓ(w::HCalculator, ℓ)
 
 Label of the integer axis that seeds the wedge of order `ℓ`: ``ℓ`` itself for integer
 indices, and ``ℓ - 1/2`` for half-integer ones.  The axis buffers are always labelled by
 this `Int`, never by `ℓ`.
 """
-@inline axis_ℓ(::WignerHCalculator{IT}, ℓ) where {IT} = Int(ℓ - ℓₘᵢₙ(IT))
+@inline axis_ℓ(::HCalculator{IT}, ℓ) where {IT} = Int(ℓ - ℓₘᵢₙ(IT))
 
 # Copy the m′ = 0 row of the wedge from the integer axis.  Integer indices only: for
 # half-integer ℓ there is no m′ = 0 row, and `recurrence_seed!` writes the rows m′ = ±1/2
 # instead.
-function fillHˡ₀ₘ!(w::WignerHCalculator{IT}) where {IT<:Integer}
+function fillHˡ₀ₘ!(w::HCalculator{IT}) where {IT<:Integer}
     let h⃗ˡ = h⃗ˡ(w), Hˡ = Hˡ(w)
         if h⃗ˡ.ℓ != axis_ℓ(w, Hˡ.ℓ)
             error("Cannot fill Hˡ₀ₘ for ℓ=$(Hˡ.ℓ) from h⃗ˡ for ℓ=$(h⃗ˡ.ℓ).")
@@ -201,15 +201,15 @@ function fillHˡ₀ₘ!(w::WignerHCalculator{IT}) where {IT<:Integer}
     w
 end
 
-function Base.show(io::IO, w::WignerHCalculator{IT, RT, ST}) where {IT, RT, ST}
+function Base.show(io::IO, w::HCalculator{IT, RT, ST}) where {IT, RT, ST}
     print(
         io,
-        "WignerHCalculator{$IT, $RT} for ℓₘₐₓ=$(ℓₘₐₓ(w)), ",
+        "HCalculator{$IT, $RT} for ℓₘₐₓ=$(ℓₘₐₓ(w)), ",
         "m′ₘₐₓ=$(m′ₘₐₓ(w)), Nᵣ=$(Nᵣ(w))",
         w.axes_valid[] ? ", currently at ℓ=$(ℓ(w))" : " (nothing computed yet)"
     )
 end
-Base.show(io::IO, ::MIME"text/plain", w::WignerHCalculator) = show(io, w)
+Base.show(io::IO, ::MIME"text/plain", w::HCalculator) = show(io, w)
 
 
 ### Rotor data
@@ -278,25 +278,25 @@ end
 # Store the half-angle pair for rotor `i`.  Each of these is a no-op — emitting no code at
 # all, and not even evaluating its source — for integer index types, whose buffers have
 # length zero; that keeps the integer path bit-identical and allocation-free.
-@inline set_half_angles!(::WignerHCalculator{IT}, ::Int, ::Real, ::Real) where {IT<:Integer} = nothing
+@inline set_half_angles!(::HCalculator{IT}, ::Int, ::Real, ::Real) where {IT<:Integer} = nothing
 @inline function set_half_angles!(
-    w::WignerHCalculator{IT, RT}, i::Int, c::Real, s::Real
+    w::HCalculator{IT, RT}, i::Int, c::Real, s::Real
 ) where {IT<:HalfOddInteger, RT}
     @inbounds w.cβ½[i] = convert(RT, c)
     @inbounds w.sβ½[i] = convert(RT, s)
     nothing
 end
 
-@inline set_half_angles_from_phase!(::WignerHCalculator{IT}, ::Int, ::Complex) where {IT<:Integer} = nothing
+@inline set_half_angles_from_phase!(::HCalculator{IT}, ::Int, ::Complex) where {IT<:Integer} = nothing
 @inline function set_half_angles_from_phase!(
-    w::WignerHCalculator{IT}, i::Int, z::Complex
+    w::HCalculator{IT}, i::Int, z::Complex
 ) where {IT<:HalfOddInteger}
     set_half_angles!(w, i, half_angles(z)...)
 end
 
-@inline set_half_angles_from_angle!(::WignerHCalculator{IT}, ::Int, ::Real) where {IT<:Integer} = nothing
+@inline set_half_angles_from_angle!(::HCalculator{IT}, ::Int, ::Real) where {IT<:Integer} = nothing
 @inline function set_half_angles_from_angle!(
-    w::WignerHCalculator{IT, RT}, i::Int, β::Real
+    w::HCalculator{IT, RT}, i::Int, β::Real
 ) where {IT<:HalfOddInteger, RT}
     # Straight from β, not from cis(β): this is the only input form that honours the true
     # 4π periodicity of half-integer d.
@@ -305,7 +305,7 @@ end
     end
 end
 
-function set_rotors!(w::WignerHCalculator{IT, RT}, eⁱᵝ::AbstractVector{<:Complex}) where {IT, RT<:Real}
+function set_rotors!(w::HCalculator{IT, RT}, eⁱᵝ::AbstractVector{<:Complex}) where {IT, RT<:Real}
     if length(eⁱᵝ) != Nᵣ(w)
         error("Expected $(Nᵣ(w)) rotors (Nᵣ), but got $(length(eⁱᵝ)).")
     end
@@ -333,13 +333,13 @@ function set_rotors!(w::WignerHCalculator{IT, RT}, eⁱᵝ::AbstractVector{<:Com
     w.axes_valid[] = false
     w
 end
-function set_rotors!(w::WignerHCalculator, R)
+function set_rotors!(w::HCalculator, R)
     error(
         "Cannot set rotor data of type $(typeof(R)) for a calculator with Nᵣ=$(Nᵣ(w)); "
         * _rotor_input_forms * "."
     )
 end
-function set_rotors!(w::WignerHCalculator{IT, RT}, β::AbstractVector{<:Real}) where {IT, RT<:Real}
+function set_rotors!(w::HCalculator{IT, RT}, β::AbstractVector{<:Real}) where {IT, RT<:Real}
     if length(β) != Nᵣ(w)
         error("Expected $(Nᵣ(w)) rotors (Nᵣ), but got $(length(β)).")
     end
@@ -350,7 +350,7 @@ function set_rotors!(w::WignerHCalculator{IT, RT}, β::AbstractVector{<:Real}) w
     w.axes_valid[] = false
     w
 end
-function set_rotors!(w::WignerHCalculator{IT, RT}, R::AbstractVector{<:Rotor}) where {IT, RT<:Real}
+function set_rotors!(w::HCalculator{IT, RT}, R::AbstractVector{<:Rotor}) where {IT, RT<:Real}
     if length(R) != Nᵣ(w)
         error("Expected $(Nᵣ(w)) rotors (Nᵣ), but got $(length(R)).")
     end
@@ -362,7 +362,7 @@ function set_rotors!(w::WignerHCalculator{IT, RT}, R::AbstractVector{<:Rotor}) w
     w.axes_valid[] = false
     w
 end
-function set_rotors!(w::WignerHCalculator{IT, RT}, R::Union{Real, Complex, Rotor}) where {IT, RT<:Real}
+function set_rotors!(w::HCalculator{IT, RT}, R::Union{Real, Complex, Rotor}) where {IT, RT<:Real}
     if Nᵣ(w) != 1
         error("A single rotor was given, but this calculator expects Nᵣ=$(Nᵣ(w)) rotors.")
     end
@@ -388,13 +388,13 @@ In the second form, the rotor data from the previous call is reused.  Successive
 ``ℓ, ℓ+1, ℓ+2, …`` are the cheap path: each costs ``O(N_r ℓ^2)``.  Requesting a smaller ``ℓ``
 than the current one restarts the recurrence from ``ℓ_{min}``.
 
-Returns `calc`; the result is then available as `calc[ℓ]` (for [`WignerDCalculator`](@ref) and
-[`WignerdCalculator`](@ref)) or `calc.Hˡ` (for [`WignerHCalculator`](@ref)).
+Returns `calc`; the result is then available as `calc[ℓ]` (for [`DCalculator`](@ref) and
+[`dCalculator`](@ref)) or `calc.Hˡ` (for [`HCalculator`](@ref)).
 
 A phase given as a `Complex` number must have unit modulus (to within rounding), and is used
 as given; an angle given as a `Real` is converted to the calculator's number type.
 """
-function recurrence!(w::WignerHCalculator, R, ℓ)
+function recurrence!(w::HCalculator, R, ℓ)
     check_ℓ(w, ℓ)
     set_rotors!(w, R)
     recurrence!(w, ℓ)
@@ -403,7 +403,7 @@ end
 # the calculator's stored rotor data untouched ("validate everything before mutating
 # anything"; see `set_rotors!` below).  It is also what rejects an `ℓ` of the wrong kind — a
 # whole number for a half-integer calculator, or `5//3` for either.
-function check_ℓ(w::WignerHCalculator{IT}, ℓ) where {IT}
+function check_ℓ(w::HCalculator{IT}, ℓ) where {IT}
     ℓ = convert(IT, ℓ)
     if ℓ < ℓₘᵢₙ(w) || ℓ > ℓₘₐₓ(w)
         error(
@@ -415,7 +415,7 @@ end
 # Advance (or restart) the integer axis buffers so that h⃗ˡ holds order `j` and h⃗ˡ⁺¹ holds
 # `j+1`.  Shared by the integer and half-integer drivers; `j` is `ℓ` in the former case and
 # `ℓ - 1/2` in the latter.
-function advance_axes!(w::WignerHCalculator, j::Int)
+function advance_axes!(w::HCalculator, j::Int)
     if !w.axes_valid[] || h⃗ˡ(w).ℓ > j
         h⃗ˡ(w).ℓ = 0
         h⃗ˡ⁺¹(w).ℓ = 1
@@ -430,7 +430,7 @@ function advance_axes!(w::WignerHCalculator, j::Int)
     w
 end
 
-function recurrence!(w::WignerHCalculator{IT, RT}, ℓ) where {IT<:Signed, RT}
+function recurrence!(w::HCalculator{IT, RT}, ℓ) where {IT<:Signed, RT}
     ℓ = convert(IT, ℓ)
     check_ℓ(w, ℓ)  # rejects an `ℓ` that is not of this calculator's index type
 
@@ -455,7 +455,7 @@ end
 # together produce the rows m′ = 0 and m′ = 1 from the ℓ and ℓ+1 axes — are replaced by
 # `recurrence_seed!`, which produces the rows m′ = ±1/2 from the j axis alone.  Steps 4 and
 # 5 are then literally the same code (see the v3 design memo, §5).
-function recurrence!(w::WignerHCalculator{IT, RT}, ℓ) where {IT<:HalfOddInteger, RT}
+function recurrence!(w::HCalculator{IT, RT}, ℓ) where {IT<:HalfOddInteger, RT}
     ℓ = convert(IT, ℓ)
     check_ℓ(w, ℓ)  # rejects an `ℓ` that is not of this calculator's index type
     advance_axes!(w, axis_ℓ(w, ℓ))
@@ -484,7 +484,7 @@ end
 
 # The axis buffers are integer-indexed for every index type (for half-integer ℓ they encode
 # the order j = ℓ - 1/2), so steps 1 and 2 are shared verbatim and never see a `Rational`.
-function recurrence_step1!(w::WignerHCalculator{IT}) where {IT}
+function recurrence_step1!(w::HCalculator{IT}) where {IT}
     let h⃗⁰ = h⃗ˡ(w)
         if h⃗⁰.ℓ ≠ ℓₘᵢₙ(h⃗⁰)
             error("recurrence_step1! can only be called for ℓ=$(ℓₘᵢₙ(h⃗⁰)); current ℓ=$(h⃗⁰.ℓ).")
@@ -499,7 +499,7 @@ end
 # Compute h⃗ⁿ₀ₘ = Hⁿ₀ₘ for m ∈ 0:n from h⃗ⁿ⁻¹₀ₘ = Hⁿ⁻¹₀ₘ, where n = ℓ+1 is the ℓ value of
 # h⃗ˡ⁺¹.  This is the recurrence of Xing et al. (2020) for the normalized associated Legendre
 # functions, in the notation of Gumerov and Duraiswami's step 2.
-function recurrence_step2!(w::WignerHCalculator{IT, RT}) where {IT, RT}
+function recurrence_step2!(w::HCalculator{IT, RT}) where {IT, RT}
     let h⃗ⁿ⁻¹ = h⃗ˡ(w), h⃗ⁿ = h⃗ˡ⁺¹(w), eⁱᵝ = eⁱᵝ(w)
         n = h⃗ⁿ⁻¹.ℓ + 1
         if h⃗ⁿ.ℓ ≠ n
@@ -593,7 +593,7 @@ end
 #
 # with c = cos(β/2), s = sin(β/2).  Both rows are mandatory: the corner H_{-1/2,1/2} cannot
 # be reached from the +1/2 row without leaving the wedge.  (See the v3 design memo, §5.3.)
-function recurrence_seed!(w::WignerHCalculator{IT, RT}) where {IT<:HalfOddInteger, RT}
+function recurrence_seed!(w::HCalculator{IT, RT}) where {IT<:HalfOddInteger, RT}
     let Hˡ = Hˡ(w), h⃗ʲ = h⃗ˡ(w), cβ½ = w.cβ½, sβ½ = w.sβ½
         @inbounds let √=sqrt∘RT, Nᵣ=Nᵣ(Hˡ), Hp=parent(Hˡ), hp=parent(h⃗ʲ)
             J = Hˡ.ℓ
@@ -650,7 +650,7 @@ end
 
 # Compute Hˡ₁ₘ for m ∈ 1:ℓ from Hˡ⁺¹₀ₘ (Gumerov and Duraiswami's step 3).  Integer indices
 # only; the half-integer route uses `recurrence_seed!` instead and never calls this.
-function recurrence_step3!(w::WignerHCalculator{IT, RT}) where {IT<:Signed, RT}
+function recurrence_step3!(w::HCalculator{IT, RT}) where {IT<:Signed, RT}
     let Hˡ = Hˡ(w), h⃗ˡ⁺¹ = h⃗ˡ⁺¹(w), eⁱᵝ = eⁱᵝ(w)
         @inbounds let √=sqrt∘RT, ℓ=Hˡ.ℓ, Nᵣ = Nᵣ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
             if h⃗ˡ⁺¹.ℓ ≠ ℓ + 1
@@ -701,7 +701,7 @@ end
 # (Gumerov and Duraiswami's step 4).  The loop runs on twice-indices, so it is the same code
 # for integer and half-integer ℓ; only the starting m′ differs (1 or 1/2), and it is a
 # compile-time constant for each index type.
-function recurrence_step4!(w::WignerHCalculator{IT, RT}) where {IT, RT}
+function recurrence_step4!(w::HCalculator{IT, RT}) where {IT, RT}
     let Hˡ = Hˡ(w)
         @inbounds let √=sqrt∘RT, Nᵣ=Nᵣ(Hˡ), ri=row_index(Hˡ)
             ℓ = Hˡ.ℓ
@@ -788,7 +788,7 @@ end
 # Compute Hˡₘ′₋₁,ₘ for m′ ∈ -ℓₘᵢₙ:-1:m′ₘᵢₙ+1 and m ∈ -m′+1:ℓ from the rows m′ and m′+1
 # (Gumerov and Duraiswami's step 5).  As in step 4, the loop runs on twice-indices and is
 # shared between index types; only the starting m′ differs (0 or -1/2).
-function recurrence_step5!(w::WignerHCalculator{IT, RT}) where {IT, RT}
+function recurrence_step5!(w::HCalculator{IT, RT}) where {IT, RT}
     let Hˡ = Hˡ(w)
         @inbounds let √=sqrt∘RT, Nᵣ=Nᵣ(Hˡ), ri=row_index(Hˡ)
             ℓ = Hˡ.ℓ

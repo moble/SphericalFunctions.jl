@@ -88,10 +88,10 @@ end
 
 
 @testitem "Half-integer d vs the Varshalovich closed form" setup=[HalfIntegerOracle] begin
-    import SphericalFunctions: d, WignerdCalculator, recurrence!
+    import SphericalFunctions: d, dCalculator, recurrence!
     import .HalfIntegerOracle: d_oracle, βvalues
 
-    # `d(β, ℓₘₐₓ)` and `WignerdCalculator` against Varshalovich Eq. 4.3.1(2), evaluated in
+    # `d(β, ℓₘₐₓ)` and `dCalculator` against Varshalovich Eq. 4.3.1(2), evaluated in
     # `BigFloat` (exact factorials, so the oracle itself contributes nothing at Float64
     # resolution).
     #
@@ -120,7 +120,7 @@ end
         for Jₘₐₓ ∈ (1//2, 7//2, 15//2), m′ₘₐₓ ∈ (1//2, 3//2, Jₘₐₓ)
             m′ₘₐₓ > Jₘₐₓ && continue
             βs = βvalues[1:3]
-            calc = WignerdCalculator(βs, Jₘₐₓ; m′ₘₐₓ, m′ₘᵢₙ=-m′ₘₐₓ)
+            calc = dCalculator(βs, Jₘₐₓ; m′ₘₐₓ, m′ₘᵢₙ=-m′ₘₐₓ)
             for ℓ ∈ 1//2:1:Jₘₐₓ
                 recurrence!(calc, ℓ)
                 block = calc[ℓ]
@@ -134,14 +134,14 @@ end
         e
     end
     @test errcalc < ϵ
-    @info "Half-integer d through WignerdCalculator" errcalc
+    @info "Half-integer d through dCalculator" errcalc
 
     # A batch of β must agree bitwise with the same β values computed one at a time
     βs = βvalues[3:5]
-    batch = WignerdCalculator(βs, 9//2)
+    batch = dCalculator(βs, 9//2)
     recurrence!(batch, 9//2)
     for (iᵣ, β) ∈ enumerate(βs)
-        single = WignerdCalculator(β, 9//2)
+        single = dCalculator(β, 9//2)
         recurrence!(single, 9//2)
         @test collect(batch[9//2][iᵣ]) == collect(single[9//2])
     end
@@ -149,10 +149,10 @@ end
 
 
 @testitem "Half-integer 𝔇 vs Boyle (2016)" setup=[HalfIntegerOracle] begin
-    import SphericalFunctions: D, WignerDCalculator, recurrence!
+    import SphericalFunctions: D, DCalculator, recurrence!
     import .HalfIntegerOracle: D_oracle, rotors
 
-    # `D(R, ℓₘₐₓ)` and `WignerDCalculator` against the independent quaternionic reference of
+    # `D(R, ℓₘₐₓ)` and `DCalculator` against the independent quaternionic reference of
     # Boyle (2016), whose convention is the complex conjugate of this package's.
     #
     # Measured worst case over J ≤ 15/2 and the ten rotors below: 2.7e-15 (12.3 eps) for
@@ -184,7 +184,7 @@ end
         for Jₘₐₓ ∈ (1//2, 7//2, 15//2), m′ₘₐₓ ∈ (1//2, 3//2, Jₘₐₓ)
             m′ₘₐₓ > Jₘₐₓ && continue
             Rbatch = Rs[5:6]
-            calc = WignerDCalculator(Rbatch, Jₘₐₓ; m′ₘₐₓ, m′ₘᵢₙ=-m′ₘₐₓ)
+            calc = DCalculator(Rbatch, Jₘₐₓ; m′ₘₐₓ, m′ₘᵢₙ=-m′ₘₐₓ)
             for ℓ ∈ 1//2:1:Jₘₐₓ
                 recurrence!(calc, ℓ)
                 block = calc[ℓ]
@@ -196,13 +196,13 @@ end
         e
     end
     @test errcalc < ϵ
-    @info "Half-integer 𝔇 through WignerDCalculator" errcalc
+    @info "Half-integer 𝔇 through DCalculator" errcalc
 
     # Jumping around in ℓ must give exactly what a fresh, sequential calculator gives
-    calc = WignerDCalculator(Rs[6], 9//2)
+    calc = DCalculator(Rs[6], 9//2)
     for ℓ ∈ (9//2, 1//2, 5//2, 7//2, 3//2)
         recurrence!(calc, ℓ)
-        fresh = WignerDCalculator(Rs[6], 9//2)
+        fresh = DCalculator(Rs[6], 9//2)
         recurrence!(fresh, ℓ)
         @test collect(calc[ℓ]) == collect(fresh[ℓ])
     end
@@ -381,7 +381,7 @@ end
     # A bare phase e^{iβ} fixes β only modulo 2π, so the branch β ∈ (-π, π] is used.  For β
     # in that branch the phase and the angle give bitwise identical results, and the same
     # phase built from β + 2π gives the same answer again -- i.e. the double-cover sign is
-    # lost, exactly as the `WignerdCalculator` docstring says.
+    # lost, exactly as the `dCalculator` docstring says.
     for J ∈ (1//2, 3//2, 7//2), β ∈ (0.3, 1.1, 2.0, 2.9)
         # `cis(β)` for β in the branch: bitwise identical to passing the angle itself
         @test Matrix(d(cis(β), J)[J]) == Matrix(d(β, J)[J])
@@ -405,8 +405,8 @@ end
 
 @testitem "Half-integer index validation and error messages" begin
     import Quaternionic: Rotor
-    import SphericalFunctions: D, d, WignerDCalculator, WignerdCalculator,
-        WignerHCalculator, WignerMatrix, WignerDMatrix, recurrence!,
+    import SphericalFunctions: D, d, DCalculator, dCalculator,
+        HCalculator, WignerMatrix, WignerDMatrix, recurrence!,
         HalfOddInteger, half_integer
 
     # Half-integer indices may be spelled as `Rational`s with denominator exactly 2, which
@@ -417,28 +417,28 @@ end
     # ℓₘₐₓ must be a half-integer, not an integer-valued Rational and not a Float
     @test_throws "must have denominator 2" D(𝟙, 3//1)
     @test_throws "must have denominator 2" d(1.1, 4//2)
-    @test_throws "must have denominator 2" WignerDCalculator(𝟙, 7//3)
+    @test_throws "must have denominator 2" DCalculator(𝟙, 7//3)
     @test_throws MethodError D(𝟙, 3.5)
-    @test_throws "must be non-negative" WignerDCalculator(𝟙, -1//2)
+    @test_throws "must be non-negative" DCalculator(𝟙, -1//2)
 
     # The four block limits must be half-integers of the same type as ℓₘₐₓ
-    @test_throws TypeError WignerDCalculator(𝟙, 7//2; m′ₘₐₓ=1)
-    @test_throws "must have denominator 2" WignerDCalculator(𝟙, 7//2; m′ₘₐₓ=2//1, m′ₘᵢₙ=-2//1)
+    @test_throws TypeError DCalculator(𝟙, 7//2; m′ₘₐₓ=1)
+    @test_throws "must have denominator 2" DCalculator(𝟙, 7//2; m′ₘₐₓ=2//1, m′ₘᵢₙ=-2//1)
 
     # Both rows m′ = ±1/2 are needed to seed the half-integer ladder, so the m′ and m
     # windows must bracket ±ℓₘᵢₙ
-    @test_throws "too large for this index type" WignerDCalculator(𝟙, 7//2; m′ₘₐₓ=3//2, m′ₘᵢₙ=1//2)
-    @test_throws "too small for this index type" WignerDCalculator(𝟙, 7//2; m′ₘₐₓ=-1//2, m′ₘᵢₙ=-3//2)
-    @test_throws "too large for this index type" WignerDCalculator(𝟙, 7//2; mₘₐₓ=7//2, mₘᵢₙ=1//2)
-    @test_throws "is too large for ℓₘₐₓ" WignerDCalculator(𝟙, 7//2; m′ₘₐₓ=9//2)
+    @test_throws "too large for this index type" DCalculator(𝟙, 7//2; m′ₘₐₓ=3//2, m′ₘᵢₙ=1//2)
+    @test_throws "too small for this index type" DCalculator(𝟙, 7//2; m′ₘₐₓ=-1//2, m′ₘᵢₙ=-3//2)
+    @test_throws "too large for this index type" DCalculator(𝟙, 7//2; mₘₐₓ=7//2, mₘᵢₙ=1//2)
+    @test_throws "is too large for ℓₘₐₓ" DCalculator(𝟙, 7//2; m′ₘₐₓ=9//2)
 
     # ...but a legal narrow window is fine, including the narrowest one
-    @test WignerDCalculator(𝟙, 7//2; m′ₘₐₓ=1//2, m′ₘᵢₙ=-1//2) isa WignerDCalculator
-    @test WignerdCalculator(1.1, 1//2) isa WignerdCalculator
-    @test WignerHCalculator(1.1, 1//2; m′ₘₐₓ=1//2) isa WignerHCalculator
+    @test DCalculator(𝟙, 7//2; m′ₘₐₓ=1//2, m′ₘᵢₙ=-1//2) isa DCalculator
+    @test dCalculator(1.1, 1//2) isa dCalculator
+    @test HCalculator(1.1, 1//2; m′ₘₐₓ=1//2) isa HCalculator
 
     # `recurrence!` and `calc[ℓ]` reject the wrong parity of ℓ, and ℓ out of range
-    calc = WignerDCalculator(𝟙, 5//2)
+    calc = DCalculator(𝟙, 5//2)
     @test_throws InexactError recurrence!(calc, 𝟙, 2)
     @test_throws "out of bounds" recurrence!(calc, 𝟙, 7//2)
     recurrence!(calc, 𝟙, 5//2)
@@ -469,7 +469,7 @@ end
 
 
 @testitem "Half-integer containers" setup=[HalfIntegerOracle] begin
-    import SphericalFunctions: D, d, WignerDCalculator, recurrence!, sYlmCalculator,
+    import SphericalFunctions: D, d, DCalculator, recurrence!, sYlmCalculator,
         WignerMatrix, WignerMatrixBatch, DegreeBlock, DegreeBlockBatch, WignerSeries,
         WignerDMatrix, WignerdMatrix, WignerRange, HalfOddInteger,
         SpinMatrix, SpinMatrixBatch,
@@ -564,7 +564,7 @@ end
 
     @testset "WignerMatrixBatch" begin
         Rs = rotors()[6:8]
-        calc = WignerDCalculator(Rs, J)
+        calc = DCalculator(Rs, J)
         recurrence!(calc, J)
         b = calc[J]
         @test b isa WignerMatrixBatch

@@ -24,7 +24,7 @@
 ### Optional arguments narrow the grid, e.g. `... per_ell_grid.jl 8,64 1,8`.
 
 using SphericalFunctions
-using SphericalFunctions: WignerHCalculator, recurrence!
+using SphericalFunctions: HCalculator, recurrence!
 using Printf
 
 const T = Float64
@@ -56,7 +56,7 @@ end
 
 function bench(ℓₘₐₓ, m′ₘₐₓ, Nᵣ)
     angles = fill(T(β), Nᵣ)
-    w = WignerHCalculator(angles, ℓₘₐₓ; m′ₘₐₓ)  # `angles::Vector{T}` fixes the element type
+    w = HCalculator(angles, ℓₘₐₓ; m′ₘₐₓ)  # `angles::Vector{T}` fixes the element type
     function run()
         for ℓ ∈ 0:ℓₘₐₓ
             recurrence!(w, ℓ)

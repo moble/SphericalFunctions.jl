@@ -2,7 +2,7 @@
 # differentiability, and interface details (show, allocation, independence of calculators).
 
 @testitem "Wigner calculators never read uninitialized memory" begin
-    import SphericalFunctions: WignerHCalculator, WignerDCalculator, WignerdCalculator,
+    import SphericalFunctions: HCalculator, DCalculator, dCalculator,
         recurrence!, wedge_value
     import SphericalFunctions
     import MathChecker: checked, unchecked, NaNError
@@ -92,8 +92,8 @@
         # The raw H engine, driven by β
         for m′ₘₐₓ in unique((0, 1, ℓₘₐₓ))
             m′ₘₐₓ ≤ ℓₘₐₓ || continue
-            calc = WignerHCalculator(data.βNC, ℓₘₐₓ; m′ₘₐₓ)
-            calcF = WignerHCalculator(data.β, ℓₘₐₓ; m′ₘₐₓ)
+            calc = HCalculator(data.βNC, ℓₘₐₓ; m′ₘₐₓ)
+            calcF = HCalculator(data.β, ℓₘₐₓ; m′ₘₐₓ)
             fill!(calc, NaN)
             @test all(isnan, parent(calc.Hˡ))
             @test all(isnan, parent(calc.h⃗ᵃ))
@@ -122,7 +122,7 @@
         dNC, dF = Nᵣ == 1 ? (data.eⁱᵝNC, data.eⁱᵝ) : (data.RNC, data.R)
         for lim in block_limits(ℓₘₐₓ)
             for (Calc, RNC, RF) in (
-                (WignerdCalculator, dNC, dF), (WignerDCalculator, data.RNC, data.R)
+                (dCalculator, dNC, dF), (DCalculator, data.RNC, data.R)
             )
                 calc = Calc(RNC, ℓₘₐₓ; lim...)
                 calcF = Calc(RF, ℓₘₐₓ; lim...)
@@ -157,7 +157,7 @@ end
 
 
 @testitem "Wigner calculators with ForwardDiff duals" begin
-    import SphericalFunctions: WignerDCalculator, WignerdCalculator, recurrence!, D, d
+    import SphericalFunctions: DCalculator, dCalculator, recurrence!, D, d
     import ForwardDiff
     import Quaternionic: Rotor, from_euler_angles
 
@@ -196,7 +196,7 @@ end
 
     # The same through an explicit calculator, with Nᵣ > 1.  The vector of `Dual` angles is
     # itself what makes the calculator a `Dual` one.
-    calc = WignerdCalculator([βd, ForwardDiff.Dual(2β, one(β))], ℓₘₐₓ)
+    calc = dCalculator([βd, ForwardDiff.Dual(2β, one(β))], ℓₘₐₓ)
     recurrence!(calc, ℓₘₐₓ)
     dd2 = d(ForwardDiff.Dual(2β, one(β)), ℓₘₐₓ)
     @test calc[ℓₘₐₓ][1] == dd[ℓₘₐₓ]
@@ -228,7 +228,7 @@ end
     # left to tell it.
     Rd = from_euler_angles(0.3, βd, 1.1)
     @test Rd isa Rotor{<:ForwardDiff.Dual}
-    calcD = WignerDCalculator(Rd, 3)
+    calcD = DCalculator(Rd, 3)
     recurrence!(calcD, 3)
     @test eltype(calcD[3]) <: Complex{<:ForwardDiff.Dual}
     @test value(real(calcD[3][2, -1])) ≈ real(𝔇(0.3, β, 1.1)[2, -1]) atol=40eps()
@@ -237,7 +237,7 @@ end
 
 
 @testitem "Wigner calculators with Float32 and Float16" begin
-    import SphericalFunctions: WignerDCalculator, WignerdCalculator, recurrence!, D, d
+    import SphericalFunctions: DCalculator, dCalculator, recurrence!, D, d
     import Quaternionic: Rotor
     import Random
 
@@ -285,7 +285,7 @@ end
 
         # Batched calculators in Float32
         Rs = randn(rng, Rotor{Float64}, 4)
-        calc = WignerDCalculator(Rotor{T}.(Rs), ℓₘₐₓ)
+        calc = DCalculator(Rotor{T}.(Rs), ℓₘₐₓ)
         recurrence!(calc, ℓₘₐₓ)
         @test eltype(calc[ℓₘₐₓ]) === Complex{T}
         for (i, R) in enumerate(Rs)
@@ -316,7 +316,7 @@ end
             end
         end
         βs = [T(0.4), T(1.9), T(3.0)]
-        calc = WignerdCalculator(βs, ℓₘₐₓ)
+        calc = dCalculator(βs, ℓₘₐₓ)
         recurrence!(calc, ℓₘₐₓ)
         @test eltype(calc[ℓₘₐₓ]) === T
         @test all(isfinite, calc[ℓₘₐₓ])
@@ -328,7 +328,7 @@ end
 
 
 @testitem "Wigner calculators show" begin
-    import SphericalFunctions: WignerHCalculator, WignerDCalculator, WignerdCalculator,
+    import SphericalFunctions: HCalculator, DCalculator, dCalculator,
         recurrence!
     import Quaternionic: Rotor
     import Random
@@ -340,9 +340,9 @@ end
         βs = rand(rng, Nᵣ) .* π
         βs32 = Float32.(βs)  # the element type shown is the data's own
         for (calc, name, R) in (
-            (WignerDCalculator(Rs, ℓₘₐₓ), "WignerDCalculator", Rs),
-            (WignerdCalculator(βs, ℓₘₐₓ), "WignerdCalculator", βs),
-            (WignerHCalculator(βs, ℓₘₐₓ), "WignerHCalculator", βs),
+            (DCalculator(Rs, ℓₘₐₓ), "DCalculator", Rs),
+            (dCalculator(βs, ℓₘₐₓ), "dCalculator", βs),
+            (HCalculator(βs, ℓₘₐₓ), "HCalculator", βs),
         )
             s = sprint(show, MIME("text/plain"), calc)
             @test occursin(name, s)
@@ -357,20 +357,20 @@ end
             @test occursin("Nᵣ=$Nᵣ", s)
             @test occursin("ℓ=4", s)
             # A different number type and non-default limits also show up
-            if calc isa WignerHCalculator
+            if calc isa HCalculator
                 @test occursin(
                     "m′ₘₐₓ=2",
-                    sprint(show, MIME("text/plain"), WignerHCalculator(βs32, ℓₘₐₓ; m′ₘₐₓ=2))
+                    sprint(show, MIME("text/plain"), HCalculator(βs32, ℓₘₐₓ; m′ₘₐₓ=2))
                 )
                 @test occursin(
-                    "Float32", sprint(show, MIME("text/plain"), WignerHCalculator(βs32, ℓₘₐₓ))
+                    "Float32", sprint(show, MIME("text/plain"), HCalculator(βs32, ℓₘₐₓ))
                 )
                 # The wedge itself can be displayed
                 @test sprint(show, MIME("text/plain"), calc.Hˡ) isa String
             else
                 s = sprint(
                     show, MIME("text/plain"),
-                    WignerdCalculator(βs32, ℓₘₐₓ; m′ₘₐₓ=2, m′ₘᵢₙ=-1, mₘₐₓ=3)
+                    dCalculator(βs32, ℓₘₐₓ; m′ₘₐₓ=2, m′ₘᵢₙ=-1, mₘₐₓ=3)
                 )
                 @test occursin("Float32", s)
                 @test occursin("m′=-1:2", s)
@@ -386,25 +386,25 @@ end
 @testitem "Wigner calculators two-argument show" begin
     # `show(io, x)` without a MIME is what `repr`, `print`, `@show`, string interpolation,
     # and the display of a container holding a calculator fall back to.  It must not throw.
-    import SphericalFunctions: WignerHCalculator, WignerDCalculator, WignerdCalculator,
+    import SphericalFunctions: HCalculator, DCalculator, dCalculator,
         recurrence!
     import Quaternionic: from_euler_angles
 
     R = from_euler_angles(0.3, 0.7, 1.1)
     β = 0.7
-    for calc in (WignerDCalculator(R, 3), WignerdCalculator(β, 3), WignerHCalculator(β, 3))
+    for calc in (DCalculator(R, 3), dCalculator(β, 3), HCalculator(β, 3))
         @test sprint(show, calc) isa String
         @test repr(calc) isa String
         @test sprint(show, [calc]) isa String
     end
-    calc = WignerHCalculator(β, 3)
+    calc = HCalculator(β, 3)
     @test sprint(show, calc.Hˡ) isa String
     @test sprint(show, calc.h⃗ᵃ) isa String
 end
 
 
 @testitem "Wigner calculators allocation" begin
-    import SphericalFunctions: WignerDCalculator, recurrence!
+    import SphericalFunctions: DCalculator, recurrence!
     import Quaternionic: Rotor
     import Random
 
@@ -419,7 +419,7 @@ end
     Nᵣ = 8
     ℓ = 40
     Rs = randn(rng, Rotor{Float64}, Nᵣ)
-    calc = WignerDCalculator(Rs, ℓₘₐₓ)
+    calc = DCalculator(Rs, ℓₘₐₓ)
     recurrence!(calc, Rs, ℓ)  # warm-up (compiles everything)
 
     # The H engine: recomputing the current ℓ, and stepping ℓ-1 → ℓ (which also runs step 2)
@@ -456,7 +456,7 @@ end
 
 
 @testitem "Wigner calculators thread safety via similar" begin
-    import SphericalFunctions: WignerDCalculator, WignerdCalculator, WignerHCalculator,
+    import SphericalFunctions: DCalculator, dCalculator, HCalculator,
         recurrence!, wedge_value
     import SphericalFunctions
     import Quaternionic: Rotor
@@ -471,9 +471,9 @@ end
     # the rotors handed to them here serve only to fix Nᵣ = 3 and 4 — and, for the Float32 d
     # calculator, the element type it works in.
     for calc in (
-        WignerDCalculator(Rs[1:2], 5; m′ₘₐₓ=3, m′ₘᵢₙ=-2, mₘₐₓ=5, mₘᵢₙ=-4),
-        WignerdCalculator(Rotor{Float32}.(Rs[1:3]), 5; m′ₘₐₓ=1),
-        WignerHCalculator(Rs[1:4], 5; m′ₘₐₓ=2),
+        DCalculator(Rs[1:2], 5; m′ₘₐₓ=3, m′ₘᵢₙ=-2, mₘₐₓ=5, mₘᵢₙ=-4),
+        dCalculator(Rotor{Float32}.(Rs[1:3]), 5; m′ₘₐₓ=1),
+        HCalculator(Rs[1:4], 5; m′ₘₐₓ=2),
     )
         c = similar(calc)
         @test typeof(c) === typeof(calc)
@@ -484,7 +484,7 @@ end
         )
             @test f(c) == f(calc)
         end
-        if calc isa WignerHCalculator
+        if calc isa HCalculator
             @test parent(c.Hˡ) !== parent(calc.Hˡ)
             @test parent(c.h⃗ᵃ) !== parent(calc.h⃗ᵃ)
             @test parent(c.h⃗ᵇ) !== parent(calc.h⃗ᵇ)
@@ -504,7 +504,7 @@ end
     end
 
     # 𝔇 for 8 rotors on 8 tasks, each with its own calculator, vs serial results
-    calc = WignerDCalculator(Rs[1], ℓₘₐₓ)
+    calc = DCalculator(Rs[1], ℓₘₐₓ)
     serial = [[copy(recurrence!(calc, R, ℓ)[ℓ]) for ℓ in 0:ℓₘₐₓ] for R in Rs]
     recurrence!(calc, Rs[1], ℓₘₐₓ)  # leave the template holding data while the tasks run
     tasks = map(Rs) do R
@@ -519,7 +519,7 @@ end
 
     # The same with a batched d calculator and interleaved ℓ orders
     βs = [rand(rng, 2) .* π for _ in 1:8]
-    calcd = WignerdCalculator(βs[1], ℓₘₐₓ)
+    calcd = dCalculator(βs[1], ℓₘₐₓ)
     seriald = [[copy(recurrence!(calcd, β, ℓ)[ℓ]) for ℓ in 0:ℓₘₐₓ] for β in βs]
     tasksd = map(enumerate(βs)) do (i, β)
         Threads.@spawn begin
@@ -537,7 +537,7 @@ end
     @test paralleld == seriald
 
     # Raw H engines in parallel, compared through wedge_value
-    calcH = WignerHCalculator(βs[1][1], ℓₘₐₓ; m′ₘₐₓ=6)
+    calcH = HCalculator(βs[1][1], ℓₘₐₓ; m′ₘₐₓ=6)
     wedge(c, ℓ) = [wedge_value(c.Hˡ, 1, m′, m) for m′ in -min(ℓ, 6):min(ℓ, 6), m in -ℓ:ℓ]
     serialH = [[wedge(recurrence!(calcH, β[1], ℓ), ℓ) for ℓ in 0:ℓₘₐₓ] for β in βs]
     tasksH = map(βs) do β

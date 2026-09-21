@@ -184,10 +184,10 @@ no modes are missing there.
 The functions above allocate a fresh workspace on every call, and copy
 the results *for all ``ℓ`` values* out of it.  When the total size is
 too large, or the values are needed for many rotors, allocate the
-workspace once as a [`WignerDCalculator`](@ref) (or a
-[`WignerdCalculator`](@ref)) and iterate over the values of ``ℓ``:
+workspace once as a [`DCalculator`](@ref) (or a
+[`dCalculator`](@ref)) and iterate over the values of ``ℓ``:
 ```julia
-calculator = WignerDCalculator(R, ℓₘₐₓ)
+calculator = DCalculator(R, ℓₘₐₓ)
 for (ℓ, 𝔇ˡ) ∈ calculator
     # 𝔇ˡ[m′, m] is available for m′, m ∈ -ℓ:ℓ
 end
@@ -229,7 +229,7 @@ of the calculator.  For example, an input `Rotor{Float32}` gives a
 All subsequent calls *must* use that same type of `Rotor`; if you need
 to use a different type, you have to create a new calculator.  For
 example, when differentiating with `ForwardDiff`, the input rotor must
-be a dual number.  A `WignerdCalculator` is built the same way from
+be a dual number.  A `dCalculator` is built the same way from
 ``β``, ``e^{iβ}``, or a rotor.  The same four keywords are accepted by
 both functions.  [`floattype`](@ref
 SphericalFunctions.floattype)`(calculator)` reports the type in use.
@@ -257,12 +257,12 @@ will simply be wrong if you try this.  A simple way to get a second
 calculator of the same type is `similar(calculator)`.
 
 To reset the calculator to the beginning of the loop over ``ℓ``, and
-change the `R` value, call [`set_R!`](@ref) on a `WignerDCalculator`
-or an `sYlmCalculator`, or [`set_β!`](@ref) on a `WignerdCalculator`.
+change the `R` value, call [`set_R!`](@ref) on a `DCalculator`
+or an `sYlmCalculator`, or [`set_β!`](@ref) on a `dCalculator`.
 For example, given a collection of rotors, you can iterate over them
 all like this:
 ```julia
-calculator = WignerDCalculator(first(rotors), ℓₘₐₓ)
+calculator = DCalculator(first(rotors), ℓₘₐₓ)
 for R ∈ rotors
     set_R!(calculator, R)
     for (ℓ, 𝔇ˡ) ∈ calculator
@@ -278,7 +278,7 @@ all of them at once — which can be significantly faster than looping
 over them one at a time.  This would not be accessible to the user by
 external looping as above.  For example,
 ```julia
-calculator = WignerDCalculator(rotors, ℓₘₐₓ)
+calculator = DCalculator(rotors, ℓₘₐₓ)
 for (ℓ, 𝔇ˡ) ∈ calculator
     # 𝔇ˡ[iᵣ, m′, m] is available for iᵣ ∈ 1:length(rotors) and m′, m ∈ -ℓ:ℓ
 end
@@ -311,7 +311,7 @@ same blocks, the same iteration, the same half-integer spellings, and
 the same containers, which are generic in the number type.
 
 The two flavours share one struct, [`HarmonicCalculator`](@ref),
-exactly as [`WignerDCalculator`](@ref) and [`WignerdCalculator`](@ref)
+exactly as [`DCalculator`](@ref) and [`dCalculator`](@ref)
 do — and for the same reason.  The underlying ``H`` recursion is real
 either way; it is only the factor ``e^{-i(mα - sγ)}`` that ever makes a
 result complex, and an angle sets ``α = γ = 0``.  So the real flavour
@@ -341,13 +341,13 @@ wants `big(θ)` rather than a bare literal.
 
 ## The underlying ``H`` recursion
 
-All of these calculators are built on a [`WignerHCalculator`](@ref),
+All of these calculators are built on a [`HCalculator`](@ref),
 which computes the real, symmetric ``H`` wedge that the
 [Gumerov–Duraiswami](@cite Gumerov_2015) recursion produces before any
 phases are applied.  It is available directly for the rare cases where
 the wedge itself is needed — probably as an optimization:
 ```julia
-h = WignerHCalculator(β, ℓₘₐₓ)
+h = HCalculator(β, ℓₘₐₓ)
 for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ  # ℓₘᵢₙ=0 for integers or 1//2 for half-integers
     recurrence!(h, ℓ)
     # h.Hˡ[iᵣ, m′, m] is available; iᵣ is always present; only |m′| ≤ m ≤ ℓ is stored
@@ -393,7 +393,7 @@ f  = sYlm(R, ℓₘₐₓ, s) * w         # the value of f at R
 f⃗  = sYlm(R⃗, ℓₘₐₓ, s) * w        # ... and at each of many rotors
 ```
 
-The calculator forms, `WignerDCalculator(R, ℓₘₐₓ) * w` and
+The calculator forms, `DCalculator(R, ℓₘₐₓ) * w` and
 `sYlmCalculator(R, ℓₘₐₓ, s) * w`, compute the same things one ``ℓ`` at a
 time rather than materializing every block.
 
@@ -430,9 +430,9 @@ sYlm
 sYlm!
 Ylm
 sYlm_matrix
-WignerDCalculator
-WignerdCalculator
-WignerHCalculator
+DCalculator
+dCalculator
+HCalculator
 sYlmCalculator
 YlmCalculator
 sλlm

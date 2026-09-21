@@ -195,7 +195,7 @@ end
     # β = π: anti-diagonal, dˡ_{m′m}(π) = (-1)^{ℓ-m} δ_{m′,-m}.  The sign follows from the
     # Varshalovich closed form Eq. 4.3.1(2): at β = π only cos(β/2)⁰ survives, which forces
     # m′ = -m and leaves the single term (-1)^{ℓ-m}.  (That closed form is also applied
-    # directly at β = π by the "WignerdCalculator vs closed form" item.)
+    # directly at β = π by the "dCalculator vs closed form" item.)
     # With β = π as a Float64, sin β ≈ 1.2e-16 rather than 0, so the off-anti-diagonal
     # elements are O(ℓ eps) rather than exactly zero; with eⁱᵝ = -1 given exactly they
     # vanish exactly.
@@ -257,7 +257,7 @@ end
 
 
 @testitem "Wigner d character identity" begin
-    import SphericalFunctions: WignerdCalculator, recurrence!, d
+    import SphericalFunctions: dCalculator, recurrence!, d
 
     # χˡ(β) = Σₘ dˡₘₘ(β) = sin((2ℓ+1)β/2) / sin(β/2)
     T = Float64
@@ -273,7 +273,7 @@ end
 
     # The same identity through the batched calculator (one recurrence for all β at once),
     # whose blocks must agree exactly with the single-β convenience function.
-    calc = WignerdCalculator(βs, maximum(ℓs))
+    calc = dCalculator(βs, maximum(ℓs))
     for ℓ ∈ 1:maximum(ℓs)
         recurrence!(calc, ℓ)
         if ℓ ∈ ℓs
@@ -317,7 +317,7 @@ end
 
 
 @testitem "Wigner D large ℓ sanity" begin
-    import SphericalFunctions: SphericalFunctions, WignerDCalculator, recurrence!
+    import SphericalFunctions: SphericalFunctions, DCalculator, recurrence!
     using Quaternionic: Rotor
     using LinearAlgebra: I, opnorm
     using Random: Xoshiro
@@ -327,7 +327,7 @@ end
     T = Float64
     L = 512
     R = randn(Xoshiro(8000), Rotor{T})
-    calc = WignerDCalculator(R, L)
+    calc = DCalculator(R, L)
     @test SphericalFunctions.ℓₘₐₓ(calc) == L
     @test SphericalFunctions.Nᵣ(calc) == 1
 

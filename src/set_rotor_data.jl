@@ -4,7 +4,7 @@
 # and subsequent values: build one workspace, then walk it over many rotors.  They are thin
 # wrappers on the internal `set_rotors!`, which does the work and the validation; what they
 # add is a name for each kind of data, so that no name promises something it does not do —
-# `set_β!` on a `WignerdCalculator` really does keep only the β angle of a rotor handed to it,
+# `set_β!` on a `dCalculator` really does keep only the β angle of a rotor handed to it,
 # and `set_θ!` really does mean the (θ, ϕ=0) evaluation rather than a full rotation.
 
 """
@@ -19,7 +19,7 @@ of exactly that many.  A quaternion that is not a `Rotor` is refused rather than
 see [`not_a_rotor`](@ref).  The number of rotors is fixed at
 construction and cannot be changed here; for a different number, build another calculator.
 
-This applies to [`WignerDCalculator`](@ref) and [`sYlmCalculator`](@ref), both of which need
+This applies to [`DCalculator`](@ref) and [`sYlmCalculator`](@ref), both of which need
 the whole rotor.  The real ``d`` matrices and the ``H`` wedge depend on ``β`` alone, so their
 calculators take [`set_β!`](@ref) instead, and the ``(θ, ϕ=0)`` evaluation of the harmonics
 takes [`set_θ!`](@ref).
@@ -31,7 +31,7 @@ precision that nobody chose to throw away — so convert whichever side you mean
 calculator from data of the type you want.  `floattype(calc)` reports the type in use.
 
 ```julia
-calc = WignerDCalculator(first(rotors), ℓₘₐₓ)
+calc = DCalculator(first(rotors), ℓₘₐₓ)
 for R ∈ rotors
     set_R!(calc, R)
     for (ℓ, 𝔇ˡ) ∈ calc
@@ -49,7 +49,7 @@ function set_R!(c::sYlmCalculator, R::Union{Rotor, AbstractVector})
     set_rotors!(c, R)
 end
 # An `sλlmCalculator` stores real numbers, so there is nowhere to put the α and γ phases a
-# rotor specifies.  This mirrors the refusal above for a `WignerdCalculator`, and names the
+# rotor specifies.  This mirrors the refusal above for a `dCalculator`, and names the
 # setter that does serve it.
 function set_R!(::sλlmCalculator, ::Any)
     error(
@@ -61,14 +61,14 @@ end
 
 function set_R!(::WignerCalculator{IT, RT, RT}, ::Any) where {IT, RT<:Real}
     error(
-        "A WignerdCalculator holds only the angle β, not a whole rotor, so its setter is "
-        * "`set_β!` — which accepts a rotor and keeps just its β.  Use a WignerDCalculator "
+        "A dCalculator holds only the angle β, not a whole rotor, so its setter is "
+        * "`set_β!` — which accepts a rotor and keeps just its β.  Use a DCalculator "
         * "if the full 𝔇 matrices are wanted."
     )
 end
-function set_R!(::WignerHCalculator, ::Any)
+function set_R!(::HCalculator, ::Any)
     error(
-        "A WignerHCalculator holds only the angle β, not a whole rotor, so its setter is "
+        "An HCalculator holds only the angle β, not a whole rotor, so its setter is "
         * "`set_β!` — which accepts a rotor and keeps just its β."
     )
 end
@@ -84,7 +84,7 @@ the ``β`` Euler angle is kept — the ``d`` matrices and the ``H`` wedge depend
 For a calculator built for `Nᵣ > 1`, pass an `AbstractVector` of exactly that many of any one
 of those forms.
 
-This applies to [`WignerdCalculator`](@ref) and [`WignerHCalculator`](@ref).  Wigner's ``𝔇``
+This applies to [`dCalculator`](@ref) and [`HCalculator`](@ref).  Wigner's ``𝔇``
 matrices and the spin-weighted harmonics need the whole rotor, so their calculators take
 [`set_R!`](@ref) instead.
 
@@ -98,15 +98,15 @@ function set_β!(c::WignerCalculator{IT, RT, RT}, β) where {IT, RT<:Real}
     check_rotor_type(c, β)
     set_rotors!(c, β)
 end
-function set_β!(w::WignerHCalculator, β)
+function set_β!(w::HCalculator, β)
     check_rotor_type(w, β)
     set_rotors!(w, β)
 end
 
 function set_β!(::WignerCalculator{IT, RT, Complex{RT}}, ::Any) where {IT, RT<:Real}
     error(
-        "A WignerDCalculator needs the whole rotor — 𝔇 depends on all three Euler angles — "
-        * "so its setter is `set_R!`.  Use a WignerdCalculator if only β is available."
+        "A DCalculator needs the whole rotor — 𝔇 depends on all three Euler angles — "
+        * "so its setter is `set_R!`.  Use a dCalculator if only β is available."
     )
 end
 
@@ -133,11 +133,11 @@ function set_θ!(c::HarmonicCalculator, θ::Union{Real, AbstractVector{<:Real}})
 end
 
 function set_θ!(::WignerCalculator{IT, RT, Complex{RT}}, ::Any) where {IT, RT<:Real}
-    error("Only an sYlmCalculator evaluates at (θ, ϕ=0); a WignerDCalculator's setter is `set_R!`.")
+    error("Only an sYlmCalculator evaluates at (θ, ϕ=0); a DCalculator's setter is `set_R!`.")
 end
 function set_θ!(::WignerCalculator{IT, RT, RT}, ::Any) where {IT, RT<:Real}
-    error("Only an sYlmCalculator evaluates at (θ, ϕ=0); a WignerdCalculator's setter is `set_β!`.")
+    error("Only an sYlmCalculator evaluates at (θ, ϕ=0); a dCalculator's setter is `set_β!`.")
 end
-function set_θ!(::WignerHCalculator, ::Any)
-    error("Only an sYlmCalculator evaluates at (θ, ϕ=0); a WignerHCalculator's setter is `set_β!`.")
+function set_θ!(::HCalculator, ::Any)
+    error("Only an sYlmCalculator evaluates at (θ, ϕ=0); an HCalculator's setter is `set_β!`.")
 end

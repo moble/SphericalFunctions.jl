@@ -1,10 +1,10 @@
-# Tests of `WignerHCalculator`, the batched engine that runs the Wigner recurrences and
+# Tests of `HCalculator`, the batched engine that runs the Wigner recurrences and
 # produces the H wedge for several rotors at once.  The oracle for its values is a
 # closed-form H, built from the definition of H in terms of the Wigner d function; see the
 # first item below.
 
-@testitem "WignerHCalculator vs closed-form H" setup=[HalfIntegerOracle] begin
-    import SphericalFunctions: WignerHCalculator, recurrence!, wedge_value
+@testitem "HCalculator vs closed-form H" setup=[HalfIntegerOracle] begin
+    import SphericalFunctions: HCalculator, recurrence!, wedge_value
     import .HalfIntegerOracle: d_oracle
     import DoubleFloats: Double64
     import Random
@@ -64,7 +64,7 @@
             m′ₘₐₓs = ℓₘₐₓ ≤ 7 ? (0:ℓₘₐₓ) : (0, 1, 2, 5, 8, 16)
             @testset "m′ₘₐₓ=$m′ₘₐₓ" for m′ₘₐₓ in m′ₘₐₓs
                 for Nᵣ in (1, 4)
-                    calc = WignerHCalculator(β⃗[1:Nᵣ], ℓₘₐₓ; m′ₘₐₓ)
+                    calc = HCalculator(β⃗[1:Nᵣ], ℓₘₐₓ; m′ₘₐₓ)
                     # The errors are accumulated and asserted once per configuration: a
                     # per-element `@test` here would be a million assertions, and a broken
                     # engine would spend minutes printing them.
@@ -110,9 +110,9 @@
 end
 
 
-@testitem "WignerHCalculator ℓ ordering" begin
+@testitem "HCalculator ℓ ordering" begin
     import SphericalFunctions
-    import SphericalFunctions: WignerHCalculator, HWedge, recurrence!
+    import SphericalFunctions: HCalculator, HWedge, recurrence!
     import Random
 
     # Snapshot of the stored wedge for the current ℓ, in storage order
@@ -130,7 +130,7 @@ end
 
     for m′ₘₐₓ in (ℓₘₐₓ, 4)
         # The reference: every ℓ in increasing order, from a single set of rotor data
-        sequential = WignerHCalculator(β⃗, ℓₘₐₓ; m′ₘₐₓ)
+        sequential = HCalculator(β⃗, ℓₘₐₓ; m′ₘₐₓ)
         reference = [wedge(recurrence!(sequential, ℓ).Hˡ) for ℓ in 0:ℓₘₐₓ]
         @test all(!isempty, reference)
 
@@ -138,7 +138,7 @@ end
         # a repeat recomputes from the same axes, a jump forward advances through the
         # intermediate ℓ values, and a move backward restarts from ℓ=0, so exactly the same
         # arithmetic is performed in every case.
-        calc = WignerHCalculator(β⃗, ℓₘₐₓ; m′ₘₐₓ)
+        calc = HCalculator(β⃗, ℓₘₐₓ; m′ₘₐₓ)
         for ℓ in order
             @test recurrence!(calc, ℓ) === calc
             @test SphericalFunctions.ℓ(calc) == ℓ
@@ -156,8 +156,8 @@ end
 end
 
 
-@testitem "WignerHCalculator rotor inputs" begin
-    import SphericalFunctions: WignerHCalculator, HWedge, recurrence!
+@testitem "HCalculator rotor inputs" begin
+    import SphericalFunctions: HCalculator, HWedge, recurrence!
     import Quaternionic: Quaternionic, Rotor, Quaternion
     import DoubleFloats: Double64
     import Random
@@ -180,8 +180,8 @@ end
         # what says a quaternion denotes a rotation.  (This used to feed `2 * Quaternion(R)`
         # in and check that the magnitude divided out, which it still does internally.)
         Q⃗ = [2 * Quaternion(R) for R in R⃗]
-        @test_throws "Rotations are taken as" WignerHCalculator(Q⃗, ℓₘₐₓ)
-        @test_throws "Rotations are taken as" WignerHCalculator(Q⃗[1], ℓₘₐₓ)
+        @test_throws "Rotations are taken as" HCalculator(Q⃗, ℓₘₐₓ)
+        @test_throws "Rotations are taken as" HCalculator(Q⃗[1], ℓₘₐₓ)
         @test eltype(β⃗) === T
         @test eltype(eⁱᵝ⃗) === Complex{T}
         @test eltype(R⃗) === Rotor{T}
@@ -192,9 +192,9 @@ end
         # at ℓ ≤ 8).
         rotor_atol = 8eps(T)
 
-        calcᵦ = WignerHCalculator(β⃗, ℓₘₐₓ)
-        calcₑ = WignerHCalculator(eⁱᵝ⃗, ℓₘₐₓ)
-        calcᵣ = WignerHCalculator(R⃗, ℓₘₐₓ)
+        calcᵦ = HCalculator(β⃗, ℓₘₐₓ)
+        calcₑ = HCalculator(eⁱᵝ⃗, ℓₘₐₓ)
+        calcᵣ = HCalculator(R⃗, ℓₘₐₓ)
         batched = Vector{Vector{Vector{T}}}(undef, ℓₘₐₓ + 1)  # batched[ℓ+1][iᵣ]
         for ℓ in 0:ℓₘₐₓ
             recurrence!(calcᵦ, ℓ)
@@ -211,9 +211,9 @@ end
         # Single-element inputs for Nᵣ=1: a scalar β, a scalar eⁱᵝ, a single Rotor.  Each
         # rotor's slice of the batched result must equal the single-rotor result.
         for (iᵣ, (β, eⁱᵝ, R)) in enumerate(zip(β⃗, eⁱᵝ⃗, R⃗))
-            calc₁ᵦ = WignerHCalculator(β, ℓₘₐₓ)
-            calc₁ₑ = WignerHCalculator(eⁱᵝ, ℓₘₐₓ)
-            calc₁ᵣ = WignerHCalculator(R, ℓₘₐₓ)
+            calc₁ᵦ = HCalculator(β, ℓₘₐₓ)
+            calc₁ₑ = HCalculator(eⁱᵝ, ℓₘₐₓ)
+            calc₁ᵣ = HCalculator(R, ℓₘₐₓ)
             for ℓ in 0:ℓₘₐₓ
                 # Supplying the rotor data on every call is allowed; it restarts the recurrence
                 recurrence!(calc₁ᵦ, β, ℓ)
@@ -226,7 +226,7 @@ end
         end
 
         # Length-1 vectors are also accepted for Nᵣ=1, at construction and later
-        calc₁ = WignerHCalculator(β⃗[2:2], ℓₘₐₓ)
+        calc₁ = HCalculator(β⃗[2:2], ℓₘₐₓ)
         recurrence!(calc₁, ℓₘₐₓ)
         @test wedge(calc₁.Hˡ, 1) == batched[ℓₘₐₓ+1][2]
         recurrence!(calc₁, eⁱᵝ⃗[3:3], ℓₘₐₓ)
@@ -237,8 +237,8 @@ end
 end
 
 
-@testitem "WignerHCalculator errors" begin
-    import SphericalFunctions: WignerHCalculator, recurrence!, wedge_value
+@testitem "HCalculator errors" begin
+    import SphericalFunctions: HCalculator, recurrence!, wedge_value
     import Quaternionic: Quaternionic
 
     ℓₘₐₓ = 4
@@ -246,14 +246,14 @@ end
     R = Quaternionic.from_euler_angles(0.1, 0.2, 0.3)
 
     # Invalid construction
-    @test_throws ErrorException WignerHCalculator(0.3, ℓₘₐₓ; m′ₘₐₓ=ℓₘₐₓ+1)
-    @test_throws ErrorException WignerHCalculator(0.3, ℓₘₐₓ; m′ₘₐₓ=-1)
-    @test_throws ErrorException WignerHCalculator(0.3, -1)
+    @test_throws ErrorException HCalculator(0.3, ℓₘₐₓ; m′ₘₐₓ=ℓₘₐₓ+1)
+    @test_throws ErrorException HCalculator(0.3, ℓₘₐₓ; m′ₘₐₓ=-1)
+    @test_throws ErrorException HCalculator(0.3, -1)
     # Nᵣ is implied by the rotor data, so an empty batch is how one asks for no rotors
-    @test_throws ErrorException WignerHCalculator(Float64[], ℓₘₐₓ)
+    @test_throws ErrorException HCalculator(Float64[], ℓₘₐₓ)
 
     # Out-of-range ℓ, with and without fresh rotor data
-    calc = WignerHCalculator(0.3, ℓₘₐₓ)
+    calc = HCalculator(0.3, ℓₘₐₓ)
     @test_throws ErrorException recurrence!(calc, 0.3, -1)
     @test_throws ErrorException recurrence!(calc, 0.3, ℓₘₐₓ + 1)
     recurrence!(calc, 0.3, 2)
@@ -262,7 +262,7 @@ end
     @test calc.Hˡ.ℓ == 2  # the rejected requests left the calculator where it was
 
     # Wrong number of rotors
-    calc₄ = WignerHCalculator(β⃗, ℓₘₐₓ)
+    calc₄ = HCalculator(β⃗, ℓₘₐₓ)
     @test_throws ErrorException recurrence!(calc₄, β⃗[1:3], 0)
     @test_throws ErrorException recurrence!(calc₄, [β⃗; 0.5], 0)
     @test_throws ErrorException recurrence!(calc₄, cis.(β⃗[1:2]), 0)
@@ -284,7 +284,7 @@ end
     @test_throws BoundsError calc.Hˡ[1, 0, 3]  # m > ℓ
     @test_throws BoundsError wedge_value(calc.Hˡ, 1, 0, 3)
     @test_throws BoundsError calc.Hˡ[1, -3, 3]  # |m′| > ℓ
-    calc₁ = WignerHCalculator(0.3, ℓₘₐₓ; m′ₘₐₓ=1)
+    calc₁ = HCalculator(0.3, ℓₘₐₓ; m′ₘₐₓ=1)
     recurrence!(calc₁, 0.3, ℓₘₐₓ)
     @test_throws BoundsError calc₁.Hˡ[1, 2, 3]  # |m′| > m′ₘₐₓ is not stored ...
     @test_throws ArgumentError wedge_value(calc₁.Hˡ, 1, 2, 3)  # ... nor obtainable by symmetry
@@ -292,9 +292,9 @@ end
 end
 
 
-@testitem "WignerHCalculator similar and fill!" begin
+@testitem "HCalculator similar and fill!" begin
     import SphericalFunctions
-    import SphericalFunctions: WignerHCalculator, HWedge, recurrence!
+    import SphericalFunctions: HCalculator, HWedge, recurrence!
     import SphericalFunctions: ℓₘₐₓ, ℓₘᵢₙ, m′ₘₐₓ, m′ₘᵢₙ, Nᵣ
     import DoubleFloats: Double64
     import MathChecker: checked, unchecked
@@ -306,7 +306,7 @@ end
 
     @testset "$T" for T in (Float64, Double64, BigFloat)
         β⃗ = T[0, 0.1, 1.2, 2.9, π]
-        calc = WignerHCalculator(β⃗, 6; m′ₘₐₓ=3)
+        calc = HCalculator(β⃗, 6; m′ₘₐₓ=3)
 
         # `similar` gives the same sizes and types, with fresh storage and the same data
         s = similar(calc)
@@ -376,12 +376,12 @@ end
         T = Float64
         NC = checked(T; precision=false, nan=true, inf=false)
         β⃗ = T[0, 0.1, 1.2, 2.9, π]
-        reference = WignerHCalculator(β⃗, 6; m′ₘₐₓ=3)
+        reference = HCalculator(β⃗, 6; m′ₘₐₓ=3)
         wedges = [wedge(recurrence!(reference, ℓ).Hˡ) for ℓ in 0:6]
 
         # The calculator's element type is its angles' own, so the checked type is asked for
         # by giving the same angles as `NC` values.
-        signaling = WignerHCalculator(NC.(β⃗), 6; m′ₘₐₓ=3)
+        signaling = HCalculator(NC.(β⃗), 6; m′ₘₐₓ=3)
         @test eltype(parent(signaling.Hˡ)) === NC
         for order in ((0, 1, 2, 3, 4, 5, 6), (6,), (3, 6, 1, 4, 0, 6))
             fill!(signaling, NaN)

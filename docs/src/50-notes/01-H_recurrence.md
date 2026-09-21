@@ -61,7 +61,7 @@ quoted, ``(-1)^{ℓ+m+m'}`` and ``(-1)^{m+m'}``.  For half-integer indices ``σ`
     [`wedge_value`](@ref SphericalFunctions.wedge_value) and
     [`wedge_source`](@ref SphericalFunctions.wedge_source), which are the only places the
     symmetries are encoded.  Reading the stored wedge of a
-    [`WignerHCalculator`](@ref) directly and transposing it by hand gives the wrong sign for
+    [`HCalculator`](@ref) directly and transposing it by hand gives the wrong sign for
     every half-integer element with ``\mathrm{sgn}(m) ≠ \mathrm{sgn}(m')``.
 
 Because of these symmetries — specifically the first two — we only

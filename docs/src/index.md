@@ -127,7 +127,7 @@ handing back the block for each, which is how to reach large ``ℓₘₐₓ``
 without ever holding every matrix at once:
 
 ```jldoctest quickstart
-julia> calc = WignerDCalculator(R, ℓₘₐₓ);
+julia> calc = DCalculator(R, ℓₘₐₓ);
 
 julia> norms = Float64[];
 
@@ -159,7 +159,7 @@ same arithmetic can be done independently:
 ```jldoctest quickstart
 julia> rotors = [from_spherical_coordinates(θ, π/4) for θ ∈ range(0, π, 8)];
 
-julia> batch = WignerDCalculator(rotors, ℓₘₐₓ);
+julia> batch = DCalculator(rotors, ℓₘₐₓ);
 
 julia> for (ℓ, 𝔇ˡ) ∈ batch
            @assert axes(𝔇ˡ) == (1:8, -ℓ:ℓ, -ℓ:ℓ)  # now indexed as 𝔇ˡ[iᵣ, m′, m]

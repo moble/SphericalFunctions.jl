@@ -24,7 +24,7 @@ Base.Rational) whose denominator is exactly 2:
 ```julia
 𝔇 = D(R, 7//2)
 𝔡 = d(β, 7//2)
-calculator = WignerDCalculator(rotors, 7//2)
+calculator = DCalculator(rotors, 7//2)
 Y = sYlm(R, 7//2, -3//2)
 𝒯 = SSHT(1//2, 7//2)
 ```

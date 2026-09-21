@@ -12,7 +12,7 @@ conjugate of the one version 2 used.**
 ### Added
 
 * **Rotating mode weights: `𝔇 * w`.**  Given the Wigner matrices of a rotor — as a
-  `WignerSeries` from `D`, or a `WignerDCalculator`, which streams one ℓ at a time — this
+  `WignerSeries` from `D`, or a `DCalculator`, which streams one ℓ at a time — this
   gives the weights of the actively rotated function, ``f′(𝐐) = f(𝐑^{-1}𝐐)``.  There is
   **no complex conjugate**: version 2's ``𝔇`` was the conjugate of this one, so ported code
   must drop a `conj` rather than add one.  The derivation is now written out in the
@@ -28,7 +28,7 @@ conjugate of the one version 2 used.**
   ``{}_sλ_{ℓ,m}(θ) = {}_sY_{ℓ,m}(θ, 0) / i^{2s}``, which is real for integer and half-odd
   spin weights alike, in the same containers as `sYlm` and with the same iteration and
   indexing.  They share one struct, `HarmonicCalculator`, with the complex family, exactly as
-  `WignerdCalculator` shares `WignerCalculator` with `WignerDCalculator`: the ``H`` recursion
+  `dCalculator` shares `WignerCalculator` with `DCalculator`: the ``H`` recursion
   is real either way, and only the factor ``e^{-i(mα - sγ)}`` ever made a result complex.  A
   real calculator therefore allocates no phase tables at all.  It refuses a `Rotor`, at
   construction and through `set_R!`, because a rotor specifies the angles ``α`` and ``γ``
@@ -100,8 +100,8 @@ conjugate of the one version 2 used.**
   `D(...)` with no conjugation.  The ``d`` matrices and the
   spin-weighted spherical harmonics are numerically unchanged.
 * **Calculators take their rotor data at construction, and take it
-  first** — `WignerDCalculator(R, ℓₘₐₓ)`, `WignerdCalculator(β, ℓₘₐₓ)`,
-  `WignerHCalculator(β, ℓₘₐₓ)`, `sYlmCalculator(R, ℓₘₐₓ, s)`.  A
+  first** — `DCalculator(R, ℓₘₐₓ)`, `dCalculator(β, ℓₘₐₓ)`,
+  `HCalculator(β, ℓₘₐₓ)`, `sYlmCalculator(R, ℓₘₐₓ, s)`.  A
   calculator is therefore usable the moment it exists, and the
   `Nᵣ` keyword is gone: a vector argument is what makes one batched.
   The old argument order is a `MethodError` at the call site.
@@ -156,7 +156,7 @@ conjugate of the one version 2 used.**
 | Version 2 | Version 3 |
 |---|---|
 | `D_matrices(R, ℓₘₐₓ)` + `D_iterator` | `D(R, ℓₘₐₓ)`, indexed `𝔇[ℓ][m′, m]` (conjugated; see above) |
-| `D_prep` + `D_matrices!` | `WignerDCalculator(R, ℓₘₐₓ)` + `recurrence!` + `calc[ℓ]` |
+| `D_prep` + `D_matrices!` | `DCalculator(R, ℓₘₐₓ)` + `recurrence!` + `calc[ℓ]` |
 | `d_matrices(β, ℓₘₐₓ)` | `d(β, ℓₘₐₓ)`, indexed `𝔡[ℓ][m′, m]` |
 | `sYlm_values(R, ℓₘₐₓ, s)` | `sYlm(R, ℓₘₐₓ, s)` |
 | `sYlm_prep(ℓₘₐₓ, sₘₐₓ)` + `sYlm_values!` | `sYlmCalculator(R, ℓₘₐₓ, s)` + `sYlm!(Y, calc, R)` |
@@ -168,7 +168,7 @@ conjugate of the one version 2 used.**
 
 * **Half-integer ``ℓ``.**  `d`, `D` and the calculators accept a
   `Rational` index type, so `D(R, 7//2)` and
-  `WignerDCalculator(R, 15//2)` work, and `sYlmCalculator` accepts
+  `DCalculator(R, 15//2)` work, and `sYlmCalculator` accepts
   half-integer spin weights.  Verified against two independent
   references to ``10^{-16}`` for ``J ≤ 31/2`` and by oracle-free
   identities to ``J = 101/2``.  (Issue #29.)  The same spelling is

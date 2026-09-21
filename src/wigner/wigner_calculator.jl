@@ -11,9 +11,9 @@
 
 Calculator producing Wigner's ``𝔇`` matrices (when `NT` is `Complex{RT}`) or ``d`` matrices
 (when `NT` is `RT`) for `Nᵣ` rotors at a time, one ``ℓ`` at a time.  Use the constructors
-[`WignerDCalculator`](@ref) and [`WignerdCalculator`](@ref).
+[`DCalculator`](@ref) and [`dCalculator`](@ref).
 
-Internally this wraps a [`WignerHCalculator`](@ref), which does the actual recurrence, plus a
+Internally this wraps a [`HCalculator`](@ref), which does the actual recurrence, plus a
 buffer into which the requested block of the matrix is written for the current ``ℓ``; that
 block is returned by `calc[ℓ]` as an array indexed naturally by `[m′, m]` (or `[iᵣ, m′, m]`
 when `Nᵣ > 1`).
@@ -23,7 +23,7 @@ read by [`isbatched`](@ref), so that the return type is inferrable; see the comm
 struct.
 """
 struct WignerCalculator{IT, RT<:Real, NT<:Union{RT, Complex{RT}}, ST, B}
-    H::WignerHCalculator{IT, RT, ST}
+    H::HCalculator{IT, RT, ST}
     Wˡ::Array{NT, 3}  # [iᵣ, m′, m] block for the current ℓ, using the leading entries
     Z₊::Matrix{Complex{RT}}  # Z₊[k+1, iᵣ] = z₊^k for k ∈ 0:2ℓₘₐₓ; empty when NT is real
     Z₋::Matrix{Complex{RT}}  # Z₋[k+1, iᵣ] = z₋^k for k ∈ 0:2ℓₘₐₓ; empty when NT is real
@@ -66,7 +66,7 @@ function WignerCalculator{IT, RT, NT}(
 end
 
 """
-    WignerDCalculator(R, ℓₘₐₓ; m′ₘₐₓ=ℓₘₐₓ, m′ₘᵢₙ=-m′ₘₐₓ, mₘₐₓ=ℓₘₐₓ, mₘᵢₙ=-mₘₐₓ)
+    DCalculator(R, ℓₘₐₓ; m′ₘₐₓ=ℓₘₐₓ, m′ₘᵢₙ=-m′ₘₐₓ, mₘₐₓ=ℓₘₐₓ, mₘᵢₙ=-mₘₐₓ)
 
 Calculator for Wigner's ``𝔇^{(ℓ)}_{m′,m}(R)`` matrices, for ``ℓ ≤ ℓₘₐₓ``, with elements of
 type `Complex{RT}`.  The keyword arguments restrict the block of each matrix that is computed
@@ -85,7 +85,7 @@ faster per rotor, for the reason described under
 The calculator is iterable, yielding one ``ℓ`` at a time:
 
 ```julia
-calc = WignerDCalculator(R, ℓₘₐₓ)
+calc = DCalculator(R, ℓₘₐₓ)
 for (ℓ, 𝔇ˡ) ∈ calc
     # 𝔇ˡ[m′, m] with m′, m ∈ -ℓ:ℓ
 end
@@ -102,25 +102,25 @@ see the "Conventions" section of the documentation.
 
 # Half-integer indices
 
-`WignerDCalculator(R, 7//2)` — a `Rational` `ℓₘₐₓ` with denominator 2 — gives a
+`DCalculator(R, 7//2)` — a `Rational` `ℓₘₐₓ` with denominator 2 — gives a
 calculator for half-integer ``ℓ, m′, m``.  All four keyword limits must then be
 half-integers too, `recurrence!` accepts only half-integer `ℓ`, and `calc[ℓ]` returns a
 [`WignerMatrix`](@ref) (or a [`WignerMatrixBatch`](@ref) when `Nᵣ > 1`) whose indices are
 half-odd-integers; it is indexed the same way.  The double cover is respected exactly: ``𝔇(-R) = -𝔇(R)``.
 
 See also [`D`](@ref) for a simpler interface when the matrices for only one rotor are needed,
-[`WignerdCalculator`](@ref) for the real ``d`` matrices, and [`recurrence!`](@ref).
+[`dCalculator`](@ref) for the real ``d`` matrices, and [`recurrence!`](@ref).
 """
-const WignerDCalculator{IT, RT, ST, B} = WignerCalculator{IT, RT, Complex{RT}, ST, B} where {IT, RT<:Real, ST, B}
+const DCalculator{IT, RT, ST, B} = WignerCalculator{IT, RT, Complex{RT}, ST, B} where {IT, RT<:Real, ST, B}
 
 """
-    WignerdCalculator(β, ℓₘₐₓ; m′ₘₐₓ=ℓₘₐₓ, m′ₘᵢₙ=-m′ₘₐₓ, mₘₐₓ=ℓₘₐₓ, mₘᵢₙ=-mₘₐₓ)
+    dCalculator(β, ℓₘₐₓ; m′ₘₐₓ=ℓₘₐₓ, m′ₘᵢₙ=-m′ₘₐₓ, mₘₐₓ=ℓₘₐₓ, mₘᵢₙ=-mₘₐₓ)
 
 Calculator for Wigner's real ``d^{(ℓ)}_{m′,m}(β)`` matrices, for ``ℓ ≤ ℓₘₐₓ``, with elements
 of the angle's own floating-point type.  The first argument may be the angle ``β``, the phase ``e^{iβ}``, or a `Rotor`
 (of which only the ``β`` Euler angle is used), or an `AbstractVector` of `Nᵣ` of any one of
 those; later values are supplied with [`set_β!`](@ref).  Otherwise this behaves exactly like
-[`WignerDCalculator`](@ref) — including iteration, and half-integer ``ℓ`` for a `Rational`
+[`DCalculator`](@ref) — including iteration, and half-integer ``ℓ`` for a `Rational`
 `ℓₘₐₓ`.
 
 Half-integer ``d`` has period ``4π`` in ``β``, so an angle or a `Rotor` determines it
@@ -129,24 +129,24 @@ unambiguously, while a bare phase ``e^{iβ}`` determines it only up to the doubl
 
 See also [`d`](@ref).
 """
-const WignerdCalculator{IT, RT, ST, B} = WignerCalculator{IT, RT, RT, ST, B} where {IT, RT<:Real, ST, B}
+const dCalculator{IT, RT, ST, B} = WignerCalculator{IT, RT, RT, ST, B} where {IT, RT<:Real, ST, B}
 
 # `ℓₘₐₓ` is constrained to `IntegerHalf` here (with the `Rational` methods at the bottom of
 # this file taking the half-integer spelling) so that a call in the old argument order —
-# `WignerDCalculator(ℓₘₐₓ, Float64)` — is an immediate `MethodError` at the call site rather
+# `DCalculator(ℓₘₐₓ, Float64)` — is an immediate `MethodError` at the call site rather
 # than something that dispatches with the element type in the rotor's place.
 # The element type is derived here and passed on as a *type*, to the helpers below, rather
 # than computed inside the body as a value: that is what lets the compiler settle the concrete
 # return type, including the `B` parameter that `calc[ℓ]`'s type depends on.
 #
-# Those helpers are deliberately *not* methods of `WignerDCalculator` and `WignerdCalculator`.
+# Those helpers are deliberately *not* methods of `DCalculator` and `dCalculator`.
 # A three-argument method of either name would be a public way to override the element type,
 # and version 3 has none by design — the type of the rotor data is the only thing that decides
 # it.  `test/wigner/iteration.jl` asserts exactly that, with `@test_throws MethodError`.
-function WignerDCalculator(R, ℓₘₐₓ::IT; kwargs...) where {IT<:IntegerHalf}
+function DCalculator(R, ℓₘₐₓ::IT; kwargs...) where {IT<:IntegerHalf}
     wigner_D_calculator(R, ℓₘₐₓ, rotor_basetype(R); kwargs...)
 end
-function WignerdCalculator(β, ℓₘₐₓ::IT; kwargs...) where {IT<:IntegerHalf}
+function dCalculator(β, ℓₘₐₓ::IT; kwargs...) where {IT<:IntegerHalf}
     wigner_d_calculator(β, ℓₘₐₓ, rotor_basetype(β); kwargs...)
 end
 function wigner_D_calculator(R, ℓₘₐₓ::IT, ::Type{RT}; kwargs...) where {IT<:IntegerHalf, RT<:Real}
@@ -160,7 +160,7 @@ end
 # thread wants.  The assertion is what keeps this inferrable: `Nᵣ(c)` is a field lookup, so
 # the constructor cannot know `B`, but the copy necessarily has the same parameters as the
 # original.  The data is copied buffer-by-buffer rather than re-derived; see the comment on
-# `similar(::WignerHCalculator)` for why it cannot be re-derived at all.
+# `similar(::HCalculator)` for why it cannot be re-derived at all.
 function Base.similar(c::WignerCalculator{IT, RT, NT, ST, B}) where {IT, RT, NT, ST, B}
     c′ = allocate_W(
         IT, RT, NT, ℓₘₐₓ(c), c.m′ₘₐₓ, c.m′ₘᵢₙ, c.mₘₐₓ, c.mₘᵢₙ, Nᵣ(c)
@@ -199,7 +199,7 @@ isbatched(::WignerCalculator{IT, RT, NT, ST, B}) where {IT, RT, NT, ST, B} = B
 function Base.show(io::IO, c::WignerCalculator{IT, RT, NT}) where {IT, RT, NT}
     print(
         io,
-        "Wigner", NT <: Complex ? "D" : "d", "Calculator{$IT, $RT} for ",
+        NT <: Complex ? "D" : "d", "Calculator{$IT, $RT} for ",
         "ℓₘₐₓ=$(ℓₘₐₓ(c)), m′=$(c.m′ₘᵢₙ):$(c.m′ₘₐₓ), m=$(c.mₘᵢₙ):$(c.mₘₐₓ), Nᵣ=$(Nᵣ(c))",
         c.ℓ[] < ℓₘᵢₙ(c) ? " (nothing computed yet)" : ", currently at ℓ=$(c.ℓ[])"
     )
@@ -214,7 +214,7 @@ end
 Fill the axis, wedge and output buffers of `c` with the value `v` and mark the current
 results as invalid.  The stored rotor data — `e^{iβ}`, the half angles, and the phase powers
 `Z₊`, `Z₋` — is deliberately *not* touched, so `recurrence!(c, ℓ)` still has everything it
-needs, exactly as for [`WignerHCalculator`](@ref).  Useful for testing
+needs, exactly as for [`HCalculator`](@ref).  Useful for testing
 that no uninitialized storage is ever read: everything the recurrence is responsible for
 writing is poisoned, while everything `set_rotors!` is responsible for writing is left
 alone.
@@ -256,8 +256,8 @@ function set_rotors!(c::WignerCalculator{IT, RT, Complex{RT}}, R::Rotor) where {
 end
 function set_rotors!(c::WignerCalculator{IT, RT, Complex{RT}}, R) where {IT, RT<:Real}
     error(
-        "A WignerDCalculator needs rotors, given as `Rotor`s — one, or an AbstractVector "
-        * "of $(Nᵣ(c)) of them — not $(typeof(R)); use a WignerdCalculator if only β is "
+        "A DCalculator needs rotors, given as `Rotor`s — one, or an AbstractVector "
+        * "of $(Nᵣ(c)) of them — not $(typeof(R)); use a dCalculator if only β is "
         * "available."
     )
 end
@@ -414,13 +414,13 @@ The keyword arguments restrict the block of each matrix that is computed.  The c
 the same either way, and `D(R, ℓₘₐₓ)[ℓ][m′, m]` reads the same.
 
 This function allocates all of its output on every call.  To evaluate the matrices for many
-rotors, or to avoid holding every ``ℓ`` at once, use a [`WignerDCalculator`](@ref) instead,
+rotors, or to avoid holding every ``ℓ`` at once, use a [`DCalculator`](@ref) instead,
 which allocates once and computes one ``ℓ`` at a time.
 
 See also [`d`](@ref) and [`sYlm`](@ref).
 """
 function D(R::Rotor{T}, ℓₘₐₓ::IT; kwargs...) where {T<:Real, IT<:IntegerHalf}
-    calc = WignerDCalculator(R, ℓₘₐₓ; kwargs...)
+    calc = DCalculator(R, ℓₘₐₓ; kwargs...)
     WignerSeries(
         [copy(recurrence!(calc, ℓ)[ℓ]) for ℓ ∈ ℓₘᵢₙ(IT):ℓₘₐₓ], ℓₘᵢₙ(IT), ℓₘₐₓ
     )
@@ -440,7 +440,7 @@ details; this function is the real, ``β``-only analogue.
 used).
 """
 function d(β::Union{Real, Complex, Rotor}, ℓₘₐₓ::IT; kwargs...) where {IT<:IntegerHalf}
-    calc = WignerdCalculator(β, ℓₘₐₓ; kwargs...)
+    calc = dCalculator(β, ℓₘₐₓ; kwargs...)
     WignerSeries(
         [copy(recurrence!(calc, ℓ)[ℓ]) for ℓ ∈ ℓₘᵢₙ(IT):ℓₘₐₓ], ℓₘᵢₙ(IT), ℓₘₐₓ
     )
@@ -459,11 +459,11 @@ const Nr = Nᵣ
 # re-dispatch, so the `Rational` spelling never reaches the hot code.  See
 # [`half_integer`](@ref).
 
-function WignerDCalculator(R, ℓₘₐₓ::Rational; kwargs...)
-    WignerDCalculator(R, half_integer(ℓₘₐₓ); half_integer_kwargs(kwargs)...)
+function DCalculator(R, ℓₘₐₓ::Rational; kwargs...)
+    DCalculator(R, half_integer(ℓₘₐₓ); half_integer_kwargs(kwargs)...)
 end
-function WignerdCalculator(β, ℓₘₐₓ::Rational; kwargs...)
-    WignerdCalculator(β, half_integer(ℓₘₐₓ); half_integer_kwargs(kwargs)...)
+function dCalculator(β, ℓₘₐₓ::Rational; kwargs...)
+    dCalculator(β, half_integer(ℓₘₐₓ); half_integer_kwargs(kwargs)...)
 end
 function D(R::Rotor, ℓₘₐₓ::Rational; kwargs...)
     D(R, half_integer(ℓₘₐₓ); half_integer_kwargs(kwargs)...)

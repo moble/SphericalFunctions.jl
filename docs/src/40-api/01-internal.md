@@ -10,7 +10,7 @@ signatures may change without a breaking release.  They are documented
 because the public docstrings refer to them, and because anyone
 reading the recurrence or the raw storage of a calculator needs them.
 
-Everything here belongs to one machine.  A [`WignerHCalculator`](@ref)
+Everything here belongs to one machine.  A [`HCalculator`](@ref)
 holds two buffers — an [`HWedge`](@ref) holding about a quarter of
 ``H^ℓ`` for a batch of rotors, and an [`HAxis`](@ref) holding the
 ``m'=0``, ``m ≥ 0`` axis that seeds it — and [`recurrence!`](@ref)
@@ -38,7 +38,7 @@ symmetries to fill the rest of the requested ``m'`` range.
 Each step name below has **two** methods, and they are not
 interchangeable.
 
-  - The methods taking a [`WignerHCalculator`](@ref) are what the
+  - The methods taking a [`HCalculator`](@ref) are what the
     engine runs.  They work on the batched quarter-wedge for all `Nᵣ`
     rotors at once, with the rotor index innermost, and they handle
     half-integer as well as integer ``ℓ``.  There are only five of
@@ -96,7 +96,7 @@ recursion](@ref "Algorithm for computing ``H`` (redesigned)")); every other elem
 obtained from a stored one by symmetry, together with a sign ``σ`` that is ``+1`` for integer
 indices and ``\mathrm{sgn}(m)\,\mathrm{sgn}(m')`` for half-integer ones.  The functions below
 are the only place in the package where those symmetries are encoded.  They are not part of
-the public interface, but they are what [`WignerHCalculator`](@ref)'s docstring refers to,
+the public interface, but they are what [`HCalculator`](@ref)'s docstring refers to,
 and anyone reading `calc.Hˡ` directly needs them.
 
 ```@docs

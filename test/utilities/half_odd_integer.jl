@@ -127,7 +127,7 @@ end
 
 
 @testitem "HalfOddInteger: the recurrence arithmetic stays in `Int`" begin
-    using SphericalFunctions: HalfOddInteger, WignerHCalculator, δ², sgn, ϵ
+    using SphericalFunctions: HalfOddInteger, HCalculator, δ², sgn, ϵ
 
     # This is the whole point of the type, and it is exactly the property that no correctness
     # test can see: if these inferred `Rational` instead, every answer would still be right
@@ -142,7 +142,7 @@ end
     for step! in (SphericalFunctions.recurrence_step4!, SphericalFunctions.recurrence_step5!,
                   SphericalFunctions.recurrence_seed!)
         ir = string(Base.code_typed(
-            step!, (WignerHCalculator{HalfOddInteger, Float64},); optimize=true
+            step!, (HCalculator{HalfOddInteger, Float64},); optimize=true
         )[1][1])
         @test !occursin("Rational", ir)
     end

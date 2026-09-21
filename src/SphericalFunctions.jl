@@ -38,7 +38,7 @@ include("wigner/wigner.jl")
 export AbstractWignerMatrix, WignerMatrix, WignerDMatrix, WignerdMatrix
 export WignerMatrixBatch, DegreeBlock, DegreeBlockBatch, WignerSeries
 export SpinMatrix, SpinMatrixBatch
-export WignerCalculator, WignerDCalculator, WignerdCalculator, WignerHCalculator
+export WignerCalculator, DCalculator, dCalculator, HCalculator
 export recurrence!, D, d
 
 include("mode_weights/indexing.jl")

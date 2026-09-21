@@ -32,7 +32,7 @@ end
 SUITE["wigner"] = BenchmarkGroup(["recursions"])
 for ℓₘₐₓ in (8, 64), m′ₘₐₓ in unique((ℓₘₐₓ, 2)), Nᵣ in (1, 64)
     R⃗ = randn(rng, Rotor{Float64}, Nᵣ)
-    calc = WignerDCalculator(R⃗, ℓₘₐₓ; m′ₘₐₓ, m′ₘᵢₙ=-m′ₘₐₓ)
+    calc = DCalculator(R⃗, ℓₘₐₓ; m′ₘₐₓ, m′ₘᵢₙ=-m′ₘₐₓ)
     SUITE["wigner"]["D sweep", ℓₘₐₓ, m′ₘₐₓ, Nᵣ] = @benchmarkable begin
         for ℓ in 0:$ℓₘₐₓ
             recurrence!($calc, ℓ)
@@ -54,7 +54,7 @@ end
 ### that; this can.
 for ℓₘₐₓ in (15//2, 127//2), Nᵣ in (1, 64)
     R⃗ = randn(rng, Rotor{Float64}, Nᵣ)
-    calc = WignerDCalculator(R⃗, ℓₘₐₓ)
+    calc = DCalculator(R⃗, ℓₘₐₓ)
     SUITE["wigner"]["D sweep (half-integer)", ℓₘₐₓ, Nᵣ] = @benchmarkable begin
         for ℓ in (1//2):($ℓₘₐₓ)
             recurrence!($calc, ℓ)

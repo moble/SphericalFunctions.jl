@@ -3,7 +3,7 @@
 # functions documented on `docs/src/40-api/01-internal.md`.
 #
 # Why this exists.  These functions take an `AbstractWignerMatrix` holding one whole `Hˡ` for
-# one rotor; the engine that the package actually runs (`WignerHCalculator`) has its own,
+# one rotor; the engine that the package actually runs (`HCalculator`) has its own,
 # separate methods of the same names in `src/wigner/wigner_H_calculator.jl`, which work on a
 # batched quarter-wedge.  Until 2026-09-11 the single-matrix path was driven by the internal
 # `DenseWignerCalculator`, and the item "Wigner calculators vs DenseWignerCalculator"

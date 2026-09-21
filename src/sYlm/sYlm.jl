@@ -5,7 +5,7 @@ Calculator producing the spin-weighted spherical harmonics ``{}_sY_{ℓ,m}`` (wh
 `Complex{RT}`) or the real ``{}_sλ_{ℓ,m}`` (when `NT` is `RT`), for `Nᵣ` points at a time, one
 ``ℓ`` at a time.  Use the constructors [`sYlmCalculator`](@ref) and [`sλlmCalculator`](@ref).
 
-Internally this wraps a [`WignerHCalculator`](@ref), which runs the recurrence that both
+Internally this wraps a [`HCalculator`](@ref), which runs the recurrence that both
 flavours share, plus a buffer holding the block for the current ``ℓ``.  The phase tables `Z₊`
 and `Z₋` are empty for the real flavour, which is the whole of the saving: the ``H``
 recurrence is real, and it is only the ``e^{-i(mα - sγ)}`` factor that ever made the result
@@ -21,7 +21,7 @@ struct HarmonicCalculator{IT, RT<:Real, NT<:Union{RT, Complex{RT}}, ST, S, B}
     # is settled at compile time.  `S` does the same job for the spin weights: it is the index
     # type when the calculator was built for one of them and a `UnitRange` of it when it was
     # built for several, which is what decides whether a block has a spin axis at all.
-    H::WignerHCalculator{IT, RT, ST}
+    H::HCalculator{IT, RT, ST}
     Yˡ::Array{NT, 3}  # [iᵣ, s, m] block for the current ℓ, using the leading m entries
     Z₊::Matrix{Complex{RT}}  # Z₊[k+1, iᵣ] = z₊^k for k ∈ 0:2ℓₘₐₓ
     Z₋::Matrix{Complex{RT}}  # Z₋[k+1, iᵣ] = z₋^k for k ∈ 0:2ℓₘₐₓ
@@ -102,7 +102,7 @@ spellings, and lay the values out in the canonical mode-weight ordering of [`Yin
 which holds for half-odd indices exactly as it does for integers.
 
 See also [`sYlm`](@ref) and [`sYlm_matrix`](@ref) for simpler interfaces, and
-[`WignerDCalculator`](@ref).
+[`DCalculator`](@ref).
 """
 const sYlmCalculator{IT, RT, ST, S, B} =
     HarmonicCalculator{IT, RT, Complex{RT}, ST, S, B} where {IT, RT<:Real, ST, S, B}
@@ -135,7 +135,7 @@ A `Rotor` is **not** accepted, here or through [`set_R!`](@ref): a rotor specifi
 [`sYlmCalculator`](@ref) for that.
 
 See also [`sλlm`](@ref) and [`sλlm_matrix`](@ref) for simpler interfaces, and
-[`WignerdCalculator`](@ref), which stands in the same relation to [`WignerDCalculator`](@ref).
+[`dCalculator`](@ref), which stands in the same relation to [`DCalculator`](@ref).
 """
 const sλlmCalculator{IT, RT, ST, S, B} =
     HarmonicCalculator{IT, RT, RT, ST, S, B} where {IT, RT<:Real, ST, S, B}
@@ -150,7 +150,7 @@ function sYlmCalculator(R, ℓₘₐₓ::IndexSpelling, s::SpinSpelling)
     sYlmCalculator_helper(R, spin_indices(ℓₘₐₓ, s)...)
 end
 function sYlmCalculator_helper(R, ℓₘₐₓ::IT, s) where {IT<:IntegerHalf}
-    # See the note on `WignerDCalculator`: the element type reaches `allocate_Y` as a type,
+    # See the note on `DCalculator`: the element type reaches `allocate_Y` as a type,
     # not as a value, so that the concrete result type is settled at compile time.
     RT = rotor_basetype(R)
     set_rotors!(allocate_Y(IT, RT, Complex{RT}, ℓₘₐₓ, s, nrotors(R)), R)
@@ -278,7 +278,7 @@ Fill the axis, wedge and output buffers of `c` with the value `v` and mark the c
 results as invalid.  The stored rotor data — `e^{iβ}`, the half angles, the phase powers
 `Z₊`, `Z₋`, and the flag recording whether rotors or bare angles were given — is deliberately
 *not* touched, so `recurrence!(c, ℓ)` still has everything it needs, exactly as for
-[`WignerHCalculator`](@ref).  Useful for testing that no uninitialized storage is ever read.
+[`HCalculator`](@ref).  Useful for testing that no uninitialized storage is ever read.
 """
 function Base.fill!(c::HarmonicCalculator{IT, RT, NT}, v::Number) where {IT, RT, NT}
     fill!(c.H, real(v))

@@ -96,7 +96,7 @@ end
 
     # An unbatched calculator's block has a unit leading stride, which is what BLAS requires;
     # contiguity is not required and is not present for ℓ < ℓₘₐₓ.
-    calc = WignerDCalculator(randn(rng, Rotor{Float64}), ℓₘₐₓ)
+    calc = DCalculator(randn(rng, Rotor{Float64}), ℓₘₐₓ)
     for ℓ ∈ 0:ℓₘₐₓ
         A = strided(recurrence!(calc, ℓ)[ℓ])
         @test A isa StridedArray
@@ -106,7 +106,7 @@ end
     # A batched block is also unit-strided as a whole, because the rotor axis leads ...
     N = 4
     rotors = randn(rng, Rotor{Float64}, N)
-    batched = WignerDCalculator(rotors, ℓₘₐₓ)
+    batched = DCalculator(rotors, ℓₘₐₓ)
     recurrence!(batched, ℓₘₐₓ)
     blk = batched[ℓₘₐₓ]
     @test stride(strided(blk), 1) == 1
@@ -115,7 +115,7 @@ end
     one_rotor = strided(blk[2])
     @test one_rotor isa StridedArray
     @test stride(one_rotor, 1) == N
-    single = WignerDCalculator(rotors[2], ℓₘₐₓ)
+    single = DCalculator(rotors[2], ℓₘₐₓ)
     reference = strided(recurrence!(single, ℓₘₐₓ)[ℓₘₐₓ])
     @test one_rotor == reference
     # The generic fallback gives the same answer BLAS would
@@ -134,7 +134,7 @@ end
     # One block of each shape the package hands out
     containers = Any[]
     push!(containers, D(R, ℓₘₐₓ)[3])                                   # WignerMatrix
-    let c = WignerDCalculator(Rs, ℓₘₐₓ); recurrence!(c, 3)
+    let c = DCalculator(Rs, ℓₘₐₓ); recurrence!(c, 3)
         push!(containers, c[3])                                        # WignerMatrixBatch
     end
     let c = sYlmCalculator(R, ℓₘₐₓ, -2); recurrence!(c, 3)

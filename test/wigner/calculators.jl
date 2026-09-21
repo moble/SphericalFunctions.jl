@@ -1,12 +1,12 @@
-# Tests for the v3 Wigner-matrix calculators: `WignerDCalculator`, `WignerdCalculator`, the
+# Tests for the v3 Wigner-matrix calculators: `DCalculator`, `dCalculator`, the
 # `calc[ℓ]` views, the four block limits, batched rotors, and the convenience functions `D`
 # and `d`.  The oracles are independent closed forms — Varshalovich Eq. 4.3.1(2) for `d`,
 # the settled Euler factorization for `𝔇`, and the quaternionic form of Boyle (2016), all
 # transcribed in the `HalfIntegerOracle` setup module — together with the explicit and
 # formulaic matrices in `ExplicitWignerMatrices` and a set of metamorphic identities.
 
-@testitem "WignerDCalculator vs closed forms" setup=[HalfIntegerOracle, Utilities] begin
-    import SphericalFunctions: WignerDCalculator, recurrence!
+@testitem "DCalculator vs closed forms" setup=[HalfIntegerOracle, Utilities] begin
+    import SphericalFunctions: DCalculator, recurrence!
     import .HalfIntegerOracle: d_oracle, D_oracle
     using Quaternionic: Rotor, Quaternion, components, 𝐢, 𝐣, 𝐤
     using DoubleFloats: Double64
@@ -59,7 +59,7 @@
         atolᵇ = 64 * eps(T)
         for ℓₘₐₓ in (0, 1, 2, 4, 8)
             rotors = Rrange(T, 6)
-            calc = WignerDCalculator(first(rotors), ℓₘₐₓ)
+            calc = DCalculator(first(rotors), ℓₘₐₓ)
             for R in rotors
                 worst = zero(T)
                 worstᵇ = zero(T)
@@ -97,8 +97,8 @@
 end
 
 
-@testitem "WignerdCalculator vs closed form" setup=[HalfIntegerOracle, Utilities] begin
-    import SphericalFunctions: WignerdCalculator, recurrence!
+@testitem "dCalculator vs closed form" setup=[HalfIntegerOracle, Utilities] begin
+    import SphericalFunctions: dCalculator, recurrence!
     import .HalfIntegerOracle: d_oracle
     using Quaternionic: Rotor, from_euler_angles
     using DoubleFloats: Double64
@@ -130,7 +130,7 @@ end
         atol = 20 * eps(T)
         for ℓₘₐₓ in (0, 1, 2, 4, 8)
             βs = βvalues(T, 6)
-            calc = WignerdCalculator(first(βs), ℓₘₐₓ)
+            calc = dCalculator(first(βs), ℓₘₐₓ)
             for β in βs
                 eⁱᵝ = cis(β)
                 ref = dref(T, β, ℓₘₐₓ)
@@ -162,7 +162,7 @@ end
 
 
 @testitem "Wigner calculators vs explicit formulas" setup=[ExplicitWignerMatrices, Utilities] begin
-    import SphericalFunctions: WignerDCalculator, WignerdCalculator, recurrence!
+    import SphericalFunctions: DCalculator, dCalculator, recurrence!
     using Quaternionic: Rotor, 𝐢, 𝐣, 𝐤, to_euler_phases
     using Random
 
@@ -173,8 +173,8 @@ end
         # The naive closed-form sum loses digits in Float64; BigFloat has ~77 digits to spare
         atol = T === BigFloat ? big"1e-60" : 1e-13
         rotors = Rrange(T, 6)
-        calcD = WignerDCalculator(first(rotors), ℓₘₐₓ)
-        calcd = WignerdCalculator(first(rotors), ℓₘₐₓ)
+        calcD = DCalculator(first(rotors), ℓₘₐₓ)
+        calcd = dCalculator(first(rotors), ℓₘₐₓ)
         for R in rotors
             eⁱᵅ, eⁱᵝ, eⁱᵞ = to_euler_phases(R)
             for ℓ in 0:ℓₘₐₓ
@@ -200,7 +200,7 @@ end
 
 @testitem "Wigner calculator block limits" begin
     import SphericalFunctions
-    import SphericalFunctions: WignerDCalculator, WignerdCalculator, recurrence!
+    import SphericalFunctions: DCalculator, dCalculator, recurrence!
     using Quaternionic: Rotor
     using OffsetArrays: OffsetVector
     using Random
@@ -216,7 +216,7 @@ end
         OffsetVector([copy(recurrence!(calc, ℓ)[ℓ]) for ℓ in 0:ℓₘₐₓ], 0:ℓₘₐₓ)
     end
 
-    for (name, Ctor) in (("WignerDCalculator", WignerDCalculator), ("WignerdCalculator", WignerdCalculator))
+    for (name, Ctor) in (("DCalculator", DCalculator), ("dCalculator", dCalculator))
         @testset "$name" begin
             full = full_blocks(Ctor)
             for m′ₘₐₓ in 0:ℓₘₐₓ, m′ₘᵢₙ in -ℓₘₐₓ:0, mₘₐₓ in (5, 3, 0), mₘᵢₙ in (-5, -2, 0)
@@ -279,7 +279,7 @@ end
 
 
 @testitem "Wigner calculators batched rotors" begin
-    import SphericalFunctions: WignerDCalculator, WignerdCalculator, recurrence!
+    import SphericalFunctions: DCalculator, dCalculator, recurrence!
     import SphericalFunctions: Nᵣ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ
     using Quaternionic: Rotor, to_euler_phases
     using OffsetArrays: OffsetVector
@@ -333,46 +333,46 @@ end
         @test recurrence!(fresh, data, ℓₘₐₓ)[ℓₘₐₓ] == ref[ℓₘₐₓ]
     end
 
-    @testset "WignerDCalculator" begin
+    @testset "DCalculator" begin
         check_batched(
-            WignerDCalculator(rotors, ℓₘₐₓ), WignerDCalculator(first(rotors), ℓₘₐₓ), rotors
+            DCalculator(rotors, ℓₘₐₓ), DCalculator(first(rotors), ℓₘₐₓ), rotors
         )
         check_batched(
-            WignerDCalculator(rotors, ℓₘₐₓ; m′ₘₐₓ=2, mₘᵢₙ=-1),
-            WignerDCalculator(first(rotors), ℓₘₐₓ; m′ₘₐₓ=2, mₘᵢₙ=-1),
+            DCalculator(rotors, ℓₘₐₓ; m′ₘₐₓ=2, mₘᵢₙ=-1),
+            DCalculator(first(rotors), ℓₘₐₓ; m′ₘₐₓ=2, mₘᵢₙ=-1),
             rotors
         )
-        check_order(WignerDCalculator(rotors, ℓₘₐₓ), rotors)
+        check_order(DCalculator(rotors, ℓₘₐₓ), rotors)
         # Wrong number of rotors
-        batched = WignerDCalculator(rotors, ℓₘₐₓ)
+        batched = DCalculator(rotors, ℓₘₐₓ)
         @test_throws ErrorException recurrence!(batched, rotors[1:N-1], 0)
         @test_throws ErrorException recurrence!(batched, rotors[1], 0)
-        @test_throws ErrorException recurrence!(WignerDCalculator(first(rotors), ℓₘₐₓ), rotors, 0)
+        @test_throws ErrorException recurrence!(DCalculator(first(rotors), ℓₘₐₓ), rotors, 0)
     end
 
-    @testset "WignerdCalculator" begin
+    @testset "dCalculator" begin
         for data in (βs, eⁱᵝs, rotors)
             check_batched(
-                WignerdCalculator(data, ℓₘₐₓ), WignerdCalculator(first(data), ℓₘₐₓ), data
+                dCalculator(data, ℓₘₐₓ), dCalculator(first(data), ℓₘₐₓ), data
             )
-            check_order(WignerdCalculator(data, ℓₘₐₓ), data)
+            check_order(dCalculator(data, ℓₘₐₓ), data)
         end
         check_batched(
-            WignerdCalculator(βs, ℓₘₐₓ; m′ₘₐₓ=3, m′ₘᵢₙ=0, mₘₐₓ=4),
-            WignerdCalculator(first(βs), ℓₘₐₓ; m′ₘₐₓ=3, m′ₘᵢₙ=0, mₘₐₓ=4),
+            dCalculator(βs, ℓₘₐₓ; m′ₘₐₓ=3, m′ₘᵢₙ=0, mₘₐₓ=4),
+            dCalculator(first(βs), ℓₘₐₓ; m′ₘₐₓ=3, m′ₘᵢₙ=0, mₘₐₓ=4),
             βs
         )
         # Wrong number of angles
-        batched = WignerdCalculator(βs, ℓₘₐₓ)
+        batched = dCalculator(βs, ℓₘₐₓ)
         @test_throws ErrorException recurrence!(batched, βs[1:2], 0)
         @test_throws ErrorException recurrence!(batched, βs[1], 0)
-        @test_throws ErrorException recurrence!(WignerdCalculator(first(βs), ℓₘₐₓ), βs, 0)
+        @test_throws ErrorException recurrence!(dCalculator(first(βs), ℓₘₐₓ), βs, 0)
     end
 end
 
 
 @testitem "Calculator block types are inferrable" begin
-    import SphericalFunctions: WignerDCalculator, WignerdCalculator, sYlmCalculator
+    import SphericalFunctions: DCalculator, dCalculator, sYlmCalculator
     import SphericalFunctions: recurrence!, isbatched, Nᵣ
     using Quaternionic: Rotor
     using Random
@@ -394,9 +394,9 @@ end
 
     for (ℓₘₐₓ, ℓ) ∈ ((4, 3), (5//2, 3//2))
         @testset "ℓₘₐₓ = $ℓₘₐₓ" begin
-            # A `Rotor` is acceptable rotor data for both calculators — `WignerdCalculator`
+            # A `Rotor` is acceptable rotor data for both calculators — `dCalculator`
             # takes the β Euler angle from it — so one set of inputs serves both here.
-            for Ctor ∈ (WignerDCalculator, WignerdCalculator)
+            for Ctor ∈ (DCalculator, dCalculator)
                 single = Ctor(R, ℓₘₐₓ)
                 @test !isbatched(single)
                 @test isconcretetype(typeof(single))
@@ -443,7 +443,7 @@ end
     end
 
     # `similar` must preserve the parameter, which it can only do by asserting it
-    for c ∈ (WignerDCalculator(R, 4), WignerDCalculator(rotors, 4),
+    for c ∈ (DCalculator(R, 4), DCalculator(rotors, 4),
              sYlmCalculator(R, 4, 2), sYlmCalculator(rotors, 4, 2),
              sYlmCalculator(R, 4, -2:2), sYlmCalculator(rotors, 4, -2:2))
         @test typeof(@inferred similar(c)) === typeof(c)
@@ -454,7 +454,7 @@ end
 
 @testitem "Wigner calculators indexing errors" begin
     import SphericalFunctions
-    import SphericalFunctions: WignerDCalculator, WignerdCalculator, recurrence!, WignerMatrix
+    import SphericalFunctions: DCalculator, dCalculator, recurrence!, WignerMatrix
     using Quaternionic: Rotor
     using Random
 
@@ -462,7 +462,7 @@ end
     ℓₘₐₓ = 4
     R = randn(rng, Rotor{Float64})
 
-    for (name, Ctor) in (("WignerDCalculator", WignerDCalculator), ("WignerdCalculator", WignerdCalculator))
+    for (name, Ctor) in (("DCalculator", DCalculator), ("dCalculator", dCalculator))
         @testset "$name" begin
             calc = Ctor(R, ℓₘₐₓ)
             # Nothing has been computed yet, so no ℓ may be indexed — including values
@@ -495,13 +495,13 @@ end
         end
     end
 
-    # A WignerDCalculator needs the full rotor, not just β
-    calcD = WignerDCalculator(R, ℓₘₐₓ)
+    # A DCalculator needs the full rotor, not just β
+    calcD = DCalculator(R, ℓₘₐₓ)
     @test_throws "Rotor" recurrence!(calcD, 0.3, 0)
     @test_throws "Rotor" recurrence!(calcD, cis(0.3), 0)
     @test_throws "Rotor" recurrence!(calcD, [0.3], 0)
-    # ... whereas a WignerdCalculator accepts any of the three forms
-    calcd = WignerdCalculator(R, ℓₘₐₓ)
+    # ... whereas a dCalculator accepts any of the three forms
+    calcd = dCalculator(R, ℓₘₐₓ)
     for input in (0.3, cis(0.3), R)
         # Deliberately *not* an `AbstractMatrix`: see the note on `AbstractWignerMatrix`.
         blk = recurrence!(calcd, input, 1)[1]
@@ -511,7 +511,7 @@ end
 
 
 @testitem "D and d convenience functions" begin
-    import SphericalFunctions: WignerDCalculator, WignerdCalculator, recurrence!, D, d
+    import SphericalFunctions: DCalculator, dCalculator, recurrence!, D, d
     using Quaternionic: Rotor, to_euler_phases
     import SphericalFunctions: WignerSeries, WignerMatrix
     using Random
@@ -527,7 +527,7 @@ end
         𝔇 = D(R, ℓₘₐₓ)
         @test 𝔇 isa WignerSeries
         @test axes(𝔇) == (0:ℓₘₐₓ,)
-        calc = WignerDCalculator(R, ℓₘₐₓ)
+        calc = DCalculator(R, ℓₘₐₓ)
         for ℓ in 0:ℓₘₐₓ
             @test 𝔇[ℓ] isa WignerMatrix && eltype(𝔇[ℓ]) === ComplexF64
             @test axes(𝔇[ℓ]) == (-ℓ:ℓ, -ℓ:ℓ)
@@ -568,7 +568,7 @@ end
         dβ = d(β, ℓₘₐₓ)
         @test dβ isa WignerSeries
         @test axes(dβ) == (0:ℓₘₐₓ,)
-        calc = WignerdCalculator(β, ℓₘₐₓ)
+        calc = dCalculator(β, ℓₘₐₓ)
         for ℓ in 0:ℓₘₐₓ
             @test dβ[ℓ] isa WignerMatrix && eltype(dβ[ℓ]) === Float64
             @test axes(dβ[ℓ]) == (-ℓ:ℓ, -ℓ:ℓ)
@@ -620,7 +620,7 @@ end
 
 @testitem "Wigner calculators vs independent references" setup=[HalfIntegerOracle] begin
     import SphericalFunctions
-    import SphericalFunctions: WignerDCalculator, WignerdCalculator, recurrence!, D
+    import SphericalFunctions: DCalculator, dCalculator, recurrence!, D
     import .HalfIntegerOracle: d_oracle, D_oracle
     using Quaternionic: Rotor, Quaternion, components
     using LinearAlgebra: I, opnorm
@@ -639,7 +639,7 @@ end
     rotors = randn(rng, Rotor{T}, 5)
 
     # High-precision Euler angles of R, taken from the quaternion components (see the
-    # "WignerDCalculator vs closed forms" item for the derivation and for why
+    # "DCalculator vs closed forms" item for the derivation and for why
     # `to_euler_angles` is not used here).
     function euler_angles(R)
         w, x, y, z = BigFloat.(components(Quaternion(R)))
@@ -662,8 +662,8 @@ end
     atolᵘ = 32 * eps(T)  # the identities below are operator norms of (2ℓ+1)-square matrices
     atolʳ = 64 * eps(T)  # ... and the representation property multiplies two of them
 
-    calcD = WignerDCalculator(first(rotors), ℓₘₐₓ)
-    calcd = WignerdCalculator(first(rotors), ℓₘₐₓ)
+    calcD = DCalculator(first(rotors), ℓₘₐₓ)
+    calcd = dCalculator(first(rotors), ℓₘₐₓ)
     for R in rotors
         αᵣ, βᵣ, γᵣ = setprecision(BigFloat, 4 * precision(T) + 64) do
             euler_angles(R)
@@ -729,7 +729,7 @@ end
 
 
 @testitem "Wigner calculators with narrow integer indices" begin
-    import SphericalFunctions: WignerDCalculator, WignerdCalculator, recurrence!, D, d
+    import SphericalFunctions: DCalculator, dCalculator, recurrence!, D, d
     using Quaternionic: Rotor
     using Random
 
@@ -741,7 +741,7 @@ end
     for IT in (Int8, Int16, Int32)
         @test D(R, IT(3)) == D(R, 3)
         @test d(R, IT(3)) == d(R, 3)
-        for Ctor in (WignerDCalculator, WignerdCalculator)
+        for Ctor in (DCalculator, dCalculator)
             calc = Ctor(R, IT(3))
             @test calc.ℓ isa Base.RefValue{IT}
             @test recurrence!(calc, IT(2))[IT(2)] == recurrence!(Ctor(R, 3), 2)[2]
