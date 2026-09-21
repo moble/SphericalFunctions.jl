@@ -151,3 +151,37 @@ end
     # The conjugating inner product of two sets of weights is still available and unchanged
     @test dot(w, w) ≈ sum(abs2, array_view(w))
 end
+
+
+@testitem "Mode-weight operations allocate only their result" begin
+    import SphericalFunctions: ModeWeights, DCalculator, sYlmCalculator, D, sYlm, ð, array_view
+    import LinearAlgebra: mul!
+    import Quaternionic: Rotor
+    import Random
+
+    # Measured inside functions, as a user's inner loop sees it; at top level the boxing of a
+    # dynamically dispatched call would be counted and would prove nothing.
+    inplace(dst, A, src) = (mul!(dst, A, src); @allocated mul!(dst, A, src))
+    product(A, src) = (A * src; @allocated A * src)
+
+    rng = Random.Xoshiro(1234)
+    R = randn(rng, Rotor{Float64})
+    s, ℓₘₐₓ = -2, 8
+    w = ModeWeights(randn(rng, ComplexF64, SphericalFunctions.Ysize(abs(s), ℓₘₐₓ)), s)
+
+    # Rotation: `mul!` into a correctly labelled destination writes only into it.  These were
+    # ~350 bytes each until the hint message in `check_ℓ_covers` was made lazy — it named
+    # `ℓₘₐₓ(w)`, so it was built on every call whether or not the check failed.
+    w′ = similar(w)
+    @test inplace(w′, D(R, ℓₘₐₓ), w) == 0
+    @test inplace(w′, DCalculator(R, ℓₘₐₓ), w) == 0
+
+    # Evaluation returns a scalar, so it has nothing to allocate at all
+    @test product(sYlm(R, ℓₘₐₓ, s), w) == 0
+    @test product(sYlmCalculator(R, ℓₘₐₓ, s), w) == 0
+
+    # An operator applied in place, where the destination takes the *output* spin weight
+    out = ModeWeights{ComplexF64}(undef, s + 1, abs(s), ℓₘₐₓ)
+    @test inplace(out, ð, w) == 0
+    @test out == ð * w
+end

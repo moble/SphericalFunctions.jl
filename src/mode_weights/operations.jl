@@ -36,11 +36,15 @@ end
 
 # Containment, not equality: `D` has no `ℓₘᵢₙ` argument and always starts at 0 (or 1/2), while
 # a `ModeWeights` usually starts at `abs(s)`.  Truncation the other way is never silent.
-function check_ℓ_covers(lo, hi, w::ModeWeights, what, fix)
+# `fix` is a function rather than a string, and is called only on the failing branch.  Written
+# the other way, the hint — which names `ℓₘₐₓ(w)`, so it cannot be a literal — was interpolated
+# on every call, pass or fail, and that one string was the whole of the ~350 bytes a `mul!`
+# allocated where its docstring promises none.
+@inline function check_ℓ_covers(lo, hi, w::ModeWeights, what, fix::F) where {F}
     if lo > ℓₘᵢₙ(w) || hi < ℓₘₐₓ(w)
         error(
             "The mode weights cover ℓ ∈ $(ℓₘᵢₙ(w)):$(ℓₘₐₓ(w)); the ℓ range of $what is only "
-            * "$lo:$hi.  $fix"
+            * "$lo:$hi.  $(fix())"
         )
     end
     nothing
@@ -81,14 +85,14 @@ function check_rotation(𝔇::WignerSeries{IT}, w::ModeWeights) where {IT}
     check_same_kind(IT, w, "this WignerSeries")
     check_ℓ_covers(
         ℓₘᵢₙ(𝔇), ℓₘₐₓ(𝔇), w, "this WignerSeries",
-        "Build the matrices with `D(R, $(ℓₘₐₓ(w)))`."
+        () -> "Build the matrices with `D(R, $(ℓₘₐₓ(w)))`."
     )
 end
 
 function check_rotation(calc::WignerCalculator{IT}, w::ModeWeights) where {IT}
     check_same_kind(IT, w, "this calculator")
     check_ℓ_covers(
-        ℓₘᵢₙ(calc), ℓₘₐₓ(calc), w, "this calculator", "Build it with ℓₘₐₓ=$(ℓₘₐₓ(w))."
+        ℓₘᵢₙ(calc), ℓₘₐₓ(calc), w, "this calculator", () -> "Build it with ℓₘₐₓ=$(ℓₘₐₓ(w))."
     )
     if Nᵣ(calc) != 1
         error(
@@ -253,7 +257,7 @@ function check_evaluation(Y::HarmonicValues{T, IT}, w::ModeWeights) where {T, IT
     check_same_kind(IT, w, "these harmonic values")
     check_ℓ_covers(
         ℓₘᵢₙ(Y), ℓₘₐₓ(Y), w, "these harmonic values",
-        "Compute them with `sYlm(R, $(ℓₘₐₓ(w)), $(spin(w)); ℓₘᵢₙ=$(ℓₘᵢₙ(w)))`."
+        () -> "Compute them with `sYlm(R, $(ℓₘₐₓ(w)), $(spin(w)); ℓₘᵢₙ=$(ℓₘᵢₙ(w)))`."
     )
     check_spin_available(spins(Y), w, "these harmonic values")
 end
@@ -261,7 +265,7 @@ end
 function check_evaluation(calc::HarmonicCalculator{IT}, w::ModeWeights) where {IT}
     check_same_kind(IT, w, "this calculator")
     check_ℓ_covers(
-        ℓₘᵢₙ(calc), ℓₘₐₓ(calc), w, "this calculator", "Build it with ℓₘₐₓ=$(ℓₘₐₓ(w))."
+        ℓₘᵢₙ(calc), ℓₘₐₓ(calc), w, "this calculator", () -> "Build it with ℓₘₐₓ=$(ℓₘₐₓ(w))."
     )
     check_spin_available(spins(calc), w, "this calculator")
 end
