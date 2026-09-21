@@ -46,7 +46,7 @@ and the axis of `w[ℓ, :]` are made of; `w[ℓ, m]` accepts either spelling.  F
 `w[ℓ, :]` is a [`DegreeBlock`](@ref), indexed by `m ∈ -ℓ:ℓ`, exactly as it is for integer
 indices.
 """
-struct ModeWeights{T, IT<:HalfInteger, V<:AbstractVector{T}} <: AbstractModeContainer{T, IT}
+struct ModeWeights{T, IT<:IntegerHalf, V<:AbstractVector{T}} <: AbstractModeContainer{T, IT}
     data::V
     s::IT
     ℓₘᵢₙ::IT
@@ -54,7 +54,7 @@ struct ModeWeights{T, IT<:HalfInteger, V<:AbstractVector{T}} <: AbstractModeCont
     # These checks hold for either kind of index: the floor of ℓₘᵢₙ is 0 for integers and 1/2
     # for half-odd-integers, and `ℓₘᵢₙ < 0` is the right test for both, since no
     # half-odd-integer lies between 0 and 1/2.
-    function ModeWeights(data::V, s::IT, ℓₘᵢₙ::IT, ℓₘₐₓ::IT) where {T, IT<:HalfInteger, V<:AbstractVector{T}}
+    function ModeWeights(data::V, s::IT, ℓₘᵢₙ::IT, ℓₘₐₓ::IT) where {T, IT<:IntegerHalf, V<:AbstractVector{T}}
         Base.require_one_based_indexing(data)
         if ℓₘᵢₙ < 0
             throw(ArgumentError("ℓₘᵢₙ=$ℓₘᵢₙ must be non-negative."))
@@ -311,7 +311,7 @@ end
 # Normalize the natural indices of `w` and require them to be of `w`'s kind.  `half_integers`
 # has already refused a mixture of the two kinds among the indices themselves, so only the
 # first need be compared with `w`.
-function mode_kind_error(::Type{IT}, indices) where {IT<:HalfInteger}
+function mode_kind_error(::Type{IT}, indices) where {IT<:IntegerHalf}
     kind, example = IT <: Integer ? ("integers", "3") : ("half-odd-integers", "7//2")
     ArgumentError(
         "The indices of this `ModeWeights` are $kind, like $example, so the indices used with "
@@ -372,7 +372,7 @@ A view of the mode weights of the [`ModeWeights`](@ref) `w` for the given ``ℓ`
 half-odd-integers they may be spelled either as `Rational`s or as [`HalfOddInteger`](@ref)s.
 Writing through the view writes into `w`.
 """
-function Base.getindex(w::ModeWeights{T, IT}, ℓ::IT, ::Colon) where {T, IT<:HalfInteger}
+function Base.getindex(w::ModeWeights{T, IT}, ℓ::IT, ::Colon) where {T, IT<:IntegerHalf}
     if !(w.ℓₘᵢₙ ≤ ℓ ≤ w.ℓₘₐₓ)
         throw(BoundsError(w, (ℓ, :)))
     end

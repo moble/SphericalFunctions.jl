@@ -70,8 +70,8 @@ step, so `copy` it if it must survive; `collect` on this iterator copies every b
 function eachℓ end
 
 # `S` is `Nothing` for the calculators that yield one block per ℓ, and the spin weight's own
-# type — necessarily `<:HalfInteger` — when one has been singled out of an `sYlmCalculator`.
-# The methods below dispatch on `Nothing` against `<:HalfInteger` rather than on `S === IT`,
+# type — necessarily `<:IntegerHalf` — when one has been singled out of an `sYlmCalculator`.
+# The methods below dispatch on `Nothing` against `<:IntegerHalf` rather than on `S === IT`,
 # because the latter pair would be ambiguous for the (unreachable) `IT === Nothing`, which
 # Aqua's ambiguity check rightly flags.
 struct EachEll{C, IT, S}
@@ -132,7 +132,7 @@ end
     recurrence!(e.calc, ℓ)
     (ℓ => e.calc[ℓ], ℓ + 1)
 end
-@inline function Base.iterate(e::EachEll{C, IT, S}, ℓ::IT=e.ℓₘᵢₙ) where {C, IT, S<:HalfInteger}
+@inline function Base.iterate(e::EachEll{C, IT, S}, ℓ::IT=e.ℓₘᵢₙ) where {C, IT, S<:IntegerHalf}
     ℓ > e.ℓₘₐₓ && return nothing
     recurrence!(e.calc, ℓ)
     (ℓ => e.calc[ℓ, e.s], ℓ + 1)
@@ -170,7 +170,7 @@ Base.length(e::EachEll) = max(0, Int(e.ℓₘₐₓ - e.ℓₘᵢₙ) + 1)
 Base.eltype(::Type{C}) where {C<:WignerCalculator} = Pair{indextype(C), blocktype(C)}
 Base.eltype(::Type{C}) where {C<:HarmonicCalculator} = Pair{indextype(C), blocktype(C)}
 Base.eltype(::Type{EachEll{C, IT, Nothing}}) where {C, IT} = Pair{IT, blocktype(C)}
-Base.eltype(::Type{EachEll{C, IT, S}}) where {C, IT, S<:HalfInteger} = Pair{IT, blocktype(C, S)}
+Base.eltype(::Type{EachEll{C, IT, S}}) where {C, IT, S<:IntegerHalf} = Pair{IT, blocktype(C, S)}
 Base.eltype(c::EllIterable) = eltype(typeof(c))
 
 # Both are already Base's defaults for a type it knows nothing else about; they are stated

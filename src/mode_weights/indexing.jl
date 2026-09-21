@@ -54,9 +54,9 @@ function Ysize(ℓₘᵢₙ::HalfOddInteger, ℓₘₐₓ::HalfOddInteger)
 end
 # The one-argument form starts the ordering at the floor of the index type: 0 for an integer
 # ℓₘₐₓ, and 1/2 for a half-odd one.
-Ysize(ℓₘₐₓ::IT) where {IT<:HalfInteger} = Ysize(ℓₘᵢₙ(IT), ℓₘₐₓ)
+Ysize(ℓₘₐₓ::IT) where {IT<:IntegerHalf} = Ysize(ℓₘᵢₙ(IT), ℓₘₐₓ)
 # The boundary methods, which are the only ones that see a `Rational`.  `IndexSpelling` is
-# defined beside `HalfInteger` in `half_odd_integer.jl`.
+# defined beside `IntegerHalf` in `half_odd_integer.jl`.
 Ysize(ℓₘₐₓ::Rational) = Ysize(half_integer(ℓₘₐₓ))
 function Ysize(ℓₘᵢₙ::IndexSpelling, ℓₘₐₓ::IndexSpelling)
     Ysize(half_integers(ℓₘᵢₙ, ℓₘₐₓ)...)
@@ -119,7 +119,7 @@ end
 function Yrange(ℓₘᵢₙ::HalfOddInteger, ℓₘₐₓ::HalfOddInteger)
     [(ℓ, m) for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ for m ∈ -ℓ:ℓ]
 end
-Yrange(ℓₘₐₓ::IT) where {IT<:HalfInteger} = Yrange(ℓₘᵢₙ(IT), ℓₘₐₓ)
+Yrange(ℓₘₐₓ::IT) where {IT<:IntegerHalf} = Yrange(ℓₘᵢₙ(IT), ℓₘₐₓ)
 # The boundary methods, which are the only ones that see a `Rational`.
 Yrange(ℓₘₐₓ::Rational) = Yrange(half_integer(ℓₘₐₓ))
 function Yrange(ℓₘᵢₙ::IndexSpelling, ℓₘₐₓ::IndexSpelling)

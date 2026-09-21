@@ -76,7 +76,7 @@ VERSION ≥ v"1.11.0-DEV.469" && eval(Meta.parse(
     * "AbstractModeContainer, DifferentialOperator, Δspin, "
     * "HarmonicCalculator, sλlmCalculator, sλlm, sλlm!, sλlm_matrix, "
     * "ell, ellmin, ellmax, mpmax, mpmin, mmax, mmin, smax, smin, Nr, ishalfinteger, isbatched, "
-    * "HalfOddInteger, HalfInteger, "
+    * "HalfOddInteger, IntegerHalf, "
     * "nmodes, npixels, HWedge, HAxis, rotor_basetype, nrotors, floattype, "
     * "driscoll_healy_pixels, driscoll_healy_rotors, mcewen_wiaux_pixels, mcewen_wiaux_rotors"
 ))

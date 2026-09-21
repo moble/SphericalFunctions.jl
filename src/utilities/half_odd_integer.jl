@@ -3,7 +3,7 @@
 
 A half-odd-integer — one of ``…, -3/2, -1/2, 1/2, 3/2, …`` — stored as its odd `numerator`,
 so that the represented value is `numerator/2`.  Together with the `Integer`s these make up
-the [`HalfInteger`](@ref)s, the index types over which the Wigner recurrences are defined.
+the [`IntegerHalf`](@ref)s, the index types over which the Wigner recurrences are defined.
 
 The point of the type is that the arithmetic which actually occurs in those recurrences
 lands back in `Int`:
@@ -40,7 +40,7 @@ Users need not construct these directly: every public entry point that accepts a
 half-integer index also accepts a `Rational` with denominator 2, and converts.  Use
 `Rational(x)` to convert back.
 
-See also [`HalfInteger`](@ref).
+See also [`IntegerHalf`](@ref).
 """
 struct HalfOddInteger <: Real
     numerator::Int
@@ -72,7 +72,7 @@ end
 HalfOddInteger(x::Integer) = throw(InexactError(:HalfOddInteger, HalfOddInteger, x))
 
 """
-    HalfInteger
+    IntegerHalf
 
 `Union{Integer, HalfOddInteger}` — the index types over which the Wigner recurrences are
 defined.  A container or calculator is parameterized by one of these, so that whether its
@@ -81,7 +81,7 @@ values, and the two cases dispatch to separate, separately-compiled code.
 
 See also [`HalfOddInteger`](@ref).
 """
-const HalfInteger = Union{Integer, HalfOddInteger}
+const IntegerHalf = Union{Integer, HalfOddInteger}
 
 # The spellings of an index that a boundary method accepts: an `Integer`, a `HalfOddInteger`,
 # or the `Rational` with denominator 2 in which users write a half-odd-integer.  A method whose
@@ -90,7 +90,7 @@ const HalfInteger = Union{Integer, HalfOddInteger}
 # a method that sees only `Integer` or `HalfOddInteger` values, so that no method body ever
 # sees a `Rational`.  (A docstring here would have to be placed in the manual, where the alias
 # would mean nothing to a reader; the rule it encodes is stated under `half_integers`.)
-const IndexSpelling = Union{HalfInteger, Rational}
+const IndexSpelling = Union{IntegerHalf, Rational}
 
 
 ### Arithmetic.

@@ -149,7 +149,7 @@ const SpinSpelling = Union{IndexSpelling, AbstractRange}
 function sYlmCalculator(R, ℓₘₐₓ::IndexSpelling, s::SpinSpelling)
     sYlmCalculator_helper(R, spin_indices(ℓₘₐₓ, s)...)
 end
-function sYlmCalculator_helper(R, ℓₘₐₓ::IT, s) where {IT<:HalfInteger}
+function sYlmCalculator_helper(R, ℓₘₐₓ::IT, s) where {IT<:IntegerHalf}
     # See the note on `WignerDCalculator`: the element type reaches `allocate_Y` as a type,
     # not as a value, so that the concrete result type is settled at compile time.
     RT = rotor_basetype(R)
@@ -159,7 +159,7 @@ end
 function sλlmCalculator(θ, ℓₘₐₓ::IndexSpelling, s::SpinSpelling)
     sλlmCalculator_helper(θ, spin_indices(ℓₘₐₓ, s)...)
 end
-function sλlmCalculator_helper(θ, ℓₘₐₓ::IT, s) where {IT<:HalfInteger}
+function sλlmCalculator_helper(θ, ℓₘₐₓ::IT, s) where {IT<:IntegerHalf}
     RT = rotor_basetype(θ)
     set_rotors!(allocate_Y(IT, RT, RT, ℓₘₐₓ, s, nrotors(θ)), θ)
 end
@@ -170,17 +170,17 @@ end
 # identity element that the type deliberately lacks.  Note that `min_abs_spin` is not simply
 # the smaller of the two magnitudes: a range that straddles zero contains the smallest index
 # of its kind, which is 0 for integers and 1/2 for half-odd-integers.
-max_abs_spin(s::HalfInteger) = abs(s)
+max_abs_spin(s::IntegerHalf) = abs(s)
 max_abs_spin(s::AbstractUnitRange) = max(abs(first(s)), abs(last(s)))
-min_abs_spin(s::HalfInteger) = abs(s)
-function min_abs_spin(s::AbstractUnitRange{IT}) where {IT<:HalfInteger}
+min_abs_spin(s::IntegerHalf) = abs(s)
+function min_abs_spin(s::AbstractUnitRange{IT}) where {IT<:IntegerHalf}
     first(s) ≤ 0 ≤ last(s) ? ℓₘᵢₙ(IT) : min(abs(first(s)), abs(last(s)))
 end
-nspins(::HalfInteger) = 1
+nspins(::IntegerHalf) = 1
 nspins(s::AbstractUnitRange) = length(s)
 
 # A single index of the same kind as the spin-weight argument, for unifying `ℓₘᵢₙ` against.
-spin_representative(s::HalfInteger) = s
+spin_representative(s::IntegerHalf) = s
 spin_representative(s::AbstractUnitRange) = first(s)
 
 # Allocate the buffers without touching them.  PRIVATE: see the note on `allocate_H`.  Here
@@ -188,7 +188,7 @@ spin_representative(s::AbstractUnitRange) = first(s)
 # ever read, so this must not escape without a `set_rotors!` or a full buffer copy.
 function allocate_Y(
     ::Type{IT}, ::Type{RT}, ::Type{NT}, ℓₘₐₓ::IT, s::S, Nᵣ::Int
-) where {IT<:HalfInteger, RT<:Real, NT<:Union{RT, Complex{RT}}, S}
+) where {IT<:IntegerHalf, RT<:Real, NT<:Union{RT, Complex{RT}}, S}
     sₕ = max_abs_spin(s)
     if sₕ > ℓₘₐₓ
         error("The spin weights $s need |s| ≤ ℓₘₐₓ=$ℓₘₐₓ; the largest of them is $sₕ.")
@@ -256,9 +256,9 @@ isbatched(::HarmonicCalculator{IT, RT, NT, ST, S, B}) where {IT, RT, NT, ST, S, 
 # does not care can loop over it either way; `spin` exists only where there is a single value
 # to name, and a calculator built for several gives a `MethodError` rather than a value that
 # would have to be wrong.
-spins(c::HarmonicCalculator{IT, RT, NT, ST, S}) where {IT, RT, NT, ST, S<:HalfInteger} = c.s:c.s
+spins(c::HarmonicCalculator{IT, RT, NT, ST, S}) where {IT, RT, NT, ST, S<:IntegerHalf} = c.s:c.s
 spins(c::HarmonicCalculator{IT, RT, NT, ST, S}) where {IT, RT, NT, ST, S<:AbstractUnitRange} = c.s
-spin(c::HarmonicCalculator{IT, RT, NT, ST, S}) where {IT, RT, NT, ST, S<:HalfInteger} = c.s
+spin(c::HarmonicCalculator{IT, RT, NT, ST, S}) where {IT, RT, NT, ST, S<:IntegerHalf} = c.s
 
 function Base.show(io::IO, c::HarmonicCalculator{IT, RT, NT}) where {IT, RT, NT}
     print(
@@ -482,7 +482,7 @@ The result is a [`DegreeBlock`](@ref), [`DegreeBlockBatch`](@ref), [`SpinMatrix`
 with its natural indices, `collect` gives an ordinary 1-based `Array`, and [`strided`](@ref)
 gives a 1-based view of the same storage for linear algebra.
 """
-function Base.getindex(c::HarmonicCalculator{IT, RT, NT, ST, S}, ℓ) where {IT, RT, NT, ST, S<:HalfInteger}
+function Base.getindex(c::HarmonicCalculator{IT, RT, NT, ST, S}, ℓ) where {IT, RT, NT, ST, S<:IntegerHalf}
     ℓ = convert(IT, ℓ)
     check_current_ℓ(c, ℓ)
     spin_row(c, ℓ, 1)
@@ -538,7 +538,7 @@ end
 # One spin weight's row, selected by its position `i` in the calculator's storage, and the
 # whole block of every spin weight.  `isbatched(c)` reads a type parameter, so every branch is
 # resolved at compile time.  The same containers are returned for both kinds of index.
-function spin_row(c::HarmonicCalculator{IT}, ℓ::IT, i::Int) where {IT<:HalfInteger}
+function spin_row(c::HarmonicCalculator{IT}, ℓ::IT, i::Int) where {IT<:IntegerHalf}
     let mr = -ℓ:ℓ
         if isbatched(c)
             DegreeBlockBatch(view(c.Yˡ, :, i, 1:length(mr)), ℓ; mₘₐₓ=last(mr), mₘᵢₙ=first(mr))
@@ -548,7 +548,7 @@ function spin_row(c::HarmonicCalculator{IT}, ℓ::IT, i::Int) where {IT<:HalfInt
     end
 end
 
-function spin_block(c::HarmonicCalculator{IT}, ℓ::IT) where {IT<:HalfInteger}
+function spin_block(c::HarmonicCalculator{IT}, ℓ::IT) where {IT<:IntegerHalf}
     let mr = -ℓ:ℓ, sr = spins(c), n = length(spins(c))
         if isbatched(c)
             SpinMatrixBatch(
@@ -569,7 +569,7 @@ end
 #
 # Each public function here is a boundary method: it accepts every spelling of an index —
 # `Integer`, `HalfOddInteger`, or a `Rational` with denominator 2 — and of a range of them,
-# normalizes them, and re-dispatches to a worker whose `where {IT<:HalfInteger}` signature is
+# normalizes them, and re-dispatches to a worker whose `where {IT<:IntegerHalf}` signature is
 # what the rest of the package sees.  The split is made at the function boundary rather than by
 # a second method because `ℓₘᵢₙ` is a keyword argument, and keyword arguments take no part in
 # dispatch: a method with `ℓₘᵢₙ::IT` in its signature would refuse `ℓₘᵢₙ=1//2` with a bare
@@ -641,7 +641,7 @@ call must all be of one kind, integers or half-odd-integers; a call that mixes t
 function sYlm(R::Rotor, ℓₘₐₓ::IndexSpelling, s::SpinSpelling; ℓₘᵢₙ=nothing)
     sYlm_helper(sYlmCalculator_helper, R, flat_indices(ℓₘₐₓ, s, ℓₘᵢₙ)...)
 end
-function sYlm_helper(make, R, ℓₘₐₓ::IT, s, ℓₘᵢₙ::IT) where {IT<:HalfInteger}
+function sYlm_helper(make, R, ℓₘₐₓ::IT, s, ℓₘᵢₙ::IT) where {IT<:IntegerHalf}
     check_sYlm_args(ℓₘₐₓ, s, ℓₘᵢₙ)
     # The calculator decides the element type, and the output buffer follows it, so that
     # there is exactly one place where that decision is made.  `make` is what chooses the
@@ -661,14 +661,14 @@ function sYlm(R⃗::AbstractVector{<:Rotor}, ℓₘₐₓ::IndexSpelling, s::Spi
 end
 function sYlm_batch_helper(
     make, R⃗::AbstractVector, ℓₘₐₓ::IT, s, ℓₘᵢₙ::IT
-) where {IT<:HalfInteger}
+) where {IT<:IntegerHalf}
     check_sYlm_args(ℓₘₐₓ, s, ℓₘᵢₙ)
     HarmonicValues(sYlm_matrix_helper(make, R⃗, ℓₘₐₓ, s, ℓₘᵢₙ), s, ℓₘᵢₙ, ℓₘₐₓ, length(R⃗))
 end
 
 # The output of a flat call: a vector of modes for one spin weight, and a matrix of spin
 # weights by modes for several.
-function allocate_sYlm(::Type{T}, ::HalfInteger, ℓₘᵢₙ, ℓₘₐₓ) where {T}
+function allocate_sYlm(::Type{T}, ::IntegerHalf, ℓₘᵢₙ, ℓₘₐₓ) where {T}
     Vector{T}(undef, Ysize(ℓₘᵢₙ, ℓₘₐₓ))
 end
 function allocate_sYlm(::Type{T}, s::AbstractUnitRange, ℓₘᵢₙ, ℓₘₐₓ) where {T}
@@ -696,7 +696,7 @@ end
 # calculator, say — is possible there in a way it is not for the other flat functions, where
 # `where {IT}` unifies the indices.  `convert(IT, s)` would refuse it, but with a bare
 # `InexactError` about the type; this says what the calculator's indices are instead.
-function check_index_kind(::Type{IT}, x, name) where {IT<:HalfInteger}
+function check_index_kind(::Type{IT}, x, name) where {IT<:IntegerHalf}
     if !isindex(IT, x)
         kind, example = IT <: Integer ? ("integers", "3") : ("half-odd-integers", "7//2")
         error(
@@ -787,7 +787,7 @@ function sYlm!(
 end
 function sYlm_flat_helper!(
     Y::AbstractVecOrMat{<:Complex}, R::Rotor, ℓₘₐₓ::IT, s, ℓₘᵢₙ::IT
-) where {IT<:HalfInteger}
+) where {IT<:IntegerHalf}
     check_sYlm_args(ℓₘₐₓ, s, ℓₘᵢₙ)
     sYlm_helper!(Y, sYlmCalculator_helper(R, ℓₘₐₓ, s), R, s, ℓₘᵢₙ)
 end
@@ -811,9 +811,9 @@ function sYlm!(
 end
 
 function sYlm_helper!(
-    Y::AbstractVector, calc::HarmonicCalculator{IT}, R, s::HalfInteger,
-    ℓₘᵢₙ::HalfInteger
-) where {IT<:HalfInteger}
+    Y::AbstractVector, calc::HarmonicCalculator{IT}, R, s::IntegerHalf,
+    ℓₘᵢₙ::IntegerHalf
+) where {IT<:IntegerHalf}
     check_index_kind(IT, s, "the spin weight s")
     check_index_kind(IT, ℓₘᵢₙ, "ℓₘᵢₙ")
     ℓₘₐₓ = SphericalFunctions.ℓₘₐₓ(calc)
@@ -842,8 +842,8 @@ function sYlm_helper!(
 end
 function sYlm_helper!(
     Y::AbstractMatrix, calc::HarmonicCalculator{IT}, R, s::AbstractUnitRange,
-    ℓₘᵢₙ::HalfInteger
-) where {IT<:HalfInteger}
+    ℓₘᵢₙ::IntegerHalf
+) where {IT<:IntegerHalf}
     check_index_kind(IT, ℓₘᵢₙ, "ℓₘᵢₙ")
     ℓₘₐₓ = SphericalFunctions.ℓₘₐₓ(calc)
     ℓₘᵢₙ = convert(IT, ℓₘᵢₙ)
@@ -930,7 +930,7 @@ function sYlm_matrix(
 end
 function sYlm_matrix_helper(
     make, R⃗::AbstractVector, ℓₘₐₓ::IT, s, ℓₘᵢₙ::IT
-) where {IT<:HalfInteger}
+) where {IT<:IntegerHalf}
     check_sYlm_args(ℓₘₐₓ, s, ℓₘᵢₙ)
     calc = make(R⃗, ℓₘₐₓ, s)
     fill_sYlm_matrix!(
@@ -939,14 +939,14 @@ function sYlm_matrix_helper(
     )
 end
 
-function allocate_sYlm_matrix(::Type{T}, ::HalfInteger, Nᵣ, ℓₘᵢₙ, ℓₘₐₓ) where {T}
+function allocate_sYlm_matrix(::Type{T}, ::IntegerHalf, Nᵣ, ℓₘᵢₙ, ℓₘₐₓ) where {T}
     Matrix{T}(undef, Nᵣ, Ysize(ℓₘᵢₙ, ℓₘₐₓ))
 end
 function allocate_sYlm_matrix(::Type{T}, s::AbstractUnitRange, Nᵣ, ℓₘᵢₙ, ℓₘₐₓ) where {T}
     Array{T, 3}(undef, Nᵣ, length(s), Ysize(ℓₘᵢₙ, ℓₘₐₓ))
 end
 
-function fill_sYlm_matrix!(Y::AbstractMatrix, calc, s::HalfInteger, ℓₘᵢₙ, ℓₘₐₓ)
+function fill_sYlm_matrix!(Y::AbstractMatrix, calc, s::IntegerHalf, ℓₘᵢₙ, ℓₘₐₓ)
     Nᵣ = SphericalFunctions.Nᵣ(calc)
     iₛ = spin_index(calc, s)
     Yˡ = calc.Yˡ

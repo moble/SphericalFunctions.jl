@@ -40,7 +40,7 @@ end
 function allocate_W(
     ::Type{IT}, ::Type{RT}, ::Type{NT}, ℓₘₐₓ::IT,
     m′ₘₐₓ::IT, m′ₘᵢₙ::IT, mₘₐₓ::IT, mₘᵢₙ::IT, Nᵣ::Int
-) where {IT<:HalfInteger, RT<:Real, NT<:Union{RT, Complex{RT}}}
+) where {IT<:IntegerHalf, RT<:Real, NT<:Union{RT, Complex{RT}}}
     validate_index_ranges(ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
     # The recurrence needs the wedge for |m′| up to the larger of the two m′ limits (and all
     # m); the four limits only select the block that is materialized.
@@ -59,7 +59,7 @@ end
 function WignerCalculator{IT, RT, NT}(
     R, ℓₘₐₓ::IT;
     m′ₘₐₓ::IT=ℓₘₐₓ, m′ₘᵢₙ::IT=-m′ₘₐₓ, mₘₐₓ::IT=ℓₘₐₓ, mₘᵢₙ::IT=-mₘₐₓ
-) where {IT<:HalfInteger, RT<:Real, NT<:Union{RT, Complex{RT}}}
+) where {IT<:IntegerHalf, RT<:Real, NT<:Union{RT, Complex{RT}}}
     set_rotors!(
         allocate_W(IT, RT, NT, ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, nrotors(R)), R
     )
@@ -131,7 +131,7 @@ See also [`d`](@ref).
 """
 const WignerdCalculator{IT, RT, ST, B} = WignerCalculator{IT, RT, RT, ST, B} where {IT, RT<:Real, ST, B}
 
-# `ℓₘₐₓ` is constrained to `HalfInteger` here (with the `Rational` methods at the bottom of
+# `ℓₘₐₓ` is constrained to `IntegerHalf` here (with the `Rational` methods at the bottom of
 # this file taking the half-integer spelling) so that a call in the old argument order —
 # `WignerDCalculator(ℓₘₐₓ, Float64)` — is an immediate `MethodError` at the call site rather
 # than something that dispatches with the element type in the rotor's place.
@@ -143,16 +143,16 @@ const WignerdCalculator{IT, RT, ST, B} = WignerCalculator{IT, RT, RT, ST, B} whe
 # A three-argument method of either name would be a public way to override the element type,
 # and version 3 has none by design — the type of the rotor data is the only thing that decides
 # it.  `test/wigner/iteration.jl` asserts exactly that, with `@test_throws MethodError`.
-function WignerDCalculator(R, ℓₘₐₓ::IT; kwargs...) where {IT<:HalfInteger}
+function WignerDCalculator(R, ℓₘₐₓ::IT; kwargs...) where {IT<:IntegerHalf}
     wigner_D_calculator(R, ℓₘₐₓ, rotor_basetype(R); kwargs...)
 end
-function WignerdCalculator(β, ℓₘₐₓ::IT; kwargs...) where {IT<:HalfInteger}
+function WignerdCalculator(β, ℓₘₐₓ::IT; kwargs...) where {IT<:IntegerHalf}
     wigner_d_calculator(β, ℓₘₐₓ, rotor_basetype(β); kwargs...)
 end
-function wigner_D_calculator(R, ℓₘₐₓ::IT, ::Type{RT}; kwargs...) where {IT<:HalfInteger, RT<:Real}
+function wigner_D_calculator(R, ℓₘₐₓ::IT, ::Type{RT}; kwargs...) where {IT<:IntegerHalf, RT<:Real}
     WignerCalculator{IT, RT, Complex{RT}}(R, ℓₘₐₓ; kwargs...)
 end
-function wigner_d_calculator(β, ℓₘₐₓ::IT, ::Type{RT}; kwargs...) where {IT<:HalfInteger, RT<:Real}
+function wigner_d_calculator(β, ℓₘₐₓ::IT, ::Type{RT}; kwargs...) where {IT<:IntegerHalf, RT<:Real}
     WignerCalculator{IT, RT, RT}(β, ℓₘₐₓ; kwargs...)
 end
 
@@ -379,7 +379,7 @@ end
 # method has a single concrete return type.  The same containers are returned for integer and
 # half-odd-integer indices alike; see the note on `AbstractWignerMatrix` for why they are not
 # `OffsetArray`s even where an `OffsetArray` could represent them.
-function block(c::WignerCalculator{IT}, ℓ::IT, m′r, mr) where {IT<:HalfInteger}
+function block(c::WignerCalculator{IT}, ℓ::IT, m′r, mr) where {IT<:IntegerHalf}
     if isbatched(c)
         WignerMatrixBatch(
             view(c.Wˡ, :, 1:length(m′r), 1:length(mr)), ℓ;
@@ -419,7 +419,7 @@ which allocates once and computes one ``ℓ`` at a time.
 
 See also [`d`](@ref) and [`sYlm`](@ref).
 """
-function D(R::Rotor{T}, ℓₘₐₓ::IT; kwargs...) where {T<:Real, IT<:HalfInteger}
+function D(R::Rotor{T}, ℓₘₐₓ::IT; kwargs...) where {T<:Real, IT<:IntegerHalf}
     calc = WignerDCalculator(R, ℓₘₐₓ; kwargs...)
     WignerSeries(
         [copy(recurrence!(calc, ℓ)[ℓ]) for ℓ ∈ ℓₘᵢₙ(IT):ℓₘₐₓ], ℓₘᵢₙ(IT), ℓₘₐₓ
@@ -439,7 +439,7 @@ details; this function is the real, ``β``-only analogue.
 ``e^{iβ}`` determines it only up to the sign ``(-1)^{2ℓ}`` (the branch ``β ∈ (-π, π]`` is
 used).
 """
-function d(β::Union{Real, Complex, Rotor}, ℓₘₐₓ::IT; kwargs...) where {IT<:HalfInteger}
+function d(β::Union{Real, Complex, Rotor}, ℓₘₐₓ::IT; kwargs...) where {IT<:IntegerHalf}
     calc = WignerdCalculator(β, ℓₘₐₓ; kwargs...)
     WignerSeries(
         [copy(recurrence!(calc, ℓ)[ℓ]) for ℓ ∈ ℓₘᵢₙ(IT):ℓₘₐₓ], ℓₘᵢₙ(IT), ℓₘₐₓ

@@ -24,7 +24,7 @@ being an array is what let the `OffsetArray`s of earlier versions accept `*` and
 silently wrong answers.  [`strided`](@ref) is the explicit route to the flat 1-based storage,
 and is what the transforms and the operator matrices take.
 """
-abstract type AbstractModeContainer{T, IT<:HalfInteger} end
+abstract type AbstractModeContainer{T, IT<:IntegerHalf} end
 
 Base.eltype(::AbstractModeContainer{T}) where {T} = T
 Base.eltype(::Type{<:AbstractModeContainer{T}}) where {T} = T
@@ -87,7 +87,7 @@ one, `Nᵣ(Y)` the number of rotors, and `ℓₘᵢₙ(Y)`/`ℓₘₐₓ(Y)` the
 See also [`ModeWeights`](@ref), which shares this layout but holds the weights of a function
 rather than the values of the harmonics.
 """
-struct HarmonicValues{T, IT<:HalfInteger, S, A<:AbstractArray{T}} <: AbstractModeContainer{T, IT}
+struct HarmonicValues{T, IT<:IntegerHalf, S, A<:AbstractArray{T}} <: AbstractModeContainer{T, IT}
     data::A
     s::S          # one `IT`, or an ascending range of them
     ℓₘᵢₙ::IT
@@ -96,7 +96,7 @@ struct HarmonicValues{T, IT<:HalfInteger, S, A<:AbstractArray{T}} <: AbstractMod
 
     function HarmonicValues(
         data::A, s::S, ℓₘᵢₙ::IT, ℓₘₐₓ::IT, Nᵣ::Int
-    ) where {T, IT<:HalfInteger, S, A<:AbstractArray{T}}
+    ) where {T, IT<:IntegerHalf, S, A<:AbstractArray{T}}
         Base.require_one_based_indexing(data)
         if size(data)[end] != Ysize(ℓₘᵢₙ, ℓₘₐₓ)
             throw(ArgumentError(
@@ -111,9 +111,9 @@ end
 Base.parent(Y::HarmonicValues) = Y.data
 Nᵣ(Y::HarmonicValues) = Y.Nᵣ
 isbatched(Y::HarmonicValues) = Y.Nᵣ > 1
-spins(Y::HarmonicValues{T, IT, S}) where {T, IT, S<:HalfInteger} = Y.s:Y.s
+spins(Y::HarmonicValues{T, IT, S}) where {T, IT, S<:IntegerHalf} = Y.s:Y.s
 spins(Y::HarmonicValues{T, IT, S}) where {T, IT, S<:AbstractUnitRange} = Y.s
-spin(Y::HarmonicValues{T, IT, S}) where {T, IT, S<:HalfInteger} = Y.s
+spin(Y::HarmonicValues{T, IT, S}) where {T, IT, S<:IntegerHalf} = Y.s
 
 # `length` counts the blocks, as it does for a `WignerSeries`; the number of modes is
 # `length(strided(Y))` for the unbatched single-spin case, and `Ysize` in general.
@@ -126,14 +126,14 @@ Base.lastindex(Y::HarmonicValues) = ℓₘₐₓ(Y)
 # a single spin weight or a range, so each of these has a single concrete return type.
 @propagate_inbounds function Base.getindex(
     Y::HarmonicValues{T, IT, S, <:AbstractVector}, ℓ
-) where {T, IT, S<:HalfInteger}
+) where {T, IT, S<:IntegerHalf}
     let ℓ = check_ℓ(Y, ℓ)
         DegreeBlock(view(Y.data, mode_range(Y, ℓ)), ℓ)
     end
 end
 @propagate_inbounds function Base.getindex(
     Y::HarmonicValues{T, IT, S, <:AbstractMatrix}, ℓ
-) where {T, IT, S<:HalfInteger}
+) where {T, IT, S<:IntegerHalf}
     let ℓ = check_ℓ(Y, ℓ)
         DegreeBlockBatch(view(Y.data, :, mode_range(Y, ℓ)), ℓ)
     end

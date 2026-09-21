@@ -110,7 +110,7 @@ The recurrences are written in the natural indices ``ℓ``, ``m'`` and ``m`` thr
 That costs nothing, because a sum or difference of two
 [`HalfOddInteger`](@ref SphericalFunctions.HalfOddInteger)s is an `Integer`: a coefficient
 such as ``(ℓ-m)(ℓ+m+1)`` is therefore integer arithmetic for both index types, while being
-written exactly as the references write it.  That type, and the `HalfInteger` union it
+written exactly as the references write it.  That type, and the `IntegerHalf` union it
 belongs to, are described on the [half-integer page](@ref interface_half_integers); the
 functions below are the boundary machinery that produces them.  A public entry point accepts
 a half-integer index spelled as a `Rational`, and normalizes it with [`half_integer`](@ref

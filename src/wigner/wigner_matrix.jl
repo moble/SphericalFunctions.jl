@@ -57,7 +57,7 @@ be re-implemented to return the correct parent object; likewise the default `get
 `setindex!` assume that `parent(w)` is a 1-based matrix whose `[1, 1]` element is
 `w[m′ₘᵢₙ(w), mₘᵢₙ(w)]`.
 """
-abstract type AbstractWignerMatrix{IT<:HalfInteger, NT, ST<:AbstractArray{NT}} end
+abstract type AbstractWignerMatrix{IT<:IntegerHalf, NT, ST<:AbstractArray{NT}} end
 # Note that this is deliberately *not* a subtype of `AbstractMatrix`: the natural indices
 # `(m′, m)` may be half-odd-integers, which cannot satisfy the `AbstractArray` interface
 # (integer `axes`).  The array-like methods that make sense are defined explicitly below.
@@ -97,7 +97,7 @@ Base.eltype(::Type{<:AbstractWignerMatrix{IT, NT, ST}}) where {IT, NT, ST} = NT
 Base.size(w::AbstractWignerMatrix{IT, NT, ST}) where {IT, NT, ST} = size(parent(w))
 Base.length(w::AbstractWignerMatrix{IT, NT, ST}) where {IT, NT, ST} = length(parent(w))
 
-struct WignerRange{T<:HalfInteger} <: AbstractUnitRange{T}
+struct WignerRange{T<:IntegerHalf} <: AbstractUnitRange{T}
     start::T
     stop::T
 
@@ -152,7 +152,7 @@ end
 # `in(::Real, ::AbstractRange{<:Real})` would additionally test integrality of the offset,
 # which is automatic here: `x - first(r)` is an `Integer` by construction for both index
 # types.)
-@inline Base.in(x::T, r::WignerRange{T}) where {T<:HalfInteger} = first(r) ≤ x ≤ last(r)
+@inline Base.in(x::T, r::WignerRange{T}) where {T<:IntegerHalf} = first(r) ≤ x ≤ last(r)
 # A value of the *other* index type is never a member, and neither is anything else.
 @inline Base.in(::Real, ::WignerRange) = false
 # `Base` has `in(::Integer, ::AbstractUnitRange{<:Integer})`, which is neither more nor less
@@ -371,7 +371,7 @@ function WignerMatrix(
     parent::ST, ℓ::IT;
     mp_max::IT=ℓ, mp_min::IT=-ℓ, m_max::IT=ℓ, m_min::IT=-ℓ,
     m′ₘₐₓ::IT=mp_max, m′ₘᵢₙ::IT=mp_min, mₘₐₓ::IT=m_max, mₘᵢₙ::IT=m_min
-) where {IT<:HalfInteger, NT, ST<:AbstractMatrix{NT}}
+) where {IT<:IntegerHalf, NT, ST<:AbstractMatrix{NT}}
     validate_index_ranges(ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
     s₁, s₂ = size(parent)
     if s₁ < Int(m′ₘₐₓ - m′ₘᵢₙ + 1)
@@ -578,7 +578,7 @@ end
 function DegreeBlock(parent::AbstractVector, ℓ::Rational; kwargs...)
     DegreeBlock(parent, half_integer(ℓ); half_integer_kwargs(kwargs)...)
 end
-function DegreeBlock(parent::ST, ℓ::IT; mₘₐₓ::IT=ℓ, mₘᵢₙ::IT=-ℓ) where {IT<:HalfInteger, NT, ST<:AbstractVector{NT}}
+function DegreeBlock(parent::ST, ℓ::IT; mₘₐₓ::IT=ℓ, mₘᵢₙ::IT=-ℓ) where {IT<:IntegerHalf, NT, ST<:AbstractVector{NT}}
     if length(parent) < Int(mₘₐₓ - mₘᵢₙ) + 1
         error(
             "The input data must have length at least mₘₐₓ-mₘᵢₙ+1="
@@ -803,7 +803,7 @@ function SpinMatrix(parent::AbstractMatrix, ℓ::Rational; kwargs...)
 end
 function SpinMatrix(
     parent::ST, ℓ::IT; sₘₐₓ::IT, sₘᵢₙ::IT, mₘₐₓ::IT=ℓ, mₘᵢₙ::IT=-ℓ
-) where {IT<:HalfInteger, NT, ST<:AbstractMatrix{NT}}
+) where {IT<:IntegerHalf, NT, ST<:AbstractMatrix{NT}}
     s₁, s₂ = size(parent)
     if s₁ < Int(sₘₐₓ - sₘᵢₙ) + 1
         error(
@@ -943,7 +943,7 @@ function SpinMatrixBatch(parent::AbstractArray{<:Any, 3}, ℓ::Rational; kwargs.
 end
 function SpinMatrixBatch(
     parent::ST, ℓ::IT; sₘₐₓ::IT, sₘᵢₙ::IT, mₘₐₓ::IT=ℓ, mₘᵢₙ::IT=-ℓ
-) where {IT<:HalfInteger, NT, ST<:AbstractArray{NT, 3}}
+) where {IT<:IntegerHalf, NT, ST<:AbstractArray{NT, 3}}
     s₀, s₁, s₂ = size(parent)
     if s₁ < Int(sₘₐₓ - sₘᵢₙ) + 1
         error(
@@ -1217,7 +1217,7 @@ const WignerdMatrix{IT, RT, ST} = WignerMatrix{IT, RT, ST} where {IT, RT<:Real, 
 function WignerDMatrix(parent::AbstractMatrix{Complex{RT}}, ℓ::Rational; kwargs...) where {RT<:Real}
     WignerDMatrix(parent, half_integer(ℓ); half_integer_kwargs(kwargs)...)
 end
-function WignerDMatrix(parent::ST, ℓ::IT; kwargs...) where {IT<:HalfInteger, RT<:Real, ST<:AbstractMatrix{Complex{RT}}}
+function WignerDMatrix(parent::ST, ℓ::IT; kwargs...) where {IT<:IntegerHalf, RT<:Real, ST<:AbstractMatrix{Complex{RT}}}
     WignerMatrix(parent, ℓ; kwargs...)
 end
 function WignerDMatrix(parent::ST, ℓ::IT; kwargs...) where {IT, RT<:Real, ST<:AbstractMatrix{RT}}
@@ -1229,7 +1229,7 @@ end
 function WignerDMatrix(::Type{Complex{RT}}, ℓ::Rational, m′ₘₐₓ=ℓ; kwargs...) where {RT<:Real}
     WignerDMatrix(Complex{RT}, half_integer(ℓ), half_integer(m′ₘₐₓ); half_integer_kwargs(kwargs)...)
 end
-function WignerDMatrix(::Type{Complex{RT}}, ℓ::IT, m′ₘₐₓ::IT=ℓ; kwargs...) where {RT<:Real, IT<:HalfInteger}
+function WignerDMatrix(::Type{Complex{RT}}, ℓ::IT, m′ₘₐₓ::IT=ℓ; kwargs...) where {RT<:Real, IT<:IntegerHalf}
     # Validate before sizing the storage: `Int(2ℓ + 1)` on, say, ℓ = 5//3 would otherwise
     # throw a bare `InexactError` instead of the message explaining the denominator rule.
     validate_index_ranges(ℓ, m′ₘₐₓ, -m′ₘₐₓ)
@@ -1241,7 +1241,7 @@ end
 function WignerdMatrix(parent::AbstractMatrix{RT}, ℓ::Rational; kwargs...) where {RT<:Real}
     WignerdMatrix(parent, half_integer(ℓ); half_integer_kwargs(kwargs)...)
 end
-function WignerdMatrix(parent::ST, ℓ::IT; kwargs...) where {IT<:HalfInteger, RT<:Real, ST<:AbstractMatrix{RT}}
+function WignerdMatrix(parent::ST, ℓ::IT; kwargs...) where {IT<:IntegerHalf, RT<:Real, ST<:AbstractMatrix{RT}}
     WignerMatrix(parent, ℓ; kwargs...)
 end
 function WignerdMatrix(parent::ST, ℓ::IT; kwargs...) where {IT, RT<:Real, ST<:AbstractMatrix{Complex{RT}}}
@@ -1253,7 +1253,7 @@ end
 function WignerdMatrix(::Type{RT}, ℓ::Rational, m′ₘₐₓ=ℓ; kwargs...) where {RT<:Real}
     WignerdMatrix(RT, half_integer(ℓ), half_integer(m′ₘₐₓ); half_integer_kwargs(kwargs)...)
 end
-function WignerdMatrix(::Type{RT}, ℓ::IT, m′ₘₐₓ::IT=ℓ; kwargs...) where {RT<:Real, IT<:HalfInteger}
+function WignerdMatrix(::Type{RT}, ℓ::IT, m′ₘₐₓ::IT=ℓ; kwargs...) where {RT<:Real, IT<:IntegerHalf}
     validate_index_ranges(ℓ, m′ₘₐₓ, -m′ₘₐₓ)
     parent = Matrix{RT}(undef, Int(m′ₘₐₓ - (-m′ₘₐₓ) + 1), Int(2ℓ + 1))
     WignerMatrix(parent, ℓ; m′ₘₐₓ=m′ₘₐₓ, m′ₘᵢₙ=-m′ₘₐₓ, kwargs...)

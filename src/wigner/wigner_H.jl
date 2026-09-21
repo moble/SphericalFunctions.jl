@@ -1,6 +1,6 @@
 ### Index arithmetic
 #
-# Indices are `Integer`s or `HalfOddInteger`s — together, `HalfInteger`.  Because a sum or
+# Indices are `Integer`s or `HalfOddInteger`s — together, `IntegerHalf`.  Because a sum or
 # difference of two `HalfOddInteger`s is an `Int`, and adding an `Int` to one gives back a
 # `HalfOddInteger`, every coefficient, loop bound and storage offset below is integer
 # arithmetic for *both* index types, while being written exactly as the references write it.

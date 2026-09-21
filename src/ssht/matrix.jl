@@ -29,7 +29,7 @@ in terms of speed and accuracy.  However, this advantage quickly falls away.  A 
 issued if `ℓₘₐₓ` is greater than about 64, because this method is not likely to be the most
 efficient or most accurate choice.
 """
-struct SSHTMatrix{T<:Real, Inplace, Tdecomp, IT<:HalfInteger} <: SSHT{T}
+struct SSHTMatrix{T<:Real, Inplace, Tdecomp, IT<:IntegerHalf} <: SSHT{T}
     s::IT
     ℓₘₐₓ::IT
     Rθϕ::Vector{Rotor{T}}
@@ -49,7 +49,7 @@ function SSHTMatrix(
     Rθϕ=golden_ratio_spiral_rotors(s, ℓₘₐₓ, TT),
     decomposition=(inplaceable(s, ℓₘₐₓ, Rθϕ) ? LinearAlgebra.lu : LinearAlgebra.qr),
     inplace=inplaceable(s, ℓₘₐₓ, Rθϕ)
-) where {IT<:HalfInteger, TT}
+) where {IT<:IntegerHalf, TT}
     if abs(s) > ℓₘₐₓ
         error("|s|=$(abs(s)) exceeds ℓₘₐₓ=$ℓₘₐₓ; there are no such modes.")
     end
@@ -127,4 +127,3 @@ function LinearAlgebra.ldiv!(𝒯::SSHTMatrix, ff̃)
     ldiv!(𝒯.Ydecomposition, flatten_trailing(strided(ff̃)))
     ff̃
 end
-

@@ -72,7 +72,7 @@ end
 function WignerHCalculator(β, ℓₘₐₓ::Rational; kwargs...)
     WignerHCalculator(β, half_integer(ℓₘₐₓ); half_integer_kwargs(kwargs)...)
 end
-function WignerHCalculator(β, ℓₘₐₓ::IT; m′ₘₐₓ::IT=ℓₘₐₓ) where {IT<:HalfInteger}
+function WignerHCalculator(β, ℓₘₐₓ::IT; m′ₘₐₓ::IT=ℓₘₐₓ) where {IT<:IntegerHalf}
     # `rotor_basetype` is called in argument position so that the element type reaches
     # `allocate_H` as a type rather than as a value, which is what keeps the result
     # inferrable.
@@ -86,7 +86,7 @@ end
 # can escape — which is exactly what the public constructor above and `similar` below do.
 function allocate_H(
     ::Type{IT}, ::Type{RT}, ℓₘₐₓ::IT, m′ₘₐₓ::IT, Nᵣ::Int
-) where {IT<:HalfInteger, RT<:Real}
+) where {IT<:IntegerHalf, RT<:Real}
     if m′ₘₐₓ < 0 || m′ₘₐₓ > ℓₘₐₓ
         error("m′ₘₐₓ=$m′ₘₐₓ must satisfy 0 ≤ m′ₘₐₓ ≤ ℓₘₐₓ=$ℓₘₐₓ.")
     end

@@ -25,7 +25,7 @@
 index_kind_name(::Type{<:Integer}) = "integers"
 index_kind_name(::Type{HalfOddInteger}) = "half-odd-integers"
 
-function check_same_kind(::Type{IT}, w::ModeWeights{T, JT}, what) where {IT<:HalfInteger, T, JT}
+function check_same_kind(::Type{IT}, w::ModeWeights{T, JT}, what) where {IT<:IntegerHalf, T, JT}
     isindex(IT, ℓₘᵢₙ(w)) && return nothing
     error(
         "These mode weights are indexed by $(index_kind_name(JT)) — "
@@ -297,13 +297,13 @@ Y * w == w(R)
 """
 function Base.:*(
     Y::HarmonicValues{T, IT, S, <:AbstractVector}, w::ModeWeights
-) where {T, IT, S<:HalfInteger}
+) where {T, IT, S<:IntegerHalf}
     check_evaluation(Y, w)
     synthesize(view(strided(Y), shared_mode_range(Y, w)), strided(w))
 end
 function Base.:*(
     Y::HarmonicValues{T, IT, S, <:AbstractMatrix}, w::ModeWeights
-) where {T, IT, S<:HalfInteger}
+) where {T, IT, S<:IntegerHalf}
     check_evaluation(Y, w)
     view(strided(Y), :, shared_mode_range(Y, w)) * strided(w)
 end

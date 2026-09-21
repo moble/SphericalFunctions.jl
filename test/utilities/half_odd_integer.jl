@@ -219,14 +219,14 @@ end
 
 
 @testitem "HalfOddInteger: the boundary helpers" begin
-    using SphericalFunctions: HalfOddInteger, HalfInteger, IndexSpelling, unify_indices, index_value
+    using SphericalFunctions: HalfOddInteger, IntegerHalf, IndexSpelling, unify_indices, index_value
     using SphericalFunctions: half_integer, Ysize, Yindex, L², sorted_rings, ModeWeights
     using DoubleFloats: Double64
     h(x) = HalfOddInteger(x)
 
     # `IndexSpelling` is exactly the set of spellings a boundary method accepts: the two kinds
     # of index, and the `Rational` in which users write a half-odd-integer
-    @test IndexSpelling === Union{HalfInteger, Rational}
+    @test IndexSpelling === Union{IntegerHalf, Rational}
     for x in (3, Int8(3), big(3), h(7//2), 7//2, 7//1, big(7)//2)
         @test x isa IndexSpelling
     end

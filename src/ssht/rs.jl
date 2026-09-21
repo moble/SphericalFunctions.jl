@@ -41,7 +41,7 @@ at integer frequencies and each sample of a ring is multiplied by ``e^{±iϕ/2}`
 defaults — ``2ℓₘₐₓ+1`` rings and ``2ℓₘₐₓ+1`` points per ring — are unchanged, and are even
 numbers.
 """
-struct SSHTRS{T<:Real, ST, P, BP, B, IT<:HalfInteger} <: SSHT{T}
+struct SSHTRS{T<:Real, ST, P, BP, B, IT<:IntegerHalf} <: SSHT{T}
     s::IT
     ℓₘₐₓ::IT
     θ::Vector{T}
@@ -66,7 +66,7 @@ function SSHTRS(
     quadrature_weights=fejer1(length(θ), TT),
     Nϕ=2ℓₘₐₓ+1,
     plan_fft_flags=FFTW.ESTIMATE, plan_fft_timelimit=Inf
-) where {IT<:HalfInteger, TT}
+) where {IT<:IntegerHalf, TT}
     if abs(s) > ℓₘₐₓ
         error("|s|=$(abs(s)) exceeds ℓₘₐₓ=$ℓₘₐₓ; there are no such modes.")
     end

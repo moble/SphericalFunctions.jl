@@ -87,7 +87,7 @@ end
 # The transforms store their indices as `Int` or as `HalfOddInteger` — as `Int` rather than
 # whatever `Integer` type the caller happened to use, which is what the fields' former `::Int`
 # annotations did.  Every public constructor is a boundary that passes its two indices
-# through this and re-dispatches to a worker whose signature is `where {IT<:HalfInteger}`.
+# through this and re-dispatches to a worker whose signature is `where {IT<:IntegerHalf}`.
 stored_index(x::Integer) = Int(x)
 stored_index(x::HalfOddInteger) = x
 transform_indices(s, ℓₘₐₓ) = map(stored_index, unify_indices(s, ℓₘₐₓ))

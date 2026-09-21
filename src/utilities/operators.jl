@@ -18,8 +18,8 @@
 #
 # Each operator is one function with two kinds of method: a *boundary* method typed
 # `IndexSpelling`, which normalizes the indices and re-dispatches, and a *worker* method typed
-# `where {IT<:HalfInteger}`, which does the arithmetic.  The worker is reached by dispatch
-# rather than by a separate underscore-prefixed name: `IT<:HalfInteger` with one `IT` for all
+# `where {IT<:IntegerHalf}`, which does the arithmetic.  The worker is reached by dispatch
+# rather than by a separate underscore-prefixed name: `IT<:IntegerHalf` with one `IT` for all
 # three indices is strictly more specific than three independent `IndexSpelling`s, so the
 # worker always wins once the indices agree, and `unify_indices` guarantees that they do.
 # Being methods of the exported name, the workers are simply undocumented rather than hidden.
@@ -28,7 +28,7 @@
 # as `Rational`s with denominator 2 or as `HalfOddInteger`s.  Each public function is a
 # boundary method, typed `IndexSpelling` on its indices, which does nothing but normalize the
 # three with `unify_indices` and re-dispatch to a private worker — `L²` for `L²`, and so on —
-# whose signature is `where {IT<:HalfInteger, T}`.  The worker therefore sees three indices of
+# whose signature is `where {IT<:IntegerHalf, T}`.  The worker therefore sees three indices of
 # one concrete type and never a `Rational`, and a call that mixes the two kinds of index is
 # refused at the boundary.  The three-argument forms normalize first as well, so that the
 # default `ℓₘᵢₙ = abs(s)` is computed from the normalized spin weight.  The worker bodies are
@@ -204,21 +204,21 @@ function (op::DifferentialOperator)(s::IndexSpelling, ℓₘₐₓ::IndexSpellin
     s, ℓₘₐₓ = unify_indices(s, ℓₘₐₓ)
     op(s, abs(s), ℓₘₐₓ, T)
 end
-function (op::DifferentialOperator)(s::IT, ℓₘᵢₙ::IT, ℓₘₐₓ::IT, ::Type{T}) where {IT<:HalfInteger, T}
+function (op::DifferentialOperator)(s::IT, ℓₘᵢₙ::IT, ℓₘₐₓ::IT, ::Type{T}) where {IT<:IntegerHalf, T}
     operator_matrix(op, bandstructure(op), s, ℓₘᵢₙ, ℓₘₐₓ, T)
 end
 
 # One builder per band structure.  The `ifelse` in the ladder ranges drops the one mode that
 # has no band entry — the very first for a sub-diagonal, the very last for a super-diagonal —
 # exactly as the hand-written builders did.
-function operator_matrix(op, ::DiagonalBand, s::IT, ℓₘᵢₙ::IT, ℓₘₐₓ::IT, ::Type{T}) where {IT<:HalfInteger, T}
+function operator_matrix(op, ::DiagonalBand, s::IT, ℓₘᵢₙ::IT, ℓₘₐₓ::IT, ::Type{T}) where {IT<:IntegerHalf, T}
     Diagonal(
         coefftype(op, T)[
             diagonal_coefficient(op, T, s, ℓ, m) for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ for m ∈ -ℓ:ℓ
         ]
     )
 end
-function operator_matrix(op, ::SubdiagonalBand, s::IT, ℓₘᵢₙ::IT, ℓₘₐₓ::IT, ::Type{T}) where {IT<:HalfInteger, T}
+function operator_matrix(op, ::SubdiagonalBand, s::IT, ℓₘᵢₙ::IT, ℓₘₐₓ::IT, ::Type{T}) where {IT<:IntegerHalf, T}
     Bidiagonal(
         zeros(coefftype(op, T), Ysize(ℓₘᵢₙ, ℓₘₐₓ)),
         coefftype(op, T)[
@@ -228,7 +228,7 @@ function operator_matrix(op, ::SubdiagonalBand, s::IT, ℓₘᵢₙ::IT, ℓₘ�
         :L
     )
 end
-function operator_matrix(op, ::SuperdiagonalBand, s::IT, ℓₘᵢₙ::IT, ℓₘₐₓ::IT, ::Type{T}) where {IT<:HalfInteger, T}
+function operator_matrix(op, ::SuperdiagonalBand, s::IT, ℓₘᵢₙ::IT, ℓₘₐₓ::IT, ::Type{T}) where {IT<:IntegerHalf, T}
     Bidiagonal(
         zeros(coefftype(op, T), Ysize(ℓₘᵢₙ, ℓₘₐₓ)),
         coefftype(op, T)[
@@ -238,7 +238,7 @@ function operator_matrix(op, ::SuperdiagonalBand, s::IT, ℓₘᵢₙ::IT, ℓ�
         :U
     )
 end
-function operator_matrix(op, ::TridiagonalBand, s::IT, ℓₘᵢₙ::IT, ℓₘₐₓ::IT, ::Type{T}) where {IT<:HalfInteger, T}
+function operator_matrix(op, ::TridiagonalBand, s::IT, ℓₘᵢₙ::IT, ℓₘₐₓ::IT, ::Type{T}) where {IT<:IntegerHalf, T}
     CT = coefftype(op, T)
     Tridiagonal(
         CT[
@@ -270,7 +270,7 @@ end
 
 function apply_operator!(
     out, op, ::DiagonalBand, in, s::IT, ℓ₀::IT, ℓ₁::IT, ::Type{T}
-) where {IT<:HalfInteger, T}
+) where {IT<:IntegerHalf, T}
     @inbounds for ℓ ∈ ℓ₀:ℓ₁
         i = Yindex(ℓ, -ℓ, ℓ₀)
         for m ∈ -ℓ:ℓ
@@ -283,7 +283,7 @@ end
 
 function apply_operator!(
     out, op, ::SubdiagonalBand, in, s::IT, ℓ₀::IT, ℓ₁::IT, ::Type{T}
-) where {IT<:HalfInteger, T}
+) where {IT<:IntegerHalf, T}
     Z = zero(eltype(out))
     @inbounds for ℓ ∈ ℓ₀:ℓ₁
         i = Yindex(ℓ, -ℓ, ℓ₀)
@@ -297,7 +297,7 @@ end
 
 function apply_operator!(
     out, op, ::SuperdiagonalBand, in, s::IT, ℓ₀::IT, ℓ₁::IT, ::Type{T}
-) where {IT<:HalfInteger, T}
+) where {IT<:IntegerHalf, T}
     N = length(out)
     Z = zero(eltype(out))
     @inbounds for ℓ ∈ ℓ₀:ℓ₁
@@ -312,7 +312,7 @@ end
 
 function apply_operator!(
     out, op, ::TridiagonalBand, in, s::IT, ℓ₀::IT, ℓ₁::IT, ::Type{T}
-) where {IT<:HalfInteger, T}
+) where {IT<:IntegerHalf, T}
     N = length(out)
     Z = zero(eltype(out))
     @inbounds for ℓ ∈ ℓ₀:ℓ₁

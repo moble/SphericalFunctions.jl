@@ -73,8 +73,8 @@ defines no `promote_rule`, so that an unanticipated operation is a
 `zero`, `one` and `oneunit` throw rather than returning a value of
 some other type.
 
-Together with the `Integer`s, these make up [`HalfInteger`](@ref
-SphericalFunctions.HalfInteger), the union of index types over which
+Together with the `Integer`s, these make up [`IntegerHalf`](@ref
+SphericalFunctions.IntegerHalf), the union of index types over which
 the recurrences are defined.  Neither name is exported, and neither
 *needs* to be constructed by hand: because the conversion happens at
 the interface boundary, `7//2` remains a natural thing to write
@@ -195,5 +195,5 @@ indices.
 
 ```@docs
 SphericalFunctions.HalfOddInteger
-SphericalFunctions.HalfInteger
+SphericalFunctions.IntegerHalf
 ```

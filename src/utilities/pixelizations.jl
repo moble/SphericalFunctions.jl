@@ -6,7 +6,7 @@
 # — `golden_ratio_spiral_pixels`, `sorted_rings` and `sorted_ring_pixels` — is a boundary
 # method, typed `IndexSpelling` on its indices, which does nothing but normalize the two with
 # `unify_indices` and re-dispatch to a private worker whose signature is
-# `where {IT<:HalfInteger, T}`.  The worker therefore sees two indices of one concrete type
+# `where {IT<:IntegerHalf, T}`.  The worker therefore sees two indices of one concrete type
 # and never a `Rational`, and a call mixing the two kinds of index is refused at the boundary
 # with an explanation rather than a bare `MethodError`; the two `_rotors` functions pass their
 # indices along to be normalized there.  Every quantity the workers form from the indices —
@@ -51,7 +51,7 @@ function golden_ratio_spiral_pixels(
 end
 function golden_ratio_spiral_pixels(
     s::IT, ℓₘₐₓ::IT, ::Type{T}
-) where {IT<:HalfInteger, T}
+) where {IT<:IntegerHalf, T}
     if abs(s) > ℓₘₐₓ
         error("|s|=$(abs(s)) exceeds ℓₘₐₓ=$ℓₘₐₓ; there are no such modes.")
     end
@@ -109,7 +109,7 @@ function sorted_rings(
 ) where T
     sorted_rings(unify_indices(s, ℓₘₐₓ)..., T)
 end
-function sorted_rings(s::IT, ℓₘₐₓ::IT, ::Type{T}) where {IT<:HalfInteger, T}
+function sorted_rings(s::IT, ℓₘₐₓ::IT, ::Type{T}) where {IT<:IntegerHalf, T}
     if abs(s) > ℓₘₐₓ
         error("|s|=$(abs(s)) exceeds ℓₘₐₓ=$ℓₘₐₓ; there are no such modes.")
     end
@@ -144,7 +144,7 @@ function sorted_ring_pixels(
 ) where T
     sorted_ring_pixels(unify_indices(s, ℓₘₐₓ)..., T)
 end
-function sorted_ring_pixels(s::IT, ℓₘₐₓ::IT, ::Type{T}) where {IT<:HalfInteger, T}
+function sorted_ring_pixels(s::IT, ℓₘₐₓ::IT, ::Type{T}) where {IT<:IntegerHalf, T}
     θrings = sorted_rings(s, ℓₘₐₓ, T)
     [
         @SVector [θ, ϕ]
