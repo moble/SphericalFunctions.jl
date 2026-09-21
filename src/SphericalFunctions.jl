@@ -54,7 +54,6 @@ include("set_rotor_data.jl")
 export set_R!, set_β!, set_θ!
 
 include("iteration.jl")
-export eachℓ, eachell
 
 include("mode_weights/mode_weights.jl")
 export ModeWeights, modes, spin

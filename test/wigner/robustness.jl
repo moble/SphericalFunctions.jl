@@ -58,11 +58,11 @@
     # throws) and compare to the plain Float64 calculator.  Exact equality is not possible:
     # `@fastmath` in `recurrence_step4!` and `complex_powers!` lets the Float64 path contract
     # multiply-adds into FMAs, while `Checked` arithmetic goes through the generic methods.
-    function check_block(calc, calcF, ℓ, atol)
+    function check_block(block, blockF, atol)
         # `strided` is what turns a labelled block into a plain 1-based array; the containers
         # deliberately have no linear indexing of their own, so `eachindex` goes through it.
-        A = strided(calc[ℓ])
-        B = strided(calcF[ℓ])
+        A = strided(block)
+        B = strided(blockF)
         axes(A) == axes(B) || return false
         for i in eachindex(A)
             abs(unchecked(A[i]) - B[i]) ≤ atol || return false
@@ -134,22 +134,19 @@
                 @test all(isnan, parent(calc.H.Hˡ))
                 @test all(x -> isnan(real(x)), calc.Wˡ)
                 for ℓ in schedule(ℓₘₐₓ)
-                    recurrence!(calc, ℓ)
-                    recurrence!(calcF, ℓ)
-                    @test check_block(calc, calcF, ℓ, atol)
+                    @test check_block(recurrence!(calc, ℓ), recurrence!(calcF, ℓ), atol)
                 end
                 # Start over from NaN and jump straight to ℓₘₐₓ
                 fill!(calc, NaN)
-                recurrence!(calc, RNC, ℓₘₐₓ)
-                recurrence!(calcF, ℓₘₐₓ)
-                @test check_block(calc, calcF, ℓₘₐₓ, atol)
+                @test check_block(
+                    recurrence!(calc, RNC, ℓₘₐₓ), recurrence!(calcF, ℓₘₐₓ), atol
+                )
                 # And again *without* re-supplying the rotors, which `fill!` promises to
                 # keep.  This is the strongest form of the check: every element the block
                 # needs must be rewritten by the recurrence from the surviving rotor data
                 # alone, or a signaling NaN is read.
                 fill!(calc, NaN)
-                recurrence!(calc, ℓₘₐₓ)
-                @test check_block(calc, calcF, ℓₘₐₓ, atol)
+                @test check_block(recurrence!(calc, ℓₘₐₓ), recurrence!(calcF, ℓₘₐₓ), atol)
             end
         end
     end
@@ -197,10 +194,10 @@ end
     # The same through an explicit calculator, with Nᵣ > 1.  The vector of `Dual` angles is
     # itself what makes the calculator a `Dual` one.
     calc = dCalculator([βd, ForwardDiff.Dual(2β, one(β))], ℓₘₐₓ)
-    recurrence!(calc, ℓₘₐₓ)
+    blk = recurrence!(calc, ℓₘₐₓ)
     dd2 = d(ForwardDiff.Dual(2β, one(β)), ℓₘₐₓ)
-    @test calc[ℓₘₐₓ][1] == dd[ℓₘₐₓ]
-    @test calc[ℓₘₐₓ][2] == dd2[ℓₘₐₓ]
+    @test blk[1] == dd[ℓₘₐₓ]
+    @test blk[2] == dd2[ℓₘₐₓ]
 
     # 𝔇 with a Rotor{Dual}: derivative with respect to β vs finite differences
     𝔇(α, θ, γ) = D(from_euler_angles(α, θ, γ), 3)[3]
@@ -229,10 +226,10 @@ end
     Rd = from_euler_angles(0.3, βd, 1.1)
     @test Rd isa Rotor{<:ForwardDiff.Dual}
     calcD = DCalculator(Rd, 3)
-    recurrence!(calcD, 3)
-    @test eltype(calcD[3]) <: Complex{<:ForwardDiff.Dual}
-    @test value(real(calcD[3][2, -1])) ≈ real(𝔇(0.3, β, 1.1)[2, -1]) atol=40eps()
-    @test deriv(real(calcD[3][2, -1])) ≈ fd atol=1e-6
+    blkD = recurrence!(calcD, 3)
+    @test eltype(blkD) <: Complex{<:ForwardDiff.Dual}
+    @test value(real(blkD[2, -1])) ≈ real(𝔇(0.3, β, 1.1)[2, -1]) atol=40eps()
+    @test deriv(real(blkD[2, -1])) ≈ fd atol=1e-6
 end
 
 
@@ -286,10 +283,10 @@ end
         # Batched calculators in Float32
         Rs = randn(rng, Rotor{Float64}, 4)
         calc = DCalculator(Rotor{T}.(Rs), ℓₘₐₓ)
-        recurrence!(calc, ℓₘₐₓ)
-        @test eltype(calc[ℓₘₐₓ]) === Complex{T}
+        blk = recurrence!(calc, ℓₘₐₓ)
+        @test eltype(blk) === Complex{T}
         for (i, R) in enumerate(Rs)
-            @test all(isapprox.(strided(calc[ℓₘₐₓ][i]), strided(D(R, ℓₘₐₓ)[ℓₘₐₓ]); atol, rtol))
+            @test all(isapprox.(strided(blk[i]), strided(D(R, ℓₘₐₓ)[ℓₘₐₓ]); atol, rtol))
         end
     end
 
@@ -317,11 +314,11 @@ end
         end
         βs = [T(0.4), T(1.9), T(3.0)]
         calc = dCalculator(βs, ℓₘₐₓ)
-        recurrence!(calc, ℓₘₐₓ)
-        @test eltype(calc[ℓₘₐₓ]) === T
-        @test all(isfinite, calc[ℓₘₐₓ])
+        blk = recurrence!(calc, ℓₘₐₓ)
+        @test eltype(blk) === T
+        @test all(isfinite, blk)
         for (i, β) in enumerate(βs)
-            @test all(isapprox.(strided(calc[ℓₘₐₓ][i]), strided(d(Float64(β), ℓₘₐₓ)[ℓₘₐₓ]); atol))
+            @test all(isapprox.(strided(blk[i]), strided(d(Float64(β), ℓₘₐₓ)[ℓₘₐₓ]); atol))
         end
     end
 end
@@ -376,7 +373,7 @@ end
                 @test occursin("m′=-1:2", s)
                 @test occursin("m=-3:3", s)
                 # The returned block can be displayed
-                @test sprint(show, MIME("text/plain"), calc[4]) isa String
+                @test sprint(show, MIME("text/plain"), recurrence!(calc, 4)) isa String
             end
         end
     end
@@ -412,7 +409,6 @@ end
     alloc_H(calc, ℓ) = @allocated recurrence!(calc.H, ℓ)
     alloc_D(calc, ℓ) = @allocated recurrence!(calc, ℓ)
     alloc_set(calc, R, ℓ) = @allocated recurrence!(calc, R, ℓ)
-    alloc_index(calc, ℓ) = @allocated calc[ℓ]
 
     rng = Random.Xoshiro(64)
     ℓₘₐₓ = 64
@@ -444,14 +440,12 @@ end
     aD_step = alloc_D(calc, ℓ)
     @test aD_step ≤ 512
 
-    # Setting the rotors, and indexing (a view, so small)
+    # Setting the rotors.  (The block `recurrence!` returns is a view, and is counted in
+    # `aD` above; there is no separate indexing step to measure.)
     alloc_set(calc, Rs, ℓ)
     aS = alloc_set(calc, Rs, ℓ)
     @test aS ≤ 512
-    alloc_index(calc, ℓ)
-    aI = alloc_index(calc, ℓ)
-    @test aI ≤ 512
-    @info "Allocation (bytes)" aH aH_step aH_restart aD aD_step aS aI
+    @info "Allocation (bytes)" aH aH_step aH_restart aD aD_step aS
 end
 
 
@@ -499,7 +493,8 @@ end
             @test c.Z₋ !== calc.Z₋
             @test c.Z₊ == calc.Z₊
             @test c.Z₋ == calc.Z₋
-            @test_throws "currently holds" c[0]
+            # `similar` copies no results: `ℓ` reports that nothing has been computed
+            @test SphericalFunctions.ℓ(c) == SphericalFunctions.ℓₘᵢₙ(c) - 1
         end
     end
 
@@ -515,7 +510,7 @@ end
     end
     parallel = fetch.(tasks)
     @test parallel == serial
-    @test calc[ℓₘₐₓ] == serial[1][end]  # the template was not disturbed
+    @test recurrence!(calc, ℓₘₐₓ) == serial[1][end]  # the template was not disturbed
 
     # The same with a batched d calculator and interleaved ℓ orders
     βs = [rand(rng, 2) .* π for _ in 1:8]

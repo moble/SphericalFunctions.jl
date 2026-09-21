@@ -11,14 +11,14 @@ and `Z₋` are empty for the real flavour, which is the whole of the saving: the
 recurrence is real, and it is only the ``e^{-i(mα - sγ)}`` factor that ever made the result
 complex.
 
-Two further parameters are lifted into the type so that the return type of `calc[ℓ]` is
+Two further parameters are lifted into the type so that the type of the block is
 inferrable — `S`, which records whether the calculator serves one spin weight or a range, and
 a `Bool` read by [`isbatched`](@ref); see the comment on the struct.
 """
 struct HarmonicCalculator{IT, RT<:Real, NT<:Union{RT, Complex{RT}}, ST, S, B}
     # As for [`WignerCalculator`](@ref), the last parameter is `Nᵣ > 1`, lifted into the type so
-    # that the branch in `spin_row` and `spin_block` — and hence the return type of `calc[ℓ]` —
-    # is settled at compile time.  `S` does the same job for the spin weights: it is the index
+    # that the branch in `spin_row` and `spin_block` — and hence the type of the block that
+    # `recurrence!` returns — is settled at compile time.  `S` does the same job for the spin weights: it is the index
     # type when the calculator was built for one of them and a `UnitRange` of it when it was
     # built for several, which is what decides whether a block has a spin axis at all.
     H::HCalculator{IT, RT, ST}
@@ -60,11 +60,11 @@ end
 ```
 
 With `Nᵣ > 1` each block gains a leading rotor index, so it is read as `ₛYₗ[iᵣ, m]` or
-`ₛYₗ[iᵣ, s, m]`.  The same block is what `calc[ℓ]` returns after an explicit
-[`recurrence!`](@ref), and `calc[ℓ, s]` picks out the row of one spin weight of a calculator
-built for several.  Each block is a view into the calculator's storage, overwritten by the
-next step; `copy` it if it must survive (keeping the natural indices), or `collect` it to get
-an ordinary 1-based array.  Wherever ``ℓ < |s|`` the values are zero.
+`ₛYₗ[iᵣ, s, m]`.  The same block is what [`recurrence!`](@ref) returns when the calculator is
+stepped by hand, and `ₛYₗ[s, :]` picks out the row of one spin weight of a calculator built
+for several.  Each block is a view into the calculator's storage, overwritten by the next
+step; `copy` it if it must survive (keeping the natural indices), or `collect` it to get an
+ordinary 1-based array.  Wherever ``ℓ < |s|`` the values are zero.
 
 [`spins`](@ref) reports the range of spin weights served, and [`spin`](@ref) the single value
 when there is only one.  Lengthening the range costs storage and arithmetic in proportion to
@@ -471,74 +471,6 @@ function materialize!(c::HarmonicCalculator{IT, RT, NT}, ℓ::IT) where {IT, RT,
     end
     c.ℓ[] = ℓ
     c
-end
-
-"""
-    calc[ℓ]
-    calc[ℓ, s]
-
-The spin-weighted spherical harmonics ``{}_sY_{ℓ,m}`` for the current ``ℓ`` of the calculator,
-as an array indexed naturally.
-
-The first form gives everything the calculator serves.  For a calculator built for a single
-spin weight that is `calc[ℓ][m]`, or `calc[ℓ][iᵣ, m]` when `Nᵣ > 1`; for one built for a range
-of spin weights it is `calc[ℓ][s, m]`, or `calc[ℓ][iᵣ, s, m]`.  The second form picks the row
-of one spin weight out of the range, and so always has the shape of the single-spin-weight
-case.  In both, `m ∈ -ℓ:ℓ`.  One spin weight can equally be sliced out of a block that holds
-several, as `calc[ℓ][s, :]`, which is spelled the same way whichever kind of index the
-calculator has.
-
-The result is a view into the calculator's storage, valid until the next call to
-[`recurrence!`](@ref).  `ℓ` must be the value passed to the most recent `recurrence!`, and `s`
-must be one of [`spins`](@ref)`(calc)`.  Wherever ``ℓ < |s|`` the elements are zero.
-
-The result is a [`DegreeBlock`](@ref), [`DegreeBlockBatch`](@ref), [`SpinMatrix`](@ref) or
-[`SpinMatrixBatch`](@ref) according to its shape, for either kind of index.  `copy` keeps it
-with its natural indices, `collect` gives an ordinary 1-based `Array`, and [`strided`](@ref)
-gives a 1-based view of the same storage for linear algebra.
-"""
-function Base.getindex(c::HarmonicCalculator{IT, RT, NT, ST, S}, ℓ) where {IT, RT, NT, ST, S<:IntegerHalf}
-    ℓ = convert(IT, ℓ)
-    check_current_ℓ(c, ℓ)
-    spin_row(c, ℓ, 1)
-end
-function Base.getindex(
-    c::HarmonicCalculator{IT, RT, NT, ST, S}, ℓ
-) where {IT, RT, NT, ST, S<:AbstractUnitRange}
-    ℓ = convert(IT, ℓ)
-    check_current_ℓ(c, ℓ)
-    spin_block(c, ℓ)
-end
-function Base.getindex(c::HarmonicCalculator{IT}, ℓ, s) where {IT}
-    ℓ = convert(IT, ℓ)
-    s = convert(IT, s)
-    check_current_ℓ(c, ℓ)
-    check_spin(c, s)
-    spin_row(c, ℓ, spin_index(c, s))
-end
-
-# The three ways a request for a block can be premature or out of range, each said separately
-# because the three have quite different remedies.
-function check_current_ℓ(c::HarmonicCalculator, ℓ)
-    if c.ℓ[] < ℓₘᵢₙ(c)
-        error(
-            "This calculator currently holds no result, because nothing has been computed "
-            * "yet; iterate it, or call `recurrence!(calc, ℓ)` first."
-        )
-    end
-    if ℓ < ℓₘᵢₙ(c) || ℓ > ℓₘₐₓ(c)
-        error(
-            "ℓ=$ℓ is out of bounds [$(ℓₘᵢₙ(c)), $(ℓₘₐₓ(c))] for this calculator; "
-            * "`recurrence!` accepts only ℓ in that range."
-        )
-    end
-    if ℓ != c.ℓ[]
-        error(
-            "This calculator currently holds ℓ=$(c.ℓ[]), not ℓ=$ℓ; "
-            * "call `recurrence!(calc, $ℓ)` first."
-        )
-    end
-    nothing
 end
 
 function check_spin(c::HarmonicCalculator, s)

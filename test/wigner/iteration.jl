@@ -1,10 +1,10 @@
-# Tests for the iteration interface: `for (ℓ, 𝔇ˡ) ∈ calc`, `eachℓ`/`eachell`, `collect` on a
-# calculator, the `set_R!`/`set_β!`/`set_θ!` family, the constructors that take the rotor data
-# first — including the rule that the data alone fixes the element type, so that a mismatch is
-# an error rather than a conversion — and `Ylm`.
+# Tests for the iteration interface: `for (ℓ, 𝔇ˡ) ∈ calc`, `collect` on a calculator, the
+# `set_R!`/`set_β!`/`set_θ!` family, the constructors that take the rotor data first —
+# including the rule that the data alone fixes the element type, so that a mismatch is an
+# error rather than a conversion — and `Ylm`.
 #
-# The oracle throughout is the package's own manual path — the `recurrence!`/`calc[ℓ]` loop,
-# and the convenience functions `D`, `d`, `sYlm` and `sYlm_matrix` that are built on it —
+# The oracle throughout is the package's own manual path — the `recurrence!` loop, and the
+# convenience functions `D`, `d`, `sYlm` and `sYlm_matrix` that are built on it —
 # because iteration is meant to do exactly the same arithmetic in exactly the same order and
 # nothing else.  Every comparison is therefore bitwise, except in the two places where
 # genuinely different code paths are being compared: a rotor's `β` reaches the recurrence
@@ -61,7 +61,7 @@ end
 
 
 @testitem "Iteration reproduces sYlm" begin
-    import SphericalFunctions: sYlmCalculator, sYlm, sYlm_matrix, recurrence!, eachℓ, Yindex
+    import SphericalFunctions: sYlmCalculator, sYlm, sYlm_matrix, recurrence!, Yindex
     using Quaternionic: Rotor
     using Random
 
@@ -70,54 +70,53 @@ end
     rotors = randn(rng, Rotor{Float64}, N)
     ℓₘₐₓ, sₘₐₓ = 5, 2
 
-    # Integer ℓ.  `sYlm` and `sYlm_matrix` copy the very buffer that `calc[ℓ, s]` views, so
-    # these comparisons are bitwise, zeros for ℓ < |s| included.
+    # Integer ℓ.  `sYlm` and `sYlm_matrix` copy the very buffer these blocks view, so the
+    # comparisons are bitwise, zeros for ℓ < |s| included.
     for R ∈ rotors
         calc = sYlmCalculator(R, ℓₘₐₓ, -sₘₐₓ:sₘₐₓ)
         for s ∈ -sₘₐₓ:sₘₐₓ
             Y = strided(sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ=0))
-            for (ℓ, ₛYₗ) ∈ eachℓ(calc, s)
-                @test all(ₛYₗ[m] == Y[Yindex(ℓ, m)] for m ∈ -ℓ:ℓ)
+            for (ℓ, ₛYₗ) ∈ calc
+                @test all(ₛYₗ[s, m] == Y[Yindex(ℓ, m)] for m ∈ -ℓ:ℓ)
             end
         end
     end
     batched = sYlmCalculator(rotors, ℓₘₐₓ, -sₘₐₓ:sₘₐₓ)
     for s ∈ -sₘₐₓ:sₘₐₓ
         Y = sYlm_matrix(rotors, ℓₘₐₓ, s; ℓₘᵢₙ=0)
-        for (ℓ, ₛYₗ) ∈ eachℓ(batched, s)
-            @test all(ₛYₗ[i, m] == Y[i, Yindex(ℓ, m)] for i ∈ 1:N, m ∈ -ℓ:ℓ)
+        for (ℓ, ₛYₗ) ∈ batched
+            @test all(ₛYₗ[i, s, m] == Y[i, Yindex(ℓ, m)] for i ∈ 1:N, m ∈ -ℓ:ℓ)
         end
     end
 
     # Half-integer ℓ.  The flat interfaces are integer-only — the canonical `Yindex`
-    # ordering is — so the oracle here is the manual `recurrence!`/`calc[ℓ, s]` loop, and the
-    # batch is compared with the single-rotor calculators.
+    # ordering is — so the oracle here is the manual `recurrence!` loop, and the batch is
+    # compared with the single-rotor calculators.
     ℓₘₐₓₕ, sₘₐₓₕ = 5//2, 3//2
     for s ∈ (-3//2, -1//2, 1//2, 3//2)
         calc = sYlmCalculator(rotors[1], ℓₘₐₓₕ, -sₘₐₓₕ:sₘₐₓₕ)
-        iterated = [ℓ => copy(ₛYₗ) for (ℓ, ₛYₗ) ∈ eachℓ(calc, s)]
+        iterated = [ℓ => copy(ₛYₗ[s, :]) for (ℓ, ₛYₗ) ∈ calc]
         # Re-driving the same calculator by hand restarts the recurrence from ℓₘᵢₙ and runs
         # forward through the same ℓ, which is the same arithmetic again
         for (ℓ, ₛYₗ) ∈ iterated
-            recurrence!(calc, ℓ)
-            @test ₛYₗ == calc[ℓ, s]
+            @test ₛYₗ == recurrence!(calc, ℓ)[s, :]
         end
 
         batchedₕ = sYlmCalculator(rotors, ℓₘₐₓₕ, -sₘₐₓₕ:sₘₐₓₕ)
         singles = [
-            [copy(ₛYₗ) for (_, ₛYₗ) ∈ eachℓ(sYlmCalculator(R, ℓₘₐₓₕ, -sₘₐₓₕ:sₘₐₓₕ), s)]
+            [copy(ₛYₗ[s, :]) for (_, ₛYₗ) ∈ sYlmCalculator(R, ℓₘₐₓₕ, -sₘₐₓₕ:sₘₐₓₕ)]
             for R ∈ rotors
         ]
-        for (k, (ℓ, ₛYₗ)) ∈ enumerate(eachℓ(batchedₕ, s))
-            @test all(ₛYₗ[i, m] == singles[i][k][m] for i ∈ 1:N, m ∈ -ℓ:ℓ)
+        for (k, (ℓ, ₛYₗ)) ∈ enumerate(batchedₕ)
+            row = ₛYₗ[:, s, :]
+            @test all(row[i, m] == singles[i][k][m] for i ∈ 1:N, m ∈ -ℓ:ℓ)
         end
     end
 end
 
 
-@testitem "Iteration agrees with eachℓ and the manual loop" begin
-    import SphericalFunctions: DCalculator, dCalculator, sYlmCalculator,
-        recurrence!, eachℓ, eachell
+@testitem "Iteration agrees with the manual loop" begin
+    import SphericalFunctions: DCalculator, dCalculator, sYlmCalculator, recurrence!
     using Quaternionic: Rotor
     using Random
 
@@ -125,7 +124,7 @@ end
     rotors = randn(rng, Rotor{Float64}, 3)
     snapshot(iterable) = [ℓ => copy(block) for (ℓ, block) ∈ iterable]
 
-    # Bare iteration and `eachℓ(calc)` are two spellings of one thing
+    # Iteration is the manual `recurrence!` loop, one step per ℓ, and nothing else
     for calc ∈ (
         DCalculator(rotors[1], 4),
         dCalculator(0.7, 4),
@@ -134,41 +133,41 @@ end
         dCalculator(rotors[1], 7//2),
     )
         full = snapshot(calc)
-        @test snapshot(eachℓ(calc)) == full
-        @test snapshot(eachell(calc)) == full  # the ASCII alias is the same function
-        # ... and so is the manual `recurrence!`/`calc[ℓ]` loop this is built on
         manual = [ℓ => copy(recurrence!(calc, ℓ)) for ℓ ∈ keys(calc)]
         @test manual == full
     end
 
-    # `eachℓ(calc, s)` against the manual loop, for every spin weight the calculator serves
+    # One spin weight is the slice `ₛYₗ[s, :]`, whichever way the block was reached
     calc = sYlmCalculator(rotors[2], 5, -2:2)
     for s ∈ -2:2
-        iterated = snapshot(eachℓ(calc, s))
-        manual = [ℓ => copy((recurrence!(calc, ℓ); calc[ℓ, s])) for ℓ ∈ keys(eachℓ(calc, s))]
+        iterated = [ℓ => copy(ₛYₗ[s, :]) for (ℓ, ₛYₗ) ∈ calc]
+        manual = [ℓ => copy(recurrence!(calc, ℓ)[s, :]) for ℓ ∈ keys(calc)]
         @test iterated == manual
+        # ... and equals what a calculator built for that spin weight alone gives
+        @test iterated == snapshot(sYlmCalculator(rotors[2], 5, s))
     end
 
-    # A restricted range is bit-for-bit the corresponding slice of a full pass: the
-    # recurrence runs through the intermediate ℓ either way
+    # A partial sweep is bit-for-bit the corresponding slice of a full one: the recurrence
+    # runs through the intermediate ℓ either way
     calc = DCalculator(rotors[3], 5)
     full = snapshot(calc)
-    @test snapshot(eachℓ(calc; ℓₘᵢₙ=2, ℓₘₐₓ=4)) == full[3:5]
-    @test snapshot(eachℓ(calc; ℓₘᵢₙ=2)) == full[3:end]
-    @test snapshot(eachℓ(calc; ℓₘₐₓ=1)) == full[1:2]
-    @test snapshot(eachℓ(calc; ℓₘᵢₙ=5, ℓₘₐₓ=5)) == full[6:6]
+    partial(c, lo, hi) = [ℓ => copy(recurrence!(c, ℓ)) for ℓ ∈ lo:hi]
+    @test partial(calc, 2, 4) == full[3:5]
+    @test partial(calc, 2, 5) == full[3:end]
+    @test partial(calc, 0, 1) == full[1:2]
+    @test partial(calc, 5, 5) == full[6:6]
     calcₕ = DCalculator(rotors[3], 7//2)
     fullₕ = snapshot(calcₕ)
-    @test snapshot(eachℓ(calcₕ; ℓₘᵢₙ=3//2, ℓₘₐₓ=5//2)) == fullₕ[2:3]
+    @test partial(calcₕ, 3//2, 5//2) == fullₕ[2:3]
     calcY = sYlmCalculator(rotors[3], 5, -1:1)
-    fullY = snapshot(eachℓ(calcY, -1))
-    @test snapshot(eachℓ(calcY, -1; ℓₘᵢₙ=1, ℓₘₐₓ=3)) == fullY[2:4]
+    fullY = [ℓ => copy(ₛYₗ[-1, :]) for (ℓ, ₛYₗ) ∈ calcY]
+    @test [ℓ => copy(recurrence!(calcY, ℓ)[-1, :]) for ℓ ∈ 1:3] == fullY[2:4]
 end
 
 
 @testitem "Calculator setters reach a freshly constructed state" begin
     import SphericalFunctions: DCalculator, dCalculator, HCalculator,
-        sYlmCalculator, HWedge, recurrence!, eachℓ, set_R!, set_β!, set_θ!
+        sYlmCalculator, HWedge, recurrence!, set_R!, set_β!, set_θ!
     using Quaternionic: Rotor, from_euler_angles
     using Random
 
@@ -191,8 +190,7 @@ end
         snapshot(DCalculator(reverse(rotors), ℓₘₐₓ))
     calcY = sYlmCalculator(rotors[1], ℓₘₐₓ, -2:2)
     @test set_R!(calcY, rotors[3]) === calcY
-    @test snapshot(eachℓ(calcY, -2)) ==
-        snapshot(eachℓ(sYlmCalculator(rotors[3], ℓₘₐₓ, -2:2), -2))
+    @test snapshot(calcY) == snapshot(sYlmCalculator(rotors[3], ℓₘₐₓ, -2:2))
 
     # `set_β!`, in each of the three forms the angle may take
     calcd = dCalculator(0.25, ℓₘₐₓ)
@@ -224,9 +222,8 @@ end
     # `set_θ!`, the entry point to the real functions ₛλₗₘ(θ) = ₛYₗₘ(θ, 0)
     calcθ = sYlmCalculator(0.25, ℓₘₐₓ, -2:2)
     @test set_θ!(calcθ, θ) === calcθ
-    @test snapshot(eachℓ(calcθ, 1)) == snapshot(eachℓ(sYlmCalculator(θ, ℓₘₐₓ, -2:2), 1))
-    @test snapshot(eachℓ(set_θ!(calcθ, 0.0), 1)) ==
-        snapshot(eachℓ(sYlmCalculator(0.0, ℓₘₐₓ, -2:2), 1))
+    @test snapshot(calcθ) == snapshot(sYlmCalculator(θ, ℓₘₐₓ, -2:2))
+    @test snapshot(set_θ!(calcθ, 0.0)) == snapshot(sYlmCalculator(0.0, ℓₘₐₓ, -2:2))
 
     # The wrong setter for a calculator is an error that names the right one
     @test_throws "set_β!" set_R!(dCalculator(β, ℓₘₐₓ), R)
@@ -243,7 +240,7 @@ end
 
 @testitem "Iteration is restartable" begin
     import SphericalFunctions
-    import SphericalFunctions: DCalculator, sYlmCalculator, recurrence!, eachℓ
+    import SphericalFunctions: DCalculator, sYlmCalculator, recurrence!
     using Quaternionic: Rotor
     using Random
 
@@ -267,36 +264,33 @@ end
         @test snapshot(calc) == first_pass
     end
 
-    # A restricted pass restarts from its own ℓₘᵢₙ, not from the calculator's
+    # A partial sweep runs over whatever range it is given, wherever the calculator happens
+    # to be standing, and leaves it fit for a later full pass
     calc = DCalculator(R, 5)
-    e = eachℓ(calc; ℓₘᵢₙ=2, ℓₘₐₓ=4)
-    restricted = snapshot(e)
-    @test [ℓ for (ℓ, _) ∈ e] == 2:4
-    for (ℓ, _) ∈ e
-        ℓ == 3 && break
-    end
-    @test first(e).first == 2
-    @test snapshot(e) == restricted
+    full = snapshot(calc)
+    partial = [ℓ => copy(recurrence!(calc, ℓ)) for ℓ ∈ 2:4]
+    @test [ℓ for (ℓ, _) ∈ partial] == 2:4
+    @test partial == full[3:5]
+    @test snapshot(calc) == full
+    @test [ℓ => copy(recurrence!(calc, ℓ)) for ℓ ∈ 2:4] == partial
 
-    # The same for the spin-weighted iterator
+    # The same for a spin-weighted calculator, whose block holds every spin weight at once,
+    # so that two spin weights of one ℓ come from the one block rather than from two passes
     calcY = sYlmCalculator(R, 4, -1:1)
-    eY = eachℓ(calcY, 1)
-    first_pass = snapshot(eY)
-    for (ℓ, _) ∈ eY
+    first_pass = [ℓ => copy(ₛYₗ[1, :]) for (ℓ, ₛYₗ) ∈ calcY]
+    for (ℓ, _) ∈ calcY
         ℓ == 2 && break
     end
-    @test first(eY).first == 0
-    @test snapshot(eY) == first_pass
-    # A different spin weight of the same calculator is an independent pass
-    @test snapshot(eachℓ(calcY, -1)) != first_pass
-    @test snapshot(eY) == first_pass
+    @test first(calcY).first == 0
+    @test [ℓ => copy(ₛYₗ[1, :]) for (ℓ, ₛYₗ) ∈ calcY] == first_pass
+    @test [ℓ => copy(ₛYₗ[-1, :]) for (ℓ, ₛYₗ) ∈ calcY] != first_pass
 end
 
 
 @testitem "One calculator over several rotors" begin
     import SphericalFunctions
     import SphericalFunctions: DCalculator, dCalculator, sYlmCalculator,
-        recurrence!, eachℓ, set_R!, set_β!
+        recurrence!, set_R!, set_β!
     using Quaternionic: Rotor, to_euler_phases
     using Random
 
@@ -326,9 +320,9 @@ end
     end
 
     calcY = sYlmCalculator(rotors[1], 4, -2:2)
-    for R ∈ rotors, s ∈ (-2, 0, 1)
+    for R ∈ rotors
         set_R!(calcY, R)
-        @test snapshot(eachℓ(calcY, s)) == snapshot(eachℓ(sYlmCalculator(R, 4, -2:2), s))
+        @test snapshot(calcY) == snapshot(sYlmCalculator(R, 4, -2:2))
     end
 
     # Batched, with the rotors rotated through the batch
@@ -343,7 +337,7 @@ end
 
 @testitem "Iteration allocates nothing and is inferrable" begin
     import SphericalFunctions
-    import SphericalFunctions: DCalculator, dCalculator, sYlmCalculator, eachℓ
+    import SphericalFunctions: DCalculator, dCalculator, sYlmCalculator, recurrence!
     using Quaternionic: Rotor
     using Random
 
@@ -365,15 +359,15 @@ end
     end
     function trace_spin(calc, s)  # Nᵣ = 1
         t = 0.0
-        for (ℓ, block) ∈ eachℓ(calc, s)
-            t += abs(block[ℓ])
+        for (ℓ, block) ∈ calc
+            t += abs(block[s, ℓ])
         end
         t
     end
     function trace_spin_batched(calc, s)  # Nᵣ > 1
         t = 0.0
-        for (ℓ, block) ∈ eachℓ(calc, s)
-            t += abs(block[1, ℓ])
+        for (ℓ, block) ∈ calc
+            t += abs(block[1, s, ℓ])
         end
         t
     end
@@ -391,9 +385,10 @@ end
         end
         t
     end
-    function trace_range(calc, ℓₘᵢₙ, ℓₘₐₓ)
+    function trace_range(calc, ℓₘᵢₙ, ℓₘₐₓ)  # a partial sweep, driven by hand
         t = 0.0
-        for (ℓ, block) ∈ eachℓ(calc; ℓₘᵢₙ, ℓₘₐₓ)
+        for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ
+            block = recurrence!(calc, ℓ)
             t += abs(block[ℓ, ℓ])
         end
         t
@@ -446,17 +441,17 @@ end
         @test Base.return_types(iterate, (typeof(calc), IT))[1] ===
             Union{Nothing, Tuple{eltype(calc), IT}}
     end
-    for it ∈ (eachℓ(DCalculator(R, 4); ℓₘᵢₙ=2), eachℓ(sYlmCalculator(R, 4, -2:2), -2))
-        @test isconcretetype(eltype(it))
-        @test (@inferred Union{Nothing, Tuple{eltype(it), Int}} iterate(it)) isa Tuple
-        @test Base.return_types(iterate, (typeof(it),))[1] ===
-            Union{Nothing, Tuple{eltype(it), Int}}
+    # A hand-driven step is inferrable too, which is what makes the partial sweep above
+    # allocation-free
+    for calc ∈ (DCalculator(R, 4), sYlmCalculator(R, 4, -2:2))
+        @test isconcretetype(Base.promote_op(recurrence!, typeof(calc), Int))
+        @test (@inferred recurrence!(calc, 2)) !== nothing
     end
 end
 
 
 @testitem "collect copies every block" begin
-    import SphericalFunctions: DCalculator, sYlmCalculator, recurrence!, eachℓ
+    import SphericalFunctions: DCalculator, sYlmCalculator, recurrence!
     using Quaternionic: Rotor
     using Random
 
@@ -493,12 +488,12 @@ end
     @test [p.first for p ∈ vₕ] == [1//2, 3//2, 5//2, 7//2]
     @test vₕ[2].second == [ℓ => copy(b) for (ℓ, b) ∈ DCalculator(R, 7//2)][2].second
     calcY = sYlmCalculator(R, 4, -2:2)
-    vY = collect(eachℓ(calcY, -2))
+    vY = collect(calcY)
     @test axes(vY) == (1:5,)
-    @test axes(vY[3].second) == (-2:2,)
-    @test vY == [ℓ => copy(block) for (ℓ, block) ∈ eachℓ(calcY, -2)]
-    # A restricted range collects only its own ℓ, still from 1
-    vr = collect(eachℓ(calc; ℓₘᵢₙ=2, ℓₘₐₓ=3))
+    @test axes(vY[3].second) == (-2:2, -2:2)
+    @test vY == [ℓ => copy(block) for (ℓ, block) ∈ calcY]
+    # A partial sweep gathers only its own ℓ, and the copying is then the caller's to do
+    vr = [ℓ => copy(recurrence!(calc, ℓ)) for ℓ ∈ 2:3]
     @test axes(vr) == (1:2,)
     @test [p.first for p ∈ vr] == [2, 3]
 end
@@ -506,7 +501,7 @@ end
 
 @testitem "Calculator container interface" begin
     import SphericalFunctions
-    import SphericalFunctions: DCalculator, dCalculator, sYlmCalculator, eachℓ
+    import SphericalFunctions: DCalculator, dCalculator, sYlmCalculator, recurrence!
     using Quaternionic: Rotor
     using Random
 
@@ -530,48 +525,34 @@ end
         @test Base.IteratorEltype(typeof(calc)) === Base.HasEltype()
     end
 
-    # `eachℓ` reports the range it was given, not the calculator's
+    # `keys` is what a partial sweep is written against, and a sweep over any part of it
+    # yields exactly those ℓ
     calc = DCalculator(R, 5)
     for (lo, hi) ∈ ((0, 5), (2, 4), (3, 3), (0, 0))
-        e = eachℓ(calc; ℓₘᵢₙ=lo, ℓₘₐₓ=hi)
-        @test keys(e) == lo:hi
-        @test length(e) == hi - lo + 1
-        @test eltype(e) === eltype(calc)
-        @test eltype(e) === typeof(first(e))
-        @test pairs(e) === e
-        @test Base.IteratorSize(typeof(e)) === Base.HasLength()
-        @test Base.IteratorEltype(typeof(e)) === Base.HasEltype()
-        @test [ℓ for (ℓ, _) ∈ e] == lo:hi
-        @test occursin("eachℓ", sprint(show, e))
+        @test [ℓ for (ℓ, _) ∈ (ℓ => recurrence!(calc, ℓ) for ℓ ∈ lo:hi)] == lo:hi
+        @test lo:hi ⊆ keys(calc)
     end
 
-    # A multi-spin calculator iterates over its own whole block, and the spin-weighted
-    # iterator over one row of it; both report the same keys
+    # A multi-spin calculator iterates over its own whole block, and reports the same keys
+    # as a single-spin one over the same ℓ
     calcY = sYlmCalculator(R, 4, -2:2)
-    eY = eachℓ(calcY, -1)
     @test keys(calcY) == 0:4
     @test length(calcY) == 5
     @test isconcretetype(eltype(calcY))
     @test pairs(calcY) === calcY
-    @test keys(eY) == 0:4
-    @test length(eY) == 5
-    @test eltype(eY) === typeof(first(eY))
-    @test isconcretetype(eltype(eY))
-    @test pairs(eY) === eY
-    @test occursin("eachℓ", sprint(show, eY))
-    @test length(collect(eachℓ(calcY, -1; ℓₘᵢₙ=2))) == 3
+    @test keys(sYlmCalculator(R, 4, -1)) == keys(calcY)
 
-    # A range outside the calculator's own is refused rather than silently clamped
-    @test_throws "not within" eachℓ(calc; ℓₘᵢₙ=-1)
-    @test_throws "not within" eachℓ(calc; ℓₘₐₓ=6)
-    @test_throws "not within" eachℓ(calcY, 1; ℓₘₐₓ=5)
+    # An ℓ outside the calculator's own is refused rather than silently clamped
+    @test_throws "out of bounds" recurrence!(calc, -1)
+    @test_throws "out of bounds" recurrence!(calc, 6)
+    @test_throws "out of bounds" recurrence!(calcY, 5)
 end
 
 
 @testitem "Calculators take their rotor data first" begin
     import SphericalFunctions
     import SphericalFunctions: DCalculator, dCalculator, HCalculator,
-        sYlmCalculator, eachℓ, floattype
+        sYlmCalculator, floattype
     using Quaternionic: Rotor, from_spherical_coordinates
     using Random
 
@@ -586,7 +567,7 @@ end
     @test blocktype(DCalculator(R32, 3)) === ComplexF32
     @test blocktype(dCalculator(0.5f0, 3)) === Float32
     @test blocktype(dCalculator(Rotor{Float32}(R64), 3)) === Float32
-    @test blocktype(eachℓ(sYlmCalculator(R32, 3, -1:1), 1)) === ComplexF32
+    @test blocktype(sYlmCalculator(R32, 3, -1:1)) === ComplexF32
     @test blocktype(DCalculator(R64, 3)) === ComplexF64
     @test eltype(HCalculator(0.5f0, 3).eⁱᵝ) === ComplexF32
     # ... which is what `floattype` reports, for every kind of calculator
@@ -607,7 +588,7 @@ end
     # honest way to say it, since the type of the data is the claim being made about it
     @test blocktype(DCalculator(Rotor{BigFloat}(R64), 3)) === Complex{BigFloat}
     @test blocktype(dCalculator(big(0.5), 3)) === BigFloat
-    @test blocktype(eachℓ(sYlmCalculator(Rotor{BigFloat}(R64), 3, -1:1), 1)) === Complex{BigFloat}
+    @test blocktype(sYlmCalculator(Rotor{BigFloat}(R64), 3, -1:1)) === Complex{BigFloat}
     @test blocktype(DCalculator(Rotor{Float32}(R64), 3)) === ComplexF32
 
     # A vector argument gives a batch of exactly that length; `Nᵣ` is implied by it, and is
@@ -649,15 +630,15 @@ end
         @test calcθ.phases[] == false
         @test calcR.phases[] == true
         for s ∈ -2:2
-            fromθ = [copy(block) for (_, block) ∈ eachℓ(calcθ, s)]
-            fromR = [copy(block) for (_, block) ∈ eachℓ(calcR, s)]
+            fromθ = [copy(block[s, :]) for (_, block) ∈ calcθ]
+            fromR = [copy(block[s, :]) for (_, block) ∈ calcR]
             @test all(all(iszero, imag.(block)) for block ∈ fromθ)
             @test maximum(maximum(abs.(a .- b)) for (a, b) ∈ zip(fromθ, fromR)) ≤ 8eps()
         end
         # Away from ϕ = 0 the harmonics are genuinely complex, so the angle path is not
         # merely a different spelling of a rotor
         if 0 < θ < π
-            fromϕ = [copy(block) for (_, block) ∈ eachℓ(calcϕ, 1)]
+            fromϕ = [copy(block[1, :]) for (_, block) ∈ calcϕ]
             @test any(any(!iszero, imag.(block)) for block ∈ fromϕ)
         end
     end
@@ -666,9 +647,9 @@ end
     @test sYlmCalculator([0.3, 1.3, 2.1], 4, -2:2).phases[] == false
     let
         batched = sYlmCalculator([0.3, 1.3, 2.1], 4, -2:2)  # 1.3 is the second of the three
-        single = [copy(block) for (_, block) ∈ eachℓ(sYlmCalculator(1.3, 4, -2:2), 1)]
-        for (k, (ℓ, block)) ∈ enumerate(eachℓ(batched, 1))
-            @test all(block[2, m] == single[k][m] for m ∈ -ℓ:ℓ)
+        single = [copy(block[1, :]) for (_, block) ∈ sYlmCalculator(1.3, 4, -2:2)]
+        for (k, (ℓ, block)) ∈ enumerate(batched)
+            @test all(block[2, 1, m] == single[k][m] for m ∈ -ℓ:ℓ)
         end
     end
 end
@@ -798,7 +779,7 @@ end
 
 @testitem "similar retains the rotor data" begin
     import SphericalFunctions
-    import SphericalFunctions: DCalculator, dCalculator, sYlmCalculator, eachℓ
+    import SphericalFunctions: DCalculator, dCalculator, sYlmCalculator
     using Quaternionic: Rotor
     using Random
 
@@ -838,19 +819,17 @@ end
     # For an sYlmCalculator the data includes the `phases` flag, which is what distinguishes
     # the (θ, ϕ=0) path; `similar` of a θ-constructed calculator must still give θ values
     calcθ = sYlmCalculator(1.3, 4, -2:2)
-    referenceθ = snapshot(eachℓ(calcθ, 1))
+    referenceθ = snapshot(calcθ)
     sθ = similar(calcθ)
     @test typeof(sθ) === typeof(calcθ)
     @test sθ.phases[] == calcθ.phases[] == false
-    @test snapshot(eachℓ(sθ, 1)) == referenceθ
-    @test snapshot(eachℓ(similar(calcθ, 0.9), 1)) ==
-        snapshot(eachℓ(sYlmCalculator(0.9, 4, -2:2), 1))
+    @test snapshot(sθ) == referenceθ
+    @test snapshot(similar(calcθ, 0.9)) == snapshot(sYlmCalculator(0.9, 4, -2:2))
     calcR = sYlmCalculator(rotors[1], 4, -2:2)
     sR = similar(calcR)
     @test sR.phases[] == calcR.phases[] == true
-    @test snapshot(eachℓ(sR, 1)) == snapshot(eachℓ(calcR, 1))
-    @test snapshot(eachℓ(similar(calcR, rotors[2]), 1)) ==
-        snapshot(eachℓ(sYlmCalculator(rotors[2], 4, -2:2), 1))
+    @test snapshot(sR) == snapshot(calcR)
+    @test snapshot(similar(calcR, rotors[2])) == snapshot(sYlmCalculator(rotors[2], 4, -2:2))
 end
 
 
@@ -887,7 +866,7 @@ end
 
 @testitem "Iteration's deliberate refusal" begin
     import SphericalFunctions: DCalculator, HCalculator, sYlmCalculator,
-        recurrence!, eachℓ
+        recurrence!
     using Quaternionic: Rotor
     using Random
 
@@ -896,30 +875,22 @@ end
 
     # An sYlmCalculator is built for the spin weights it serves, so bare iteration has
     # something to yield and no longer refuses; what is refused is a spin weight it was not
-    # built for.
+    # built for, which is now out of bounds of the block rather than a message of its own.
     calcY = sYlmCalculator(R, 3, -1:1)
     @test first(calcY).first == 0
     @test length(collect(calcY)) == 4
-    @test length(collect(eachℓ(calcY))) == 4
-    @test length(collect(eachℓ(calcY; ℓₘᵢₙ=1))) == 3
-    @test length(collect(eachℓ(calcY, 1))) == 4
-    @test_throws "not among them" eachℓ(calcY, 2)
-    calc1 = sYlmCalculator(R, 3, 1)
-    recurrence!(calc1, 0)
-    @test_throws "not among them" calc1[0, 0]
+    @test_throws BoundsError recurrence!(calcY, 0)[2, :]
 
     # An HCalculator's only block is the wedge itself — one mutable object handed back
     # by identity, which `copy` cannot preserve — so it is not iterable at all.  The error
     # names the manual loop it has always had.
     calcH = HCalculator(0.7, 3)
-    @test_throws "not iterable" eachℓ(calcH)
-    @test_throws "not iterable" eachℓ(calcH, 1)
-    @test_throws "not iterable" eachℓ(calcH; ℓₘᵢₙ=1)
-    @test_throws MethodError iterate(calcH)
-    err = try eachℓ(calcH) catch e; e end
+    err = try iterate(calcH) catch e; e end
     @test err isa ErrorException
+    @test occursin("not iterable", err.msg)
     @test occursin("recurrence!", err.msg)
     @test occursin("DCalculator", err.msg)
+    @test_throws "not iterable" [x for x ∈ calcH]
     # And that manual loop is unaffected
     @test recurrence!(calcH, 2).ℓ == 2
 

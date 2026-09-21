@@ -207,13 +207,14 @@ function rotate_modes!(dst::AbstractVector, 𝔇::WignerSeries, w::ModeWeights)
     dst
 end
 
-# Streaming: nothing is held but the block the calculator is standing on.  Starting `eachℓ`
-# above the calculator's own ℓₘᵢₙ still runs the recurrence through the ℓ below, so the result
-# is bit-for-bit what a sequential pass gives.  The m′/m limits were checked once, in
+# Streaming: nothing is held but the block the calculator is standing on.  Beginning above the
+# calculator's own ℓₘᵢₙ still runs the recurrence through the ℓ below, so the result is
+# bit-for-bit what a sequential pass gives.  The m′/m limits were checked once, in
 # `check_rotation`, because they are fields of the calculator rather than of each block.
 function rotate_modes!(dst::AbstractVector, calc::WignerCalculator, w::ModeWeights)
     src = strided(w)
-    for (ℓ, B) ∈ eachℓ(calc; ℓₘᵢₙ=ℓₘᵢₙ(w), ℓₘₐₓ=ℓₘₐₓ(w))
+    for ℓ ∈ ℓₘᵢₙ(w):ℓₘₐₓ(w)
+        B = recurrence!(calc, ℓ)
         r = mode_range(w, ℓ)
         mul!(view(dst, r), strided(B), view(src, r))
     end
@@ -329,7 +330,10 @@ function Base.:*(
     check_evaluation(calc, w)
     src = strided(w)
     f = zero(promote_type(YT, eltype(w)))
-    for (ℓ, Yˡ) ∈ eachℓ(calc, convert(IT, spin(w)); ℓₘᵢₙ=ℓₘᵢₙ(w), ℓₘₐₓ=ℓₘₐₓ(w))
+    iₛ = spin_index(calc, convert(IT, spin(w)))
+    for ℓ ∈ ℓₘᵢₙ(w):ℓₘₐₓ(w)
+        recurrence!(calc, ℓ)
+        Yˡ = spin_row(calc, ℓ, iₛ)
         f += synthesize(strided(Yˡ), view(src, mode_range(w, ℓ)))
     end
     f
@@ -341,9 +345,11 @@ function Base.:*(
     src = strided(w)
     NT = promote_type(YT, eltype(w))
     f = zeros(NT, Nᵣ(calc))
-    for (ℓ, Yˡ) ∈ eachℓ(calc, convert(IT, spin(w)); ℓₘᵢₙ=ℓₘᵢₙ(w), ℓₘₐₓ=ℓₘₐₓ(w))
+    iₛ = spin_index(calc, convert(IT, spin(w)))
+    for ℓ ∈ ℓₘᵢₙ(w):ℓₘₐₓ(w)
+        recurrence!(calc, ℓ)
         # β = 1 accumulates across ℓ, so nothing beyond `f` is ever held.
-        mul!(f, strided(Yˡ), view(src, mode_range(w, ℓ)), one(NT), one(NT))
+        mul!(f, strided(spin_row(calc, ℓ, iₛ)), view(src, mode_range(w, ℓ)), one(NT), one(NT))
     end
     f
 end

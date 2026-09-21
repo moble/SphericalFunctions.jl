@@ -107,8 +107,7 @@ end
     N = 4
     rotors = randn(rng, Rotor{Float64}, N)
     batched = DCalculator(rotors, ℓₘₐₓ)
-    recurrence!(batched, ℓₘₐₓ)
-    blk = batched[ℓₘₐₓ]
+    blk = recurrence!(batched, ℓₘₐₓ)
     @test stride(strided(blk), 1) == 1
     # ... but a single rotor's slice out of it is strided by Nᵣ, so BLAS cannot take it.
     # `mul!` then falls back to the generic implementation: slower, never wrong.
@@ -134,21 +133,11 @@ end
     # One block of each shape the package hands out
     containers = Any[]
     push!(containers, D(R, ℓₘₐₓ)[3])                                   # WignerMatrix
-    let c = DCalculator(Rs, ℓₘₐₓ); recurrence!(c, 3)
-        push!(containers, c[3])                                        # WignerMatrixBatch
-    end
-    let c = sYlmCalculator(R, ℓₘₐₓ, -2); recurrence!(c, 3)
-        push!(containers, c[3])                                        # DegreeBlock
-    end
-    let c = sYlmCalculator(Rs, ℓₘₐₓ, -2); recurrence!(c, 3)
-        push!(containers, c[3])                                        # DegreeBlockBatch
-    end
-    let c = sYlmCalculator(R, ℓₘₐₓ, -2:2); recurrence!(c, 3)
-        push!(containers, c[3])                                        # SpinMatrix
-    end
-    let c = sYlmCalculator(Rs, ℓₘₐₓ, -2:2); recurrence!(c, 3)
-        push!(containers, c[3])                                        # SpinMatrixBatch
-    end
+    push!(containers, recurrence!(DCalculator(Rs, ℓₘₐₓ), 3))           # WignerMatrixBatch
+    push!(containers, recurrence!(sYlmCalculator(R, ℓₘₐₓ, -2), 3))     # DegreeBlock
+    push!(containers, recurrence!(sYlmCalculator(Rs, ℓₘₐₓ, -2), 3))    # DegreeBlockBatch
+    push!(containers, recurrence!(sYlmCalculator(R, ℓₘₐₓ, -2:2), 3))   # SpinMatrix
+    push!(containers, recurrence!(sYlmCalculator(Rs, ℓₘₐₓ, -2:2), 3))  # SpinMatrixBatch
 
     for w ∈ containers
         A = collect(strided(w))          # an independent copy, so the round trip is visible
@@ -191,8 +180,7 @@ end
     rng = Random.Xoshiro(66)
     R = randn(rng, Rotor{Float64})
     c = sYlmCalculator(R, 4, -2)
-    recurrence!(c, 3)
-    v = c[3]
+    v = recurrence!(c, 3)
 
     v .= 5 + 0im
     @test all(v[m] == 5 for m ∈ -3:3)

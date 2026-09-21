@@ -104,7 +104,7 @@ function spins end
     Nr(x)
 
 The number of rotors `x` handles at once.  A calculator with `Nᵣ > 1` evaluates a whole
-batch in one pass, and its blocks have a leading rotor index: `calc[ℓ][iᵣ, m′, m]`.
+batch in one pass, and its blocks have a leading rotor index: `𝔇ˡ[iᵣ, m′, m]`.
 """
 function Nᵣ end
 
@@ -124,7 +124,8 @@ function ishalfinteger end
 
 Whether the calculator `c` was built for a batch of rotors (`true`, when `Nᵣ > 1`) or for a
 single one (`false`).  Like [`ishalfinteger`](@ref), this is a property of the type rather
-than of the data, so it is known at compile time — which is what lets `calc[ℓ]` have a
-single, inferrable return type rather than a union of the batched and unbatched ones.
+than of the data, so it is known at compile time — which is what lets the block that
+[`recurrence!`](@ref) returns have a single, inferrable type rather than a union of the
+batched and unbatched ones.
 """
 function isbatched end

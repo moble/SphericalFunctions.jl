@@ -1,6 +1,6 @@
 # The last parameter, `B`, is `Nᵣ > 1`.  It is redundant — `Nᵣ` is a field of the wedge
 # inside `H`, and `isbatched(c)` could simply compare it to 1 — but it is the difference
-# between `calc[ℓ]` having one return type and having a union of the batched and unbatched
+# between the block having one type and having a union of the batched and unbatched
 # ones, because the branch in `block` below is then resolved at compile time.  Only the
 # *predicate* is lifted into the type, not `Nᵣ` itself: `SSHTRS` sets `Nᵣ = Nθ`, which grows
 # with ℓₘₐₓ, and parameterizing on the count would recompile the recurrence for every
@@ -15,10 +15,10 @@ Calculator producing Wigner's ``𝔇`` matrices (when `NT` is `Complex{RT}`) or 
 
 Internally this wraps a [`HCalculator`](@ref), which does the actual recurrence, plus a
 buffer into which the requested block of the matrix is written for the current ``ℓ``; that
-block is returned by `calc[ℓ]` as an array indexed naturally by `[m′, m]` (or `[iᵣ, m′, m]`
-when `Nᵣ > 1`).
+block is what [`recurrence!`](@ref) returns, as an array indexed naturally by `[m′, m]` (or
+`[iᵣ, m′, m]` when `Nᵣ > 1`).
 
-Which of those two shapes `calc[ℓ]` returns is recorded in the type, as the `Bool` parameter
+Which of those two shapes comes back is recorded in the type, as the `Bool` parameter
 read by [`isbatched`](@ref), so that the return type is inferrable; see the comment on the
 struct.
 """
@@ -94,8 +94,8 @@ end
 With `Nᵣ > 1` each block is indexed as `[iᵣ, m′, m]` instead.  The block is a view into the
 calculator's storage and is overwritten by the next step, so `copy` it if it must survive
 (the copy keeps the natural indices), or `collect` it to get an ordinary 1-based `Matrix`.
-`collect(calc)` copies every block, so it is safe; see [`eachℓ`](@ref) to restrict the range
-of ``ℓ``, and [`recurrence!`](@ref) to step the calculator by hand.
+`collect(calc)` copies every block, so it is safe.  To sweep part of the range, or to take
+the values of ``ℓ`` in some other order, loop over [`recurrence!`](@ref) yourself.
 
 The convention is ``𝔇^{(ℓ)}_{m′,m}(𝐑_{α,β,γ}) = e^{-im′α}\\, d^{(ℓ)}_{m′,m}(β)\\, e^{-imγ}``;
 see the "Conventions" section of the documentation.
@@ -104,7 +104,7 @@ see the "Conventions" section of the documentation.
 
 `DCalculator(R, 7//2)` — a `Rational` `ℓₘₐₓ` with denominator 2 — gives a
 calculator for half-integer ``ℓ, m′, m``.  All four keyword limits must then be
-half-integers too, `recurrence!` accepts only half-integer `ℓ`, and `calc[ℓ]` returns a
+half-integers too, `recurrence!` accepts only half-integer `ℓ` and returns a
 [`WignerMatrix`](@ref) (or a [`WignerMatrixBatch`](@ref) when `Nᵣ > 1`) whose indices are
 half-odd-integers; it is indexed the same way.  The double cover is respected exactly: ``𝔇(-R) = -𝔇(R)``.
 
@@ -137,7 +137,7 @@ const dCalculator{IT, RT, ST, B} = WignerCalculator{IT, RT, RT, ST, B} where {IT
 # than something that dispatches with the element type in the rotor's place.
 # The element type is derived here and passed on as a *type*, to the helpers below, rather
 # than computed inside the body as a value: that is what lets the compiler settle the concrete
-# return type, including the `B` parameter that `calc[ℓ]`'s type depends on.
+# return type, including the `B` parameter that the block's type depends on.
 #
 # Those helpers are deliberately *not* methods of `DCalculator` and `dCalculator`.
 # A three-argument method of either name would be a public way to override the element type,
@@ -339,45 +339,6 @@ function materialize!(c::WignerCalculator{IT, RT, NT}, ℓ::IT) where {IT, RT, N
     end
     c.ℓ[] = ℓ
     c
-end
-
-"""
-    calc[ℓ]
-
-The block of the Wigner matrix for the current ``ℓ`` of the calculator, as an array indexed
-naturally: `calc[ℓ][m′, m]` for `Nᵣ == 1`, or `calc[ℓ][iᵣ, m′, m]` for `Nᵣ > 1`.  The
-result is a view into the calculator's storage, valid until the next call to
-[`recurrence!`](@ref).  `ℓ` must be the value passed to the most recent `recurrence!`.
-
-The result is a [`WignerMatrix`](@ref) (for `Nᵣ == 1`) or a [`WignerMatrixBatch`](@ref), for
-either kind of index, supporting `[m′, m]` and `[iᵣ, m′, m]` respectively.  `copy` keeps it,
-with its natural indices, beyond the next `recurrence!`; `collect` gives an ordinary 1-based
-`Array`; and [`strided`](@ref) gives a 1-based view of the same storage, which is what linear
-algebra takes.
-"""
-function Base.getindex(c::WignerCalculator{IT}, ℓ) where {IT}
-    ℓ = convert(IT, ℓ)
-    if c.ℓ[] < ℓₘᵢₙ(c)
-        error(
-            "This calculator currently holds no result, because nothing has been computed "
-            * "yet; iterate the calculator, or call `recurrence!(calc, ℓ)` first."
-        )
-    end
-    if ℓ < ℓₘᵢₙ(c) || ℓ > ℓₘₐₓ(c)
-        error(
-            "ℓ=$ℓ is out of bounds [$(ℓₘᵢₙ(c)), $(ℓₘₐₓ(c))] for this calculator; "
-            * "`recurrence!` accepts only ℓ in that range."
-        )
-    end
-    if ℓ != c.ℓ[]
-        error(
-            "This calculator currently holds ℓ=$(c.ℓ[]), not ℓ=$ℓ; "
-            * "call `recurrence!(calc, $ℓ)` first."
-        )
-    end
-    m′r = m′range(c, ℓ)
-    mr = mrange(c, ℓ)
-    block(c, ℓ, m′r, mr)
 end
 
 # `isbatched(c)` reads the type parameter, so this branch is resolved at compile time and the

@@ -218,8 +218,9 @@ What the recursion costs is governed by the *largest* ``|s|`` asked
 for, so reading the rest of the range out of it is close to free;
 naming a single spin weight is a saving in storage and in the final
 assembly rather than in the recursion itself.  A single spin weight of
-such a block is `ₛYₗ[s, :]`, and [`eachℓ`](@ref)`(calculator, s)`
-iterates that row directly.  [`spins`](@ref SphericalFunctions.spins)
+such a block is `ₛYₗ[s, :]`, which is spelled the same way whichever
+kind of index the calculator has.
+[`spins`](@ref SphericalFunctions.spins)
 reports the range a calculator serves, and [`spin`](@ref) the one
 value when there is only one.
 
@@ -249,6 +250,22 @@ s)`.
 `copy` keeps the block's natural indices, while `collect` gives an
 ordinary 1-based array; `collect` applied to the calculator itself
 copies every block for you.
+
+A calculator is not indexed, and there is no restricted form of the
+iteration.  Both are the same `for` loop over [`recurrence!`](@ref),
+which computes one ``ℓ`` and returns its block:
+```julia
+for ℓ ∈ 2:4
+    𝔇ˡ = recurrence!(calculator, ℓ)
+    # 𝔇ˡ[m′, m] for m′, m ∈ -ℓ:ℓ
+end
+```
+Beginning above the calculator's own ``ℓₘᵢₙ`` costs nothing in
+accuracy: the recursion runs through the values below either way, and
+the result is bit-for-bit what a full sweep gives.  Values of ``ℓ``
+taken in *decreasing* order are a different matter — each one restarts
+the recursion from ``ℓₘᵢₙ``, so a loop that reads two neighbouring
+``ℓ`` together pays that restart at every step.
 
 For the same reason, two loops over one calculator cannot be
 interleaved.  Each step of either loop overwrites what the other is
@@ -349,13 +366,15 @@ the wedge itself is needed — probably as an optimization:
 ```julia
 h = HCalculator(β, ℓₘₐₓ)
 for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ  # ℓₘᵢₙ=0 for integers or 1//2 for half-integers
-    recurrence!(h, ℓ)
-    # h.Hˡ[iᵣ, m′, m] is available; iᵣ is always present; only |m′| ≤ m ≤ ℓ is stored
+    Hˡ = recurrence!(h, ℓ)
+    # Hˡ[iᵣ, m′, m] is available; iᵣ is always present; only |m′| ≤ m ≤ ℓ is stored
 end
 ```
-This one is intentionally not iterable: it is a single mutable object
-handed back.  It must also be stepped through manually with
-`recurrence!` and read as `h.Hˡ`.
+This one is intentionally not iterable, and is the exception to
+everything said above about blocks: the wedge is a single mutable
+object handed back by identity rather than a view, so a `copy` of it
+still shares the numbers it wraps.  Read the values out before
+stepping on, or copy `parent(Hˡ)`.
 
 The wedge is stored as an [`HWedge`](@ref) (and, during the recursion,
 an [`HAxis`](@ref)); the symmetries that relate the rest of the matrix
@@ -441,8 +460,6 @@ sλlm_matrix
 sλlmCalculator
 HarmonicCalculator
 recurrence!
-eachℓ
-eachell
 set_R!
 set_β!
 set_θ!
@@ -451,8 +468,8 @@ set_θ!
 
 ## [Containers](@id interface_containers)
 
-The types that `D`, `d`, `sYlm` and `calc[ℓ]` return, for either kind
-of index, and the abstract types they share with the workspaces below.
+The types that `D`, `d`, `sYlm` and [`recurrence!`](@ref) return, for
+either kind of index, and the abstract types they share with the workspaces below.
 
 These containers are deliberately **not** `AbstractArray`s.  Half-odd
 indices cannot satisfy that interface at all — `axes` must be integer

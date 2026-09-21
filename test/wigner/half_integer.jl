@@ -1,4 +1,4 @@
-# Stage-2 tests of the half-integer Wigner engine (design memo §6): `calc[ℓ][m′, m]`,
+# Stage-2 tests of the half-integer Wigner engine (design memo §6): `𝔇ˡ[m′, m]`,
 # `D` and `d` against the stage-1 oracle of `test/wigner/half_integer_oracle.jl`, the
 # oracle-free metamorphic identities that stay valid at large `J`, the validation of
 # `Rational` index ranges, and the half-integer containers.
@@ -122,8 +122,7 @@ end
             βs = βvalues[1:3]
             calc = dCalculator(βs, Jₘₐₓ; m′ₘₐₓ, m′ₘᵢₙ=-m′ₘₐₓ)
             for ℓ ∈ 1//2:1:Jₘₐₓ
-                recurrence!(calc, ℓ)
-                block = calc[ℓ]
+                block = recurrence!(calc, ℓ)
                 for iᵣ ∈ eachindex(βs), m′ ∈ max(-ℓ, -m′ₘₐₓ):min(ℓ, m′ₘₐₓ), m ∈ -ℓ:ℓ
                     e = max(
                         e, abs(block[iᵣ, m′, m] - Float64(d_oracle(ℓ, m′, m, big(βs[iᵣ]))))
@@ -139,11 +138,10 @@ end
     # A batch of β must agree bitwise with the same β values computed one at a time
     βs = βvalues[3:5]
     batch = dCalculator(βs, 9//2)
-    recurrence!(batch, 9//2)
+    blkbatch = recurrence!(batch, 9//2)
     for (iᵣ, β) ∈ enumerate(βs)
         single = dCalculator(β, 9//2)
-        recurrence!(single, 9//2)
-        @test collect(batch[9//2][iᵣ]) == collect(single[9//2])
+        @test collect(blkbatch[iᵣ]) == collect(recurrence!(single, 9//2))
     end
 end
 
@@ -186,8 +184,7 @@ end
             Rbatch = Rs[5:6]
             calc = DCalculator(Rbatch, Jₘₐₓ; m′ₘₐₓ, m′ₘᵢₙ=-m′ₘₐₓ)
             for ℓ ∈ 1//2:1:Jₘₐₓ
-                recurrence!(calc, ℓ)
-                block = calc[ℓ]
+                block = recurrence!(calc, ℓ)
                 for iᵣ ∈ 1:2, m′ ∈ max(-ℓ, -m′ₘₐₓ):min(ℓ, m′ₘₐₓ), m ∈ -ℓ:ℓ
                     e = max(e, abs(block[iᵣ, m′, m] - D_oracle(Rbatch[iᵣ], ℓ, m′, m)))
                 end
@@ -201,10 +198,8 @@ end
     # Jumping around in ℓ must give exactly what a fresh, sequential calculator gives
     calc = DCalculator(Rs[6], 9//2)
     for ℓ ∈ (9//2, 1//2, 5//2, 7//2, 3//2)
-        recurrence!(calc, ℓ)
         fresh = DCalculator(Rs[6], 9//2)
-        recurrence!(fresh, ℓ)
-        @test collect(calc[ℓ]) == collect(fresh[ℓ])
+        @test collect(recurrence!(calc, ℓ)) == collect(recurrence!(fresh, ℓ))
     end
 end
 
@@ -437,13 +432,13 @@ end
     @test dCalculator(1.1, 1//2) isa dCalculator
     @test HCalculator(1.1, 1//2; m′ₘₐₓ=1//2) isa HCalculator
 
-    # `recurrence!` and `calc[ℓ]` reject the wrong parity of ℓ, and ℓ out of range
+    # `recurrence!` rejects the wrong parity of ℓ, and ℓ out of range
     calc = DCalculator(𝟙, 5//2)
     @test_throws InexactError recurrence!(calc, 𝟙, 2)
     @test_throws "out of bounds" recurrence!(calc, 𝟙, 7//2)
     recurrence!(calc, 𝟙, 5//2)
-    @test_throws "out of bounds" calc[9//2]
-    @test_throws "not ℓ=" calc[3//2]
+    @test_throws "out of bounds" recurrence!(calc, 9//2)
+    @test_throws InexactError recurrence!(calc, 3)
 
     # An integer ℓ on a half-integer `WignerSeries` must say so, rather than throwing a bare
     # `InexactError` out of the index arithmetic (or, under `@inbounds`, quietly returning a
@@ -565,8 +560,7 @@ end
     @testset "WignerMatrixBatch" begin
         Rs = rotors()[6:8]
         calc = DCalculator(Rs, J)
-        recurrence!(calc, J)
-        b = calc[J]
+        b = recurrence!(calc, J)
         @test b isa WignerMatrixBatch
         @test ndims(b) == 3
         @test size(b) == (3, 6, 6) && size(b, 1) == 3 && size(b, 4) == 1
@@ -608,8 +602,7 @@ end
     @testset "DegreeBlock and DegreeBlockBatch" begin
         # `sYlmCalculator` is the half-integer producer of the 1-dimensional containers
         calc = sYlmCalculator(R, J, -3//2:3//2)
-        recurrence!(calc, J)
-        v = calc[J, 1//2]
+        v = recurrence!(calc, J)[1//2, :]
         @test v isa DegreeBlock
         @test ndims(v) == 1
         @test size(v) == (6,) && size(v, 1) == 6 && size(v, 2) == 1
@@ -654,8 +647,7 @@ end
         @test Rational.(r) == [k//2 for k ∈ -5:2:5]
 
         calcb = sYlmCalculator([R, R], J, -3//2:3//2)
-        recurrence!(calcb, J)
-        vb = calcb[J, 1//2]
+        vb = recurrence!(calcb, J)[:, 1//2, :]
         @test vb isa DegreeBlockBatch
         @test ndims(vb) == 2
         @test size(vb) == (2, 6) && size(vb, 1) == 2 && size(vb, 3) == 1
@@ -683,8 +675,7 @@ end
         # the 1- and 2-dimensional ones above
         sr = -3//2:3//2
         calc = sYlmCalculator(R, J, sr)
-        recurrence!(calc, J)
-        b = calc[J]
+        b = recurrence!(calc, J)
         @test b isa SpinMatrix
         @test ndims(b) == 2
         @test size(b) == (4, 6) && size(b, 1) == 4 && size(b, 3) == 1
@@ -696,7 +687,6 @@ end
         # Each row is the very block a single-spin calculator would give
         for s ∈ sr
             @test b[s, :] isa DegreeBlock
-            @test collect(b[s, :]) == collect(calc[J, s])
             @test collect(b[s, :]) == collect(recurrence!(sYlmCalculator(R, J, s), J))
         end
         @test collect(b) == Matrix(b) == Array(b) == [b[s, m] for s ∈ sr, m ∈ -J:J]
@@ -715,8 +705,7 @@ end
         @test occursin("SpinMatrix", sprint(show, MIME("text/plain"), b))
 
         calcb = sYlmCalculator([R, R], J, sr)
-        recurrence!(calcb, J)
-        bb = calcb[J]
+        bb = recurrence!(calcb, J)
         @test bb isa SpinMatrixBatch
         @test ndims(bb) == 3
         @test size(bb) == (2, 4, 6) && size(bb, 1) == 2 && size(bb, 4) == 1
@@ -725,7 +714,8 @@ end
         @test bb[1] isa SpinMatrix
         @test collect(bb[1]) == collect(b)
         @test bb[:, 1//2, :] isa DegreeBlockBatch
-        @test collect(bb[:, 1//2, :]) == collect(calcb[J, 1//2])
+        @test collect(bb[:, 1//2, :]) ==
+            collect(recurrence!(sYlmCalculator([R, R], J, 1//2), J))
         @test collect(bb) == Array(bb) == [bb[iᵣ, s, m] for iᵣ ∈ 1:2, s ∈ sr, m ∈ -J:J]
         @test collect(Iterators.take(bb, length(bb))) == vec(Array(bb))
 

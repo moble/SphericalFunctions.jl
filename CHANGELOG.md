@@ -111,10 +111,9 @@ conjugate of the one version 2 used.**
   `sYlmCalculator(R, ℓₘₐₓ, -2:2)` serves all five.  It follows that the
   calculator has something to yield, so it iterates like the Wigner
   ones — `for (ℓ, ₛYₗ) ∈ calc` — with the block indexed `ₛYₗ[m]` in the
-  first case and `ₛYₗ[s, m]` in the second.  `eachℓ(calc, s)` still
-  singles out one spin weight, `calc[ℓ, s]` still reads one out of the
-  current ``ℓ``, and `spins` and `spin` report what a calculator was
-  built for.  The flat `sYlm`, `sYlm!` and `sYlm_matrix` take ranges
+  first case and `ₛYₗ[s, m]` in the second.  One spin weight of such a
+  block is the slice `ₛYₗ[s, :]`, and `spins` and `spin` report what a
+  calculator was built for.  The flat `sYlm`, `sYlm!` and `sYlm_matrix` take ranges
   too, laying the spin weights along a new axis of a plain array.
   Half-integer ranges are spelled the same way, `-3//2:3//2`, and their
   blocks are the new `SpinMatrix` and `SpinMatrixBatch` containers.
@@ -138,6 +137,22 @@ conjugate of the one version 2 used.**
   `rotor(q)` or `exp(v/2)`.  Vectors of rotor data must also have a
   concrete element type, so a `Vector{Any}` is refused rather than
   guessed at.
+* **The calculators are named for their functions.**
+  `WignerDCalculator`, `WignerdCalculator` and `WignerHCalculator` are
+  now `DCalculator`, `dCalculator` and `HCalculator`, so that every
+  calculator is its function's name plus `Calculator`, as
+  `sYlmCalculator` and `YlmCalculator` already were.
+* **`recurrence!` returns the block** rather than the calculator, and
+  **the calculators are no longer indexed.**  `calc[ℓ]` had to be given
+  the ``ℓ`` just computed and threw for any other, so it asserted what
+  the caller already knew rather than looking anything up; reading a
+  result by hand is now one call, `𝔇ˡ = recurrence!(calc, ℓ)`.  This is
+  also how an `HCalculator` hands back its wedge, in place of the field
+  access `calc.Hˡ`, and how one spin weight is reached, as
+  `recurrence!(calc, ℓ)[s, :]` in place of `calc[ℓ, s]`.
+* **`eachℓ` and `eachell` are removed.**  `eachℓ(calc)` was bare
+  iteration under another name; a restricted range and a single spin
+  weight are both a `for` loop over `recurrence!`.
 * **`SphericalFunctions.Deprecated` is removed**, and with it the
   whole version-2 API: `D_matrices`, `D_prep`, `D_iterator`,
   `d_matrices`, `d_prep`, `d_iterator`, `sYlm_values`, `sYlm_prep`,
@@ -156,7 +171,7 @@ conjugate of the one version 2 used.**
 | Version 2 | Version 3 |
 |---|---|
 | `D_matrices(R, ℓₘₐₓ)` + `D_iterator` | `D(R, ℓₘₐₓ)`, indexed `𝔇[ℓ][m′, m]` (conjugated; see above) |
-| `D_prep` + `D_matrices!` | `DCalculator(R, ℓₘₐₓ)` + `recurrence!` + `calc[ℓ]` |
+| `D_prep` + `D_matrices!` | `DCalculator(R, ℓₘₐₓ)`, iterated, or stepped with `recurrence!` |
 | `d_matrices(β, ℓₘₐₓ)` | `d(β, ℓₘₐₓ)`, indexed `𝔡[ℓ][m′, m]` |
 | `sYlm_values(R, ℓₘₐₓ, s)` | `sYlm(R, ℓₘₐₓ, s)` |
 | `sYlm_prep(ℓₘₐₓ, sₘₐₓ)` + `sYlm_values!` | `sYlmCalculator(R, ℓₘₐₓ, s)` + `sYlm!(Y, calc, R)` |
@@ -197,9 +212,8 @@ conjugate of the one version 2 used.**
   ``ℓₘₐₓ`` without holding every matrix at once; a whole pass allocates
   nothing.  With it come `keys`, `length`, `eltype`, `pairs`, and a
   `collect` that copies every block, since the blocks themselves are
-  views that the next step overwrites.  `eachℓ` (ASCII `eachell`)
-  covers the two cases bare iteration cannot: a restricted range of
-  ``ℓ``, and one spin weight of an `sYlmCalculator` built for several.
+  views that the next step overwrites.  A sweep over part of the range,
+  or in some other order, is a `for` loop over `recurrence!`.
 * `set_R!`, `set_β!` and `set_θ!` point an existing calculator at new
   data, each named for what its calculator actually holds.
 * `Ylm(R, ℓₘₐₓ)`, the ordinary scalar spherical harmonics, which are

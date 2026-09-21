@@ -34,12 +34,12 @@
                 flat = sλlm(θ, ℓmax, s)
                 @test eltype(strided(flat)) === T
                 for ℓ ∈ ℓₘᵢₙ(flat):ℓₘₐₓ(flat)
-                    recurrence!(cY, ℓ)
-                    recurrence!(cλ, ℓ)
+                    blkY = recurrence!(cY, ℓ)
+                    blkλ = recurrence!(cλ, ℓ)
                     for m ∈ -ℓ:ℓ
                         # `===` rather than `==`, so that a signed zero would be caught too.
-                        @test cλ[ℓ][m] === λref(cY[ℓ][m], s)
-                        @test flat[ℓ][m] === cλ[ℓ][m]
+                        @test blkλ[m] === λref(blkY[m], s)
+                        @test flat[ℓ][m] === blkλ[m]
                     end
                 end
             end
@@ -98,10 +98,8 @@ end
 
     # `set_θ!` is what serves it, and re-setting works as for the complex flavour
     set_θ!(cλ, 0.9)
-    recurrence!(cλ, 3)
     reference = sλlmCalculator(0.9, 4, -2)
-    recurrence!(reference, 3)
-    @test collect(cλ[3]) == collect(reference[3])
+    @test collect(recurrence!(cλ, 3)) == collect(recurrence!(reference, 3))
 
     # The complex flavour still takes both
     cY = sYlmCalculator(0.3, 4, -2)
@@ -187,10 +185,10 @@ end
         # The table the innermost loops read, against what the complex calculator gave
         cY = sYlmCalculator(collect(𝒯rs.θ), ℓmax, s)
         for ℓ ∈ abs(s):ℓmax
-            recurrence!(𝒯rs.λ, ℓ)
-            recurrence!(cY, ℓ)
+            blkλ = recurrence!(𝒯rs.λ, ℓ)
+            blkY = recurrence!(cY, ℓ)
             for iᵣ ∈ 1:size(𝒯rs.λ.Yˡ, 1), m ∈ -ℓ:ℓ
-                @test 𝒯rs.λ[ℓ][iᵣ, m] === λref(cY[ℓ][iᵣ, m], s)
+                @test blkλ[iᵣ, m] === λref(blkY[iᵣ, m], s)
             end
         end
 

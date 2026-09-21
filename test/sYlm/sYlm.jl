@@ -171,10 +171,10 @@ end
     # Every spin weight from one calculator, batched, equals the single-rotor results exactly
     singles = Dict((i, s) => strided(sYlm(Rs[i], ℓₘₐₓ, s; ℓₘᵢₙ=0)) for i ∈ 1:Nᵣ for s ∈ -sₘₐₓ:sₘₐₓ)
     for ℓ ∈ 0:ℓₘₐₓ
-        recurrence!(calc, ℓ)
+        block = recurrence!(calc, ℓ)
         @test SphericalFunctions.ℓ(calc) == ℓ
         for s ∈ -sₘₐₓ:sₘₐₓ
-            blk = calc[ℓ, s]
+            blk = block[:, s, :]
             @test blk isa DegreeBlockBatch
             @test axes(blk) == (1:Nᵣ, -ℓ:ℓ)
             for i ∈ 1:Nᵣ, m ∈ -ℓ:ℓ
@@ -188,17 +188,16 @@ end
     end
     # Arbitrary ℓ order gives the same results as the sequential order
     for ℓ ∈ (0, 3, 1, 7, 7, 4, 0, 2)
-        recurrence!(calc, ℓ)
+        block = recurrence!(calc, ℓ)
         for s ∈ (-2, 0, 3)
-            blk = calc[ℓ, s]
+            blk = block[:, s, :]
             for i ∈ 1:Nᵣ, m ∈ -ℓ:ℓ
                 @test blk[i, m] == (ℓ < abs(s) ? 0 : singles[(i, s)][Yindex(ℓ, m)])
             end
         end
     end
     # copy keeps the natural axes and survives the next recurrence!; collect is 1-based
-    recurrence!(calc, 4)
-    v = calc[4, 1]
+    v = recurrence!(calc, 4)[:, 1, :]
     c = copy(v)
     a = collect(v)
     @test axes(c) == axes(v)
@@ -207,18 +206,18 @@ end
     @test strided(c) == [singles[(i, 1)][Yindex(4, m)] for i ∈ 1:Nᵣ, m ∈ -4:4]
     # Nᵣ == 1: a single rotor and a vector view
     c1 = sYlmCalculator(Rs[2], ℓₘₐₓ, -sₘₐₓ:sₘₐₓ)
-    recurrence!(c1, 3)
-    @test axes(c1[3, -1]) == (-3:3,)
-    @test collect(c1[3, -1]) == singles[(2, -1)][Yindex(3, -3):Yindex(3, 3)]
+    row = recurrence!(c1, 3)[-1, :]
+    @test axes(row) == (-3:3,)
+    @test collect(row) == singles[(2, -1)][Yindex(3, -3):Yindex(3, 3)]
     # Angle input, given at construction, evaluates at (θ, ϕ=0)
     θs = [0.0, 0.7, 1.9, π]
     cθ = sYlmCalculator(θs, 4, -2:2)
-    recurrence!(cθ, 2)
+    blkθ = recurrence!(cθ, 2)
     using Quaternionic: from_spherical_coordinates
     for (i, θ) ∈ enumerate(θs), s ∈ -2:2, m ∈ -2:2
         Yref = strided(sYlm(Rotor(from_spherical_coordinates(θ, 0.0)), 4, s; ℓₘᵢₙ=0))[Yindex(2, m)]
-        @test cθ[2, s][i, m] ≈ Yref atol=1e-15
-        @test imag(cθ[2, s][i, m]) == 0
+        @test blkθ[i, s, m] ≈ Yref atol=1e-15
+        @test imag(blkθ[i, s, m]) == 0
     end
     # similar and show
     c2 = similar(calc)
@@ -245,11 +244,8 @@ end
     @test_throws "runs downward or is empty" sYlmCalculator(R, 3, 2:-1:-2)
     @test_throws "runs downward or is empty" sYlmCalculator(R, 7//2, 3//2:-1:-3//2)
     calc = sYlmCalculator(R, 4, -2:2)
-    @test_throws "nothing has been computed" calc[0, 0]
-    recurrence!(calc, 2)
-    @test_throws "not among them" calc[2, 3]
-    @test_throws "currently holds ℓ=2" calc[1, 0]
-    @test_throws "out of bounds" calc[5, 0]
+    # A spin weight the calculator does not serve is out of bounds of the block it returns
+    @test_throws BoundsError recurrence!(calc, 2)[3, :]
     @test_throws "out of bounds" recurrence!(calc, 5)
     @test_throws "out of bounds" recurrence!(calc, R, -1)
     # A complex "phase" is not a valid rotor for an sYlmCalculator
@@ -348,19 +344,17 @@ end
         fill!(calc, NaN)  # after construction, which stores the rotor data `fill!` preserves
         ref = sYlmCalculator(Rs, ℓₘₐₓ, -sₘₐₓ:sₘₐₓ)
         for ℓ ∈ [0:ℓₘₐₓ; ℓₘₐₓ ÷ 2]
-            recurrence!(calc, ℓ)
-            recurrence!(ref, ℓ)
+            blk = recurrence!(calc, ℓ)
+            refblk = recurrence!(ref, ℓ)
             for s ∈ -sₘₐₓ:sₘₐₓ
-                blk = calc[ℓ, s]
-                refblk = ref[ℓ, s]
                 # Every entry must have been written: an untouched one still holds the
                 # sentinel NaN, which turns `err` into NaN and fails the comparison.  The
                 # values are only approximately equal to the plain-`Float64` run because
                 # `@fastmath` has no effect on a wrapper type, so the two round differently.
                 err = 0.0
                 for i ∈ 1:Nᵣ, m ∈ -ℓ:ℓ
-                    z = Nᵣ == 1 ? blk[m] : blk[i, m]
-                    zref = Nᵣ == 1 ? refblk[m] : refblk[i, m]
+                    z = Nᵣ == 1 ? blk[s, m] : blk[i, s, m]
+                    zref = Nᵣ == 1 ? refblk[s, m] : refblk[i, s, m]
                     err = max(err, abs(unchecked(real(z)) - real(zref)), abs(unchecked(imag(z)) - imag(zref)))
                 end
                 @test err < 1e-13
@@ -369,14 +363,13 @@ end
         # `fill!` keeps the stored rotor data, as its docstring promises, so the recurrence
         # can be re-run without re-supplying it — and must still write every element.
         fill!(calc, NaN)
-        recurrence!(calc, ℓₘₐₓ)
-        recurrence!(ref, ℓₘₐₓ)
+        blk = recurrence!(calc, ℓₘₐₓ)
+        refblk = recurrence!(ref, ℓₘₐₓ)
         for s ∈ -sₘₐₓ:sₘₐₓ
-            blk, refblk = calc[ℓₘₐₓ, s], ref[ℓₘₐₓ, s]
             err = 0.0
             for i ∈ 1:Nᵣ, m ∈ -ℓₘₐₓ:ℓₘₐₓ
-                z = Nᵣ == 1 ? blk[m] : blk[i, m]
-                zref = Nᵣ == 1 ? refblk[m] : refblk[i, m]
+                z = Nᵣ == 1 ? blk[s, m] : blk[i, s, m]
+                zref = Nᵣ == 1 ? refblk[s, m] : refblk[i, s, m]
                 err = max(err, abs(unchecked(real(z)) - real(zref)), abs(unchecked(imag(z)) - imag(zref)))
             end
             @test err < 1e-13
@@ -409,10 +402,9 @@ end
             # The flat function and the calculator are the same engine, so the values agree
             # exactly, whatever the calculator's own sₘₐₓ.
             for ℓ ∈ ℓₘᵢₙ:1:ℓₘₐₓ
-                recurrence!(calc, ℓ)
-                blk = calc[ℓ, s]
+                blk = recurrence!(calc, ℓ)
                 for m ∈ -ℓ:ℓ
-                    @test Y[Yindex(ℓ, m, ℓₘᵢₙ)] == blk[m]
+                    @test Y[Yindex(ℓ, m, ℓₘᵢₙ)] == blk[s, m]
                 end
             end
         end
@@ -694,7 +686,7 @@ end
 end
 
 @testitem "sYlmCalculator ranges agree with single spin weights" begin
-    import SphericalFunctions: sYlmCalculator, sYlm, spins, recurrence!, eachℓ
+    import SphericalFunctions: sYlmCalculator, sYlm, spins, recurrence!
     using Quaternionic: Rotor
     using Random
 
@@ -712,10 +704,8 @@ end
             batched = data isa AbstractVector
             for s ∈ spins(ranged)
                 singly = sYlmCalculator(data, ℓₘₐₓ, s)
-                # `eachℓ(ranged, s)` yields the same kind of block, and the same numbers
-                @test [ℓ => copy(b) for (ℓ, b) ∈ eachℓ(ranged, s)] ==
-                      [ℓ => copy(b) for (ℓ, b) ∈ singly]
-                # ... and so does the corresponding slice of the whole block
+                # The slice for one spin weight holds the same numbers a calculator built
+                # for that spin weight alone gives
                 expected = [collect(b) for (_, b) ∈ singly]
                 for (k, (ℓ, b)) ∈ enumerate(ranged)
                     @test collect(batched ? b[:, s, :] : b[s, :]) == expected[k]
@@ -726,11 +716,11 @@ end
 
     # Below |s| the values are zero, in a range exactly as for a single spin weight
     calc = sYlmCalculator(rotors[1], 4, -2:2)
-    recurrence!(calc, 1)
+    blk = recurrence!(calc, 1)
     for s ∈ (-2, 2), m ∈ -1:1
-        @test iszero(calc[1][s, m])
+        @test iszero(blk[s, m])
     end
-    @test !iszero(calc[1][0, 0])
+    @test !iszero(blk[0, 0])
 
     # A range calculator also reproduces the flat `sYlm`, which is the independent oracle
     for s ∈ -2:2
@@ -833,8 +823,7 @@ end
 
     # A collection of rotors gives the batched blocks, as sYlmCalculator does
     batched = YlmCalculator(Rs, ℓₘₐₓ)
-    recurrence!(batched, 3)
-    @test axes(batched[3]) == (1:3, -3:3)
+    @test axes(recurrence!(batched, 3)) == (1:3, -3:3)
 
     # Half-integer ℓ has no spin-weight-zero analogue
     @test_throws MethodError YlmCalculator(R, 7//2)

@@ -275,9 +275,8 @@ end
     # whose blocks must agree exactly with the single-β convenience function.
     calc = dCalculator(βs, maximum(ℓs))
     for ℓ ∈ 1:maximum(ℓs)
-        recurrence!(calc, ℓ)
+        block = recurrence!(calc, ℓ)
         if ℓ ∈ ℓs
-            block = calc[ℓ]
             @test axes(block) == (1:length(βs), -ℓ:ℓ, -ℓ:ℓ)
             for (iᵣ, β) ∈ enumerate(βs)
                 @test sum(block[iᵣ, m, m] for m ∈ -ℓ:ℓ) ≈ χ(ℓ, β) atol=atol
@@ -331,19 +330,17 @@ end
     @test SphericalFunctions.ℓₘₐₓ(calc) == L
     @test SphericalFunctions.Nᵣ(calc) == 1
 
-    recurrence!(calc, 0)
+    @test recurrence!(calc, 0)[0, 0] == 1
     @test SphericalFunctions.ℓ(calc) == 0
-    @test calc[0][0, 0] == 1
     nonfinite_ℓs = Int[]  # mutated, not reassigned, so no soft-scope ambiguity in the loop
     for ℓ ∈ 1:L
-        recurrence!(calc, ℓ)
-        all(isfinite, calc[ℓ]) || push!(nonfinite_ℓs, ℓ)
+        all(isfinite, recurrence!(calc, ℓ)) || push!(nonfinite_ℓs, ℓ)
     end
     @test isempty(nonfinite_ℓs)
     @test SphericalFunctions.ℓ(calc) == L
-    @test_throws ErrorException calc[L - 1]
+    @test_throws MethodError calc[L - 1]
 
-    M = parent(calc[L])
+    M = parent(recurrence!(calc, L))
     @test size(M) == (2L + 1, 2L + 1)
     @test opnorm(M * M' - I) ≤ 1e-11
     @test opnorm(M' * M - I) ≤ 1e-11

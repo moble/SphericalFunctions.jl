@@ -415,7 +415,7 @@ end
     WignerMatrixBatch{IT, NT, ST} <: AbstractWignerMatrix{IT, NT, ST}
 
 `Nᵣ` Wigner matrices of one ``ℓ``, stored together and indexed as `w[iᵣ, m′, m]`.  This is
-what `calc[ℓ]` returns when `Nᵣ > 1`, for either kind of index.
+what [`recurrence!`](@ref) returns when `Nᵣ > 1`, for either kind of index.
 
 The storage `parent(w)` is 1-based and 3-dimensional, ordered `[iᵣ, m′, m]`, exactly as in
 the calculator.  `w[iᵣ]` gives the [`WignerMatrix`](@ref) view of one rotor's matrix, which
@@ -560,7 +560,7 @@ One harmonic degree's worth of values, indexed naturally by the order ``m``: `v[
 
 The name is deliberately neutral, because the same shape serves three things: a block of
 spin-weighted harmonics at one ``ℓ``, from [`sYlm`](@ref) or [`sYlmCalculator`](@ref)'s
-`calc[ℓ, s]`; one ``ℓ``'s worth of mode weights, from [`ModeWeights`](@ref)'s `w[ℓ, :]`; and
+`ₛYₗ[s, :]`; one ``ℓ``'s worth of mode weights, from [`ModeWeights`](@ref)'s `w[ℓ, :]`; and
 one spin weight's row of a [`SpinMatrix`](@ref), from `b[s, :]`.  All three are values at a
 fixed degree indexed by order, whatever they mean.
 
@@ -660,7 +660,7 @@ end
 
 `Nᵣ` rows of values of a single ``ℓ``, stored together and indexed as `v[iᵣ, m]`.  This is
 the 1-dimensional sibling of [`WignerMatrixBatch`](@ref), and is what
-[`sYlmCalculator`](@ref)'s `calc[ℓ, s]` returns for half-integer indices when `Nᵣ > 1`.
+a batched [`sYlmCalculator`](@ref) yields for one spin weight with half-integer indices.
 `v[iᵣ]` gives the [`DegreeBlock`](@ref) view of one rotor's row.
 
 The storage `parent(v)` is 1-based and 2-dimensional, ordered `[iᵣ, m]`.
@@ -778,7 +778,7 @@ end
 The values of a single ``ℓ`` for a range of spin weights, indexed naturally by ``(s, m)``:
 `b[s, m]` for ``sₘᵢₙ ≤ s ≤ sₘₐₓ`` and ``mₘᵢₙ ≤ m ≤ mₘₐₓ``, and `b[s, :]` for one whole row as
 a [`DegreeBlock`](@ref).  This is what an [`sYlmCalculator`](@ref) built for a range of spin
-weights returns from `calc[ℓ]`.
+weights yields for each ``ℓ``.
 
 The storage `parent(b)` is 1-based and 2-dimensional, ordered `[s, m]`.
 
@@ -919,7 +919,7 @@ end
     SpinMatrixBatch{IT, NT, ST}
 
 `Nᵣ` [`SpinMatrix`](@ref) blocks of one ``ℓ``, stored together and indexed as `b[iᵣ, s, m]`.
-This is what `calc[ℓ]` returns when a batched [`sYlmCalculator`](@ref) was built for a range
+This is what a batched [`sYlmCalculator`](@ref) yields when it was built for a range
 of spin weights.  `b[iᵣ]` gives the `SpinMatrix` view of one rotor's block, which is then indexed
 naturally as `b[iᵣ][s, m]`.
 

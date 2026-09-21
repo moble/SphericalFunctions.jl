@@ -1,5 +1,5 @@
 # Tests for the v3 Wigner-matrix calculators: `DCalculator`, `dCalculator`, the
-# `calc[ℓ]` views, the four block limits, batched rotors, and the convenience functions `D`
+# the blocks `recurrence!` returns, the four block limits, batched rotors, and the convenience functions `D`
 # and `d`.  The oracles are independent closed forms — Varshalovich Eq. 4.3.1(2) for `d`,
 # the settled Euler factorization for `𝔇`, and the quaternionic form of Boyle (2016), all
 # transcribed in the `HalfIntegerOracle` setup module — together with the explicit and
@@ -65,12 +65,11 @@
                 worstᵇ = zero(T)
                 ref = Dref(T, R, ℓₘₐₓ)
                 for ℓ in 0:ℓₘₐₓ
-                    if ℓ == 0
+                    𝔇ˡ = if ℓ == 0
                         recurrence!(calc, R, ℓ)  # set the rotor and compute ℓ=0
                     else
                         recurrence!(calc, ℓ)  # reuse the rotor data
                     end
-                    𝔇ˡ = calc[ℓ]
                     @test axes(𝔇ˡ) == (-ℓ:ℓ, -ℓ:ℓ)
                     @test eltype(𝔇ˡ) === Complex{T}
                     # The block is a view into the calculator's storage; stripping the
@@ -140,12 +139,11 @@ end
                 for input in (β, eⁱᵝ, R)
                     worst = zero(T)
                     for ℓ in 0:ℓₘₐₓ
-                        if ℓ == 0
+                        dˡ = if ℓ == 0
                             recurrence!(calc, input, ℓ)
                         else
                             recurrence!(calc, ℓ)
                         end
-                        dˡ = calc[ℓ]
                         @test axes(dˡ) == (-ℓ:ℓ, -ℓ:ℓ)
                         @test eltype(dˡ) === T  # d is real
                         @test parent(dˡ) isa AbstractMatrix{T}
@@ -178,10 +176,8 @@ end
         for R in rotors
             eⁱᵅ, eⁱᵝ, eⁱᵞ = to_euler_phases(R)
             for ℓ in 0:ℓₘₐₓ
-                recurrence!(calcD, R, ℓ)
-                recurrence!(calcd, R, ℓ)
-                𝔇ˡ = calcD[ℓ]
-                dˡ = calcd[ℓ]
+                𝔇ˡ = recurrence!(calcD, R, ℓ)
+                dˡ = recurrence!(calcd, R, ℓ)
                 for m′ in -ℓ:ℓ, m in -ℓ:ℓ
                     𝔇ᶠ = ExplicitWignerMatrices.D_formula(ℓ, m′, m, eⁱᵅ, eⁱᵝ, eⁱᵞ)
                     dᶠ = ExplicitWignerMatrices.d_formula(ℓ, m′, m, eⁱᵝ)
@@ -237,25 +233,28 @@ end
                 ) == (m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
                 for ℓ in 0:ℓₘₐₓ
                     if ℓ == 0
-                        recurrence!(calc, R, ℓ)
-                        recurrence!(twin, R, ℓ)
+                        blk = recurrence!(calc, R, ℓ)
+                        blktwin = recurrence!(twin, R, ℓ)
                     else
-                        recurrence!(calc, ℓ)
-                        recurrence!(twin, ℓ)
+                        blk = recurrence!(calc, ℓ)
+                        blktwin = recurrence!(twin, ℓ)
                     end
-                    blk = calc[ℓ]
                     m′r = max(-ℓ, m′ₘᵢₙ):min(ℓ, m′ₘₐₓ)
                     mr = max(-ℓ, mₘᵢₙ):min(ℓ, mₘₐₓ)
                     @test axes(blk) == (m′r, mr)
                     # Restricting the block never changes a value: the limited calculator
                     # runs exactly the same operations for the rows it keeps
                     @test all(blk[m′, m] == full[ℓ][m′, m] for m′ in m′r, m in mr)
-                    @test twin[ℓ] == blk
+                    @test blktwin == blk
                 end
                 # Storage is not shared between a calculator and its `similar`
-                recurrence!(twin, R₂, ℓₘₐₓ)
-                @test twin[ℓₘₐₓ] != calc[ℓₘₐₓ]
-                @test all(calc[ℓₘₐₓ][m′, m] == full[ℓₘₐₓ][m′, m] for m′ in axes(calc[ℓₘₐₓ], 1), m in axes(calc[ℓₘₐₓ], 2))
+                blktwin = recurrence!(twin, R₂, ℓₘₐₓ)
+                blk = recurrence!(calc, ℓₘₐₓ)
+                @test blktwin != blk
+                @test all(
+                    blk[m′, m] == full[ℓₘₐₓ][m′, m]
+                    for m′ in axes(blk, 1), m in axes(blk, 2)
+                )
             end
 
             # Invalid limits are rejected at construction
@@ -300,19 +299,17 @@ end
         @test Nᵣ(batched) == N
         @test Nᵣ(single) == 1
         for ℓ in 0:ℓₘₐₓ
-            if ℓ == 0
+            blk = if ℓ == 0
                 recurrence!(batched, data, ℓ)
             else
                 recurrence!(batched, ℓ)
             end
-            blk = batched[ℓ]
             m′r = max(-ℓ, m′ₘᵢₙ(batched)):min(ℓ, m′ₘₐₓ(batched))
             mr = max(-ℓ, mₘᵢₙ(batched)):min(ℓ, mₘₐₓ(batched))
             @test ndims(blk) == 3
             @test axes(blk) == (1:N, m′r, mr)
             for i in 1:N
-                recurrence!(single, data[i], ℓ)
-                @test blk[i] == single[ℓ]
+                @test blk[i] == recurrence!(single, data[i], ℓ)
             end
         end
     end
@@ -378,12 +375,13 @@ end
     using Random
 
     # The payoff, measured the way a user's inner loop sees it: inside a function, where the
-    # calculator's type is known, fetching a block allocates nothing.  Measuring at top level
-    # instead would report the boxing of a dynamically dispatched call and prove nothing.
-    blockallocs(c, ℓ) = (c[ℓ]; @allocated c[ℓ])
-    blockallocs(c, ℓ, s) = (c[ℓ, s]; @allocated c[ℓ, s])
+    # calculator's type is known, a step allocates nothing.  Measuring at top level instead
+    # would report the boxing of a dynamically dispatched call and prove nothing.  This
+    # covers the recurrence and the block together, since one call now does both; a block
+    # whose type were not concrete would show up here as the union split's allocation.
+    blockallocs(c, ℓ) = (recurrence!(c, ℓ); @allocated recurrence!(c, ℓ))
 
-    # Whether `calc[ℓ]` returns a single block or a batch of them is a type parameter, not a
+    # Whether `recurrence!` returns a single block or a batch of them is a type parameter, not a
     # runtime test of `Nᵣ`, so the return type is concrete rather than a union of the two.
     # Guarding that here because nothing else would notice it silently regressing: the union
     # is split by the compiler, so the cost is one small allocation per call, not a failure.
@@ -401,43 +399,51 @@ end
                 @test !isbatched(single)
                 @test isconcretetype(typeof(single))
                 recurrence!(single, R, ℓ)
-                @test isconcretetype(Base.return_types(getindex, (typeof(single), typeof(ℓ)))[1])
-                @test (@inferred single[ℓ]) == single[ℓ]
+                @test isconcretetype(
+                    Base.return_types(recurrence!, (typeof(single), typeof(ℓ)))[1]
+                )
+                @test (@inferred recurrence!(single, ℓ)) == recurrence!(single, ℓ)
                 @test blockallocs(single, ℓ) == 0
 
                 batched = Ctor(rotors, ℓₘₐₓ)
                 @test isbatched(batched)
                 @test isconcretetype(typeof(batched))
                 recurrence!(batched, rotors, ℓ)
-                @test isconcretetype(Base.return_types(getindex, (typeof(batched), typeof(ℓ)))[1])
-                @test (@inferred batched[ℓ]) == batched[ℓ]
+                @test isconcretetype(
+                    Base.return_types(recurrence!, (typeof(batched), typeof(ℓ)))[1]
+                )
+                @test (@inferred recurrence!(batched, ℓ)) == recurrence!(batched, ℓ)
                 @test blockallocs(batched, ℓ) == 0
             end
 
             # ... and the same for the harmonics, where the spin-weight argument is a second
-            # type parameter, so `calc[ℓ]` has four shapes to keep concrete rather than two
+            # type parameter, so the block has four shapes to keep concrete rather than two
             s = ℓₘₐₓ isa Integer ? 2 : 3//2
             srange = ℓₘₐₓ isa Integer ? (-2:2) : (-3//2:3//2)
             for spec ∈ (s, srange)
                 single = sYlmCalculator(R, ℓₘₐₓ, spec)
                 @test !isbatched(single)
                 recurrence!(single, R, ℓ)
-                @test isconcretetype(Base.return_types(getindex, (typeof(single), typeof(ℓ)))[1])
-                @test (@inferred single[ℓ]) == single[ℓ]
+                @test isconcretetype(
+                    Base.return_types(recurrence!, (typeof(single), typeof(ℓ)))[1]
+                )
+                @test (@inferred recurrence!(single, ℓ)) == recurrence!(single, ℓ)
                 @test blockallocs(single, ℓ) == 0
-                @test isconcretetype(Base.return_types(getindex, (typeof(single), typeof(ℓ), typeof(s)))[1])
-                @test (@inferred single[ℓ, s]) == single[ℓ, s]
-                @test blockallocs(single, ℓ, s) == 0
 
                 batched = sYlmCalculator(rotors, ℓₘₐₓ, spec)
                 @test isbatched(batched)
                 recurrence!(batched, rotors, ℓ)
-                @test isconcretetype(Base.return_types(getindex, (typeof(batched), typeof(ℓ)))[1])
-                @test (@inferred batched[ℓ]) == batched[ℓ]
+                @test isconcretetype(
+                    Base.return_types(recurrence!, (typeof(batched), typeof(ℓ)))[1]
+                )
+                @test (@inferred recurrence!(batched, ℓ)) == recurrence!(batched, ℓ)
                 @test blockallocs(batched, ℓ) == 0
-                @test isconcretetype(Base.return_types(getindex, (typeof(batched), typeof(ℓ), typeof(s)))[1])
-                @test (@inferred batched[ℓ, s]) == batched[ℓ, s]
-                @test blockallocs(batched, ℓ, s) == 0
+
+                # Slicing one spin weight out of a multi-spin block keeps that concreteness
+                if spec isa AbstractRange
+                    @test isconcretetype(typeof(recurrence!(single, ℓ)[s, :]))
+                    @test isconcretetype(typeof(recurrence!(batched, ℓ)[:, s, :]))
+                end
             end
         end
     end
@@ -452,7 +458,7 @@ end
     end
 end
 
-@testitem "Wigner calculators indexing errors" begin
+@testitem "Wigner calculators range errors" begin
     import SphericalFunctions
     import SphericalFunctions: DCalculator, dCalculator, recurrence!, WignerMatrix
     using Quaternionic: Rotor
@@ -465,32 +471,25 @@ end
     for (name, Ctor) in (("DCalculator", DCalculator), ("dCalculator", dCalculator))
         @testset "$name" begin
             calc = Ctor(R, ℓₘₐₓ)
-            # Nothing has been computed yet, so no ℓ may be indexed — including values
-            # outside 0:ℓₘₐₓ
-            for ℓ in -1:ℓₘₐₓ+1
-                @test_throws ErrorException calc[ℓ]
-            end
-            recurrence!(calc, R, 2)
+            # A calculator is not indexed at all; `recurrence!` is the only way in
+            @test_throws MethodError calc[2]
+            # Nothing has been computed yet, and `ℓ` says so
+            @test SphericalFunctions.ℓ(calc) == SphericalFunctions.ℓₘᵢₙ(calc) - 1
+            blk = recurrence!(calc, R, 2)
             @test SphericalFunctions.ℓ(calc) == 2
-            @test size(calc[2]) == (5, 5)
-            # Only the current ℓ may be indexed, and the error says what to do about it
-            for ℓ in (-1, 0, 1, 3, 4, 5)
-                @test_throws "recurrence!" calc[ℓ]
-            end
+            @test size(blk) == (5, 5)
             # ℓ out of range for this calculator; the failed call leaves the current block
             # in place
             @test_throws ErrorException recurrence!(calc, ℓₘₐₓ + 1)
             @test_throws ErrorException recurrence!(calc, -1)
             @test SphericalFunctions.ℓ(calc) == 2
-            reference = copy(calc[2])
-            # `fill!` invalidates the current block ...
+            reference = copy(blk)
+            # Recomputing from NaN-filled storage reproduces the result exactly, so no
+            # uninitialized element is ever read
             fill!(calc, NaN)
-            @test_throws ErrorException calc[2]
-            # ... and recomputing from NaN-filled storage reproduces the result exactly, so
-            # no uninitialized element is ever read
-            recurrence!(calc, R, 2)
-            @test calc[2] == reference
-            @test !any(isnan, calc[2])
+            blk = recurrence!(calc, R, 2)
+            @test blk == reference
+            @test !any(isnan, blk)
             @test_throws ErrorException recurrence!(calc, R, ℓₘₐₓ + 1)
         end
     end
@@ -538,9 +537,9 @@ end
         # changes nothing
         snapshot = deepcopy(𝔇)
         𝔇₂ = D(R₂, ℓₘₐₓ)
-        recurrence!(calc, R₂, ℓₘₐₓ)
+        blk = recurrence!(calc, R₂, ℓₘₐₓ)
         @test all(𝔇[ℓ] == snapshot[ℓ] for ℓ in 0:ℓₘₐₓ)
-        @test 𝔇₂[ℓₘₐₓ] == calc[ℓₘₐₓ]
+        @test 𝔇₂[ℓₘₐₓ] == blk
         @test 𝔇₂[ℓₘₐₓ] != 𝔇[ℓₘₐₓ]
         # Block limits shrink the blocks without changing any value
         𝔇ₗ = D(R, ℓₘₐₓ; limits...)
@@ -578,9 +577,9 @@ end
         # Independent copies
         snapshot = deepcopy(dβ)
         d₂ = d(β / 3, ℓₘₐₓ)
-        recurrence!(calc, β / 3, ℓₘₐₓ)
+        blk = recurrence!(calc, β / 3, ℓₘₐₓ)
         @test all(dβ[ℓ] == snapshot[ℓ] for ℓ in 0:ℓₘₐₓ)
-        @test d₂[ℓₘₐₓ] == calc[ℓₘₐₓ]
+        @test d₂[ℓₘₐₓ] == blk
         @test d₂[ℓₘₐₓ] != dβ[ℓₘₐₓ]
         # The phase and rotor forms give the same matrices (up to the rounding of β itself)
         for input in (eⁱᵝ, R)
@@ -673,15 +672,11 @@ end
         worstB = zero(T)
         worstF = zero(T)
         for ℓ in 0:ℓₘₐₓ
-            if ℓ == 0
-                recurrence!(calcD, R, ℓ)
-                recurrence!(calcd, R, ℓ)
+            𝔇ˡ, dˡ = if ℓ == 0
+                recurrence!(calcD, R, ℓ), recurrence!(calcd, R, ℓ)
             else
-                recurrence!(calcD, ℓ)
-                recurrence!(calcd, ℓ)
+                recurrence!(calcD, ℓ), recurrence!(calcd, ℓ)
             end
-            𝔇ˡ = calcD[ℓ]
-            dˡ = calcd[ℓ]
             @test size(𝔇ˡ) == size(dˡ) == (2ℓ + 1, 2ℓ + 1)
             setprecision(BigFloat, 4 * precision(T) + 64) do
                 for m′ in -ℓ:ℓ, m in -ℓ:ℓ
