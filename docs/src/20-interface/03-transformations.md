@@ -98,9 +98,6 @@ series of rings, each of which is at a constant ``θ`` and has pixels
 equally spaced in ``ϕ``, then we can use Fast Fourier Transforms
 (FFTs) to perform the azimuthal integration very quickly.
 
-
-
-
 # Analysis
 
 Analytically, we use orthogonality of the spin-weighted spherical
@@ -115,18 +112,16 @@ But — again because we are finite — we will only be able to evaluate
 the function at a finite number of points, and so we will need to use
 discrete quadrature to evaluate the integrals.
 
-
-
 To describe the mode weights of a spin-``s`` function up to (and
-including) some maximum angular resolution ``ℓ_\mathrm{max}``,
-there are ``(ℓ_\mathrm{max}+1)^2 - s^2`` mode weights.  We assume
-throughout that the values `f̃` are stored as the (column) vector
+including) some maximum angular resolution ``ℓ_\mathrm{max}``, there
+are ``(ℓ_\mathrm{max}+1)^2 - s^2`` mode weights.  We assume throughout
+that the values `f̃` are stored as the (column) vector
 ```julia
 f̃ = [mode_weight(ℓ, m) for ℓ ∈ abs(s):ℓₘₐₓ for m ∈ -ℓ:ℓ]
 ```
 (Here, `mode_weight` is a made-up function for schematic purposes.) In
-particular, the ``m`` index varies most rapidly, and the ``ℓ``
-index varies most slowly.  Correspondingly, there must be *at least*
+particular, the ``m`` index varies most rapidly, and the ``ℓ`` index
+varies most slowly.  Correspondingly, there must be *at least*
 ``(ℓ_\mathrm{max}+1)^2 - s^2`` function values `f`.  However, some
 ``s``-SHT algorithms require more function values — usually by a
 factor of 2 or 4 — trading off between speed and memory usage.
@@ -147,30 +142,85 @@ Both also accept any number of trailing dimensions, which are
 transformed independently — so a whole time series of functions can be
 transformed in one call.
 
-Currently, there are three algorithms implemented, each having different
-advantages and disadvantages:
+Currently, there are three algorithms implemented, each having
+different advantages and disadvantages:
 
-  1. The "RS" algorithm due to [Reinecke_2013](@citet), which is the default.
-     This forms the basis for the
+  1. The "RS" algorithm due to [Reinecke_2013](@citet), which is the
+     default.  This forms the basis for the
      [`libsharp`](https://gitlab.mpcdf.mpg.de/mtr/libsharp) and
-     [`ducc.sht`](https://gitlab.mpcdf.mpg.de/mtr/ducc#duccsht) packages.  It
-     requires pixelizations on "iso-latitude rings", and does not achieve
-     optimal dimensionality.  However, it is very fast, and its accuracy is
-     excellent at extremely high ``ℓ_\mathrm{max}``.
-  2. The "Matrix" algorithm (introduced here for the first time; called
-     "Direct" before version 3.0), which should only be used up to
-     ``ℓ_\mathrm{max} \lesssim 50`` because its intermediate storage
-     requirements scale as ``ℓ_\mathrm{max}^4``.  This algorithm is the
-     fastest for small ``ℓ_\mathrm{max}``, it can be used with arbitrary
-     (non-degenerate) pixelizations, and achieves optimal dimensionality.
-  3. The "Minimal" algorithm due to [Elahi_2018](@citet), with some minor
-     improvements.  This algorithm is fast and — as the name implies — also
-     achieves optimal dimensionality, and its storage scales as
-     ``ℓ_\mathrm{max}^3``.  However, its pixelization is restricted, and its
-     accuracy at very high ``ℓ_\mathrm{max}`` is not as good as the "RS"
-     algorithm.  The algorithm itself is not actually fully specified by Elahi
-     et al., and leaves out some relatively simple improvements, so I have had
-     to take some liberties with my interpretation.
+     [`ducc.sht`](https://gitlab.mpcdf.mpg.de/mtr/ducc#duccsht)
+     packages.  It requires pixelizations on "iso-latitude rings", and
+     does not achieve optimal dimensionality.  However, it is very
+     fast, and its accuracy is excellent at extremely high
+     ``ℓ_\mathrm{max}``.
+  2. The "Matrix" algorithm (introduced here for the first time;
+     called "Direct" before version 3.0), which should only be used up
+     to ``ℓ_\mathrm{max} \lesssim 50`` because its intermediate
+     storage requirements scale as ``ℓ_\mathrm{max}^4``.  This
+     algorithm is the fastest for small ``ℓ_\mathrm{max}``, it can be
+     used with arbitrary (non-degenerate) pixelizations, and achieves
+     optimal dimensionality.
+  3. The "Minimal" algorithm due to [Elahi_2018](@citet), with some
+     minor improvements.  This algorithm is fast and — as the name
+     implies — also achieves optimal dimensionality, and its storage
+     scales as ``ℓ_\mathrm{max}^3``.  However, its pixelization is
+     restricted, and its accuracy at very high ``ℓ_\mathrm{max}`` is
+     not as good as the "RS" algorithm.  The algorithm itself is not
+     actually fully specified by Elahi et al., and leaves out some
+     relatively simple improvements, so I have had to take some
+     liberties with my interpretation.
+
+
+## [Half-integer spin weights](@id transformations_half_integer)
+
+Everything above extends to half-integer spin weights, and the `"RS"`
+and `"Matrix"` methods accept them; only the `"Minimal"` method does
+not, because its bookkeeping of rings and aliased modes is written for
+integer indices, and it says so when asked.  As elsewhere in this
+package, a half-integer is spelled as a `Rational` with denominator 2,
+and the mode weights are then indexed by half-odd ``ℓ`` and ``m`` in
+the same canonical ordering:
+```julia
+𝒯 = SSHT(1//2, 7//2)          # spin weight 1/2, with ℓ = 1/2, 3/2, 5/2, 7/2
+f̃ = ModeWeights(randn(ComplexF64, Ysize(1//2, 7//2)), 1//2)
+f = 𝒯 * f̃
+f̃′ = 𝒯 \ f
+```
+
+What deserves some thought is the meaning of the function values
+``f``.  For an integer spin weight we speak loosely of "the value of
+the function at a point of the sphere", and the looseness is harmless:
+as discussed in the [background](@ref background_domain), a
+spin-weighted function is really a function on ``\mathrm{Spin}(3)``,
+but for integer ``s`` its dependence on the third angle is a phase
+``e^{-isγ}`` that a choice of coordinates fixes once and for all.  For
+half-integer ``s`` the two rotors ``±𝐑`` above a point of the sphere
+give values of opposite sign — ``{}_sY_{ℓ,m}(-𝐑) = (-1)^{2ℓ}\,
+{}_sY_{ℓ,m}(𝐑)``, and ``2ℓ`` is odd — so "the value at ``(θ, ϕ)``" is
+defined only once we say which rotor is meant.  The transforms use the
+rotors that [`rotors`](@ref) returns, which are
+`from_spherical_coordinates(θ, ϕ)`; [`pixels`](@ref) returns the same
+points as coordinates, and is for this reason the less informative of
+the two accessors.  One consequence is worth knowing about: with that
+choice of rotor the function values are antiperiodic in the azimuth,
+``f(θ, ϕ + 2π) = -f(θ, ϕ)``, because a full circuit in ``ϕ`` arrives
+at ``-𝐑``.  A map sampled on ``ϕ ∈ [0, 2π)`` therefore contains
+everything, but it is not the sample of a periodic function.
+
+The algorithms need only small adjustments, and those are made
+internally.  On a ring of constant ``θ``, the harmonics of a
+half-integer spin weight are ``i^{2s} = ±i`` times real functions of
+``θ`` — the prefactor ``(-1)^s`` in their definition is the only
+source of the phase — so the ``θ`` stage of the `"RS"` algorithm works
+with the real functions and restores the constant phase once per ring.
+And ``e^{imϕ}`` for half-odd ``m`` is ``e^{iϕ/2}`` times an ordinary
+Fourier mode of integer frequency ``m - 1/2``, so the FFT along each
+ring runs at integer frequencies, with each sample multiplied by
+``e^{±iϕ/2}``.  The sampling requirements are unchanged in form — at
+least ``2ℓₘₐₓ+1`` rings and ``2ℓₘₐₓ+1`` points per ring for an exact
+analysis of a band-limited function — and both are even numbers when
+``ℓₘₐₓ`` is a half-odd-integer.  The same holds for [`map2salm`](@ref)
+and [`salm2map`](@ref), which are built on the `"RS"` transform.
 
 
 ## `SSHT` objects

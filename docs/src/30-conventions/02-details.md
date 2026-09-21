@@ -901,12 +901,12 @@ define the rotation operator ``U(𝐑)`` by
 ```math
 \left[U(𝐑) f\right](𝐐) = f\left(𝐑^{-1}\, 𝐐\right).
 ```
-A short calculation shows that ``U(𝐑_1)\, U(𝐑_2) = U(𝐑_1 𝐑_2)``, so
-``U`` is a representation of ``\mathrm{Spin}(3)`` on the space of
-functions.  It is unitary with respect to the inner product defined by
-the [invariant measure](@ref conv_haar_measure), and it commutes with
-every right operator ``R_𝐮`` (left and right multiplication commute).
-For an infinitesimal rotation we have
+A short calculation shows that ``U(𝐑_1)\, U(𝐑_2) = U(𝐑_1 𝐑_2)``,
+so ``U`` is a representation of ``\mathrm{Spin}(3)`` on the space of
+functions.[^3]  It is unitary with respect to the inner product
+defined by the [invariant measure](@ref conv_haar_measure), and it
+commutes with every right operator ``R_𝐮`` (left and right
+multiplication commute).  For an infinitesimal rotation we have
 ```math
 \begin{aligned}
 \left[U\left(e^{ϵ 𝐮/2}\right) f\right](𝐑)
@@ -936,18 +936,24 @@ priority list (LALSuite, Wikipedia, Sakurai, Shankar, Zettili,
 Varshalovich et al.) uses to define Wigner's ``𝔇`` matrices; we do
 the same.
 
+[^3]: That calculation may look counterintuitive because of the
+    presence of inverses, which swaps the order of multiplication.
+    The subtlety here is precisely the same as the one concerning the
+    composition ``L_𝔤 L_𝔥`` that [we saw above](@ref
+    conv_L_R_definitions).
+
 ### [Definition](@id conv_wigner_D_definition)
 
 Let ``|ℓ, m\rangle`` denote an orthonormal set of simultaneous
-eigenfunctions of ``L^2``, ``L_z``, and ``R_z``, with eigenvalues
-``ℓ(ℓ+1)``, ``m``, and some fixed ``s``.  (The value of ``s`` is
+eigenfunctions of ``L^2,`` ``L_z,`` and ``R_z,`` with eigenvalues
+``ℓ(ℓ+1),`` ``m,`` and some fixed ``s``.  (The value of ``s`` is
 irrelevant here because ``U(𝐑)`` commutes with ``R_z``; for integer
 ``ℓ`` we may take ``s=0``, so that the ``|ℓ, m\rangle`` are just the
 ordinary spherical harmonics defined [below](@ref
 conv_spherical_harmonics).)  Because ``U(𝐑)`` commutes with ``L^2``,
 it maps the ``(2ℓ+1)``-dimensional eigenspace of ``L^2`` to itself,
-and we define Wigner's ``𝔇`` matrix as the matrix of ``U(𝐑)`` in this
-basis — Sakurai's Eq. (3.5.42):
+and we define Wigner's ``𝔇`` matrix as the matrix of ``U(𝐑)`` in
+this basis — Sakurai's Eq. (3.5.42):
 ```math
 𝔇^{(ℓ)}_{m',m}(𝐑)
 =
@@ -1165,18 +1171,18 @@ conv_haar_measure) normalized to total volume ``2π^2``, the
 orthogonality relation reads
 ```math
 \int_{\mathrm{Spin}(3)}
-  \overline{𝔇^{(ℓ')}_{m'_1, m_1}(𝐑)}\,
+  \overline{𝔇^{(ℓ_1)}_{m'_1, m_1}(𝐑)}\,
   𝔇^{(ℓ)}_{m', m}(𝐑)\,
   d^3Ω
 =
-\frac{2π^2}{2ℓ+1}\, δ_{ℓ', ℓ}\, δ_{m'_1, m'}\, δ_{m_1, m}.
+\frac{2π^2}{2ℓ+1}\, δ_{ℓ_1, ℓ}\, δ_{m'_1, m'}\, δ_{m_1, m}.
 ```
 Restricting the sum over ``ℓ`` to integers gives the corresponding
 statement for ``\mathrm{SO}(3)``, whose volume in this normalization
 is ``π^2``.  This is the sense in which the ``𝔇`` matrices generalize
 Fourier analysis from the circle to the rotation group, and it is the
-basis of the spin-weighted spherical-harmonic transforms implemented
-in this package.
+basis of the spin-weighted spherical-harmonic *transforms*
+([SSHTs](@ref interface_transformations)) implemented in this package.
 
 ## [Spherical harmonics and spin-weighted spherical harmonics](@id conv_harmonics)
 
@@ -1212,8 +1218,8 @@ and the spherical harmonic is ``Y_{ℓ,m}(θ, ϕ) = \Theta(ℓ, m)\,
 \Phi(m)`` with ``\Phi(m) = e^{imϕ} / \sqrt{2π}`` from their Eq. (5).
 This expression is tested directly against this package (see the
 Condon–Shortley comparison page), so we can definitively say that
-***the spherical-harmonic functions provided by this package obey the
-Condon–Shortley phase convention***.  For example,
+**the spherical-harmonic functions provided by this package obey the
+Condon–Shortley phase convention**.  For example,
 ```math
 Y_{0,0} = \frac{1}{\sqrt{4π}},
 \qquad
@@ -1305,6 +1311,42 @@ take it as canonical.  Exactly the same law holds for the
 spin-weighted spherical harmonics defined below, with ``Y`` replaced
 by ``{}_sY``, because ``U(𝐑)`` commutes with ``R_z``.
 
+#### [Rotation of mode weights](@id conv_rotation_of_modes)
+
+The law above is stated for the harmonics; the consequence for the
+*weights* of a function expanded in them is generally more useful.  We
+start with ``f(𝐐) = \sum_{ℓ,m} f_{ℓ,m}\, Y_{ℓ,m}(𝐐)``.  The
+*actively rotated* field ``f'`` — meaning that the field is rotated,
+rather than the coordinates of its argument — obeys``f'(𝐐) =
+f(𝐑^{-1}\, 𝐐)``.  Substituting the law and relabelling the summation
+index gives
+```math
+\begin{aligned}
+f'(𝐐) &= \sum_{ℓ,m'} f'_{ℓ,m'}\, Y_{ℓ,m'}(𝐐) \\
+&= \sum_{ℓ,m} f_{ℓ,m}\, Y_{ℓ,m}(𝐑^{-1}\, 𝐐) \\
+&= \sum_{ℓ,m} f_{ℓ,m}\, \sum_{m'} \overline{𝔇^{(ℓ)}_{m,m'}(𝐑^{-1})}\,
+   Y_{ℓ,m'}(𝐐) \\
+&= \sum_{ℓ,m',m} f_{ℓ,m}\, 𝔇^{(ℓ)}_{m',m}(𝐑)\, Y_{ℓ,m'}(𝐐) \\
+&= \sum_{ℓ,m'} \left[ \sum_m 𝔇^{(ℓ)}_{m',m}(𝐑)\, f_{ℓ,m}\right]
+   Y_{ℓ,m'}(𝐐).
+\end{aligned}
+```
+The first line is effectively the definition of ``f'_{ℓ,m'}``; the
+second uses the relation between ``f'`` and ``f``, and the expansion
+of ``f``; the third uses the rotation law for ``Y_{ℓ,m}`` from above;
+the fourth just combines the sums, then uses the conjugate-transpose
+property of ``𝔇``; and the fifth just groups the terms in a nice way.
+Comparing the first and last lines (or using orthonormality of the
+harmonics) gives the law for the weights of a rotated field:
+```math
+f'_{ℓ,m'} = \sum_m 𝔇^{(ℓ)}_{m',m}(𝐑)\, f_{ℓ,m}.
+```
+Note that ``𝔇^{(ℓ)}`` is seemingly transposed relative to the
+expression for the rotation of the harmonics themselves (the primes
+are in different places).  This is closely analogous to the
+"contravariance" that we saw for the [differential operators](@ref
+Differential-operators).
+
 ### [Spin-weighted functions](@id conv_spin_weight)
 
 [Newman_1966](@citet) define the spherical tangent basis vectors as
@@ -1355,10 +1397,9 @@ functions: applying ``R_z = i\partial_γ`` we find
 ```math
 R_z\, \eta = s\, \eta,
 ```
-so ***spin-weighted functions are eigenfunctions of ``R_z`` with
-eigenvalue equal to the spin weight***.  It was to make this sign
-come out positive that we chose ``\rho = -i`` in the definition of
-``R``.
+so **spin-weighted functions are eigenfunctions of ``R_z`` with
+eigenvalue equal to the spin weight**.  It was to make this sign come
+out positive that we chose ``\rho = -i`` in the definition of ``R``.
 
 The spin-raising and -lowering operators — canonically denoted ``\eth``
 and ``\bar{\eth}`` — were introduced by [Newman and Penrose](@cite
@@ -1504,6 +1545,38 @@ spin weight are not orthogonal on ``𝕊²``, and the integral is not even
 coordinate-independent).  The conjugation relation is the one given by
 Goldberg et al. (their Eq. 2.6); note that the exponent ``m+s`` is
 always an integer.
+
+### [Rotation of spin-weighted spherical harmonics and modes](@id spin_rotation_law)
+
+Using the relationship between ``{}_sY_{ℓ,m}`` and ``𝔇``, the
+rotation law for the spin-weighted spherical harmonics is
+```math
+\begin{aligned}
+\left[U(𝐑)\, {}_sY_{ℓ,m}\right](𝐐)
+&=
+{}_sY_{ℓ,m}\left(𝐑^{-1}\, 𝐐\right) \\
+&=
+(-1)^s \sqrt{\frac{2ℓ+1}{4π}}\;
+\overline{𝔇^{(ℓ)}_{m,-s}(𝐑^{-1}\, 𝐐)} \\
+&=
+(-1)^s \sqrt{\frac{2ℓ+1}{4π}}\; \sum_{m'}
+\overline{𝔇^{(ℓ)}_{m,m'}(𝐑^{-1})}\; \overline{𝔇^{(ℓ)}_{m',-s}(𝐐)} \\
+&=
+\sum_{m'} \overline{𝔇^{(ℓ)}_{m,m'}(𝐑^{-1})}\; {}_sY_{ℓ,m'}(𝐐) \\
+&=
+\sum_{m'} {}_sY_{ℓ,m'}(𝐐)\, 𝔇^{(ℓ)}_{m',m}(𝐑).
+\end{aligned}
+```
+This is *precisely* the same law as [for the ordinary spherical
+harmonics](@ref conv_rotation_law), with extra ``s`` indices carried
+along.  And exactly the same reasoning as for the [rotation of
+*scalar* mode weights](@ref conv_rotation_of_modes) gives the law for
+the weights of a rotated spin-weighted function:
+```math
+{}_sf'_{ℓ,m'} = \sum_m 𝔇^{(ℓ)}_{m',m}(𝐑)\, {}_sf_{ℓ,m}.
+```
+Again, ``f'`` is the *actively rotated* field, with the coordinates of
+its argument unchanged.
 
 ### [Half-integer indices](@id conv_swsh_half_integer)
 

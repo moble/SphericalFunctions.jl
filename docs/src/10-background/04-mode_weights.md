@@ -78,12 +78,12 @@ integral over ``\mathrm{Spin}(3)`` in the previous expression is the
 one to use.  Functions whose domain is really ``I × 𝕊¹`` rather than
 ``𝕊²`` are discussed [here](@ref "Pulling back to ``I×𝕊¹``").
 
-Half-integer spin weight is *not* an exception here: the cancellation
-above only needs ``f`` and ``{}_{s}Y_{ℓ,m}`` to have the *same* spin
-weight, so the product is ``γ``-independent — and in particular
-unchanged under ``𝐑 → -𝐑`` — whatever the parity of ``s`` may be.
-What is peculiar to half-integer ``s`` is that each factor separately
-is double-valued on ``𝕊²``, changing sign under ``ϕ → ϕ + 2π``; the
+The same result holds for half-integer spins: the cancellation above
+only needs ``f`` and ``{}_{s}Y_{ℓ,m}`` to have the *same* spin weight,
+so the product is ``γ``-independent — and in particular unchanged
+under ``𝐑 → -𝐑`` — whatever the parity of ``s`` may be.  What is
+peculiar to half-integer ``s`` is that each factor separately is
+double-valued on ``𝕊²``, changing sign under ``ϕ → ϕ + 2π``; the
 integral must therefore be taken with one fixed rotor assignment ``(θ,
 ϕ) ↦ 𝐐``, under which the integrand is single-valued and the identity
 holds unchanged.
@@ -103,22 +103,22 @@ L_+ \left\{{}_{s}Y_{ℓ,m}\right\} (R)
 = \sqrt{(ℓ-m)(ℓ+m+1)}\ {}_{s}Y_{ℓ,m+1}(R).
 ```
 We can use this to derive mode weights of a general spin-weighted
-function ``f`` under the action of this operator:[^1]
+function ``f`` under the action of this operator:
 ```math
 \begin{aligned}
 \left\{L_+ f\right\}_{ℓ,m}
 &=
-\int \left\{L_+ f(R)\right\}\, {}_{s}\bar{Y}_{ℓ,m}(R)\, dR \\
+\frac{2}{\pi} \int \left\{L_+ f(R)\right\}\, {}_{s}\bar{Y}_{ℓ,m}(R)\, dR \\
 &=
-\int \left\{L_+ \sum_{ℓ',m'}f_{ℓ',m'}\, {}_{s}Y_{ℓ',m'}(R)\right\}\, {}_{s}\bar{Y}_{ℓ,m}(R)\, dR \\
+\frac{2}{\pi} \int \left\{L_+ \sum_{ℓ',m'}f_{ℓ',m'}\, {}_{s}Y_{ℓ',m'}(R)\right\}\, {}_{s}\bar{Y}_{ℓ,m}(R)\, dR \\
 &=
-\int \sum_{ℓ',m'} f_{ℓ',m'}\, \left\{L_+ {}_{s}Y_{ℓ',m'}(R)\right\}\, {}_{s}\bar{Y}_{ℓ,m}(R)\, dR \\
+\frac{2}{\pi} \int \sum_{ℓ',m'} f_{ℓ',m'}\, \left\{L_+ {}_{s}Y_{ℓ',m'}(R)\right\}\, {}_{s}\bar{Y}_{ℓ,m}(R)\, dR \\
 &=
-\sum_{ℓ',m'} f_{ℓ',m'}\, \int \left\{L_+ {}_{s}Y_{ℓ',m'}(R)\right\}\, {}_{s}\bar{Y}_{ℓ,m}(R)\, dR \\
+\sum_{ℓ',m'} f_{ℓ',m'}\, \frac{2}{\pi} \int \left\{L_+ {}_{s}Y_{ℓ',m'}(R)\right\}\, {}_{s}\bar{Y}_{ℓ,m}(R)\, dR \\
 &=
-\sum_{ℓ',m'} f_{ℓ',m'}\, \int \left\{\sqrt{(ℓ'-m')(ℓ'+m'+1)} {}_{s}Y_{ℓ',m'+1}(R)\right\}\, {}_{s}\bar{Y}_{ℓ,m}(R)\, dR \\
+\sum_{ℓ',m'} f_{ℓ',m'}\, \frac{2}{\pi} \int \left\{\sqrt{(ℓ'-m')(ℓ'+m'+1)} {}_{s}Y_{ℓ',m'+1}(R)\right\}\, {}_{s}\bar{Y}_{ℓ,m}(R)\, dR \\
 &=
-\sum_{ℓ',m'} f_{ℓ',m'}\, \sqrt{(ℓ'-m')(ℓ'+m'+1)} \int {}_{s}Y_{ℓ',m'+1}(R)\, {}_{s}\bar{Y}_{ℓ,m}(R)\, dR \\
+\sum_{ℓ',m'} f_{ℓ',m'}\, \sqrt{(ℓ'-m')(ℓ'+m'+1)} \frac{2}{\pi} \int {}_{s}Y_{ℓ',m'+1}(R)\, {}_{s}\bar{Y}_{ℓ,m}(R)\, dR \\
 &=
 \sum_{ℓ',m'} f_{ℓ',m'}\, \sqrt{(ℓ'-m')(ℓ'+m'+1)} δ_{ℓ,ℓ'} δ_{m,m'+1} \\
 &=
@@ -128,45 +128,148 @@ f_{ℓ,m-1}\, \sqrt{(ℓ-m+1)(ℓ+m)}
 Note that this expression (and in particular its signs) more resembles
 the expression for ``L_- \left\{{}_{s}Y_{ℓ,m}\right\}`` than for
 ``L_+ \left\{{}_{s}Y_{ℓ,m}\right\}``.  Similar relations hold for
-the action of ``L_-``.
-
-[^1]:
-    A technical note about the integrals above: the integrals should
-    be taken over the appropriate space and with the appropriate
-    weight such that the SWSHs are orthonormal.  In general, this
-    integral should be over ``\mathrm{Spin}(3)`` and weighted by
-    ``2/π`` so that the result will be either ``0`` or ``1``; in
-    general the SWSHs are not truly orthonormal when integrated over
-    an ``𝕊²`` subspace (nor even is the integral invariant).
-    However, if we know that the spins are the same in both cases, it
-    *is* possible to integrate over an ``𝕊²`` subspace.
+the action of ``L_-``:
+```math
+\begin{gathered}
+L_- \left\{{}_{s}Y_{ℓ,m}\right\} (R)
+= \sqrt{(ℓ+m)(ℓ-m+1)}\ {}_{s}Y_{ℓ,m-1}(R),
+\\
+\left\{L_- f\right\}_{ℓ,m}
+= f_{ℓ,m+1}\, \sqrt{(ℓ+m+1)(ℓ-m)}.
+\end{gathered}
+```
 
 However, it is important to note that the same "contravariance" is not
-present for the spin-raising and -lowering operators:
+apparent for the spin-raising and -lowering operators:
 ```math
 \begin{aligned}
 \left\{\eth f\right\}_{s+1,ℓ,m}
 &=
-\int \left\{\eth f(R)\right\}\, {}_{s+1}\bar{Y}_{ℓ,m}(R)\, dR \\
+\frac{2}{\pi} \int \left\{\eth f(R)\right\}\, {}_{s+1}\bar{Y}_{ℓ,m}(R)\, dR \\
 &=
-\int \left\{\eth \sum_{ℓ',m'}f_{ℓ',m'}\, {}_{s}Y_{ℓ',m'}(R)\right\}\, {}_{s+1}\bar{Y}_{ℓ,m}(R)\, dR \\
+\frac{2}{\pi} \int \left\{\eth \sum_{ℓ',m'}f_{ℓ',m'}\, {}_{s}Y_{ℓ',m'}(R)\right\}\, {}_{s+1}\bar{Y}_{ℓ,m}(R)\, dR \\
 &=
-\sum_{ℓ',m'} f_{ℓ',m'}\, \int \left\{\eth {}_{s}Y_{ℓ',m'}(R)\right\}\, {}_{s+1}\bar{Y}_{ℓ,m}(R)\, dR \\
+\sum_{ℓ',m'} f_{ℓ',m'}\, \frac{2}{\pi} \int \left\{\eth {}_{s}Y_{ℓ',m'}(R)\right\}\, {}_{s+1}\bar{Y}_{ℓ,m}(R)\, dR \\
 &=
-\sum_{ℓ',m'} f_{ℓ',m'}\, \sqrt{(ℓ'-s)(ℓ'+s+1)} \int {}_{s+1}Y_{ℓ',m'}(R)\, {}_{s+1}\bar{Y}_{ℓ,m}(R)\, dR \\
+\sum_{ℓ',m'} f_{ℓ',m'}\, \sqrt{(ℓ'-s)(ℓ'+s+1)} \frac{2}{\pi} \int {}_{s+1}Y_{ℓ',m'}(R)\, {}_{s+1}\bar{Y}_{ℓ,m}(R)\, dR \\
 &=
 \sum_{ℓ',m'} f_{ℓ',m'}\, \sqrt{(ℓ'-s)(ℓ'+s+1)} δ_{ℓ,ℓ'} δ_{m,m'} \\
 &=
-\left\{f\right\}_{s,ℓ,m}\, \sqrt{(ℓ-s)(ℓ+s+1)}
+\left\{f\right\}_{s,ℓ,m}\, \sqrt{(ℓ-s)(ℓ+s+1)}.
 \end{aligned}
 ```
-The operators ``R_\pm`` obey this same, more "covariant" form of
-transformation, and so does ``\bar{\eth}`` — except that the latter
-includes Newman and Penrose's minus sign, ``\bar{\eth} = -R_-``, so
-that
+The reason for this apparent asymmetry between ``L_\pm`` and ``\eth``
+is actually just an asymmetry in the way we treat modes as they vary
+over ``m`` and over ``s``, belied by a sleight of hand we played in
+the notation above.  We generally assemble mode weights for a *single*
+spin weight ``s``, while varying the index ``m`` over its full range.
+So the expression for ``\left\{L_+ f\right\}_{ℓ,m}`` has ``m`` on the
+left-hand side and ``m-1`` on the right-hand side, whereas the
+expression for ``\left\{\eth f\right\}_{s+1,ℓ,m}`` has ``s+1`` on the
+left-hand side and ``s`` on the right-hand side.  That is, we assume
+that ``f`` has a fixed spin weight ``s``, so we don't care about the
+``s`` component of ``\eth f`` — it is automatically zero.  On the
+other hand, we assume that ``f`` has a range of ``m`` components, so
+we *do* care about the ``m`` component of ``L_+ f``.  Perhaps a
+simpler way to see this is to write the modes as vectors, and look at
+the operators in matrix form, as we do in the next section.
+
+# Vector/matrix forms
+
+We conventionally assemble the mode weights of a function ``f`` with a
+fixed spin weight ``s`` into a single vector of data, with ``ℓ``
+increasing, but ``m`` running from ``-ℓ`` to ``ℓ`` between each
+increment of ``ℓ``.  Schematically, this looks like
 ```math
-\left\{\bar{\eth} f\right\}_{s-1,ℓ,m}
-= -\sqrt{(ℓ+s)(ℓ-s+1)}\, \left\{f\right\}_{s,ℓ,m}.
+f_{ℓ,m} \leftrightarrow
+[f_{0,0}, f_{1,-1}, f_{1,0}, f_{1,1}, f_{2,-2}, f_{2,-1}, f_{2,0}, f_{2,1}, f_{2,2}, \ldots]^T.
 ```
-See the [conventions summary](@ref summary_spin_weight) for the
-identification ``\eth = R_+`` and ``\bar{\eth} = -R_-``.
+This is the form used throughout this package — and in particular the
+[`ModeWeights`](@ref) type.  (Optionally, the ``ℓ < |s|`` modes can be
+omitted since they are automatically zero, but on this page we will
+assume they are present, for simplicity.)
+
+The differential operators can then be represented as matrices acting
+on these vectors.  For example, ``L_z`` is diagonal in this basis,
+with the ``m`` values along the diagonal:
+```math
+L_z = \begin{pmatrix}
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \cdots \\
+0 & -1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \cdots \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \cdots \\
+0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 & \cdots \\
+0 & 0 & 0 & 0 & -2 & 0 & 0 & 0 & 0 & \cdots \\
+0 & 0 & 0 & 0 & 0 & -1 & 0 & 0 & 0 & \cdots \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \cdots \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 & \cdots \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 2 & \cdots \\
+\vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \ddots
+\end{pmatrix}.
+```
+The ``L_+`` operator is represented by a matrix that is *not*
+diagonal, but rather has nonzero entries just below the diagonal, with
+the square-root factors from the previous section:
+```math
+L_+ = \begin{pmatrix}
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \cdots \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \cdots \\
+0 & \sqrt{2} & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \cdots \\
+0 & 0 & \sqrt{2} & 0 & 0 & 0 & 0 & 0 & 0 & \cdots \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \cdots \\
+0 & 0 & 0 & 0 & 2 & 0 & 0 & 0 & 0 & \cdots \\
+0 & 0 & 0 & 0 & 0 & \sqrt{6} & 0 & 0 & 0 & \cdots \\
+0 & 0 & 0 & 0 & 0 & 0 & \sqrt{6} & 0 & 0 & \cdots \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 2 & 0 & \cdots \\
+\vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \ddots
+\end{pmatrix}.
+```
+Similarly, ``L_-`` has nonzero entries just above the diagonal.  Note
+that these matrices are independent of ``s`` (though entries with ``ℓ
+< |s|`` will never be used).
+
+The ``R`` matrices are different: they are *all* diagonal, and they
+all depend on ``s``.  ``R_z`` is simply ``s`` times the identity (up
+to irrelevant factors in the ``ℓ < |s|`` entries):
+```math
+R_z = \begin{pmatrix}
+s & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \cdots \\
+0 & s & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \cdots \\
+0 & 0 & s & 0 & 0 & 0 & 0 & 0 & 0 & \cdots \\
+0 & 0 & 0 & s & 0 & 0 & 0 & 0 & 0 & \cdots \\
+0 & 0 & 0 & 0 & s & 0 & 0 & 0 & 0 & \cdots \\
+0 & 0 & 0 & 0 & 0 & s & 0 & 0 & 0 & \cdots \\
+0 & 0 & 0 & 0 & 0 & 0 & s & 0 & 0 & \cdots \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & s & 0 & \cdots \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & s & \cdots \\
+\vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \ddots
+\end{pmatrix}.
+```
+But now, ``R_+`` is also diagonal.  For ``s=1``, for example:
+```math
+R_+ = \begin{pmatrix}
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \cdots \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \cdots \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \cdots \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \cdots \\
+0 & 0 & 0 & 0 & 2 & 0 & 0 & 0 & 0 & \cdots \\
+0 & 0 & 0 & 0 & 0 & 2 & 0 & 0 & 0 & \cdots \\
+0 & 0 & 0 & 0 & 0 & 0 & 2 & 0 & 0 & \cdots \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 2 & 0 & \cdots \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 2 & \cdots \\
+\vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \ddots
+\end{pmatrix}.
+```
+The contrast with the sub-diagonal ``L_+`` is striking.  The
+difference is that the matrix-vector product ``L_+ f`` represents
+modes of a function with the *same* spin weight as ``f``, while ``R_+
+f`` implicitly represents modes of a function with *different* spin
+weight — a fact that is not readily apparent in matrix-vector
+notation.
+
+Because of this subtlety, we *cannot* represent ``R_x = (R_+ +
+R_-)/2`` and ``R_y = (R_+ - R_-)/(2i)`` as matrices in the same way.
+These operators result in functions with *indefinite* spin weight, so
+they cannot be represented as a single vector of mode weights.  This
+package defines functions for [`L₊`](@ref), [`L₋`](@ref),
+[`R₊`](@ref), and [`R₋`](@ref), but only [`Lx`](@ref) and [`Ly`](@ref)
+— not `Rx` or `Ry`.
