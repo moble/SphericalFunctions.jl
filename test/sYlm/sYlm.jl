@@ -46,14 +46,14 @@
         for ℓₘₐₓ ∈ (0, 1, 2, 5, 9)
             for s ∈ -min(3, ℓₘₐₓ):min(3, ℓₘₐₓ)
                 for R ∈ Rrange(T, 8)
-                    Y = strided(SphericalFunctions.sYlm(R, ℓₘₐₓ, s))
+                    Y = array_view(SphericalFunctions.sYlm(R, ℓₘₐₓ, s))
                     @test eltype(Y) === Complex{T}
                     @test length(Y) == Ysize(abs(s), ℓₘₐₓ)
                     # Accumulated and asserted once per rotor: an engine that is wrong
                     # everywhere would otherwise print one failure per (ℓ, m).
                     errY = maximum(abs, Y .- Yref(T, R, s, ℓₘₐₓ))
                     @test errY ≤ ϵ
-                    Y₀ = strided(SphericalFunctions.sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ=0))
+                    Y₀ = array_view(SphericalFunctions.sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ=0))
                     @test length(Y₀) == Ysize(0, ℓₘₐₓ)
                     @test all(iszero, Y₀[1:s^2])
                     @test Y₀[s^2+1:end] == Y
@@ -74,7 +74,7 @@ end
     for (θ, ϕ) ∈ θϕrange(Float64, 6)
         R = Rotor(from_spherical_coordinates(θ, ϕ))
         for s ∈ -2:2
-            Y = strided(SphericalFunctions.sYlm(R, ℓₘₐₓ, s))
+            Y = array_view(SphericalFunctions.sYlm(R, ℓₘₐₓ, s))
             for ℓ ∈ abs(s):ℓₘₐₓ, m ∈ -ℓ:ℓ
                 # Closed form on the sphere (from the Utilities snippet)
                 @test Y[Yindex(ℓ, m, abs(s))] ≈ sYlm(s, ℓ, m, θ, ϕ) atol=1e-13 rtol=1e-13
@@ -85,7 +85,7 @@ end
     for R ∈ randn(rng, Rotor{Float64}, 5)
         𝔇 = D(R, ℓₘₐₓ)
         for s ∈ -2:2
-            Y = strided(SphericalFunctions.sYlm(R, ℓₘₐₓ, s))
+            Y = array_view(SphericalFunctions.sYlm(R, ℓₘₐₓ, s))
             for ℓ ∈ abs(s):ℓₘₐₓ, m ∈ -ℓ:ℓ
                 @test Y[Yindex(ℓ, m, abs(s))] ≈ (-1)^s * √((2ℓ+1)/(4π)) * conj(𝔇[ℓ][m, -s]) atol=1e-14
             end
@@ -129,7 +129,7 @@ end
             @test M isa Matrix{Complex{T}}
             @test size(M) == (7, Ysize(abs(s), ℓₘₐₓ))
             for (i, R) ∈ enumerate(Rs)
-                @test M[i, :] == strided(SphericalFunctions.sYlm(R, ℓₘₐₓ, s))
+                @test M[i, :] == array_view(SphericalFunctions.sYlm(R, ℓₘₐₓ, s))
             end
             errM = maximum(abs, M .- Yref(T, Rs, s, ℓₘₐₓ))
             @test errM ≤ ϵ
@@ -158,7 +158,7 @@ end
     import SphericalFunctions
     import SphericalFunctions: sYlmCalculator, sYlm, recurrence!, Yindex
     using Quaternionic: Rotor
-    import SphericalFunctions: DegreeBlockBatch, strided
+    import SphericalFunctions: DegreeBlockBatch, array_view
     using Random
     rng = Random.Xoshiro(11)
     ℓₘₐₓ, sₘₐₓ, Nᵣ = 7, 3, 5
@@ -169,7 +169,7 @@ end
     @test SphericalFunctions.spins(calc) == -sₘₐₓ:sₘₐₓ
     @test_throws MethodError SphericalFunctions.spin(calc)
     # Every spin weight from one calculator, batched, equals the single-rotor results exactly
-    singles = Dict((i, s) => strided(sYlm(Rs[i], ℓₘₐₓ, s; ℓₘᵢₙ=0)) for i ∈ 1:Nᵣ for s ∈ -sₘₐₓ:sₘₐₓ)
+    singles = Dict((i, s) => array_view(sYlm(Rs[i], ℓₘₐₓ, s; ℓₘᵢₙ=0)) for i ∈ 1:Nᵣ for s ∈ -sₘₐₓ:sₘₐₓ)
     for ℓ ∈ 0:ℓₘₐₓ
         block = recurrence!(calc, ℓ)
         @test SphericalFunctions.ℓ(calc) == ℓ
@@ -203,7 +203,7 @@ end
     @test axes(c) == axes(v)
     @test a isa Matrix{ComplexF64} && size(a) == (Nᵣ, 9)
     recurrence!(calc, 5)
-    @test strided(c) == [singles[(i, 1)][Yindex(4, m)] for i ∈ 1:Nᵣ, m ∈ -4:4]
+    @test array_view(c) == [singles[(i, 1)][Yindex(4, m)] for i ∈ 1:Nᵣ, m ∈ -4:4]
     # Nᵣ == 1: a single rotor and a vector view
     c1 = sYlmCalculator(Rs[2], ℓₘₐₓ, -sₘₐₓ:sₘₐₓ)
     row = recurrence!(c1, 3)[-1, :]
@@ -215,7 +215,7 @@ end
     blkθ = recurrence!(cθ, 2)
     using Quaternionic: from_spherical_coordinates
     for (i, θ) ∈ enumerate(θs), s ∈ -2:2, m ∈ -2:2
-        Yref = strided(sYlm(Rotor(from_spherical_coordinates(θ, 0.0)), 4, s; ℓₘᵢₙ=0))[Yindex(2, m)]
+        Yref = array_view(sYlm(Rotor(from_spherical_coordinates(θ, 0.0)), 4, s; ℓₘᵢₙ=0))[Yindex(2, m)]
         @test blkθ[i, s, m] ≈ Yref atol=1e-15
         @test imag(blkθ[i, s, m]) == 0
     end
@@ -255,10 +255,10 @@ end
     batched = sYlmCalculator([R, R, R], 4, -2:2)
     @test_throws "expects Nᵣ=3" recurrence!(batched, R, 2)
     @test_throws "Expected 3 rotors" recurrence!(batched, [R, R], 2)
-    @test_throws "exceeds ℓₘₐₓ" strided(sYlm(R, 2, 3))
+    @test_throws "exceeds ℓₘₐₓ" array_view(sYlm(R, 2, 3))
     # The message about ℓₘᵢₙ names the floor of the integer kind
-    @test_throws "ℓₘᵢₙ=-1 must satisfy 0 ≤ ℓₘᵢₙ ≤ max(|s|, ℓₘₐₓ)." strided(sYlm(R, 2, 0; ℓₘᵢₙ=-1))
-    @test_throws "0 ≤ ℓₘᵢₙ" strided(sYlm(R, 2, 1; ℓₘᵢₙ=3))
+    @test_throws "ℓₘᵢₙ=-1 must satisfy 0 ≤ ℓₘᵢₙ ≤ max(|s|, ℓₘₐₓ)." array_view(sYlm(R, 2, 0; ℓₘᵢₙ=-1))
+    @test_throws "0 ≤ ℓₘᵢₙ" array_view(sYlm(R, 2, 1; ℓₘᵢₙ=3))
     Y = zeros(ComplexF64, 5)
     @test_throws "Output vector has length" sYlm!(Y, R, 3, 0)
     @test_throws "not among them" sYlm!(zeros(ComplexF64, 25), sYlmCalculator(R, 4, 1), R, 2)
@@ -281,10 +281,10 @@ end
     Y = Vector{ComplexF64}(undef, Ysize(0, ℓₘₐₓ))
     for R ∈ Rs, s ∈ -2:2
         @test sYlm!(Y, calc, R, s; ℓₘᵢₙ=0) === Y
-        @test Y == strided(sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ=0))
+        @test Y == array_view(sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ=0))
         n = Ysize(abs(s), ℓₘₐₓ)
         sYlm!(Y, calc, R, s)
-        @test Y[1:n] == strided(sYlm(R, ℓₘₐₓ, s))
+        @test Y[1:n] == array_view(sYlm(R, ℓₘₐₓ, s))
     end
     # Allocation-free after warm-up
     R = randn(rng, Rotor{Float64})
@@ -302,21 +302,21 @@ end
     rng = Random.Xoshiro(13)
     R64 = randn(rng, Rotor{Float64})
     # Float32
-    Y32 = strided(sYlm(Rotor{Float32}(R64), 20, -1))
-    Y64 = strided(sYlm(R64, 20, -1))
+    Y32 = array_view(sYlm(Rotor{Float32}(R64), 20, -1))
+    Y64 = array_view(sYlm(R64, 20, -1))
     @test eltype(Y32) === ComplexF32
     @test all(isfinite, Y32)
     @test maximum(abs(Y32[i] - Y64[i]) / abs(Y64[i]) for i ∈ eachindex(Y64) if abs(Y64[i]) > 1e-3) < 1e-4
     # BigFloat vs Double64
-    YB = strided(sYlm(Rotor{BigFloat}(R64), 4, 2))
-    YD = strided(sYlm(Rotor{Double64}(R64), 4, 2))
+    YB = array_view(sYlm(Rotor{BigFloat}(R64), 4, 2))
+    YD = array_view(sYlm(Rotor{Double64}(R64), 4, 2))
     @test maximum(abs, YB .- YD) < 1e-30
     # ForwardDiff through the rotor.  ϕ = 0 is included deliberately: there the spinor
     # phase `z₊` is exactly 1, and a `sqrt` of an exact zero inside `complex_powers!` used
     # to make every derivative NaN.  It is also the case the ring-based transforms use.
     θ₀ = 0.8
     for ϕ ∈ (0.0, 0.3)
-        f(θ) = real(strided(sYlm(Rotor(from_spherical_coordinates(θ, ϕ)), 3, 1))[Yindex(3, 2, 1)])
+        f(θ) = real(array_view(sYlm(Rotor(from_spherical_coordinates(θ, ϕ)), 3, 1))[Yindex(3, 2, 1)])
         dual = ForwardDiff.derivative(f, θ₀)
         h = 1e-6
         fd = (f(θ₀ + h) - f(θ₀ - h)) / 2h
@@ -396,7 +396,7 @@ end
     for R ∈ Rs
         calc = sYlmCalculator(R, ℓₘₐₓ, -3//2:3//2)
         for s ∈ (-3//2, -1//2, 1//2, 3//2), ℓₘᵢₙ ∈ (abs(s), 1//2)
-            Y = strided(sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ))
+            Y = array_view(sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ))
             @test eltype(Y) === ComplexF64
             @test length(Y) == Ysize(ℓₘᵢₙ, ℓₘₐₓ)
             # The flat function and the calculator are the same engine, so the values agree
@@ -409,14 +409,14 @@ end
             end
         end
         # The default ℓₘᵢₙ is |s|, for the half-integer kind as for the integer one.
-        @test strided(sYlm(R, ℓₘₐₓ, 3//2)) == strided(sYlm(R, ℓₘₐₓ, 3//2; ℓₘᵢₙ=3//2))
-        @test length(strided(sYlm(R, ℓₘₐₓ, 3//2))) == Ysize(3//2, ℓₘₐₓ)
+        @test array_view(sYlm(R, ℓₘₐₓ, 3//2)) == array_view(sYlm(R, ℓₘₐₓ, 3//2; ℓₘᵢₙ=3//2))
+        @test length(array_view(sYlm(R, ℓₘₐₓ, 3//2))) == Ysize(3//2, ℓₘₐₓ)
     end
     # For half-integer s the values include the phase i^{2s} = ±i: the ϕ = γ = 0 values, which
     # are real for integer s, are here purely imaginary.
     Rθ = Rotor(from_euler_angles(0.0, 1.1, 0.0))
     for s ∈ (-1//2, 1//2, 3//2)
-        Yθ = strided(sYlm(Rθ, ℓₘₐₓ, s))
+        Yθ = array_view(sYlm(Rθ, ℓₘₐₓ, s))
         @test maximum(abs ∘ real, Yθ) == 0
         @test maximum(abs ∘ imag, Yθ) > 0.1
     end
@@ -429,8 +429,8 @@ end
     ℓₘₐₓ = 9//2
     R = from_spherical_coordinates(0.7, 1.2)
     for s ∈ (-3//2, 3//2, 5//2)
-        Y = strided(sYlm(R, ℓₘₐₓ, s))
-        Y₀ = strided(sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ=1//2))
+        Y = array_view(sYlm(R, ℓₘₐₓ, s))
+        Y₀ = array_view(sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ=1//2))
         @test length(Y₀) == Ysize(1//2, ℓₘₐₓ)
         # The entries for ℓ < |s| are the first Ysize(1//2, |s| - 1) of them, and all zero.
         n₀ = Ysize(1//2, abs(s) - 1)
@@ -443,11 +443,11 @@ end
     end
     # The floor of ℓₘᵢₙ is 1/2; anything below it, or above max(|s|, ℓₘₐₓ), is refused, with
     # a message that names the floor of this kind of index rather than the integer one.
-    @test_throws "must satisfy" strided(sYlm(R, ℓₘₐₓ, 1//2; ℓₘᵢₙ=-1//2))
-    @test_throws "must satisfy" strided(sYlm(R, ℓₘₐₓ, 1//2; ℓₘᵢₙ=11//2))
-    @test_throws "ℓₘᵢₙ=-1//2 must satisfy 1//2 ≤ ℓₘᵢₙ ≤ max(|s|, ℓₘₐₓ)." strided(sYlm(R, ℓₘₐₓ, 1//2; ℓₘᵢₙ=-1//2))
+    @test_throws "must satisfy" array_view(sYlm(R, ℓₘₐₓ, 1//2; ℓₘᵢₙ=-1//2))
+    @test_throws "must satisfy" array_view(sYlm(R, ℓₘₐₓ, 1//2; ℓₘᵢₙ=11//2))
+    @test_throws "ℓₘᵢₙ=-1//2 must satisfy 1//2 ≤ ℓₘᵢₙ ≤ max(|s|, ℓₘₐₓ)." array_view(sYlm(R, ℓₘₐₓ, 1//2; ℓₘᵢₙ=-1//2))
     @test_throws "1//2 ≤ ℓₘᵢₙ" sYlm_matrix([R, -R], ℓₘₐₓ, 3//2; ℓₘᵢₙ=11//2)
-    @test_throws "exceeds ℓₘₐₓ" strided(sYlm(R, 1//2, 3//2))
+    @test_throws "exceeds ℓₘₐₓ" array_view(sYlm(R, 1//2, 3//2))
 end
 
 @testitem "sYlm! half-integer, both forms, equals sYlm" begin
@@ -460,14 +460,14 @@ end
     Y = Vector{ComplexF64}(undef, Ysize(1//2, ℓₘₐₓ))
     for R ∈ Rs, s ∈ (-3//2, -1//2, 1//2, 3//2)
         @test sYlm!(Y, calc, R, s; ℓₘᵢₙ=1//2) === Y
-        @test Y == strided(sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ=1//2))
+        @test Y == array_view(sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ=1//2))
         n = Ysize(abs(s), ℓₘₐₓ)
         sYlm!(Y, calc, R, s)
-        @test Y[1:n] == strided(sYlm(R, ℓₘₐₓ, s))
+        @test Y[1:n] == array_view(sYlm(R, ℓₘₐₓ, s))
         # The allocating form, with the indices spelled as `Rational`s
         Y′ = Vector{ComplexF64}(undef, n)
         @test sYlm!(Y′, R, ℓₘₐₓ, s) === Y′
-        @test Y′ == strided(sYlm(R, ℓₘₐₓ, s))
+        @test Y′ == array_view(sYlm(R, ℓₘₐₓ, s))
     end
     # Allocation-free after warm-up, as for the integer kind
     R = Rs[2]
@@ -497,7 +497,7 @@ end
         @test M isa Matrix{ComplexF64}
         @test size(M) == (length(Rs), Ysize(ℓₘᵢₙ, ℓₘₐₓ))
         for (i, R) ∈ enumerate(Rs)
-            @test M[i, :] == strided(sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ))
+            @test M[i, :] == array_view(sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ))
         end
     end
     @test_throws "exceeds ℓₘₐₓ" sYlm_matrix(Rs, 1//2, 3//2)
@@ -512,9 +512,9 @@ end
     ℓₘₐₓ, s, ℓₘᵢₙ = HalfOddInteger(7//2), HalfOddInteger(1//2), HalfOddInteger(1//2)
     # The `Rational` spelling is normalized at the boundary and gives exactly what the
     # `HalfOddInteger` spelling gives, keyword included.
-    @test strided(sYlm(R, 7//2, 1//2)) == strided(sYlm(R, ℓₘₐₓ, s))
-    @test strided(sYlm(R, 7//2, 3//2; ℓₘᵢₙ=1//2)) == strided(sYlm(R, ℓₘₐₓ, HalfOddInteger(3//2); ℓₘᵢₙ))
-    @test strided(sYlm(R, 7//2, HalfOddInteger(1//2))) == strided(sYlm(R, ℓₘₐₓ, s))
+    @test array_view(sYlm(R, 7//2, 1//2)) == array_view(sYlm(R, ℓₘₐₓ, s))
+    @test array_view(sYlm(R, 7//2, 3//2; ℓₘᵢₙ=1//2)) == array_view(sYlm(R, ℓₘₐₓ, HalfOddInteger(3//2); ℓₘᵢₙ))
+    @test array_view(sYlm(R, 7//2, HalfOddInteger(1//2))) == array_view(sYlm(R, ℓₘₐₓ, s))
     @test sYlm_matrix(Rs, 7//2, 1//2) == sYlm_matrix(Rs, ℓₘₐₓ, s)
     @test sYlm_matrix(Rs, 7//2, 1//2; ℓₘᵢₙ=1//2) == sYlm_matrix(Rs, ℓₘₐₓ, s; ℓₘᵢₙ)
     Yr = sYlm!(Vector{ComplexF64}(undef, Ysize(1//2, 7//2)), R, 7//2, 1//2)
@@ -524,38 +524,38 @@ end
     @test sYlm!(similar(Yr), calc, R, 1//2; ℓₘᵢₙ=1//2) == sYlm!(similar(Yr), calc, R, s; ℓₘᵢₙ)
     # A mixture of the two kinds of index is refused with a message naming both spellings.
     msg = "must all be integers, like 3, or all be half-odd-integers, like 7//2"
-    @test_throws msg strided(sYlm(R, 7//2, 1))
-    @test_throws msg strided(sYlm(R, 4, 1//2))
-    @test_throws msg strided(sYlm(R, 7//2, 1//2; ℓₘᵢₙ=0))
-    @test_throws msg strided(sYlm(R, 4, 1; ℓₘᵢₙ=1//2))  # the keyword alone of the other kind
-    @test_throws msg strided(sYlm(R, 4, HalfOddInteger(1//2)))
+    @test_throws msg array_view(sYlm(R, 7//2, 1))
+    @test_throws msg array_view(sYlm(R, 4, 1//2))
+    @test_throws msg array_view(sYlm(R, 7//2, 1//2; ℓₘᵢₙ=0))
+    @test_throws msg array_view(sYlm(R, 4, 1; ℓₘᵢₙ=1//2))  # the keyword alone of the other kind
+    @test_throws msg array_view(sYlm(R, 4, HalfOddInteger(1//2)))
     @test_throws msg sYlm_matrix(Rs, 7//2, 1)
     @test_throws msg sYlm_matrix(Rs, 4, 1//2)
     @test_throws msg sYlm!(similar(Yr), R, 7//2, 1)
     @test_throws msg sYlm!(similar(Yr), R, 4, 1//2)
     # A `Rational` that is not a half-odd-integer is refused as such.
-    @test_throws "must have denominator 2" strided(sYlm(R, 7//3, 1//3))
-    @test_throws "must have denominator 2" strided(sYlm(R, 4//1, 1//1))
+    @test_throws "must have denominator 2" array_view(sYlm(R, 7//3, 1//3))
+    @test_throws "must have denominator 2" array_view(sYlm(R, 4//1, 1//1))
     # Integer indices of differing concrete types are unified, and give the `Int` result.
-    @test strided(sYlm(R, 4, Int8(1))) == strided(sYlm(R, 4, 1))
-    @test strided(sYlm(R, Int8(4), 1; ℓₘᵢₙ=Int16(0))) == strided(sYlm(R, 4, 1; ℓₘᵢₙ=0))
+    @test array_view(sYlm(R, 4, Int8(1))) == array_view(sYlm(R, 4, 1))
+    @test array_view(sYlm(R, Int8(4), 1; ℓₘᵢₙ=Int16(0))) == array_view(sYlm(R, 4, 1; ℓₘᵢₙ=0))
     @test sYlm_matrix(Rs, 4, Int8(1)) == sYlm_matrix(Rs, 4, 1)
     # Indices all of one narrower integer type are kept as that type, all the way into the
     # calculator, and give the `Int` result exactly.
     for IT in (Int8, Int16, Int32)
-        @test strided(sYlm(R, IT(4), IT(1))) == strided(sYlm(R, 4, 1))
-        @test strided(sYlm(R, IT(4), IT(-1); ℓₘᵢₙ=IT(2))) == strided(sYlm(R, 4, -1; ℓₘᵢₙ=2))
-        @test sYlm!(Vector{ComplexF64}(undef, Ysize(1, 4)), R, IT(4), IT(1)) == strided(sYlm(R, 4, 1))
+        @test array_view(sYlm(R, IT(4), IT(1))) == array_view(sYlm(R, 4, 1))
+        @test array_view(sYlm(R, IT(4), IT(-1); ℓₘᵢₙ=IT(2))) == array_view(sYlm(R, 4, -1; ℓₘᵢₙ=2))
+        @test sYlm!(Vector{ComplexF64}(undef, Ysize(1, 4)), R, IT(4), IT(1)) == array_view(sYlm(R, 4, 1))
         @test sYlm_matrix(Rs, IT(4), IT(1)) == sYlm_matrix(Rs, 4, 1)
         narrowcalc = sYlmCalculator(R, IT(4), IT(1))
         @test narrowcalc isa sYlmCalculator{IT}
         @test narrowcalc.ℓ isa Base.RefValue{IT}
         @test sYlm!(Vector{ComplexF64}(undef, Ysize(1, 4)), narrowcalc, R, IT(1)) ==
-            strided(sYlm(R, 4, 1))
+            array_view(sYlm(R, 4, 1))
     end
     # A half-odd-integer spelled as a `Rational` of another integer type is the same index.
-    @test strided(sYlm(R, big(7)//2, big(1)//2)) == strided(sYlm(R, ℓₘₐₓ, s))
-    @test strided(sYlm(R, Int8(7)//Int8(2), Int8(1)//Int8(2))) == strided(sYlm(R, ℓₘₐₓ, s))
+    @test array_view(sYlm(R, big(7)//2, big(1)//2)) == array_view(sYlm(R, ℓₘₐₓ, s))
+    @test array_view(sYlm(R, Int8(7)//Int8(2), Int8(1)//Int8(2))) == array_view(sYlm(R, ℓₘₐₓ, s))
     @test sYlm_matrix(Rs, Int8(7)//Int8(2), Int8(1)//Int8(2)) == sYlm_matrix(Rs, ℓₘₐₓ, s)
 end
 
@@ -596,11 +596,11 @@ end
     for (θ, ϕ) ∈ ((0.7, 1.2), (2.2, 4.0), (1.0, 0.0), (0.3, 5.9))
         R, R′ = from_spherical_coordinates(θ, ϕ), from_spherical_coordinates(θ, ϕ + 2π)
         for s ∈ (-3//2, -1//2, 1//2, 3//2)
-            Y, Y′ = strided(sYlm(R, 9//2, s)), strided(sYlm(R′, 9//2, s))
+            Y, Y′ = array_view(sYlm(R, 9//2, s)), array_view(sYlm(R′, 9//2, s))
             @test maximum(abs, Y′ + Y) < 1e-14
         end
         for s ∈ (-1, 0, 2)
-            Y, Y′ = strided(sYlm(R, 4, s)), strided(sYlm(R′, 4, s))
+            Y, Y′ = array_view(sYlm(R, 4, s)), array_view(sYlm(R′, 4, s))
             @test maximum(abs, Y′ - Y) < 1e-14
         end
     end
@@ -614,8 +614,8 @@ end
     R64 = from_spherical_coordinates(0.7, 1.2)
     @test R32 isa Rotor{Float32}
     for s ∈ (-1//2, 1//2, 3//2)
-        Y32 = strided(sYlm(R32, 9//2, s))
-        Y64 = strided(sYlm(R64, 9//2, s))
+        Y32 = array_view(sYlm(R32, 9//2, s))
+        Y64 = array_view(sYlm(R64, 9//2, s))
         @test eltype(Y32) === ComplexF32
         @test length(Y32) == Ysize(abs(s), 9//2)
         @test all(isfinite, Y32)
@@ -724,7 +724,7 @@ end
 
     # A range calculator also reproduces the flat `sYlm`, which is the independent oracle
     for s ∈ -2:2
-        Y = strided(sYlm(rotors[1], 4, s; ℓₘᵢₙ=0))
+        Y = array_view(sYlm(rotors[1], 4, s; ℓₘᵢₙ=0))
         for (ℓ, b) ∈ sYlmCalculator(rotors[1], 4, -2:2)
             @test all(b[s, m] == Y[SphericalFunctions.Yindex(ℓ, m)] for m ∈ -ℓ:ℓ)
         end
@@ -749,11 +749,11 @@ end
 
         # `sYlm` gives a matrix of spin weights by modes, in the order the range was given,
         # with `ℓₘᵢₙ` defaulting to the smallest |s| in it
-        Y = strided(sYlm(R, ℓₘₐₓ, srange))
+        Y = array_view(sYlm(R, ℓₘₐₓ, srange))
         @test Y isa Matrix{ComplexF64}
         @test size(Y) == (n, nmodes)
         for (i, s) ∈ enumerate(sr)
-            @test Y[i, :] == strided(sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ))
+            @test Y[i, :] == array_view(sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ))
         end
 
         # `sYlm!` fills the same thing, and returns it
@@ -764,10 +764,10 @@ end
         calc = sYlmCalculator(R, ℓₘₐₓ, srange)
         fill!(Y′, 0)
         @test sYlm!(Y′, calc, rotors[2]) === Y′
-        @test Y′ == strided(sYlm(rotors[2], ℓₘₐₓ, srange))
+        @test Y′ == array_view(sYlm(rotors[2], ℓₘₐₓ, srange))
         # ... and one spin weight of that same calculator still fills a vector
         v = Vector{ComplexF64}(undef, nmodes)
-        @test sYlm!(v, calc, rotors[2], first(sr); ℓₘᵢₙ) == strided(sYlm(rotors[2], ℓₘₐₓ, first(sr); ℓₘᵢₙ))
+        @test sYlm!(v, calc, rotors[2], first(sr); ℓₘᵢₙ) == array_view(sYlm(rotors[2], ℓₘₐₓ, first(sr); ℓₘᵢₙ))
 
         # `sYlm_matrix` gives a stack of synthesis matrices, indexed [rotor, spin, mode]
         M = sYlm_matrix(rotors, ℓₘₐₓ, srange)
@@ -777,12 +777,12 @@ end
             @test M[:, i, :] == sYlm_matrix(rotors, ℓₘₐₓ, s; ℓₘᵢₙ)
         end
         for (j, Rj) ∈ enumerate(rotors)
-            @test M[j, :, :] == strided(sYlm(Rj, ℓₘₐₓ, srange))
+            @test M[j, :, :] == array_view(sYlm(Rj, ℓₘₐₓ, srange))
         end
     end
 
     # An explicit ℓₘᵢₙ is honoured, and the rows below their own |s| are zero
-    Y = strided(sYlm(R, 4, -2:2; ℓₘᵢₙ=0))
+    Y = array_view(sYlm(R, 4, -2:2; ℓₘᵢₙ=0))
     @test size(Y) == (5, Ysize(0, 4))
     @test all(iszero, Y[1, 1:Ysize(0, 1)])   # s = -2 has nothing below ℓ = 2
     @test !all(iszero, Y[3, 1:Ysize(0, 1)])  # ... while s = 0 does

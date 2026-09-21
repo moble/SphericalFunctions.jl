@@ -28,11 +28,11 @@
         data = randn(rng, ComplexF64, n)
         w = ModeWeights(data, s, ℓₘᵢₙ, ℓₘₐₓ)
         @test w isa ModeWeights{ComplexF64}
-        # Since 3.0 this is an `AbstractModeContainer`, not an `AbstractVector`: `strided` is
+        # Since 3.0 this is an `AbstractModeContainer`, not an `AbstractVector`: `array_view` is
         # the route to the flat storage, and array semantics come with it.
         @test w isa SphericalFunctions.AbstractModeContainer{ComplexF64, Int}
         @test !(w isa AbstractVector)
-        @test strided(w) === parent(w)
+        @test array_view(w) === parent(w)
         @test parent(w) === data
         @test spin(w) == s
         @test SphericalFunctions.ℓₘᵢₙ(w) == ℓₘᵢₙ
@@ -1197,7 +1197,7 @@ end
             w = ModeWeights(data, s, ℓₘᵢₙ, ℓₘₐₓ)
             for _ in 1:3
                 R = randn(rng, Rotor{T})
-                Y = strided(sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ))
+                Y = array_view(sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ))
                 expected = sum(
                     w[ℓ, m] * Y[Yindex(ℓ, m, ℓₘᵢₙ)] for (ℓ, m) in modes(w);
                     init=zero(Complex{T})

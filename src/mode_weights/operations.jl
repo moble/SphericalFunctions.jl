@@ -118,7 +118,7 @@ function check_rotation_output(w′::ModeWeights, w::ModeWeights)
             * "changes neither, so it must have s=$(spin(w)) and ℓ ∈ $(ℓₘᵢₙ(w)):$(ℓₘₐₓ(w))."
         )
     end
-    if Base.mightalias(strided(w′), strided(w))
+    if Base.mightalias(array_view(w′), array_view(w))
         error(
             "The output aliases the input.  A rotation mixes every m of a block into every "
             * "m′, so it cannot be done in place; pass a separate destination, such as "
@@ -167,28 +167,28 @@ See also [`ModeWeights`](@ref) and [`HarmonicValues`](@ref).
 function Base.:*(𝔇::WignerSeries, w::ModeWeights)
     check_rotation(𝔇, w)
     w′ = similar(w, promote_type(number_type(𝔇), eltype(w)))
-    rotate_modes!(strided(w′), 𝔇, w)
+    rotate_modes!(array_view(w′), 𝔇, w)
     w′
 end
 
 function Base.:*(calc::WignerCalculator, w::ModeWeights)
     check_rotation(calc, w)
     w′ = similar(w, promote_type(number_type(calc), eltype(w)))
-    rotate_modes!(strided(w′), calc, w)
+    rotate_modes!(array_view(w′), calc, w)
     w′
 end
 
 function LinearAlgebra.mul!(w′::ModeWeights, 𝔇::WignerSeries, w::ModeWeights)
     check_rotation(𝔇, w)
     check_rotation_output(w′, w)
-    rotate_modes!(strided(w′), 𝔇, w)
+    rotate_modes!(array_view(w′), 𝔇, w)
     w′
 end
 
 function LinearAlgebra.mul!(w′::ModeWeights, calc::WignerCalculator, w::ModeWeights)
     check_rotation(calc, w)
     check_rotation_output(w′, w)
-    rotate_modes!(strided(w′), calc, w)
+    rotate_modes!(array_view(w′), calc, w)
     w′
 end
 
@@ -197,12 +197,12 @@ end
 # range formed from two different objects' accessors is a `MethodError` waiting to happen when
 # one side is a `HalfOddInteger` and the other is not.
 function rotate_modes!(dst::AbstractVector, 𝔇::WignerSeries, w::ModeWeights)
-    src = strided(w)
+    src = array_view(w)
     for ℓ ∈ ℓₘᵢₙ(w):ℓₘₐₓ(w)
         B = 𝔇[ℓ]
         check_whole_block(B, ℓ)
         r = mode_range(w, ℓ)
-        mul!(view(dst, r), strided(B), view(src, r))
+        mul!(view(dst, r), array_view(B), view(src, r))
     end
     dst
 end
@@ -212,11 +212,11 @@ end
 # bit-for-bit what a sequential pass gives.  The m′/m limits were checked once, in
 # `check_rotation`, because they are fields of the calculator rather than of each block.
 function rotate_modes!(dst::AbstractVector, calc::WignerCalculator, w::ModeWeights)
-    src = strided(w)
+    src = array_view(w)
     for ℓ ∈ ℓₘᵢₙ(w):ℓₘₐₓ(w)
         B = recurrence!(calc, ℓ)
         r = mode_range(w, ℓ)
-        mul!(view(dst, r), strided(B), view(src, r))
+        mul!(view(dst, r), array_view(B), view(src, r))
     end
     dst
 end
@@ -300,25 +300,25 @@ function Base.:*(
     Y::HarmonicValues{T, IT, S, <:AbstractVector}, w::ModeWeights
 ) where {T, IT, S<:IntegerHalf}
     check_evaluation(Y, w)
-    synthesize(view(strided(Y), shared_mode_range(Y, w)), strided(w))
+    synthesize(view(array_view(Y), shared_mode_range(Y, w)), array_view(w))
 end
 function Base.:*(
     Y::HarmonicValues{T, IT, S, <:AbstractMatrix}, w::ModeWeights
 ) where {T, IT, S<:IntegerHalf}
     check_evaluation(Y, w)
-    view(strided(Y), :, shared_mode_range(Y, w)) * strided(w)
+    view(array_view(Y), :, shared_mode_range(Y, w)) * array_view(w)
 end
 function Base.:*(
     Y::HarmonicValues{T, IT, S, <:AbstractMatrix}, w::ModeWeights
 ) where {T, IT, S<:AbstractUnitRange}
     check_evaluation(Y, w)
-    synthesize(view(strided(Y), spin_row(Y, w), shared_mode_range(Y, w)), strided(w))
+    synthesize(view(array_view(Y), spin_row(Y, w), shared_mode_range(Y, w)), array_view(w))
 end
 function Base.:*(
     Y::HarmonicValues{T, IT, S, <:AbstractArray{T, 3}}, w::ModeWeights
 ) where {T, IT, S<:AbstractUnitRange}
     check_evaluation(Y, w)
-    view(strided(Y), :, spin_row(Y, w), shared_mode_range(Y, w)) * strided(w)
+    view(array_view(Y), :, spin_row(Y, w), shared_mode_range(Y, w)) * array_view(w)
 end
 
 # Streaming.  Batchedness is a type parameter, so these dispatch on it rather than branching
@@ -328,13 +328,13 @@ function Base.:*(
     calc::HarmonicCalculator{IT, RT, YT, ST, S, false}, w::ModeWeights
 ) where {IT, RT, YT, ST, S}
     check_evaluation(calc, w)
-    src = strided(w)
+    src = array_view(w)
     f = zero(promote_type(YT, eltype(w)))
     iₛ = spin_index(calc, convert(IT, spin(w)))
     for ℓ ∈ ℓₘᵢₙ(w):ℓₘₐₓ(w)
         recurrence!(calc, ℓ)
         Yˡ = spin_row(calc, ℓ, iₛ)
-        f += synthesize(strided(Yˡ), view(src, mode_range(w, ℓ)))
+        f += synthesize(array_view(Yˡ), view(src, mode_range(w, ℓ)))
     end
     f
 end
@@ -342,14 +342,14 @@ function Base.:*(
     calc::HarmonicCalculator{IT, RT, YT, ST, S, true}, w::ModeWeights
 ) where {IT, RT, YT, ST, S}
     check_evaluation(calc, w)
-    src = strided(w)
+    src = array_view(w)
     NT = promote_type(YT, eltype(w))
     f = zeros(NT, Nᵣ(calc))
     iₛ = spin_index(calc, convert(IT, spin(w)))
     for ℓ ∈ ℓₘᵢₙ(w):ℓₘₐₓ(w)
         recurrence!(calc, ℓ)
         # β = 1 accumulates across ℓ, so nothing beyond `f` is ever held.
-        mul!(f, strided(spin_row(calc, ℓ, iₛ)), view(src, mode_range(w, ℓ)), one(NT), one(NT))
+        mul!(f, array_view(spin_row(calc, ℓ, iₛ)), view(src, mode_range(w, ℓ)), one(NT), one(NT))
     end
     f
 end
@@ -377,10 +377,10 @@ This computes the harmonics afresh on every call.  For repeated evaluation build
 #
 # `⋅` is `LinearAlgebra.dot`, which conjugates its first argument; evaluation must not.  The
 # package's own `dot(::ModeWeights, ::ModeWeights)` *is* the conjugating inner product, and
-# `dot(strided(Y), strided(w))` conjugates too — so a non-conjugating `dot` here would make `⋅`
+# `dot(array_view(Y), array_view(w))` conjugates too — so a non-conjugating `dot` here would make `⋅`
 # mean two different things a few lines apart, with the disagreement showing up only as a wrong
 # phase.  That is exactly the silent-wrong-answer failure these containers exist to prevent
-# (see the header of `strided.jl`).  These methods say so, rather than leaving a bare
+# (see the header of `array_view.jl`).  These methods say so, rather than leaving a bare
 # `MethodError` for someone to "fix" later by adding the harmful method.
 const dot_is_not_evaluation = (
     "`dot` (`⋅`) conjugates its first argument, but evaluating a spin-weighted function — "

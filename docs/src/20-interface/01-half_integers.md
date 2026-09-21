@@ -93,9 +93,9 @@ returned [`OffsetArray`](@ref OffsetArrays.OffsetArray)s, so that a
 block could be indexed by its natural ``m`` and ``m'``; half-odd
 indices could not be handled that way, because `OffsetArray`s cannot
 use non-integer axes, and this package grew its own family of
-containers for them.  Since version 3 those containers are what *every*
-call returns, whichever kind of index is in play, so there is no table
-of correspondences to learn:
+containers for them.  Since version 3 those containers are what
+*every* call returns, whichever kind of index is in play, so there is
+no table of correspondences to learn:
 
 | call | what comes back |
 |---|---|
@@ -109,12 +109,12 @@ of correspondences to learn:
 | a block of a range of spin weights | [`SpinMatrix`](@ref) |
 | the same, over a batch of rotors | [`SpinMatrixBatch`](@ref) |
 
-The reason for retiring the `OffsetArray`s from the integer path is not
-uniformity but safety, and is set out under [Containers](@ref
-interface_containers): an `OffsetArray` with non-trivial offsets accepts
-`*` and `mul!` and returns silently wrong answers.  [`strided`](@ref) is
-the explicit route to a plain 1-based array, for either kind of index,
-and [`relabel`](@ref) is the way back.
+The reason for retiring the `OffsetArray`s from the integer path is
+not uniformity but safety, and is set out under [Containers](@ref
+interface_containers): an `OffsetArray` with non-trivial offsets
+accepts `*` and `mul!` and returns silently wrong answers.
+[`array_view`](@ref) is the explicit route to a plain 1-based array,
+for either kind of index, and [`relabel`](@ref) is the way back.
 
 ``ℓ`` runs over `1//2, 3//2, …, ℓₘₐₓ`, so `ℓₘᵢₙ` is `1//2` rather than
 `0`, and that is where a loop over a calculator begins.  Indexing a
@@ -130,7 +130,7 @@ deliberately **not** `AbstractMatrix`es, so linear algebra does not
 apply to them directly: operations like `B'`, `B * C`, `lu(B)` and the
 like are `MethodError`s, and broadcasting (`B .+ 1`) returns an
 ordinary 1-based `Matrix`, dropping the natural indices.  Call
-[`strided`](@ref) for a 1-based view of the same storage, on which
+[`array_view`](@ref) for a 1-based view of the same storage, on which
 BLAS works at full speed, or `Matrix(B)` for an independent copy.
 
 ## ``β``, the double cover, and the ``H`` wedge

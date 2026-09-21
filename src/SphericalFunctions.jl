@@ -58,8 +58,8 @@ include("iteration.jl")
 include("mode_weights/mode_weights.jl")
 export ModeWeights, modes, spin
 
-include("strided.jl")
-export strided, relabel
+include("array_view.jl")
+export array_view, relabel
 
 include("mode_weights/operations.jl")
 

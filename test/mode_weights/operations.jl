@@ -42,21 +42,21 @@ end
         R₁ = randn(rng, RotorF64); R₂ = randn(rng, RotorF64)
 
         # Left multiplication by a representation composes with no transpose or inverse
-        @test isapprox(strided(D(R₁,ℓₘₐₓ) * (D(R₂,ℓₘₐₓ) * w)),
-                       strided(D(R₁*R₂, ℓₘₐₓ) * w); atol=ϵ, rtol=ϵ)
-        @test isapprox(strided(D(one(RotorF64), ℓₘₐₓ) * w), strided(w); atol=ϵ, rtol=ϵ)
-        @test isapprox(strided(D(inv(R₁), ℓₘₐₓ) * (D(R₁, ℓₘₐₓ) * w)),
-                       strided(w); atol=ϵ, rtol=ϵ)
+        @test isapprox(array_view(D(R₁,ℓₘₐₓ) * (D(R₂,ℓₘₐₓ) * w)),
+                       array_view(D(R₁*R₂, ℓₘₐₓ) * w); atol=ϵ, rtol=ϵ)
+        @test isapprox(array_view(D(one(RotorF64), ℓₘₐₓ) * w), array_view(w); atol=ϵ, rtol=ϵ)
+        @test isapprox(array_view(D(inv(R₁), ℓₘₐₓ) * (D(R₁, ℓₘₐₓ) * w)),
+                       array_view(w); atol=ϵ, rtol=ϵ)
         # 𝔇 is unitary, so each ℓ block keeps its norm
         rot = D(R₁, ℓₘₐₓ) * w
         for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ
-            @test isapprox(norm(strided(rot[ℓ, :])), norm(strided(w[ℓ, :])); atol=ϵ, rtol=ϵ)
+            @test isapprox(norm(array_view(rot[ℓ, :])), norm(array_view(w[ℓ, :])); atol=ϵ, rtol=ϵ)
         end
         # The double cover: 𝔇(-R) = (-1)^{2ℓ} 𝔇(R), exactly
         sign = ℓₘₐₓ isa Rational ? -1 : 1
-        @test strided(D(-R₁, ℓₘₐₓ) * w) == sign .* strided(D(R₁, ℓₘₐₓ) * w)
+        @test array_view(D(-R₁, ℓₘₐₓ) * w) == sign .* array_view(D(R₁, ℓₘₐₓ) * w)
         # A rotation is block-diagonal in ℓ and touches nothing but m, so it commutes with ð
-        @test isapprox(strided(ð(D(R₁,ℓₘₐₓ) * w)), strided(D(R₁,ℓₘₐₓ) * ð(w)); atol=ϵ, rtol=ϵ)
+        @test isapprox(array_view(ð(D(R₁,ℓₘₐₓ) * w)), array_view(D(R₁,ℓₘₐₓ) * ð(w)); atol=ϵ, rtol=ϵ)
     end
 end
 
@@ -72,7 +72,7 @@ end
 
     # `D` starts at ℓ=0 while `w` starts at |s|, so containment is what is required
     @test D(R, ℓₘₐₓ) * w isa ModeWeights
-    @test strided(D(R, ℓₘₐₓ + 3) * w) == strided(D(R, ℓₘₐₓ) * w)
+    @test array_view(D(R, ℓₘₐₓ + 3) * w) == array_view(D(R, ℓₘₐₓ) * w)
     @test_throws "ℓ range of" D(R, 2) * w
     # A restricted block cannot rotate: every m mixes into every m′
     @test_throws "needs the whole" D(R, ℓₘₐₓ; m′ₘₐₓ=2) * w
@@ -83,11 +83,11 @@ end
     @test_throws "Nᵣ=" DCalculator(randn(rng, RotorF64, 3), ℓₘₐₓ) * w
 
     # The calculator streams, and agrees with the series exactly: `D` copies the same blocks
-    @test strided(DCalculator(R, ℓₘₐₓ) * w) == strided(D(R, ℓₘₐₓ) * w)
+    @test array_view(DCalculator(R, ℓₘₐₓ) * w) == array_view(D(R, ℓₘₐₓ) * w)
     # `mul!` writes into a correctly labelled destination ...
     dst = similar(w)
-    @test strided(mul!(dst, D(R, ℓₘₐₓ), w)) == strided(D(R, ℓₘₐₓ) * w)
-    @test strided(mul!(similar(w), DCalculator(R, ℓₘₐₓ), w)) == strided(dst)
+    @test array_view(mul!(dst, D(R, ℓₘₐₓ), w)) == array_view(D(R, ℓₘₐₓ) * w)
+    @test array_view(mul!(similar(w), DCalculator(R, ℓₘₐₓ), w)) == array_view(dst)
     # ... but not into a mislabelled one, and not in place
     @test_throws "changes neither" mul!(ModeWeights(zeros(ComplexF64, Ysize(2, ℓₘₐₓ)), 1, 2, ℓₘₐₓ),
                                         D(R, ℓₘₐₓ), w)
@@ -117,7 +117,7 @@ end
     @test isapprox(sYlmCalculator(R, ℓₘₐₓ, s) * w, w(R); atol=ϵ, rtol=ϵ)
     @test isapprox(sYlmCalculator(R⃗, ℓₘₐₓ, s) * w, [w(r) for r ∈ R⃗]; atol=ϵ, rtol=ϵ)
     # And it is the same product `sYlm_matrix` documents as `f = Y * f̃`
-    @test isapprox(sYlm_matrix(R⃗, ℓₘₐₓ, s; ℓₘᵢₙ=abs(s)) * strided(w),
+    @test isapprox(sYlm_matrix(R⃗, ℓₘₐₓ, s; ℓₘᵢₙ=abs(s)) * array_view(w),
                    sYlm(R⃗, ℓₘₐₓ, s; ℓₘᵢₙ=abs(s)) * w; atol=ϵ, rtol=ϵ)
 
     # Refusals
@@ -141,7 +141,7 @@ end
     # The bilinear product is the right one ...
     @test Y * w == w(R)
     # ... and the conjugating one is demonstrably different, by far more than any tolerance
-    @test abs(dot(strided(Y), strided(w)) - w(R)) > 1e-6
+    @test abs(dot(array_view(Y), array_view(w)) - w(R)) > 1e-6
     # ... so `dot` on these types errors rather than quietly answering with the wrong phase.
     # This is the tombstone: it stops a future maintainer "fixing" a MethodError by adding the
     # harmful non-conjugating method.
@@ -149,5 +149,5 @@ end
     @test_throws "conjugates its first argument" dot(w, Y)
     @test_throws "conjugates its first argument" dot(sYlmCalculator(R, ℓₘₐₓ, s), w)
     # The conjugating inner product of two sets of weights is still available and unchanged
-    @test dot(w, w) ≈ sum(abs2, strided(w))
+    @test dot(w, w) ≈ sum(abs2, array_view(w))
 end

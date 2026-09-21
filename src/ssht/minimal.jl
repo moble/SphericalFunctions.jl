@@ -165,17 +165,17 @@ npixels(𝒯::SSHTMinimal) = nmodes(𝒯)
 
 function Base.:*(𝒯::SSHTMinimal, f̃)
     check_modes(𝒯, f̃)
-    mul!(𝒯, copy(strided(f̃)))
+    mul!(𝒯, copy(array_view(f̃)))
 end
 function Base.:*(𝒯::SSHTMinimal{T, true}, f̃) where {T}
     check_modes(𝒯, f̃)
-    mul!(𝒯, strided(f̃))
+    mul!(𝒯, array_view(f̃))
     f̃
 end
 function LinearAlgebra.mul!(f, 𝒯::SSHTMinimal, f̃)
     check_modes(𝒯, f̃)
     check_pixels(𝒯, f)
-    f .= strided(f̃)
+    f .= array_view(f̃)
     mul!(𝒯, f)
 end
 
@@ -183,7 +183,7 @@ end
 function LinearAlgebra.mul!(𝒯::SSHTMinimal{T}, ff̃) where {T}
     check_modes(𝒯, ff̃)
     s, ℓₘₐₓ = 𝒯.s, 𝒯.ℓₘₐₓ
-    ff̃′ = reshape(strided(ff̃), size(ff̃, 1), :)
+    ff̃′ = reshape(array_view(ff̃), size(ff̃, 1), :)
 
     @inbounds for ₛf̃ ∈ eachcol(ff̃′)
         for m ∈ alternating_countup(ℓₘₐₓ)  # Iterate over +m, then -m, up from m=0
@@ -237,14 +237,14 @@ function Base.:\(𝒯::SSHTMinimal, f)
 end
 function Base.:\(𝒯::SSHTMinimal{T, true}, ff̃) where {T}
     check_pixels(𝒯, ff̃)
-    ldiv!(𝒯, strided(ff̃))
+    ldiv!(𝒯, array_view(ff̃))
     ff̃
 end
 function LinearAlgebra.ldiv!(f̃, 𝒯::SSHTMinimal, f)
     check_modes(𝒯, f̃)
     check_pixels(𝒯, f)
-    strided(f̃) .= f
-    ldiv!(𝒯, strided(f̃))
+    array_view(f̃) .= f
+    ldiv!(𝒯, array_view(f̃))
     f̃
 end
 
@@ -252,7 +252,7 @@ end
 function LinearAlgebra.ldiv!(𝒯::SSHTMinimal{T}, ff̃) where {T}
     check_pixels(𝒯, ff̃)
     s, ℓₘₐₓ = 𝒯.s, 𝒯.ℓₘₐₓ
-    ff̃′ = reshape(strided(ff̃), size(ff̃, 1), :)
+    ff̃′ = reshape(array_view(ff̃), size(ff̃, 1), :)
 
     @inbounds let π = T(π)
         for ₛf ∈ eachcol(ff̃′)

@@ -21,7 +21,7 @@ Supertype of the containers stored in the canonical mode ordering — [`ModeWeig
 These are *not* `AbstractArray`s.  A container indexed by ``ℓ`` cannot be one, because ``ℓ``
 may be a half-odd-integer and `axes` must be integer ranges; and for the ones that could be,
 being an array is what let the `OffsetArray`s of earlier versions accept `*` and return
-silently wrong answers.  [`strided`](@ref) is the explicit route to the flat 1-based storage,
+silently wrong answers.  [`array_view`](@ref) is the explicit route to the flat 1-based storage,
 and is what the transforms and the operator matrices take.
 """
 abstract type AbstractModeContainer{T, IT<:IntegerHalf} end
@@ -75,7 +75,7 @@ This is what [`sYlm`](@ref) returns.  The blocks are [`DegreeBlock`](@ref),
 [`DegreeBlockBatch`](@ref), [`SpinMatrix`](@ref) and [`SpinMatrixBatch`](@ref) respectively,
 and are views into the storage rather than copies, so writing through one writes into `Y`.
 
-[`strided`](@ref) gives the flat storage: a `Vector` of modes, or an array whose *last* axis is
+[`array_view`](@ref) gives the flat storage: a `Vector` of modes, or an array whose *last* axis is
 the modes in the canonical ordering (see [`Yindex`](@ref)) and whose leading axes are the
 rotors and spin weights.  That is the form a product with mode weights takes, and
 [`sYlm_matrix`](@ref) is the direct spelling of it.
@@ -116,7 +116,7 @@ spins(Y::HarmonicValues{T, IT, S}) where {T, IT, S<:AbstractUnitRange} = Y.s
 spin(Y::HarmonicValues{T, IT, S}) where {T, IT, S<:IntegerHalf} = Y.s
 
 # `length` counts the blocks, as it does for a `WignerSeries`; the number of modes is
-# `length(strided(Y))` for the unbatched single-spin case, and `Ysize` in general.
+# `length(array_view(Y))` for the unbatched single-spin case, and `Ysize` in general.
 Base.length(Y::HarmonicValues) = Int(ℓₘₐₓ(Y) - ℓₘᵢₙ(Y)) + 1
 Base.keys(Y::HarmonicValues) = ℓₘᵢₙ(Y):ℓₘₐₓ(Y)
 Base.firstindex(Y::HarmonicValues) = ℓₘᵢₙ(Y)

@@ -94,14 +94,14 @@ end
 
 function Base.:*(𝒯::SSHTMatrix, f̃)
     check_modes(𝒯, f̃)
-    d = strided(f̃)
+    d = array_view(f̃)
     unflatten_trailing(𝒯.Y * flatten_trailing(d), size(d))
 end
 function LinearAlgebra.mul!(f, 𝒯::SSHTMatrix, f̃)
     check_modes(𝒯, f̃)
     check_pixels(𝒯, f)
     check_trailing(f, f̃)
-    mul!(flatten_trailing(f), 𝒯.Y, flatten_trailing(strided(f̃)))
+    mul!(flatten_trailing(f), 𝒯.Y, flatten_trailing(array_view(f̃)))
     f
 end
 
@@ -112,18 +112,18 @@ function Base.:\(𝒯::SSHTMatrix, f)
 end
 function Base.:\(𝒯::SSHTMatrix{T, true}, ff̃) where {T}
     check_pixels(𝒯, ff̃)
-    ldiv!(𝒯.Ydecomposition, flatten_trailing(strided(ff̃)))
+    ldiv!(𝒯.Ydecomposition, flatten_trailing(array_view(ff̃)))
     ff̃
 end
 function LinearAlgebra.ldiv!(f̃, 𝒯::SSHTMatrix, f)
     check_modes(𝒯, f̃)
     check_pixels(𝒯, f)
     check_trailing(f, f̃)
-    ldiv!(flatten_trailing(strided(f̃)), 𝒯.Ydecomposition, flatten_trailing(f))
+    ldiv!(flatten_trailing(array_view(f̃)), 𝒯.Ydecomposition, flatten_trailing(f))
     f̃
 end
 function LinearAlgebra.ldiv!(𝒯::SSHTMatrix, ff̃)
     check_pixels(𝒯, ff̃)
-    ldiv!(𝒯.Ydecomposition, flatten_trailing(strided(ff̃)))
+    ldiv!(𝒯.Ydecomposition, flatten_trailing(array_view(ff̃)))
     ff̃
 end

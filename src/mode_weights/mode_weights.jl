@@ -9,7 +9,7 @@ Vector of mode weights ``f_{ℓ,m}`` of a spin-weighted function ``f = \\sum_{�
 (see [`Yindex`](@ref)), together with the spin weight `s` and the range of ``ℓ``.
 
 A `ModeWeights` is an [`AbstractModeContainer`](@ref
-SphericalFunctions.AbstractModeContainer), not an `AbstractVector`; [`strided`](@ref) gives
+SphericalFunctions.AbstractModeContainer), not an `AbstractVector`; [`array_view`](@ref) gives
 the flat 1-based storage, which is what the transforms and the operator matrices take.  Linear
 indexing and broadcasting still work, and a shape-preserving broadcast keeps the wrapper.  In
 addition
@@ -183,7 +183,7 @@ modes(w::ModeWeights) = Yrange(w.ℓₘᵢₙ, w.ℓₘₐₓ)
 # machinery; it is now an [`AbstractModeContainer`](@ref) like the rest, and these are the
 # methods that keep the useful part of the old behavior.  Losing the subtyping costs less than
 # it appears to: the transforms in `ssht/` never used it, reaching for the raw storage before
-# every `mul!` and `ldiv!` (what is now spelled [`strided`](@ref)).
+# every `mul!` and `ldiv!` (what is now spelled [`array_view`](@ref)).
 Base.size(w::ModeWeights) = size(w.data)
 Base.size(w::ModeWeights, d::Integer) = d ≤ 1 ? size(w)[d] : 1
 Base.length(w::ModeWeights) = length(w.data)
@@ -231,7 +231,7 @@ Base.copy(w::ModeWeights) = ModeWeights(copy(w.data), w.s, w.ℓₘᵢₙ, w.ℓ
 # `AbstractArray`; a style of this type's own does the same job, given a `broadcastable` that
 # hands back the container rather than `collect`ing it, and the `axes` and linear `getindex`
 # defined above.  Writing *into* one with `.=` is handled with the other containers, in
-# `strided.jl`.
+# `array_view.jl`.
 struct ModeWeightsStyle <: Broadcast.AbstractArrayStyle{1} end
 ModeWeightsStyle(::Val{0}) = ModeWeightsStyle()
 ModeWeightsStyle(::Val{1}) = ModeWeightsStyle()
@@ -255,7 +255,7 @@ find_modeweights(::Any, rest) = find_modeweights(rest)
 
 # The non-mutating `copy(bc)` builds its destination with the `similar` above and then fills
 # it, so a `ModeWeights` destination needs a `copyto!` of its own; `.=` into an existing one
-# goes through `materialize!` in `strided.jl` instead.
+# goes through `materialize!` in `array_view.jl` instead.
 function Base.copyto!(w::ModeWeights, bc::Broadcast.Broadcasted)
     copyto!(w.data, bc)
     w

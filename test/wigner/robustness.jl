@@ -59,10 +59,10 @@
     # `@fastmath` in `recurrence_step4!` and `complex_powers!` lets the Float64 path contract
     # multiply-adds into FMAs, while `Checked` arithmetic goes through the generic methods.
     function check_block(block, blockF, atol)
-        # `strided` is what turns a labelled block into a plain 1-based array; the containers
+        # `array_view` is what turns a labelled block into a plain 1-based array; the containers
         # deliberately have no linear indexing of their own, so `eachindex` goes through it.
-        A = strided(block)
-        B = strided(blockF)
+        A = array_view(block)
+        B = array_view(blockF)
         axes(A) == axes(B) || return false
         for i in eachindex(A)
             abs(unchecked(A[i]) - B[i]) ≤ atol || return false
@@ -256,9 +256,9 @@ end
                 @test !any(isnan, D32[ℓ])
                 @test all(isapprox.(D32[ℓ], D64[ℓ]; atol, rtol))
                 # On the well-conditioned elements the relative error is small.  The mask
-                # and the selection it drives are 1-based, so both go through `strided`:
+                # and the selection it drives are 1-based, so both go through `array_view`:
                 # the containers have no logical indexing of their own.
-                A32, A64 = strided(D32[ℓ]), strided(D64[ℓ])
+                A32, A64 = array_view(D32[ℓ]), array_view(D64[ℓ])
                 big = abs.(A64) .> 0.1
                 @test all(abs.(A32[big] .- A64[big]) .≤ rtol .* abs.(A64[big]))
             end
@@ -270,7 +270,7 @@ end
             for ℓ in 0:ℓₘₐₓ
                 @test !any(isnan, d32[ℓ])
                 @test all(isapprox.(d32[ℓ], d64[ℓ]; atol, rtol))
-                a32, a64 = strided(d32[ℓ]), strided(d64[ℓ])
+                a32, a64 = array_view(d32[ℓ]), array_view(d64[ℓ])
                 big = abs.(a64) .> 0.1
                 @test all(abs.(a32[big] .- a64[big]) .≤ rtol .* abs.(a64[big]))
             end
@@ -286,7 +286,7 @@ end
         blk = recurrence!(calc, ℓₘₐₓ)
         @test eltype(blk) === Complex{T}
         for (i, R) in enumerate(Rs)
-            @test all(isapprox.(strided(blk[i]), strided(D(R, ℓₘₐₓ)[ℓₘₐₓ]); atol, rtol))
+            @test all(isapprox.(array_view(blk[i]), array_view(D(R, ℓₘₐₓ)[ℓₘₐₓ]); atol, rtol))
         end
     end
 
@@ -318,7 +318,7 @@ end
         @test eltype(blk) === T
         @test all(isfinite, blk)
         for (i, β) in enumerate(βs)
-            @test all(isapprox.(strided(blk[i]), strided(d(Float64(β), ℓₘₐₓ)[ℓₘₐₓ]); atol))
+            @test all(isapprox.(array_view(blk[i]), array_view(d(Float64(β), ℓₘₐₓ)[ℓₘₐₓ]); atol))
         end
     end
 end

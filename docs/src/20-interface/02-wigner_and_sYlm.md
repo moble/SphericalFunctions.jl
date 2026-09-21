@@ -103,7 +103,7 @@ container is a [`WignerSeries`](@ref).  Note that `ℓₘᵢₙ=0` for
 integers but `ℓₘᵢₙ=1//2` for half-integers.
 
 A block is deliberately **not** an `AbstractMatrix`, so linear algebra
-does not apply to it directly; [`strided`](@ref) gives a 1-based
+does not apply to it directly; [`array_view`](@ref) gives a 1-based
 `StridedArray` view of the same storage, which BLAS takes at full
 speed, and [`relabel`](@ref) puts the natural indices back on the
 result.  `Matrix(𝔇[ℓ])` gives an independent copy.  The reasons for
@@ -158,10 +158,10 @@ may be a range, which between them give a block four possible shapes:
 Underneath, the values are held in one array whose *last* axis is the
 modes in the canonical ordering described by [`Ysize`](@ref),
 [`Yindex`](@ref) and [`Yrange`](@ref), and whose leading axes are the
-rotors and spin weights.  [`strided`](@ref) hands that array back:
+rotors and spin weights.  [`array_view`](@ref) hands that array back:
 
 ```julia
-strided(sY)[Yindex(ℓ, m, abs(s))] == sY[ℓ][m]
+array_view(sY)[Yindex(ℓ, m, abs(s))] == sY[ℓ][m]
 ```
 
 That flat form is what a product with a vector of mode weights takes,
@@ -243,7 +243,7 @@ s)`.
     Each `𝔇ˡ` block is a *view* into the storage kept in the
     calculator.  The next step of the loop overwrites it, so you
     cannot keep a block between steps unless you `copy` it.  The same
-    applies to [`strided`](@ref) of a block, which aliases that
+    applies to [`array_view`](@ref) of a block, which aliases that
     storage rather than copying it; `Matrix`, `Array` and `collect`
     are the forms that survive.
 
@@ -480,11 +480,11 @@ non-trivial offsets *accepts* `*` and `mul!` and returns silently
 wrong answers: a product of two blocks comes back as a 1-based
 `Matrix` of mostly zeros, and an adjoint product comes back holding
 uninitialized memory.  Refusing to be an `AbstractMatrix` turns that
-silence into a `MethodError` at the call site, and [`strided`](@ref)
+silence into a `MethodError` at the call site, and [`array_view`](@ref)
 is what a caller reaches for once they actually mean it.
 
 ```@docs
-strided
+array_view
 relabel
 AbstractWignerMatrix
 WignerMatrix

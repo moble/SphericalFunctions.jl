@@ -182,7 +182,7 @@ function check_modes(𝒯::SSHT, f̃)
     end
 end
 # `ModeWeights` stopped being an `AbstractVector` in version 3, so the entry points that take
-# "a map, or mode weights" have to name both.  Everything downstream goes through `strided`,
+# "a map, or mode weights" have to name both.  Everything downstream goes through `array_view`,
 # which accepts either and hands back the raw storage.
 const MapOrModes = Union{AbstractArray{<:Complex}, ModeWeights}
 

@@ -75,7 +75,7 @@ end
     for R ∈ rotors
         calc = sYlmCalculator(R, ℓₘₐₓ, -sₘₐₓ:sₘₐₓ)
         for s ∈ -sₘₐₓ:sₘₐₓ
-            Y = strided(sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ=0))
+            Y = array_view(sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ=0))
             for (ℓ, ₛYₗ) ∈ calc
                 @test all(ₛYₗ[s, m] == Y[Yindex(ℓ, m)] for m ∈ -ℓ:ℓ)
             end
@@ -714,9 +714,9 @@ end
     # A calculator of one type cannot be pointed at a rotor of another, either
     @test_throws "works in Float32" sYlm!(Y32, sYlmCalculator(rotors32[1], 4, -1:1), rotors[1], 1)
     # Agreement all round is what the function is for
-    @test sYlm!(Y64, rotors[1], 4, 1) == strided(sYlm(rotors[1], 4, 1))
-    @test sYlm!(Y32, rotors32[1], 4, 1) == strided(sYlm(rotors32[1], 4, 1))
-    @test sYlm!(Y64, sYlmCalculator(rotors[1], 4, -1:1), rotors[1], 1) == strided(sYlm(rotors[1], 4, 1))
+    @test sYlm!(Y64, rotors[1], 4, 1) == array_view(sYlm(rotors[1], 4, 1))
+    @test sYlm!(Y32, rotors32[1], 4, 1) == array_view(sYlm(rotors32[1], 4, 1))
+    @test sYlm!(Y64, sYlmCalculator(rotors[1], 4, -1:1), rotors[1], 1) == array_view(sYlm(rotors[1], 4, 1))
 
     # A vector of rotor data must say what it holds.  The path that used to re-box such a
     # vector into a `Vector{AbstractQuaternion}` — and fall back on Float64 — is gone, so an
@@ -842,25 +842,25 @@ end
     rotors = randn(rng, Rotor{Float64}, 3)
 
     for R ∈ rotors
-        @test strided(Ylm(R, 5)) == strided(sYlm(R, 5, 0))
-        @test strided(Ylm(R, 5; ℓₘᵢₙ=0)) == strided(sYlm(R, 5, 0; ℓₘᵢₙ=0))
-        @test strided(Ylm(R, 5; ℓₘᵢₙ=2)) == strided(sYlm(R, 5, 0; ℓₘᵢₙ=2))
-        @test strided(Ylm(R, 0)) == strided(sYlm(R, 0, 0))
+        @test array_view(Ylm(R, 5)) == array_view(sYlm(R, 5, 0))
+        @test array_view(Ylm(R, 5; ℓₘᵢₙ=0)) == array_view(sYlm(R, 5, 0; ℓₘᵢₙ=0))
+        @test array_view(Ylm(R, 5; ℓₘᵢₙ=2)) == array_view(sYlm(R, 5, 0; ℓₘᵢₙ=2))
+        @test array_view(Ylm(R, 0)) == array_view(sYlm(R, 0, 0))
         # The two agree in whatever type the rotor is given in, which is the only thing
         # that decides it
-        @test strided(Ylm(Rotor{Float32}(R), 5)) == strided(sYlm(Rotor{Float32}(R), 5, 0))
-        @test strided(Ylm(Rotor{BigFloat}(R), 5)) == strided(sYlm(Rotor{BigFloat}(R), 5, 0))
+        @test array_view(Ylm(Rotor{Float32}(R), 5)) == array_view(sYlm(Rotor{Float32}(R), 5, 0))
+        @test array_view(Ylm(Rotor{BigFloat}(R), 5)) == array_view(sYlm(Rotor{BigFloat}(R), 5, 0))
     end
-    @test eltype(strided(Ylm(Rotor{Float32}(rotors[1]), 3))) === ComplexF32
-    @test eltype(strided(Ylm(Rotor{BigFloat}(rotors[1]), 3))) === Complex{BigFloat}
+    @test eltype(array_view(Ylm(Rotor{Float32}(rotors[1]), 3))) === ComplexF32
+    @test eltype(array_view(Ylm(Rotor{BigFloat}(rotors[1]), 3))) === Complex{BigFloat}
     # Neither function has an element-type keyword argument any more
-    @test_throws MethodError strided(Ylm(rotors[1], 3; T=BigFloat))
-    @test_throws MethodError strided(sYlm(rotors[1], 3, 0; T=BigFloat))
+    @test_throws MethodError array_view(Ylm(rotors[1], 3; T=BigFloat))
+    @test_throws MethodError array_view(sYlm(rotors[1], 3, 0; T=BigFloat))
 
     # Half-integer ℓ goes with half-integer spin weight, so these functions have no
     # half-integer analogue: the `Rational` is a MethodError, not an error from deeper down
-    @test_throws MethodError strided(Ylm(rotors[1], 7//2))
-    @test_throws MethodError strided(Ylm(rotors[1], 3.0))
+    @test_throws MethodError array_view(Ylm(rotors[1], 7//2))
+    @test_throws MethodError array_view(Ylm(rotors[1], 3.0))
 end
 
 

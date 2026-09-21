@@ -134,7 +134,7 @@ function LinearAlgebra.mul!(f, 𝒯::SSHTRS{T}, f̃) where {T}
     end
     s, ℓₘₐₓ, Nθ = 𝒯.s, 𝒯.ℓₘₐₓ, length(𝒯.θ)
     λ, F, G = 𝒯.λ, 𝒯.F, 𝒯.G
-    f̃′ = reshape(strided(f̃), size(f̃, 1), :)
+    f̃′ = reshape(array_view(f̃), size(f̃, 1), :)
     f′ = reshape(f, size(f, 1), :)
     @inbounds for (f̃ⱼ, fⱼ) ∈ zip(eachcol(f̃′), eachcol(f′))
         # Fourier coefficients on each ring: F[y, m] = Σ_ℓ f̃ₗₘ ₛλₗₘ(θ_y)
@@ -182,7 +182,7 @@ function LinearAlgebra.ldiv!(f̃, 𝒯::SSHTRS{T}, f) where {T}
     end
     s, ℓₘₐₓ, Nθ = 𝒯.s, 𝒯.ℓₘₐₓ, length(𝒯.θ)
     λ, F, G = 𝒯.λ, 𝒯.F, 𝒯.G
-    f̃′ = reshape(strided(f̃), size(f̃, 1), :)
+    f̃′ = reshape(array_view(f̃), size(f̃, 1), :)
     f′ = reshape(f, size(f, 1), :)
     @inbounds let π = T(π)
         for (f̃ⱼ, fⱼ) ∈ zip(eachcol(f̃′), eachcol(f′))

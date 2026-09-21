@@ -1,7 +1,7 @@
 # Tests of `HarmonicValues`, the container `sYlm` returns — `src/mode_weights/containers.jl`.
 #
 # The point of the container is that one loop reads the same whichever of the four shapes it
-# was handed, and that the flat array the transforms want is still one `strided` call away.
+# was handed, and that the flat array the transforms want is still one `array_view` call away.
 
 @testitem "HarmonicValues: the four shapes" begin
     using Quaternionic: Rotor
@@ -38,23 +38,23 @@
     @test ℓₘᵢₙ(one_one) == abs(s) && ℓₘₐₓ(one_one) == ℓmax
 
     # Every shape agrees with the flat storage at the canonical index, which is the property
-    # that lets `strided` be handed to a transform
+    # that lets `array_view` be handed to a transform
     for ℓ ∈ abs(s):ℓmax, m ∈ -ℓ:ℓ
         i = Yindex(ℓ, m, abs(s))
-        @test one_one[ℓ][m]  == strided(one_one)[i]
-        @test many_one[ℓ][2, m] == strided(many_one)[2, i]
+        @test one_one[ℓ][m]  == array_view(one_one)[i]
+        @test many_one[ℓ][2, m] == array_view(many_one)[2, i]
     end
     for ℓ ∈ 0:ℓmax, m ∈ -ℓ:ℓ, (j, σ) ∈ enumerate(sr)
         i = Yindex(ℓ, m, 0)
-        @test one_many[ℓ][σ, m]     == strided(one_many)[j, i]
-        @test many_many[ℓ][2, σ, m] == strided(many_many)[2, j, i]
+        @test one_many[ℓ][σ, m]     == array_view(one_many)[j, i]
+        @test many_many[ℓ][2, σ, m] == array_view(many_many)[2, j, i]
     end
 
     # The batched flat forms are exactly what `sYlm_matrix` gives
-    @test strided(many_one) == sYlm_matrix(Rs, ℓmax, s)
-    @test strided(many_many) == sYlm_matrix(Rs, ℓmax, sr)
+    @test array_view(many_one) == sYlm_matrix(Rs, ℓmax, s)
+    @test array_view(many_many) == sYlm_matrix(Rs, ℓmax, sr)
     # ... and one rotor's row of the batch is the single-rotor result
-    @test strided(many_one)[2, :] == strided(sYlm(Rs[2], ℓmax, s))
+    @test array_view(many_one)[2, :] == array_view(sYlm(Rs[2], ℓmax, s))
 end
 
 @testitem "HarmonicValues: iteration and blocks are views" begin
@@ -78,7 +78,7 @@ end
 
     # A block is a view, so writing through it writes into the container
     Y[3][0] = 17
-    @test strided(Y)[Yindex(3, 0, 1)] == 17
+    @test array_view(Y)[Yindex(3, 0, 1)] == 17
 
     # An ℓ the container does not hold says so
     @test_throws ArgumentError Y[1//2]
@@ -100,7 +100,7 @@ end
     @test Y[3//2] isa DegreeBlock
     @test axes(Y[3//2]) == (-3//2:3//2,)
     for ℓ ∈ 1//2:7//2, m ∈ -ℓ:ℓ
-        @test Y[ℓ][m] == strided(Y)[Yindex(ℓ, m, 1//2)]
+        @test Y[ℓ][m] == array_view(Y)[Yindex(ℓ, m, 1//2)]
     end
     # A whole number asked of a half-integer container is told what the container holds
     @test_throws ArgumentError Y[2]
@@ -119,8 +119,8 @@ end
     R₂ = randn(rng, Rotor{Float64})
 
     Y = sYlm(R₁, 4, -2)
-    before = copy(strided(Y))
+    before = copy(array_view(Y))
     sYlm!(Y, R₂, 4, -2)
-    @test strided(Y) == strided(sYlm(R₂, 4, -2))
-    @test strided(Y) != before
+    @test array_view(Y) == array_view(sYlm(R₂, 4, -2))
+    @test array_view(Y) != before
 end

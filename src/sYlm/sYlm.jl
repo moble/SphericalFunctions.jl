@@ -565,7 +565,7 @@ range straddles zero, so rows below their own ``|s|`` are zero.
 
 Underneath, the values are held in one array whose *last* axis is the modes in the canonical
 ordering `[ₛYₗₘ for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ for m ∈ -ℓ:ℓ]` (see [`Yindex`](@ref)), and whose leading axes
-are the rotors and spin weights.  [`strided`](@ref) hands that array back, which is the form a
+are the rotors and spin weights.  [`array_view`](@ref) hands that array back, which is the form a
 product with mode weights takes; [`sYlm_matrix`](@ref) is the direct spelling of it for
 callers who want the bare array.
 
@@ -723,7 +723,7 @@ constructed, and a spin weight or `ℓₘᵢₙ` of the other kind is refused wi
 function sYlm!(Y::HarmonicValues, args...; kwargs...)
     # A `HarmonicValues` is filled by writing through its storage; the labels do not change,
     # so the container itself comes back.
-    sYlm!(strided(Y), args...; kwargs...)
+    sYlm!(array_view(Y), args...; kwargs...)
     Y
 end
 function sYlm!(
@@ -970,7 +970,7 @@ Write ``{}_sλ_{ℓ,m}(θ)`` into the existing real array `Y`, which must have t
 [`sYlm!`](@ref) for the real flavour, and behaves identically in every other respect.
 """
 function sλlm!(Y::HarmonicValues, args...; kwargs...)
-    sλlm!(strided(Y), args...; kwargs...)
+    sλlm!(array_view(Y), args...; kwargs...)
     Y
 end
 function sλlm!(

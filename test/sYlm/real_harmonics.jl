@@ -32,7 +32,7 @@
                 # The flat form runs the same recurrence to completion, so it agrees with the
                 # calculator exactly rather than approximately.
                 flat = sλlm(θ, ℓmax, s)
-                @test eltype(strided(flat)) === T
+                @test eltype(array_view(flat)) === T
                 for ℓ ∈ ℓₘᵢₙ(flat):ℓₘₐₓ(flat)
                     blkY = recurrence!(cY, ℓ)
                     blkλ = recurrence!(cλ, ℓ)
@@ -51,8 +51,8 @@
     for s ∈ (0, -2, 1//2, -3//2)
         ℓmax = s isa Rational ? 7//2 : 4
         θ = 0.7
-        a = strided(sYlm(from_spherical_coordinates(θ, 0.0), ℓmax, s))
-        b = strided(sλlm(θ, ℓmax, s))
+        a = array_view(sYlm(from_spherical_coordinates(θ, 0.0), ℓmax, s))
+        b = array_view(sλlm(θ, ℓmax, s))
         scale = maximum(abs, b)
         @test maximum(abs, λref.(a, s) .- b) < 20eps(scale)
     end
@@ -130,9 +130,9 @@ end
     @test spins(one_many) == -2:2 && spin(one_one) == -2
 
     # The flat batched form is exactly `sλlm_matrix`, as for the complex pair
-    @test strided(many_one) == sλlm_matrix(θ⃗, 4, -2)
-    @test strided(many_many) == sλlm_matrix(θ⃗, 4, -2:2)
-    @test strided(many_one)[2, :] == strided(sλlm(θ⃗[2], 4, -2))
+    @test array_view(many_one) == sλlm_matrix(θ⃗, 4, -2)
+    @test array_view(many_many) == sλlm_matrix(θ⃗, 4, -2:2)
+    @test array_view(many_one)[2, :] == array_view(sλlm(θ⃗[2], 4, -2))
 
     # Iteration reads the same as a calculator's
     seen = Int[]
@@ -145,18 +145,18 @@ end
     # Half-odd indices, including ℓₘᵢₙ = 1/2
     H = sλlm(θ⃗[1], 7//2, 1//2)
     @test ℓₘᵢₙ(H) == 1//2 && ℓₘₐₓ(H) == 7//2
-    @test eltype(strided(H)) === Float64
+    @test eltype(array_view(H)) === Float64
     for ℓ ∈ 1//2:7//2, m ∈ -ℓ:ℓ
-        @test H[ℓ][m] == strided(H)[Yindex(ℓ, m, 1//2)]
+        @test H[ℓ][m] == array_view(H)[Yindex(ℓ, m, 1//2)]
     end
 
     # `sλlm!` writes into existing storage, including through the container
-    Y = zeros(Float64, length(strided(one_one)))
+    Y = zeros(Float64, length(array_view(one_one)))
     sλlm!(Y, θ⃗[1], 4, -2)
-    @test Y == strided(one_one)
+    @test Y == array_view(one_one)
     container = sλlm(θ⃗[2], 4, -2)
     sλlm!(container, θ⃗[1], 4, -2)
-    @test strided(container) == strided(one_one)
+    @test array_view(container) == array_view(one_one)
     # The element type must match the calculator's, and says so
     @test_throws "element type must be Float64" sλlm!(zeros(Float32, length(Y)), θ⃗[1], 4, -2)
     @test_throws MethodError sλlm!(zeros(ComplexF64, length(Y)), θ⃗[1], 4, -2)
@@ -165,7 +165,7 @@ end
     calc = sλlmCalculator(θ⃗[1], 4, -2)
     Y2 = similar(Y)
     sλlm!(Y2, calc, θ⃗[3])
-    @test Y2 == strided(sλlm(θ⃗[3], 4, -2))
+    @test Y2 == array_view(sλlm(θ⃗[3], 4, -2))
 end
 
 @testitem "The ring transforms are unchanged by the real tables" begin

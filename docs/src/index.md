@@ -93,7 +93,7 @@ julia> repr(Y)
 julia> axes(Y[3])  # one ℓ, indexed by m ∈ -ℓ:ℓ
 (-3:1:3,)
 
-julia> sum(abs2, strided(Y[3])) ≈ 7 / (4π)  # Σₘ |ₛYₗₘ|² = (2ℓ+1)/4π
+julia> sum(abs2, array_view(Y[3])) ≈ 7 / (4π)  # Σₘ |ₛYₗₘ|² = (2ℓ+1)/4π
 true
 
 julia> Ylm(R, ℓₘₐₓ)[0][0] ≈ 1 / √(4π)  # here ℓ starts at 0, and Y₀₀ = 1/√(4π)
@@ -102,15 +102,15 @@ true
 
 Underneath, the values are held in one flat array in the canonical
 ordering of mode weights, `[ₛYₗₘ for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ for m ∈ -ℓ:ℓ]`,
-and [`strided`](@ref) hands that array back.  It is what a product
+and [`array_view`](@ref) hands that array back.  It is what a product
 with a vector of mode weights takes, and [`Yindex`](@ref) gives the
 position of any one mode in it:
 
 ```jldoctest quickstart
-julia> length(strided(Y)) == Ysize(2, ℓₘₐₓ)
+julia> length(array_view(Y)) == Ysize(2, ℓₘₐₓ)
 true
 
-julia> strided(Y)[Yindex(3, -3, 2)] == Y[3][-3]
+julia> array_view(Y)[Yindex(3, -3, 2)] == Y[3][-3]
 true
 ```
 
