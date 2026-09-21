@@ -170,31 +170,34 @@ julia> size(recurrence!(batch, ℓₘₐₓ))
 ```
 
 How much that arrangement is worth, and the structure of the recursion
-it follows from, are described under [Reusing the workspace](@ref
-interface_wigner_matrices).
+it follows from, are described under [reusing the storage](@ref
+Iterating-over-ℓ-and-reusing-the-storage).
 
 Everything so far computes the harmonics themselves.  They are a
-basis, so the other half of the story is the coefficients against
-them.  A [`ModeWeights`](@ref) holds the ``f_{ℓ,m}`` of a
-spin-weighted function ``f = \sum_{ℓ,m} f_{ℓ,m}\, {}_sY_{ℓ,m}``, in the
-canonical ordering described above, together with the spin weight and
-the range of ``ℓ`` they belong to.  Keeping those labels beside the
-numbers is what lets the operations below know what they are acting
-on, and refuse a combination that means nothing:
+basis, so the other half of the story is the coefficients of those
+harmonics in an expansion with respect to them.  A
+[`ModeWeights`](@ref) object holds the ``f_{ℓ,m}`` of a spin-weighted
+function ``f = \sum_{ℓ,m} f_{ℓ,m}\, {}_sY_{ℓ,m}``, in the canonical
+ordering described above, together with the spin weight and the range
+of ``ℓ`` they belong to.  Keeping those labels beside the numbers is
+what lets the operations below know what they are acting on, and raise
+an appropriate error for a combination that means nothing:
 
 ```jldoctest quickstart
 julia> w = ModeWeights{ComplexF64}(undef, -2, 4);  # spin weight -2, so ℓ runs over 2:4
 
-julia> w .= 0; w[2, -1] = 0.5; w[3, 2] = im;
+julia> w .= 0; w[2, -1] = 0.5; w[3, 2] = im;  # example data
 
 julia> spin(w), length(modes(w)), w[2, -1]
 (-2, 21, 0.5 + 0.0im)
 ```
 
-Evaluating the function those weights describe is a call.  Writing the
-sum out instead — as a product with the harmonics at the same point —
-gives the same number, and is the form to prefer when the harmonics
-are already in hand or are wanted for many sets of weights:
+The function those weights describe can be evaluated at a point by
+calling the `ModeWeights` with a `Rotor` (or a vector of them) as an
+argument.  Writing the sum out instead — as a product with the
+harmonics at the same point — gives the same number, and is the form
+to prefer when the harmonics are already in hand or are wanted for
+many sets of weights:
 
 ```jldoctest quickstart
 julia> w(R) ≈ sYlm(R, 4, -2) * w
@@ -218,23 +221,32 @@ julia> w′(Q) ≈ w(inv(R) * Q)
 true
 ```
 
-The angular-momentum operators are applied the same way, as
-[`ð`](@ref)`(w)` or `ð * w`.  Each gives a new `ModeWeights`, with the
-spin weight adjusted where the operator changes it — the point of
-labelling the weights in the first place, since ``ð`` maps a function
-of spin weight ``s`` to one of spin weight ``s+1``:
+Here, `w'` is the version of `w` obtained by *actively* rotating `w`
+by `R`.
+
+The angular-momentum operators are applied by calling them, as
+[`ð`](@ref)`(w)`.  (Multiplication, `ð * w`, does the same thing, but
+an operator is a function rather than a matrix here, and calling it
+says so.)  Each gives a new `ModeWeights`, with the spin weight
+adjusted where the operator changes it — the point of labelling the
+weights in the first place, since ``ð`` maps a function of spin weight
+``s`` to one of spin weight ``s+1``:
 
 ```jldoctest quickstart
-julia> spin(ð * w), spin(ð̄ * w)
+julia> spin(ð(w)), spin(ð̄(w))
 (-1, -3)
 
-julia> (L² * w)[3, 2] == 3 * (3 + 1) * w[3, 2]  # L² is diagonal, with eigenvalue ℓ(ℓ+1)
+julia> ℓ = 3;
+
+julia> L²(w)[ℓ, 2] == ℓ * (ℓ + 1) * w[ℓ, 2]  # L² is diagonal, with eigenvalue ℓ(ℓ+1)
 true
 ```
 
 No matrix is built for any of this: the operator is applied by a loop,
-so the only allocation is the result, and `mul!` into an existing
-container allocates nothing at all.  The rest of what a `ModeWeights`
+so the only allocation is the result, and using
+[`LinearAlgebra.mul!`](@extref) with an existing container allocates
+nothing at all — though you have to preallocate the result, and set
+the correct spin weight for it.  The rest of what a `ModeWeights`
 supports is described under [rotating and evaluating mode
 weights](@ref mode_weight_operations), and the full list of operators
 — along with the matrix forms of them, which act on a plain vector
