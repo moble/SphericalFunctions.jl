@@ -1343,8 +1343,8 @@ f'_{ℓ,m'} = \sum_m 𝔇^{(ℓ)}_{m',m}(𝐑)\, f_{ℓ,m}.
 ```
 Note that ``𝔇^{(ℓ)}`` is seemingly transposed relative to the
 expression for the rotation of the harmonics themselves (the primes
-are in different places).  This is closely analogous to the
-"contravariance" that we saw for the [differential operators](@ref
+are in different places).  This is closely analogous to the "opposite"
+transformation law that we saw for the [differential operators](@ref
 Differential-operators).
 
 ### [Spin-weighted functions](@id conv_spin_weight)

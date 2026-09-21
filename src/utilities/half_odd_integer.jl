@@ -1,9 +1,10 @@
 """
     HalfOddInteger(x)
 
-A half-odd-integer — one of ``…, -3/2, -1/2, 1/2, 3/2, …`` — stored as its odd `numerator`,
-so that the represented value is `numerator/2`.  Together with the `Integer`s these make up
-the [`IntegerHalf`](@ref)s, the index types over which the Wigner recurrences are defined.
+A half-odd-integer — one of ``…, -3//2, -1//2, 1//2, 3//2, …`` — stored as its odd
+`numerator`, so that the represented value is `numerator//2`.  Together with the `Integer`s
+these make up the [`IntegerHalf`](@ref)s, the index types over which the Wigner recurrences
+are defined.
 
 The point of the type is that the arithmetic which actually occurs in those recurrences
 lands back in `Int`:
@@ -14,12 +15,12 @@ julia> using SphericalFunctions: HalfOddInteger
 julia> ℓ = HalfOddInteger(7//2)
 7//2
 
-julia> 2ℓ + 1          # an `Int`; compiles to `ℓ.numerator + 1`
+julia> 2ℓ + 1  # an `Int`; compiles to `ℓ.numerator + 1`
 8
 
 julia> m = HalfOddInteger(3//2);
 
-julia> (ℓ - m) * (ℓ + m + 1)    # the recurrence coefficient (ℓ-m)(ℓ+m+1), exactly
+julia> (ℓ - m) * (ℓ + m + 1)  # an `Int`
 12
 ```
 
@@ -46,8 +47,8 @@ struct HalfOddInteger <: Real
     numerator::Int
 
     # Construct from the *numerator*, unchecked.  Internal: the parity is known by
-    # construction at every call site, and the public constructor below is value-semantic, as
-    # Julia's numeric conventions require.
+    # construction at every call site, and the public constructor below is value-semantic,
+    # as Julia's numeric conventions require.
     global unsafe_half_odd_integer(numerator::Int) = new(numerator)
 end
 
@@ -77,29 +78,30 @@ HalfOddInteger(x::Integer) = throw(InexactError(:HalfOddInteger, HalfOddInteger,
 `Union{Integer, HalfOddInteger}` — the index types over which the Wigner recurrences are
 defined.  A container or calculator is parameterized by one of these, so that whether its
 indices are integers or half-odd-integers is a property of its *type* rather than of its
-values, and the two cases dispatch to separate, separately-compiled code.
+values, and the two cases dispatch to separate code.
 
 See also [`HalfOddInteger`](@ref).
 """
 const IntegerHalf = Union{Integer, HalfOddInteger}
 
-# The spellings of an index that a boundary method accepts: an `Integer`, a `HalfOddInteger`,
-# or the `Rational` with denominator 2 in which users write a half-odd-integer.  A method whose
-# index arguments are typed with this normalizes them, through `half_integers` or
-# `unify_indices` below, may check their kind against a container's, and then re-dispatches to
-# a method that sees only `Integer` or `HalfOddInteger` values, so that no method body ever
-# sees a `Rational`.  (A docstring here would have to be placed in the manual, where the alias
-# would mean nothing to a reader; the rule it encodes is stated under `half_integers`.)
+# The spellings of an index that a boundary method accepts: an `Integer`, a
+# `HalfOddInteger`, or the `Rational` with denominator 2 in which users write a
+# half-odd-integer.  A method whose index arguments are typed with this normalizes them,
+# through `half_integers` or `unify_indices` below, may check their kind against a
+# container's, and then re-dispatches to a method that sees only `Integer` or
+# `HalfOddInteger` values, so that no method body ever sees a `Rational`.  (A docstring here
+# would have to be placed in the manual, where the alias would mean nothing to a reader; the
+# rule it encodes is stated under `half_integers`.)
 const IndexSpelling = Union{IntegerHalf, Rational}
 
 
 ### Arithmetic.
 #
 # This is the whole point of the type: `ℓ ± m` is an `Int`, `ℓ ± 1` is a `HalfOddInteger`,
-# and `2ℓ` is an `Int`, so an expression like `√((ℓ-m) * (ℓ+m+1))` — copied straight from the
-# reference — is integer arithmetic throughout, with the shifts hidden in `+` and `-` rather
-# than written out as `>>1` on twice-indices.  Every method is `@inline`: without that the
-# assertion in `*` is enough to keep `2ℓ` from folding.
+# and `2ℓ` is an `Int`, so an expression like `√((ℓ-m) * (ℓ+m+1))` — copied straight from
+# the reference — is integer arithmetic throughout, with the shifts hidden in `+` and `-`
+# rather than written out as `>>1` on twice-indices.  Every method is `@inline`: without
+# that the assertion in `*` is enough to keep `2ℓ` from folding.
 
 @inline Base.:+(a::HalfOddInteger, b::HalfOddInteger) = (a.numerator + b.numerator) >> 1
 @inline Base.:-(a::HalfOddInteger, b::HalfOddInteger) = (a.numerator - b.numerator) >> 1
@@ -109,8 +111,8 @@ const IndexSpelling = Union{IntegerHalf, Rational}
 @inline Base.:-(n::Integer, a::HalfOddInteger) = unsafe_half_odd_integer(2n - a.numerator)
 @inline Base.:-(a::HalfOddInteger) = unsafe_half_odd_integer(-a.numerator)
 
-# Multiply by an *even* integer, giving an `Integer`.  Half-odd-integers are not closed under
-# multiplication — (1/2)(1/2) = 1/4 is not one — so rather than return a type-unstable
+# Multiply by an *even* integer, giving an `Integer`.  Half-odd-integers are not closed
+# under multiplication — (1/2)(1/2) = 1/4 is not one — so rather than return a type-unstable
 # `Union`, this asserts what is true of every multiplication the recurrences actually
 # perform: the multiplier is 2, and the result is 2ℓ.  (A docstring here would have nowhere
 # to live in the manual, so this is a comment; the rule is stated in `HalfOddInteger`'s own
@@ -143,7 +145,8 @@ end
 @inline Base.:(<=)(n::Integer, a::HalfOddInteger) = 2n <= a.numerator
 @inline Base.:(==)(a::HalfOddInteger, b::HalfOddInteger) = a.numerator == b.numerator
 # A half-odd-integer is never equal to a whole number, and is equal to a `Rational` only if
-# that `Rational` is in lowest terms with denominator 2 — which Julia's `Rational` always is.
+# that `Rational` has denominator 2 — and is in reduced form, which Julia's `Rational`
+# always is.
 @inline Base.:(==)(::HalfOddInteger, ::Integer) = false
 @inline Base.:(==)(::Integer, ::HalfOddInteger) = false
 @inline Base.:(==)(a::HalfOddInteger, x::Rational) = denominator(x) == 2 && a.numerator == numerator(x)
@@ -159,9 +162,9 @@ end
 # `Integer` it is the identity.  Like `floor`, this returns an `Int` rather than a
 # `HalfOddInteger`: the ceiling of a half-odd-integer is a whole number, and the type has no
 # way to hold one.  For an odd numerator `a`, the ceiling of `a/2` is exactly `(a+1)/2` at
-# either sign — ⌈1/2⌉ = 1 = (1+1)/2 and ⌈-1/2⌉ = 0 = (-1+1)/2 — and because `a+1` is even the
-# shift halves it exactly, so no rounding direction enters and the one expression is right for
-# negative and positive values alike.
+# either sign — ⌈1/2⌉ = 1 = (1+1)/2 and ⌈-1/2⌉ = 0 = (-1+1)/2 — and because `a+1` is even
+# the shift halves it exactly, so no rounding direction enters and the one expression is
+# right for negative and positive values alike.
 @inline Base.ceil(::Type{T}, a::HalfOddInteger) where {T<:Integer} = T((a.numerator + 1) >> 1)
 @inline Base.ceil(a::HalfOddInteger) = ceil(Int, a)
 
@@ -211,9 +214,9 @@ Base.AbstractFloat(a::HalfOddInteger) = Float64(a)
 Base.float(a::HalfOddInteger) = Float64(a)
 
 # An index as an element of a floating-point matrix or vector of type `T`.  An integer is
-# returned as it is, for the typed comprehension that receives it to convert as it always
-# has.  A half-odd-integer is converted through its numerator: the `Int` 2x becomes a `T` and
-# is halved, which is exact in every binary floating-point type.  This exists because the
+# returned as is, for the typed comprehension that receives it to convert as it always has.
+# A half-odd-integer is converted through its numerator: the `Int` 2x becomes a `T` and is
+# halved, which is exact in every binary floating-point type.  This exists because the
 # direct conversion `T(x)` is not resolved by every float type — `DoubleFloats` defines
 # `Double64(x::T) where {T<:Real}`, which is exactly as specific as the
 # `(::Type{T})(a::HalfOddInteger) where {T<:AbstractFloat}` above, so `Double64(x)` is an
@@ -241,35 +244,35 @@ Every public entry point that takes an index calls this, so that callers may kee
 @inline half_integer(x::HalfOddInteger) = x
 @inline function half_integer(x::Rational)
     # The refusal names both spellings, which the constructor's own message — written for a
-    # caller who asked for a `HalfOddInteger` by name — does not; the constructor then does the
-    # conversion, including the `InexactError` for a numerator too large for an `Int`.
+    # caller who asked for a `HalfOddInteger` by name — does not; the constructor then does
+    # the conversion, including the `InexactError` for a numerator too large for an `Int`.
     denominator(x) == 2 || throw(ArgumentError(
-        "A `Rational` index must have denominator 2, spelling a half-odd-integer such as 7//2; "
-        * "an integer index is spelled as an `Integer`, such as 3.  Got $x."
+        "A `Rational` index must be given with denominator 2, such as 7//2;\n"
+        * "an integer index is given as an `Integer`, such as 3.  Got $x."
     ))
     HalfOddInteger(x)
 end
 half_integer(x) = throw(ArgumentError(
-    "An index must be an `Integer`, a `HalfOddInteger`, or a `Rational` with denominator 2; "
-    * "got $x of type $(typeof(x))."
+    "An index must be an `Integer`, a `HalfOddInteger`, or a `Rational` with denominator 2;"
+    * " got $x of type $(typeof(x))."
 ))
 
 """
     half_integers(xs...)
 
 Normalize several user-supplied indices at once, returning them as a tuple.  Each is passed
-through [`half_integer`](@ref), and the results are then required to be all of one kind — all
-`Integer`s or all [`HalfOddInteger`](@ref)s — because the package never mixes the two kinds
-of index within a single call: an integer ``ℓ`` goes with an integer ``m`` and ``ℓₘᵢₙ``, and a
-half-odd ``ℓ`` with half-odd ones.  A call that mixes them, such as `Ysize(0, 7//2)`, is
-refused with an `ArgumentError` that names both spellings, in place of the bare `MethodError`
-that dispatch alone would produce.
+through [`half_integer`](@ref), and the results are then required to be all of one kind —
+all `Integer`s or all [`HalfOddInteger`](@ref)s — because the package never mixes the two
+kinds of index within a single call: an integer ``ℓ`` goes with an integer ``m`` and
+``ℓₘᵢₙ``, and a half-odd ``ℓ`` with half-odd ones.  A call that mixes them, such as
+`Ysize(0, 7//2)`, is refused with an `ArgumentError` that names both spellings, in place of
+the bare `MethodError` that dispatch alone would produce.
 
 This is the tool of the boundary methods: a method that accepts `Rational` spellings calls
-this on its index arguments and re-dispatches on the result, so that no method body ever sees
-a `Rational`.  A `Rational` with denominator 1, such as `3//1`, is refused by `half_integer`
-like any other `Rational` whose denominator is not 2; an integer index is spelled as an
-`Integer`.
+this on its index arguments and re-dispatches on the result, so that no method body ever
+sees a `Rational`.  A `Rational` with denominator 1, such as `3//1`, is refused by
+`half_integer` like any other `Rational` whose denominator is not 2; an integer index is
+spelled as an `Integer`.
 """
 @inline function half_integers(xs...)
     ys = map(half_integer, xs)
@@ -282,36 +285,37 @@ like any other `Rational` whose denominator is not 2; an integer index is spelle
     ys
 end
 
-# Normalize the indices that describe a set of mode weights — the spin weight, ℓₘᵢₙ and ℓₘₐₓ —
-# to one concrete index type.  `half_integers` turns each `Rational` spelling into a
-# `HalfOddInteger` and refuses a mixture of integers and half-odd-integers with an explanation;
-# `promote` then unifies integers of different concrete types, as the callers' own arithmetic
-# would have done before half-integer indices were admitted, and returns `HalfOddInteger`s
-# unchanged, since they are already of one type (the type has no `promote_rule`, and none is
-# needed here).  This is what the boundary methods of the flat `sYlm` functions, the
-# `ModeWeights` constructors, the operators and the pixelizations call before re-dispatching
-# to their workers.  (A docstring here would have to be placed in the manual; the rule is
-# stated under `half_integers`.)
+# Normalize the indices that describe a set of mode weights — the spin weight, ℓₘᵢₙ and ℓₘₐₓ
+# — to one concrete index type.  `half_integers` turns each `Rational` spelling into a
+# `HalfOddInteger` and refuses a mixture of integers and half-odd-integers with an
+# explanation; `promote` then unifies integers of different concrete types, as the callers'
+# own arithmetic would have done before half-integer indices were admitted, and returns
+# `HalfOddInteger`s unchanged, since they are already of one type (the type has no
+# `promote_rule`, and none is needed here).  This is what the boundary methods of the flat
+# `sYlm` functions, the `ModeWeights` constructors, the operators and the pixelizations call
+# before re-dispatching to their workers.  (A docstring here would have to be placed in the
+# manual; the rule is stated under `half_integers`.)
 @inline unify_indices(xs...) = promote(half_integers(xs...)...)
 
 # Normalize the pair of indices an `sYlmCalculator` is built from, where the spin weight may
-# be either a single value or an ascending range of them.  The two forms are deliberately kept
-# apart: a scalar spelling normalizes to a scalar and a range to a `UnitRange`, because the
-# calculator stores whichever it was given and that is what settles the shape of the block
-# handed back by `calc[ℓ]`.
+# be either a single value or an ascending range of them.  The two forms are deliberately
+# kept apart: a scalar spelling normalizes to a scalar and a range to a `UnitRange`, because
+# the calculator stores whichever it was given and that is what settles the shape of the
+# block handed back by `recurrence!`.
 #
-# A range is normalized from its two endpoints rather than element by element, and its step is
-# compared by value rather than converted.  The reason is that `-3//2:3//2` is a
+# A range is normalized from its two endpoints rather than element by element, and its step
+# is compared by value rather than converted.  The reason is that `-3//2:3//2` is a
 # `UnitRange{Rational{Int}}` whose step is `1//1`, which `half_integer` rightly refuses; the
 # comparison `step(s) == 1` is true for that spelling and for the `UnitRange{Int}` and
 # `UnitRange{HalfOddInteger}` spellings alike.  The result is rebuilt with the colon, which
-# forms only `start + floor(stop - start)` and so asks `HalfOddInteger` for nothing it lacks.
+# forms only `start + floor(stop - start)` and so asks `HalfOddInteger` for nothing it
+# lacks.
 @inline spin_indices(ℓₘₐₓ, s) = unify_indices(ℓₘₐₓ, s)
 function spin_indices(ℓₘₐₓ, s::AbstractRange)
     # A descending range is answered before the step is complained about in general, because
-    # the two spellings that produce one — `3//2:-1:-3//2` and the empty `3//2:-3//2` — are a
-    # single mistake with a single remedy, and naming that remedy is more use than naming the
-    # step.
+    # the two spellings that produce one — `3//2:-1:-3//2` and the empty `3//2:-3//2` — are
+    # a single mistake with a single remedy, and naming that remedy is more use than naming
+    # the step.
     if step(s) < 0 || isempty(s)
         throw(ArgumentError(
             "The range of spin weights $s runs downward or is empty.  A range runs from its "

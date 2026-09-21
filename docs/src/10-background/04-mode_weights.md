@@ -95,9 +95,9 @@ Mode weights and functions transform in related but different ways
 under the action of the differential operators.
 
 One important point to note is that mode weights transform
-"contravariantly" (very loosely speaking) relative to the
-spin-weighted spherical functions under some operators.  For example,
-take the action of the ``L_+`` operator, which acts on a SWSH as
+"oppositely" (loosely speaking) relative to the spin-weighted
+spherical functions under some operators.  For example, take the
+action of the ``L_+`` operator, which acts on a SWSH as
 ```math
 L_+ \left\{{}_{s}Y_{ℓ,m}\right\} (R)
 = \sqrt{(ℓ-m)(ℓ+m+1)}\ {}_{s}Y_{ℓ,m+1}(R).
@@ -138,9 +138,16 @@ L_- \left\{{}_{s}Y_{ℓ,m}\right\} (R)
 = f_{ℓ,m+1}\, \sqrt{(ℓ+m+1)(ℓ-m)}.
 \end{gathered}
 ```
+Seeing this, it is obvious that this "opposite" transformation is just
+down to the fact that ``L_+`` and ``L_-`` are dual operators, and we
+have
+```math
+\left\langle {}_{s}Y_{ℓ,m} \middle| L_+ f \right\rangle
+= \left\langle L_- {}_{s}Y_{ℓ,m} \middle| f \right\rangle.
+``` 
 
-However, it is important to note that the same "contravariance" is not
-apparent for the spin-raising and -lowering operators:
+However, it is important to note that the same duality is not
+*apparent* for the spin-raising and -lowering operator laws:
 ```math
 \begin{aligned}
 \left\{\eth f\right\}_{s+1,ℓ,m}
