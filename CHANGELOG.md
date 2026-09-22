@@ -9,11 +9,13 @@ code that is updated only by renaming functions will run without
 complaint, but will give the complex conjugate of the intended result.
 Almost everything else in version 2's interface has been replaced, and
 the table under "What replaces what" maps each old function to its
-successor.  The most significant additions are support for
-half-integer indices throughout the package, and the `ModeWeights`
-container, which can be evaluated, rotated, and acted on by the
-differential operators directly.  The entries below are relative to
-version 2.2.9.
+successor.  The most significant additions are a complete account of
+the package's conventions, derived from first principles and compared
+in detail with thirty other sources from Euler (1767) to current
+software; support for half-integer indices throughout the package; and
+the `ModeWeights` container, which can be evaluated, rotated, and acted
+on by the differential operators directly.  The entries below are
+relative to version 2.2.9.
 
 ### Breaking
 
@@ -26,9 +28,9 @@ version 2.2.9.
   of version 2's ``𝔇`` should now use `D` with no conjugation — or,
   more simply, `D(R, ℓₘₐₓ) * w`.  The ``d`` matrices and the
   spin-weighted spherical harmonics are numerically unchanged.  (Issue
-  #42.)  The conventions are described in full in the documentation,
-  along with comparisons to other sources that are tested
-  automatically.
+  #42.)  The reasons for the change, and comparisons with the other
+  sources, are in the new conventions documentation described under
+  "Added".
 * **Julia 1.10 or later is required**, rather than 1.6.
 * **The version-2 interface is removed.**  This includes `D_matrices`,
   `D_matrices!`, `D_prep`, `D_iterator`, `d_matrices`, `d_matrices!`,
@@ -121,6 +123,24 @@ version 2.2.9.
 
 ### Added
 
+* **A complete account of the conventions.**  The documentation now
+  derives every convention used in the package from first principles,
+  starting from Cartesian coordinates and proceeding through
+  quaternions, rotations, the angular-momentum operators, Wigner's
+  matrices, and the spin-weighted spherical harmonics, for integer and
+  half-integer indices alike.  Those conventions are then compared
+  with thirty other sources, each on its own page.  They range from
+  the founders — Euler (1767), Hamilton, Tait, Clifford, Gibbs and
+  Wilson — through the standard texts and papers of quantum mechanics
+  and relativity, including Whittaker, Condon and Shortley, Wigner,
+  Edmonds, Newman and Penrose, Goldberg et al., Thorne, Varshalovich
+  et al., Sakurai, Shankar, and Zettili, to current references and
+  software, including the NIST DLMF, Wikipedia, LALSuite, Mathematica,
+  SciPy and SymPy.  For the twenty-four sources whose formulas can be
+  evaluated, those formulas are transcribed and checked numerically
+  against this package.  The checks are test items that run with the
+  test suite, as well as being rendered in the documentation, so a
+  change that breaks agreement with any of these sources is caught.
 * **Half-integer indices.**  `D`, `d`, the calculators, `sYlm`,
   `sYlm!`, `sYlm_matrix`, `Ysize`, `Yindex`, `Yrange`, `ModeWeights`,
   the differential operators, the pixelizations, and the `"RS"` and
