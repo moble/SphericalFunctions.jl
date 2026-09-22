@@ -251,6 +251,8 @@ The map is then antiperiodic in ``ϕ`` — its values are those of the function 
 rotor — and the requirements ``N_ϕ ≥ 2ℓₘₐₓ+1``, ``N_θ ≥ 2ℓₘₐₓ+1`` are unchanged in form; see
 [`SSHT`](@ref).
 """
+function map2salm end
+
 function map2salm(map::MapOrModes, s::IndexArgument, ℓₘₐₓ::IndexArgument)
     map2salm(map, map2salm_plan(map, s, ℓₘₐₓ))
 end
@@ -287,6 +289,8 @@ ordering `ℓ ∈ abs(s):ℓₘₐₓ, m ∈ -ℓ:ℓ` along the first dimension
 [`ModeWeights`](@ref).  The result has size ``N_ϕ × N_θ`` followed by the trailing
 dimensions of `salm`.
 """
+function salm2map end
+
 function salm2map(salm::MapOrModes, s::IndexArgument, ℓₘₐₓ::IndexArgument, Nϕ::Integer, Nθ::Integer)
     T = real(eltype(salm))
     𝒯 = SSHTRS(

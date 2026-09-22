@@ -238,6 +238,8 @@ The optional second argument is the real type the phases are computed in; it def
 `float(eltype(R))`.  Pass the *calculator's* type whenever that is more precise than the
 rotor's own — otherwise every later step inherits the rotor type's precision.
 """
+function spinor_phases end
+
 spinor_phases(R::AbstractQuaternion{T}) where {T} = spinor_phases(R, float(T))
 function spinor_phases(R::AbstractQuaternion, ::Type{F}) where {F<:Real}
     a = F(R[1])^2 + F(R[4])^2
@@ -424,6 +426,8 @@ weight of a block that holds several is `ₛYₗ[s, :]`.
 A phase given as a `Complex` number must have unit modulus (to within rounding), and is used
 as given; an angle given as a `Real` is converted to the calculator's number type.
 """
+function recurrence! end
+
 function recurrence!(w::HCalculator, R, ℓ)
     check_ℓ(w, ℓ)
     set_rotors!(w, R)

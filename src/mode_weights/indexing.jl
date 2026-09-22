@@ -32,6 +32,8 @@ smallest ``ℓ`` of the given kind, which is 0 for integers and 1/2 for half-odd
 
 See also [`Yindex`](@ref) and [`Yrange`](@ref).
 """
+function Ysize end
+
 function Ysize(ℓₘᵢₙ::Integer, ℓₘₐₓ::Integer)
     if ℓₘᵢₙ < 0
         throw(ArgumentError("ℓₘᵢₙ=$ℓₘᵢₙ must be non-negative."))
@@ -78,6 +80,8 @@ bounds are checked.
 
 See also [`Ysize`](@ref) and [`Yrange`](@ref).
 """
+function Yindex end
+
 @inline Yindex(ℓ::Integer, m::Integer, ℓₘᵢₙ::Integer) = ℓ*(ℓ+1) - ℓₘᵢₙ^2 + m + 1
 @inline Yindex(ℓ::Integer, m::Integer) = Yindex(ℓ, m, ℓₘᵢₙ(typeof(ℓ)))
 # ℓ(ℓ+1) - ℓₘᵢₙ² + m + 1 on the doubled indices a = 2ℓ, b = 2m and c = 2ℓₘᵢₙ, all odd `Int`s.
@@ -112,6 +116,8 @@ the smallest ``ℓ`` of the given kind, which is 0 for integers and 1/2 for half
 
 See also [`Ysize`](@ref) and [`Yindex`](@ref).
 """
+function Yrange end
+
 function Yrange(ℓₘᵢₙ::Integer, ℓₘₐₓ::Integer)
     [(ℓ, m) for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ for m ∈ -ℓ:ℓ]
 end

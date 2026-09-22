@@ -306,6 +306,8 @@ stored wedge element (``b ≥ |a|``).  Element `iᵣ` is at
 
 The four-argument form takes `m′ₘᵢₙ(H)` from the caller, which hoists it out of a loop.
 """
+function wedge_offset end
+
 @inline function wedge_offset(H::HWedge, a, b, m′ₘᵢₙ)
     @inbounds row_index(H)[(a - m′ₘᵢₙ) + 1] + Nᵣ(H) * (b - abs(a)) - 1
 end
