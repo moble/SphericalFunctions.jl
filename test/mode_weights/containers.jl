@@ -124,3 +124,79 @@ end
     @test array_view(Y) == array_view(sYlm(R₂, 4, -2))
     @test array_view(Y) != before
 end
+
+# The items above check the four shapes and the indexing.  This one covers the rest of the
+# container interface — the type-level queries, the copy/equality pair, and display — none of
+# which the transform tests reach.
+
+@testitem "HarmonicValues: type queries, copying, equality and display" begin
+    using Quaternionic: Rotor
+    import SphericalFunctions: HarmonicValues, AbstractModeContainer
+    import SphericalFunctions: ishalfinteger, ℓₘᵢₙ, ℓₘₐₓ, Nᵣ, isbatched, spins, half_integer
+    using Random
+
+    rng = Random.Xoshiro(2026)
+    R = randn(rng, Rotor{Float64})
+    Rs = randn(rng, Rotor{Float64}, 3)
+    Y = sYlm(R, 4, -2)
+
+    @test Y isa AbstractModeContainer
+    @test eltype(Y) == ComplexF64
+    @test eltype(typeof(Y)) == ComplexF64        # the type-level method, used by generic code
+    @test ℓₘᵢₙ(Y) == 2 && ℓₘₐₓ(Y) == 4
+    @test !ishalfinteger(Y)
+    @test Nᵣ(Y) == 1 && !isbatched(Y)
+    @test spins(Y) == -2:-2
+
+    # A half-integer container answers `ishalfinteger` the other way
+    Yh = sYlm(R, half_integer(7//2), half_integer(1//2))
+    @test ishalfinteger(Yh)
+    @test ℓₘᵢₙ(Yh) == half_integer(1//2) && ℓₘₐₓ(Yh) == half_integer(7//2)
+
+    # `copy` is independent of the original
+    c = copy(Y)
+    @test c == Y
+    @test c !== Y
+    original = Y[3][0]
+    c[3][0] = 12345.0 + 0.0im
+    @test c[3][0] == 12345.0 + 0.0im
+    @test Y[3][0] == original            # writing through the copy does not reach the original
+    @test c != Y
+
+    # Equality compares the spin, the ℓ range, the rotor count and the data
+    @test sYlm(R, 4, -2) == Y
+    @test sYlm(R, 3, -2) != Y                    # a different ℓₘₐₓ
+    @test sYlm(R, 4, -1) != Y                    # a different spin
+    @test sYlm(Rs, 4, -2) != Y                   # a different rotor count
+
+    # Iteration is by `ℓ => block` pairs, and the container is its own `pairs`
+    @test Base.IteratorSize(typeof(Y)) == Base.HasLength()
+    @test pairs(Y) === Y
+    @test [ℓ for (ℓ, _) ∈ Y] == collect(2:4)
+
+    # `show` names the type, the ℓ range and the spin; the batched form also says how many
+    # rotors, and a spin range prints as a range
+    s = sprint(show, Y)
+    @test occursin("HarmonicValues", s)
+    @test occursin("ℓ ∈ 2:4", s)
+    @test occursin("s = -2", s)
+    @test !occursin("rotors", s)                 # a single rotor is not mentioned
+
+    sb = sprint(show, sYlm(Rs, 4, -2))
+    @test occursin("3 rotors", sb)
+
+    sr = sprint(show, sYlm(R, 4, -2:2))
+    @test occursin("s ∈ -2:2", sr)
+
+    # The three-argument `show` lists each ℓ block in turn
+    s3 = sprint(show, MIME("text/plain"), Y)
+    @test occursin("HarmonicValues", s3)
+    for ℓ ∈ 2:4
+        @test occursin("ℓ = $ℓ", s3)
+    end
+
+    # The mode axis must be exactly the length the ℓ range calls for
+    @test_throws ArgumentError HarmonicValues(zeros(ComplexF64, 5), -2, 2, 4, 1)
+    @test_throws "mode axis has length" HarmonicValues(zeros(ComplexF64, 5), -2, 2, 4, 1)
+    @test_throws "Ysize" HarmonicValues(zeros(ComplexF64, 5), -2, 2, 4, 1)
+end
