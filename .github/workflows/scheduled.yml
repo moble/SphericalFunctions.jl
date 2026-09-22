@@ -37,7 +37,7 @@ jobs:
         with:
           version: ${{ matrix.version }}
           show-versioninfo: true
-      - uses: julia-actions/cache@v2
+      - uses: julia-actions/cache@v3
       - uses: julia-actions/julia-buildpkg@v1
       - name: Full test suite
         uses: julia-actions/julia-runtest@v1
@@ -58,7 +58,7 @@ jobs:
         with:
           version: '1'
           show-versioninfo: true
-      - uses: julia-actions/cache@v2
+      - uses: julia-actions/cache@v3
       - uses: julia-actions/julia-buildpkg@v1
       - name: Build docs (no deploy)
         # `deploydocs` does nothing for a scheduled or manual run, so this only checks that
