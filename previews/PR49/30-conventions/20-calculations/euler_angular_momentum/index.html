@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>L_j and R_j with Euler angles · SphericalFunctions.jl</title><meta name="title" content="L_j and R_j with Euler angles · SphericalFunctions.jl"/><meta property="og:title" content="L_j and R_j with Euler angles · SphericalFunctions.jl"/><meta property="twitter:title" content="L_j and R_j with Euler angles · SphericalFunctions.jl"/><meta name="description" content="Documentation for SphericalFunctions.jl."/><meta property="og:description" content="Documentation for SphericalFunctions.jl."/><meta property="twitter:description" content="Documentation for SphericalFunctions.jl."/><meta property="og:url" content="https://moble.github.io/SphericalFunctions.jl/stable/30-conventions/20-calculations/euler_angular_momentum/"/><meta property="twitter:url" content="https://moble.github.io/SphericalFunctions.jl/stable/30-conventions/20-calculations/euler_angular_momentum/"/><link rel="canonical" href="https://moble.github.io/SphericalFunctions.jl/stable/30-conventions/20-calculations/euler_angular_momentum/"/><script data-outdated-warner src="../../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../../assets/documenter.js"></script><script src="../../../search_index.js"></script><script src="../../../siteinfo.js"></script><script src="../../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../../assets/themeswap.js"></script><link href="../../../assets/documentercitations/citations-hover.css" rel="stylesheet" type="text/css"/><link href="../../../assets/documentercitations/citations.css" rel="stylesheet" type="text/css"/><link href="../../../assets/citations.css" rel="stylesheet" type="text/css"/><link href="../../../assets/extras.css" rel="stylesheet" type="text/css"/><script src="../../../assets/documentercitations/citations-data.js"></script><script src="../../../assets/documentercitations/citations-hover.js"></script><script src="../../../assets/documentercitations/citations-backlinks.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../../">SphericalFunctions.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../../">Introduction</a></li><li><span class="tocitem">Background</span><ul><li><a class="tocitem" href="../../../10-background/01-domain/">Domain</a></li><li><a class="tocitem" href="../../../10-background/02-operators/">Differential operators</a></li><li><a class="tocitem" href="../../../10-background/03-sYlm_and_Dlmpm/"><span>${}_{s}Y_{ℓ,m}$</span> and <span>$𝔇^{(ℓ)}_{m&#39;, m}$</span></a></li><li><a class="tocitem" href="../../../10-background/04-mode_weights/">Mode weights</a></li></ul></li><li><span class="tocitem">Interface</span><ul><li><a class="tocitem" href="../../../20-interface/01-half_integers/">Half-integer indices</a></li><li><a class="tocitem" href="../../../20-interface/02-wigner_and_sYlm/"><span>$𝔇$</span> and <span>$d$</span> matrices, and <span>${}_{s}Y_{ℓ,m}$</span> and <span>$Y_{ℓ,m}$</span> functions</a></li><li><a class="tocitem" href="../../../20-interface/03-transformations/"><span>$s$</span>-SHT Transformations</a></li><li><a class="tocitem" href="../../../20-interface/04-operators/">Differential operators</a></li><li><a class="tocitem" href="../../../20-interface/05-utilities/">Utilities</a></li></ul></li><li><span class="tocitem">Conventions</span><ul><li><a class="tocitem" href="../../01-summary/">Summary</a></li><li><a class="tocitem" href="../../02-details/">Details</a></li><li><input class="collapse-toggle" id="menuitem-4-3" type="checkbox"/><label class="tocitem" for="menuitem-4-3"><span class="docs-label">Comparisons</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../10-comparisons/blanchet_2024/">Blanchet (2024)</a></li><li><a class="tocitem" href="../../10-comparisons/boyle_2016/">Boyle (2016)</a></li><li><a class="tocitem" href="../../10-comparisons/clifford_1878/">Clifford (1878)</a></li><li><a class="tocitem" href="../../10-comparisons/cohen_tannoudji_1991/">Cohen-Tannoudji (1991)</a></li><li><a class="tocitem" href="../../10-comparisons/condon_shortley_1935/">Condon-Shortley (1935)</a></li><li><a class="tocitem" href="../../10-comparisons/edmonds_1960/">Edmonds (1960)</a></li><li><a class="tocitem" href="../../10-comparisons/euler_1767/">Euler (1767 and 1776)</a></li><li><a class="tocitem" href="../../10-comparisons/gibbs_1881/">Gibbs (1881)</a></li><li><a class="tocitem" href="../../10-comparisons/goldberg_et_al_1967/">Goldberg et al. (1967)</a></li><li><a class="tocitem" href="../../10-comparisons/griffiths_1995/">Griffiths (1995)</a></li><li><a class="tocitem" href="../../10-comparisons/hamilton_1844/">Hamilton (1844 and 1853)</a></li><li><a class="tocitem" href="../../10-comparisons/lalsuite_2025/">LALSuite (2025)</a></li><li><a class="tocitem" href="../../10-comparisons/le_bellac_2006/">Le Bellac (2006)</a></li><li><a class="tocitem" href="../../10-comparisons/mathematica_2026/">Mathematica (2026)</a></li><li><a class="tocitem" href="../../10-comparisons/newman_penrose_1966/">Newman-Penrose (1966)</a></li><li><a class="tocitem" href="../../10-comparisons/ninja_2011/">NINJA (2011)</a></li><li><a class="tocitem" href="../../10-comparisons/nist_dlmf_2026/">NIST DLMF (2026)</a></li><li><a class="tocitem" href="../../10-comparisons/sakurai_1994/">Sakurai (1994)</a></li><li><a class="tocitem" href="../../10-comparisons/scipy_2026/">SciPy (2026)</a></li><li><a class="tocitem" href="../../10-comparisons/shankar_1994/">Shankar (1994)</a></li><li><a class="tocitem" href="../../10-comparisons/sympy_2026/">SymPy (2026)</a></li><li><a class="tocitem" href="../../10-comparisons/tait_1868/">Tait (1867 and 1868)</a></li><li><a class="tocitem" href="../../10-comparisons/thorne_1980/">Thorne (1980)</a></li><li><a class="tocitem" href="../../10-comparisons/torres_del_castillo_2003/">Torres del Castillo (2003)</a></li><li><a class="tocitem" href="../../10-comparisons/varshalovich_1988/">Varshalovich et al. (1988)</a></li><li><a class="tocitem" href="../../10-comparisons/whittaker_1947/">Whittaker (1904)</a></li><li><a class="tocitem" href="../../10-comparisons/wigner_1959/">Wigner (1959)</a></li><li><a class="tocitem" href="../../10-comparisons/wikipedia_2026/">Wikipedia (2026)</a></li><li><a class="tocitem" href="../../10-comparisons/wilson_1921/">Wilson (1929)</a></li><li><a class="tocitem" href="../../10-comparisons/zettili_2009/">Zettili (2009)</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-4-4" type="checkbox" checked/><label class="tocitem" for="menuitem-4-4"><span class="docs-label">Calculations</span><i class="docs-chevron"></i></label><ul class="collapsed"><li class="is-active"><a class="tocitem" href><span>$L_j$</span> and <span>$R_j$</span> with Euler angles</a><ul class="internal"><li><a class="tocitem" href="#Analytical-groundwork"><span>Analytical groundwork</span></a></li><li><a class="tocitem" href="#Computational-infrastructure"><span>Computational infrastructure</span></a></li><li><a class="tocitem" href="#euler_full_S3"><span>Full expressions on <span>$𝕊³$</span></span></a></li><li><a class="tocitem" href="#Commutators"><span>Commutators</span></a></li><li><a class="tocitem" href="#euler_standard_S2"><span>Standard expressions on <span>$𝕊²$</span></span></a></li></ul></li><li><a class="tocitem" href="../metrics_and_integration/">Metrics and integration</a></li></ul></li></ul></li><li><span class="tocitem">API</span><ul><li><a class="tocitem" href="../../../40-api/01-internal/">Internal functions</a></li><li><a class="tocitem" href="../../../40-api/02-functions/">Complete function list</a></li></ul></li><li><span class="tocitem">Notes</span><ul><li><a class="tocitem" href="../../../50-notes/01-H_recurrence/">Algorithm for computing <span>$H$</span> (redesigned)</a></li><li><a class="tocitem" href="../../../50-notes/02-H_recursions/">Algorithm for computing <span>$H$</span></a></li><li><a class="tocitem" href="../../../50-notes/03-normalization/">Normalization</a></li><li><a class="tocitem" href="../../../50-notes/04-sampling_theorems/">Sampling theorems and transformations of spin-weighted spherical harmonics</a></li></ul></li><li><span class="tocitem">Development</span><ul><li><a class="tocitem" href="../../../60-development/01-index/">Common development tasks</a></li><li><a class="tocitem" href="../../../60-development/02-literate_testitems/">Literate TestItems</a></li></ul></li><li><a class="tocitem" href="../../../index_of_docstrings/">Index of docstrings</a></li><li><a class="tocitem" href="../../../references/">References</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Conventions</a></li><li><a class="is-disabled">Calculations</a></li><li class="is-active"><a href><span>$L_j$</span> and <span>$R_j$</span> with Euler angles</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href><span>$L_j$</span> and <span>$R_j$</span> with Euler angles</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/moble/SphericalFunctions.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/moble/SphericalFunctions.jl/blob/main/docs/literate_input/30-conventions/20-calculations/euler_angular_momentum.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="euler_angular_momentum"><a class="docs-heading-anchor" href="#euler_angular_momentum"><span>$L_j$</span> and <span>$R_j$</span> with Euler angles</a><a id="euler_angular_momentum-1"></a><a class="docs-heading-anchor-permalink" href="#euler_angular_momentum" title="Permalink"></a></h1><p>This package defines the angular-momentum operators <span>$L_j$</span> and <span>$R_j$</span> in terms of elements of the Lie group and algebra:</p><p class="math-container">\[L_𝐮 f(𝐑) = \left. i \frac{d}{dϵ}\right|_{ϵ=0}
+f\left(e^{-ϵ 𝐮/2}\, 𝐑\right)
+\qquad \text{and} \qquad
+R_𝐮 f(𝐑) = -\left. i \frac{d}{dϵ}\right|_{ϵ=0}
+f\left(𝐑\, e^{-ϵ 𝐮/2}\right),\]</p><p>This is certainly the natural realm for these operators, but it is not the common one.  In particular, virtually all textbooks and papers on the subject define these operators in terms of the standard spherical coordinates on the 2-sphere, rather than quaternions or even Euler angles.  In particular, the standard forms are essentially always given in terms of the Cartesian basis, as in <span>$L_x$</span>, <span>$L_y$</span>, and <span>$L_z$</span> — though the first two are often combined so that they can be expressed as <span>$L_{\pm} = L_x \pm i L_y$</span>.</p><p>Here, we will use SymPy to just grind through the algebra of expressing the angular-momentum operators in terms of Euler angles, including evaluating the commutators in that form, and further reduce them to operators in terms of spherical coordinates.  We will find a couple important results that help make contact with more standard expressions:</p><ol><li>Our results for <span>$L_x$</span>, <span>$L_y$</span>, and <span>$L_z$</span> in spherical coordinates agree with standard expressions.</li><li>The commutators obey <span>$[L_x, L_y] = i L_z$</span> and cyclic permutations, in agreement with the standard expressions.</li><li>We also find <span>$[R_x, R_y] = i R_z$</span> and cyclic permutations.</li><li>We can explicitly compute <span>$[L_i, R_j] = 0$</span>, as expected.</li><li>Using the natural extension of Goldberg et al.&#39;s SWSHs to include <span>$γ$</span>, we can see that the natural spin-weight operator is <span>$R_z = i \partial_γ$</span>.  Thus, we define <span>$R_z = s$</span> for a function with spin weight <span>$s$</span>.</li><li>The spin-raising operator for <span>$R_z$</span> is <span>$\eth = R_+ = R_x + i R_y$</span>; Newman–Penrose&#39;s spin-lowering operator is <span>$\bar{\eth} = -R_- = -(R_x - i R_y)$</span>, with the sign explained below.</li></ol><div class="admonition is-info" id="Note-46070589f2d0ec73"><header class="admonition-header">Note<a class="admonition-anchor" href="#Note-46070589f2d0ec73" title="Permalink"></a></header><div class="admonition-body"><p>This page is <em>only</em> here to show the comparisons between this package&#39;s conventions and more standard ones in the literature.  Nothing within this package relies on Euler angles to do calculations in any way.</p></div></div><h2 id="Analytical-groundwork"><a class="docs-heading-anchor" href="#Analytical-groundwork">Analytical groundwork</a><a id="Analytical-groundwork-1"></a><a class="docs-heading-anchor-permalink" href="#Analytical-groundwork" title="Permalink"></a></h2><p>We start by defining a new set of Euler angles — depending on whether we are interested in the left- or right-Lie derivative, respectively — according to either</p><p class="math-container">\[𝐑_{α&#39;, β&#39;, γ&#39;}
+= e^{-ϵ 𝐮 / 2} 𝐑_{α, β, γ}
+\qquad \text{or} \qquad
+𝐑_{α&#39;, β&#39;, γ&#39;}
+= 𝐑_{α, β, γ} e^{-ϵ 𝐮 / 2},\]</p><p>respectively.  Here, <span>$𝐮$</span> will be each of the basis quaternions, and each of <span>$α&#39;$</span>, <span>$β&#39;$</span>, and <span>$γ&#39;$</span> is a function of <span>$α$</span>, <span>$β$</span>, <span>$γ$</span>, and <span>$ϵ$</span>.  Then, we note that the chain rule tells us that</p><p class="math-container">\[\frac{\partial}{\partial ϵ}
+=
+\frac{\partial α&#39;}{\partial ϵ} \frac{\partial}{\partial α&#39;}
++ \frac{\partial β&#39;}{\partial ϵ} \frac{\partial}{\partial β&#39;}
++ \frac{\partial γ&#39;}{\partial ϵ} \frac{\partial}{\partial γ&#39;},\]</p><p>which we will use to convert the general expression for the angular-momentum operators in terms of <span>$\partial_ϵ$</span> into an expression in terms of derivatives with respect to these new Euler angles:</p><p class="math-container">\[\begin{align}
+  L_j f(𝐑_{α, β, γ})
+  &amp;=
+  \left. i \frac{\partial} {\partial ϵ} f \left( e^{-ϵ 𝐞_j / 2}
+  𝐑_{α, β, γ} \right) \right|_{ϵ=0}
+  \\
+  &amp;=
+  i \left[ \left(
+      \frac{\partial α&#39;}{\partial ϵ} \frac{\partial}{\partial α&#39;}
+      + \frac{\partial β&#39;}{\partial ϵ} \frac{\partial}{\partial β&#39;}
+      + \frac{\partial γ&#39;}{\partial ϵ} \frac{\partial}{\partial γ&#39;}
+  \right) f \left(α&#39;, β&#39;, γ&#39;\right) \right]_{ϵ=0}
+  \\
+  &amp;=
+  i \left[ \left(
+      \frac{\partial α&#39;}{\partial ϵ} \frac{\partial}{\partial α}
+      + \frac{\partial β&#39;}{\partial ϵ} \frac{\partial}{\partial β}
+      + \frac{\partial γ&#39;}{\partial ϵ} \frac{\partial}{\partial γ}
+  \right) f \left(α, β, γ\right) \right]_{ϵ=0},
+\end{align}\]</p><p>or for <span>$R_j$</span>:</p><p class="math-container">\[\begin{align}
+  R_j f(𝐑_{α, β, γ})
+  &amp;=
+  -\left. i \frac{\partial} {\partial ϵ} f \left( 𝐑_{α, β, γ}
+  e^{-ϵ 𝐞_j / 2} \right) \right|_{ϵ=0}
+  \\
+  &amp;=
+  -i \left[ \left(
+      \frac{\partial α&#39;}{\partial ϵ} \frac{\partial}{\partial α}
+      + \frac{\partial β&#39;}{\partial ϵ} \frac{\partial}{\partial β}
+      + \frac{\partial γ&#39;}{\partial ϵ} \frac{\partial}{\partial γ}
+  \right) f \left(α, β, γ\right) \right]_{ϵ=0}.
+\end{align}\]</p><p>So the objective is to find the new Euler angles, differentiate with respect to <span>$ϵ$</span>, and then evaluate at <span>$ϵ = 0$</span>.  We do this by first multiplying <span>$𝐑_{α, β, γ}$</span> and <span>$e^{-ϵ 𝐮 / 2}$</span> in the desired order, then expanding the results in terms of its quaternion components, and then computing the new Euler angles in terms of those components according to the usual expression.</p><h2 id="Computational-infrastructure"><a class="docs-heading-anchor" href="#Computational-infrastructure">Computational infrastructure</a><a id="Computational-infrastructure-1"></a><a class="docs-heading-anchor-permalink" href="#Computational-infrastructure" title="Permalink"></a></h2><p>We&#39;ll use SymPy (via Julia) since <code>Symbolics.jl</code> isn&#39;t very good at trig yet.</p><pre><code class="language-julia hljs">import Memoization: @memoize
+import LaTeXStrings: @L_str, LaTeXString
+import Quaternionic: Quaternionic, Quaternion, components
+import SymPyPythonCall
+import SymPyPythonCall: sympy, symbols, sqrt, sin, cos, tan, acos, atan, latex
+const expand_trig = sympy.expand_trig
+const Derivative = sympy.Derivative
+const π = sympy.pi
+const I = sympy.I</code></pre><p>Define symbols we will use throughout</p><pre><code class="language-julia hljs">α, β, γ, θ, ϕ, ϵ = symbols(&quot;α β γ θ ϕ ϵ&quot;, real=true, positive=true)
+f = symbols(&quot;f&quot;, cls=SymPyPythonCall.sympy.o.Function)</code></pre><p>Reinterpret the quaternion basis elements for compatibility with SymPy.  (<code>Quaternionic</code> defines the basis with <code>Bool</code> components, but SymPy can&#39;t handle that.)</p><pre><code class="language-julia hljs">const 𝐢 = Quaternion{Int}(Quaternionic.𝐢)
+const 𝐣 = Quaternion{Int}(Quaternionic.𝐣)
+const 𝐤 = Quaternion{Int}(Quaternionic.𝐤)</code></pre><p>Next, we define functions to compute the Euler components of the left and right operators</p><pre><code class="language-julia hljs">@memoize function 𝒪(u, side)
+    # Substitutions that sympy doesn&#39;t make but we want
+    subs = Dict(
+        cos(β)/sin(β) =&gt; 1/tan(β),
+        sqrt(1 - cos(β))*sqrt(cos(β) + 1) =&gt; sin(β)
+    )
+
+    # Define the essential quaternions
+    e = cos(ϵ/2) + u * sin(-ϵ/2)
+    R₀ = Quaternion(sympy.simplify.(sympy.expand.(components(
+        (cos(α/2) + 𝐤 * sin(α/2)) * (cos(β/2) + 𝐣 * sin(β/2)) * (cos(γ/2) + 𝐤 * sin(γ/2))
+    ))))
+
+    # Extract the (simplified) components of the product
+    w, x, y, z = sympy.simplify.(sympy.expand.(components(
+        side == :left ? e * R₀ : R₀ * e
+    )))
+
+    # Convert back to Euler angles
+    α′ = (atan(z/w) + atan(-x/y)).expand().simplify()
+    β′ = (2*acos(sqrt(w^2 + z^2) / sqrt(w^2 + x^2 + y^2 + z^2))).expand().simplify()
+    γ′ = (atan(z/w) - atan(-x/y)).expand().simplify()
+
+    # Differentiate with respect to ϵ, set ϵ to 0, and simplify
+    ∂α′∂ϵ = expand_trig(Derivative(α′, ϵ).doit().subs(ϵ, 0).expand().simplify().subs(subs))
+    ∂β′∂ϵ = expand_trig(Derivative(β′, ϵ).doit().subs(ϵ, 0).expand().simplify().subs(subs))
+    ∂γ′∂ϵ = expand_trig(Derivative(γ′, ϵ).doit().subs(ϵ, 0).expand().simplify().subs(subs))
+
+    return ∂α′∂ϵ, ∂β′∂ϵ, ∂γ′∂ϵ
+end
+
+# Note that we are not including the factor of ``i`` here; for simplicity, we will insert
+# it manually when displaying the results below, and when applying these operators to
+# functions (`Lx` and related definitions below).
+L(u) = 𝒪(u, :left)
+R(u) = 𝒪(u, :right)</code></pre><p>We need a couple quick helper macros to display the results. The details are boring, but you can expand the source code to see them.</p><details>
+<summary>
+Click here to expand the source code for display macros
+</summary><pre><code class="language-julia hljs">macro display(expr)
+    op = string(expr.args[1])
+    arg = Dict(:𝐢 =&gt; &quot;x&quot;, :𝐣 =&gt; &quot;y&quot;, :𝐤 =&gt; &quot;z&quot;)[expr.args[2]]
+    if op == &quot;L&quot;
+        quote
+            ∂α′∂ϵ, ∂β′∂ϵ, ∂γ′∂ϵ = latex.($expr)  # Call expr; format results as LaTeX
+            expr = $op * &quot;_&quot; * $arg  # Standard form of the operator
+            L&quot;&quot;&quot;%$expr = i\left[
+                %$(∂α′∂ϵ) \frac{\partial}{\partial α}
+                + %$(∂β′∂ϵ) \frac{\partial}{\partial β}
+                + %$(∂γ′∂ϵ) \frac{\partial}{\partial γ}
+            \right]&quot;&quot;&quot;  # Display the result in LaTeX form
+        end
+    else
+        quote
+            ∂α′∂ϵ, ∂β′∂ϵ, ∂γ′∂ϵ = latex.($expr)  # Call expr; format results as LaTeX
+            expr = $op * &quot;_&quot; * $arg  # Standard form of the operator
+            L&quot;&quot;&quot;%$expr = -i\left[
+                %$(∂α′∂ϵ) \frac{\partial}{\partial α}
+                + %$(∂β′∂ϵ) \frac{\partial}{\partial β}
+                + %$(∂γ′∂ϵ) \frac{\partial}{\partial γ}
+            \right]&quot;&quot;&quot;  # Display the result in LaTeX form
+        end
+    end
+end</code></pre><p>And we&#39;ll need another for the angular-momentum operators in standard <span>$𝕊²$</span> form.</p><pre><code class="language-julia hljs">conversion(∂) = ∂.subs(Dict(α =&gt; ϕ, β =&gt; θ, γ =&gt; 0)).simplify()
+macro display2(expr)
+    op = string(expr.args[1])
+    element = expr.args[2]
+    arg = Dict(:𝐢 =&gt; &quot;x&quot;, :𝐣 =&gt; &quot;y&quot;, :𝐤 =&gt; &quot;z&quot;, :+ =&gt; &quot;+&quot;, :- =&gt; &quot;-&quot;)[element]
+    @info element
+    if op == &quot;L&quot; &amp;&amp; arg ∈ (&quot;+&quot;, &quot;-&quot;)
+        quote
+            ∂φ′∂ϵ, ∂ϑ′∂ϵ, ∂γ′∂ϵ = (
+                (
+                    ($element)(I * $conversion(i), -$conversion(j)).rewrite(exp)
+                    / exp(($element)(I) * ϕ)
+                ).simplify()
+                for (i, j) ∈ zip(L(𝐢), L(𝐣))
+            )
+            expr = $op * &quot;_&quot; * $arg  # Standard form of the operator
+            expsign = ($arg==&quot;+&quot; ? &quot;&quot; : &quot;-&quot;)
+            L&quot;&quot;&quot;%$expr = e^{%$expsign i ϕ} \left[
+                %$(∂ϑ′∂ϵ) \frac{\partial}{\partial θ}
+                + %$(∂φ′∂ϵ) \frac{\partial}{\partial ϕ}
+            \right]&quot;&quot;&quot;  # Display the result in LaTeX form
+        end
+    elseif op == &quot;L&quot;
+        quote
+            ∂φ′∂ϵ, ∂ϑ′∂ϵ, ∂γ′∂ϵ = latex.($conversion.($expr))  # Call expr; format as LaTeX
+            expr = $op * &quot;_&quot; * $arg  # Standard form of the operator
+            L&quot;&quot;&quot;%$expr = i\left[
+                %$(∂ϑ′∂ϵ) \frac{\partial}{\partial θ}
+                + %$(∂φ′∂ϵ) \frac{\partial}{\partial ϕ}
+            \right]&quot;&quot;&quot;  # Display the result in LaTeX form
+        end
+    else
+        quote
+            ∂φ′∂ϵ, ∂ϑ′∂ϵ, ∂γ′∂ϵ = latex.($conversion.($expr))  # Call expr; format as LaTeX
+            expr = $op * &quot;_&quot; * $arg  # Standard form of the operator
+            L&quot;&quot;&quot;%$expr = -i\left[
+                %$(∂ϑ′∂ϵ) \frac{\partial}{\partial θ}
+                + %$(∂φ′∂ϵ) \frac{\partial}{\partial ϕ}
+                + %$(∂γ′∂ϵ) \frac{\partial}{\partial γ}
+            \right]&quot;&quot;&quot;  # Display the result in LaTeX form
+        end
+    end
+end</code></pre></details><h2 id="euler_full_S3"><a class="docs-heading-anchor" href="#euler_full_S3">Full expressions on <span>$𝕊³$</span></a><a id="euler_full_S3-1"></a><a class="docs-heading-anchor-permalink" href="#euler_full_S3" title="Permalink"></a></h2><p>Finally, we can actually compute the Euler components of the angular momentum operators.</p><h3 id="euler_L_S3"><a class="docs-heading-anchor" href="#euler_L_S3"><span>$L$</span> operators in terms of Euler angles</a><a id="euler_L_S3-1"></a><a class="docs-heading-anchor-permalink" href="#euler_L_S3" title="Permalink"></a></h3><pre><code class="language-julia hljs">@display L(𝐢)</code></pre><p class="math-container">\[L_x = i\left[
+    \frac{\cos{\left(α \right)} \cos{\left(β \right)}}{\sin{\left(β \right)}} \frac{\partial}{\partial α}
+    + \sin{\left(α \right)} \frac{\partial}{\partial β}
+    + - \frac{\cos{\left(α \right)}}{\sin{\left(β \right)}} \frac{\partial}{\partial γ}
+\right]\]</p><pre><code class="language-julia hljs">@display L(𝐣)</code></pre><p class="math-container">\[L_y = i\left[
+    \frac{\sin{\left(α \right)} \cos{\left(β \right)}}{\sin{\left(β \right)}} \frac{\partial}{\partial α}
+    + - \cos{\left(α \right)} \frac{\partial}{\partial β}
+    + - \frac{\sin{\left(α \right)}}{\sin{\left(β \right)}} \frac{\partial}{\partial γ}
+\right]\]</p><pre><code class="language-julia hljs">@display L(𝐤)</code></pre><p class="math-container">\[L_z = i\left[
+    -1 \frac{\partial}{\partial α}
+    + 0 \frac{\partial}{\partial β}
+    + 0 \frac{\partial}{\partial γ}
+\right]\]</p><h3 id="euler_R_S3"><a class="docs-heading-anchor" href="#euler_R_S3"><span>$R$</span> operators in terms of Euler angles</a><a id="euler_R_S3-1"></a><a class="docs-heading-anchor-permalink" href="#euler_R_S3" title="Permalink"></a></h3><pre><code class="language-julia hljs">@display R(𝐢)</code></pre><p class="math-container">\[R_x = -i\left[
+    \frac{\cos{\left(γ \right)}}{\sin{\left(β \right)}} \frac{\partial}{\partial α}
+    + - \sin{\left(γ \right)} \frac{\partial}{\partial β}
+    + - \frac{\cos{\left(β \right)} \cos{\left(γ \right)}}{\sin{\left(β \right)}} \frac{\partial}{\partial γ}
+\right]\]</p><pre><code class="language-julia hljs">@display R(𝐣)</code></pre><p class="math-container">\[R_y = -i\left[
+    - \frac{\sin{\left(γ \right)}}{\sin{\left(β \right)}} \frac{\partial}{\partial α}
+    + - \cos{\left(γ \right)} \frac{\partial}{\partial β}
+    + \frac{\sin{\left(γ \right)} \cos{\left(β \right)}}{\sin{\left(β \right)}} \frac{\partial}{\partial γ}
+\right]\]</p><pre><code class="language-julia hljs">@display R(𝐤)</code></pre><p class="math-container">\[R_z = -i\left[
+    0 \frac{\partial}{\partial α}
+    + 0 \frac{\partial}{\partial β}
+    + -1 \frac{\partial}{\partial γ}
+\right]\]</p><p>In their description of the Wigner 𝔇 functions as wave functions of a rigid symmetric top, <a href="../../../references/#Varshalovich_1988" id="Varshalovich_1988-cite-2">Varshalovich <em>et al.</em> [52]</a> provide equivalent expressions in Eqs. (6) and (7) of their Sec. 4.2 — except that <span>$R_x$</span> and <span>$R_z$</span> have the wrong signs. <a href="https://en.wikipedia.org/wiki/Wigner_D-matrix#Properties_of_the_Wigner_D-matrix">Wikipedia</a>, meanwhile, provides equivalent expressions, except that their <span>$\hat{𝒫}$</span> has (consistently) the opposite sign to <span>$R$</span> defined here.</p><p>Note that the Wikipedia convention is actually entirely sensible — maybe more sensible than the one we use.  In that convention <span>$\hat{J}$</span> is in the inertial frame, whereas <span>$\hat{P}$</span> is exactly that operator in the body-fixed frame.  In our notation, we have</p><p class="math-container">\[\begin{align}
+R_𝐮 f(𝐑)
+&amp;=
+-\left. i \frac{d}{dϵ}\right|_{ϵ=0} f\left(𝐑\, e^{-ϵ 𝐮/2}\right) \\
+&amp;=
+-\left. i \frac{d}{dϵ}\right|_{ϵ=0}
+  f\left(𝐑\, e^{-ϵ 𝐮/2}\, 𝐑^{-1}\, 𝐑\right) \\
+&amp;=
+-\left. i \frac{d}{dϵ}\right|_{ϵ=0}
+  f\left(e^{-ϵ 𝐑\, 𝐮\, 𝐑^{-1}/2}\, 𝐑\right) \\
+&amp;=
+-L_{𝐑\, 𝐮\, 𝐑^{-1}} f(𝐑),
+\end{align}\]</p><p>which says that <span>$R$</span> is just the <em>negative of</em> the <span>$L$</span> operator transformed to the body-fixed frame.  That negative sign is slightly unnatural, but the reason we choose to define <span>$R$</span> in this way is for its more natural connection to the literature on spin-weighted spherical functions.  Also, <span>$R$</span> defined here obeys the same commutation relations as the standard angular-momentum operators, whereas the Wikipedia convention leads to &quot;anomalous&quot; commutation relations with an extra minus sign.</p><h2 id="Commutators"><a class="docs-heading-anchor" href="#Commutators">Commutators</a><a id="Commutators-1"></a><a class="docs-heading-anchor-permalink" href="#Commutators" title="Permalink"></a></h2><p>We can also compute the commutators of the angular momentum operators, as derived above. First, we define the operators acting on functions of the Euler angles.  Note that this function differs from the one above because it explicitly takes the function <span>$f$</span> and the Euler angles as arguments — which will be necessary to compute the commutators.</p><pre><code class="language-julia hljs">function 𝒪(u, side, f, α, β, γ)
+    let O = 𝒪(u, side)
+        (side==:left ? I : -I) * (
+            O[1] * f(α, β, γ).diff(α)
+            + O[2] * f(α, β, γ).diff(β)
+            + O[3] * f(α, β, γ).diff(γ)
+        )
+    end
+end
+
+Lx(f, α, β, γ) = 𝒪(𝐢, :left, f, α, β, γ)
+Ly(f, α, β, γ) = 𝒪(𝐣, :left, f, α, β, γ)
+Lz(f, α, β, γ) = 𝒪(𝐤, :left, f, α, β, γ)
+
+Rx(f, α, β, γ) = 𝒪(𝐢, :right, f, α, β, γ)
+Ry(f, α, β, γ) = 𝒪(𝐣, :right, f, α, β, γ)
+Rz(f, α, β, γ) = 𝒪(𝐤, :right, f, α, β, γ)</code></pre><p>Now we define their commutator <span>$[O₁, O₂] = O₁O₂ - O₂O₁$</span>:</p><pre><code class="language-julia hljs">function commutator(O₁, O₂)
+    (
+        O₁((α, β, γ)-&gt;O₂(f, α, β, γ), α, β, γ)
+        - O₂((α, β, γ)-&gt;O₁(f, α, β, γ), α, β, γ)
+    ).expand().simplify()
+end</code></pre><p>And finally, evaluate each in turn.  We expect <span>$[L_x, L_y] = i L_z$</span> and cyclic permutations:</p><h3 id="L-commutators-in-Euler-angles"><a class="docs-heading-anchor" href="#L-commutators-in-Euler-angles"><span>$L$</span> commutators in Euler angles</a><a id="L-commutators-in-Euler-angles-1"></a><a class="docs-heading-anchor-permalink" href="#L-commutators-in-Euler-angles" title="Permalink"></a></h3><pre><code class="language-julia hljs">commutator(Lx, Ly)</code></pre><p class="math-container">\[\frac{\partial}{\partial α} f{\left(α,β,γ \right)}\]</p><p>which equals <span>$i L_z$</span>,</p><pre><code class="language-julia hljs">commutator(Ly, Lz)</code></pre><p class="math-container">\[- \sin{\left(α \right)} \frac{\partial}{\partial β} f{\left(α,β,γ \right)} - \frac{\cos{\left(α \right)} \frac{\partial}{\partial α} f{\left(α,β,γ \right)}}{\tan{\left(β \right)}} + \frac{\cos{\left(α \right)} \frac{\partial}{\partial γ} f{\left(α,β,γ \right)}}{\sin{\left(β \right)}}\]</p><p>which equals <span>$i L_x$</span>, and</p><pre><code class="language-julia hljs">commutator(Lz, Lx)</code></pre><p class="math-container">\[- \frac{\sin{\left(α \right)} \frac{\partial}{\partial α} f{\left(α,β,γ \right)}}{\tan{\left(β \right)}} + \frac{\sin{\left(α \right)} \frac{\partial}{\partial γ} f{\left(α,β,γ \right)}}{\sin{\left(β \right)}} + \cos{\left(α \right)} \frac{\partial}{\partial β} f{\left(α,β,γ \right)}\]</p><p>which equals <span>$i L_y$</span>.  Similarly, we expect <span>$[R_x, R_y] = i R_z$</span> and cyclic permutations:</p><h3 id="R-commutators-in-Euler-angles"><a class="docs-heading-anchor" href="#R-commutators-in-Euler-angles"><span>$R$</span> commutators in Euler angles</a><a id="R-commutators-in-Euler-angles-1"></a><a class="docs-heading-anchor-permalink" href="#R-commutators-in-Euler-angles" title="Permalink"></a></h3><pre><code class="language-julia hljs">commutator(Rx, Ry)</code></pre><p class="math-container">\[- \frac{\partial}{\partial γ} f{\left(α,β,γ \right)}\]</p><p>which equals <span>$i R_z$</span>,</p><pre><code class="language-julia hljs">commutator(Ry, Rz)</code></pre><p class="math-container">\[- \sin{\left(γ \right)} \frac{\partial}{\partial β} f{\left(α,β,γ \right)} - \frac{\cos{\left(γ \right)} \frac{\partial}{\partial γ} f{\left(α,β,γ \right)}}{\tan{\left(β \right)}} + \frac{\cos{\left(γ \right)} \frac{\partial}{\partial α} f{\left(α,β,γ \right)}}{\sin{\left(β \right)}}\]</p><p>which equals <span>$i R_x$</span>, and</p><pre><code class="language-julia hljs">commutator(Rz, Rx)</code></pre><p class="math-container">\[\frac{\sin{\left(γ \right)} \frac{\partial}{\partial γ} f{\left(α,β,γ \right)}}{\tan{\left(β \right)}} - \cos{\left(γ \right)} \frac{\partial}{\partial β} f{\left(α,β,γ \right)} - \frac{\sin{\left(γ \right)} \frac{\partial}{\partial α} f{\left(α,β,γ \right)}}{\sin{\left(β \right)}}\]</p><p>which equals <span>$i R_y$</span> — all as expected.</p><p>Just for completeness, let&#39;s evaluate the commutators of the left and right operators, which should all be zero.</p><h3 id="L,R-commutators-in-Euler-angles"><a class="docs-heading-anchor" href="#L,R-commutators-in-Euler-angles"><span>$L,R$</span> commutators in Euler angles</a><a id="L,R-commutators-in-Euler-angles-1"></a><a class="docs-heading-anchor-permalink" href="#L,R-commutators-in-Euler-angles" title="Permalink"></a></h3><pre><code class="language-julia hljs">[commutator(L, R) for L ∈ (Lx, Ly, Lz), R ∈ (Rx, Ry, Rz)]</code></pre><p class="math-container">\[\left[\begin{smallmatrix}0 &amp; 0 &amp; 0\\0 &amp; 0 &amp; 0\\0 &amp; 0 &amp; 0\end{smallmatrix}\right]\]</p><p>This completes independent commutator results, which are all as we expect them to be.</p><h2 id="euler_standard_S2"><a class="docs-heading-anchor" href="#euler_standard_S2">Standard expressions on <span>$𝕊²$</span></a><a id="euler_standard_S2-1"></a><a class="docs-heading-anchor-permalink" href="#euler_standard_S2" title="Permalink"></a></h2><p>We can substitute <span>$(α, β, γ) \to (φ, θ, 0)$</span> to get the standard expressions for the angular momentum operators on the 2-sphere.</p><h3 id="L-operators-in-spherical-coordinates"><a class="docs-heading-anchor" href="#L-operators-in-spherical-coordinates"><span>$L$</span> operators in spherical coordinates</a><a id="L-operators-in-spherical-coordinates-1"></a><a class="docs-heading-anchor-permalink" href="#L-operators-in-spherical-coordinates" title="Permalink"></a></h3><pre><code class="language-julia hljs">@display2 L(𝐢)</code></pre><p class="math-container">\[L_x = i\left[
+    \sin{\left(ϕ \right)} \frac{\partial}{\partial θ}
+    + \frac{\cos{\left(ϕ \right)}}{\tan{\left(θ \right)}} \frac{\partial}{\partial ϕ}
+\right]\]</p><pre><code class="language-julia hljs">@display2 L(𝐣)</code></pre><p class="math-container">\[L_y = i\left[
+    - \cos{\left(ϕ \right)} \frac{\partial}{\partial θ}
+    + \frac{\sin{\left(ϕ \right)}}{\tan{\left(θ \right)}} \frac{\partial}{\partial ϕ}
+\right]\]</p><pre><code class="language-julia hljs">@display2 L(𝐤)</code></pre><p class="math-container">\[L_z = i\left[
+    0 \frac{\partial}{\partial θ}
+    + -1 \frac{\partial}{\partial ϕ}
+\right]\]</p><p>We can also provide the usual expressions for the raising and lowering operators in terms of spherical coordinates with <span>$L_{\pm} = L_x \pm i L_y$</span>:</p><h3 id="L_{\\pm}-operators-in-spherical-coordinates"><a class="docs-heading-anchor" href="#L_{\\pm}-operators-in-spherical-coordinates"><span>$L_{\pm}$</span> operators in spherical coordinates</a><a id="L_{\\pm}-operators-in-spherical-coordinates-1"></a><a class="docs-heading-anchor-permalink" href="#L_{\\pm}-operators-in-spherical-coordinates" title="Permalink"></a></h3><pre><code class="language-julia hljs">@display2 L(+)</code></pre><p class="math-container">\[L_+ = e^{ i ϕ} \left[
+    1 \frac{\partial}{\partial θ}
+    + I/tan(θ) \frac{\partial}{\partial ϕ}
+\right]\]</p><pre><code class="language-julia hljs">@display2 L(-)</code></pre><p class="math-container">\[L_- = e^{- i ϕ} \left[
+    -1 \frac{\partial}{\partial θ}
+    + I/tan(θ) \frac{\partial}{\partial ϕ}
+\right]\]</p><p>These are all indeed the standard expressions for the angular-momentum operators on the 2-sphere, as seen in numerous references, so we can declare compatibility between our unusual definition of <span>$L$</span> and more standard definitions.</p><p>Now, note that including <span>$\partial_γ$</span> for an expression on the 2-sphere doesn&#39;t actually make any sense: <span>$γ$</span> isn&#39;t even a coordinate for the 2-sphere!  However, for historical reasons (comparison to older references), it&#39;s included here when showing the results of the <span>$R$</span> operator in Euler angles.</p><h3 id="euler_R_S2"><a class="docs-heading-anchor" href="#euler_R_S2"><span>$R$</span> operators in &quot;spherical&quot; coordinates</a><a id="euler_R_S2-1"></a><a class="docs-heading-anchor-permalink" href="#euler_R_S2" title="Permalink"></a></h3><pre><code class="language-julia hljs">@display2 R(𝐢)</code></pre><p class="math-container">\[R_x = -i\left[
+    0 \frac{\partial}{\partial θ}
+    + \frac{1}{\sin{\left(θ \right)}} \frac{\partial}{\partial ϕ}
+    + - \frac{1}{\tan{\left(θ \right)}} \frac{\partial}{\partial γ}
+\right]\]</p><pre><code class="language-julia hljs">@display2 R(𝐣)</code></pre><p class="math-container">\[R_y = -i\left[
+    -1 \frac{\partial}{\partial θ}
+    + 0 \frac{\partial}{\partial ϕ}
+    + 0 \frac{\partial}{\partial γ}
+\right]\]</p><pre><code class="language-julia hljs">@display2 R(𝐤)</code></pre><p class="math-container">\[R_z = -i\left[
+    0 \frac{\partial}{\partial θ}
+    + 0 \frac{\partial}{\partial ϕ}
+    + -1 \frac{\partial}{\partial γ}
+\right]\]</p><p>We get nonzero components of <span>$\partial_γ$</span>, showing that these operators really <em>do not</em> make sense for the 2-sphere, and therefore that it doesn&#39;t actually make sense to define spin-weighted spherical functions on the 2-sphere; they really only make sense on the 3-sphere.  Nonetheless, if we stipulate that the function <span>$\eta$</span> has a specific spin weight, that means that <em>on the 3-sphere</em> it is an eigenfunction with <span>$R_z\eta = i\partial_γ \eta = s\eta$</span>.  So we could just substitute <span>$-i s$</span> for <span>$\partial_γ$</span> in the expressions above, and recover the standard spin-weight operators.  We get</p><p class="math-container">\[\left[R_x + i R_y\right] \eta
+= \left[
+    -i \frac{1}{\sin θ} \frac{\partial}{\partial ϕ}
+    + \frac{s}{\tan θ}
+    - \frac{\partial}{\partial θ}
+  \right] \eta
+= -(\sin θ)^s \left\{
+    \frac{\partial}{\partial θ}
+    +i \frac{1}{\sin θ} \frac{\partial}{\partial ϕ}
+  \right\}
+  \left\{ (\sin θ)^{-s} \eta \right\}.\]</p><p>And in the latter form, we can see that <span>$R_x + i R_y = R_+$</span> is exactly the spin-raising operator <span>$\eth$</span> as originally defined by <a href="../../../references/#Newman_1966" id="Newman_1966-cite-11">Newman and Penrose [4]</a> in their Eq. (3.8). Their spin-lowering operator <span>$\bar{\eth}$</span> is the complex-conjugate <em>operator</em> of <span>$\eth$</span>, i.e., <span>$\bar{\eth}\eta = \overline{\eth \bar{\eta}}$</span>.  Because <span>$R_x$</span> and <span>$R_y$</span> each include an explicit factor of <span>$i$</span>, conjugating the operator flips their signs, and we find</p><p class="math-container">\[\begin{gather}
+\bar{\eth} = -\left(R_x - i R_y\right) = -R_-,
+\\
+\bar{\eth}\eta
+= -\left[
+    i \frac{1}{\sin θ} \frac{\partial}{\partial ϕ}
+    + \frac{s}{\tan θ}
+    + \frac{\partial}{\partial θ}
+  \right] \eta
+= -(\sin θ)^{-s} \left\{
+    \frac{\partial}{\partial θ}
+    - i \frac{1}{\sin θ} \frac{\partial}{\partial ϕ}
+  \right\}
+  \left\{ (\sin θ)^{s} \eta \right\},
+\end{gather}\]</p><p>which is again exactly Newman and Penrose&#39;s Eq. (3.8).  The minus sign is real: <span>$R_-$</span> has the positive ladder coefficient of Condon–Shortley on the spin-weighted spherical harmonics, whereas <span>$\bar{\eth}$</span> lowers <span>$s$</span> with a negative coefficient — Eq. (2.7b) of <a href="../../../references/#GoldbergEtAl_1967" id="GoldbergEtAl_1967-cite-6">Goldberg <em>et al.</em> [3]</a>.  <em>By definition</em> of raising and lowering operators, <span>$[R_z, R_\pm] = \pm R_\pm$</span>, and therefore <span>$[R_z, \eth] = \eth$</span> and <span>$[R_z, \bar{\eth}] = -\bar{\eth}$</span>.  We can verify these results by computing the commutators directly from the expressions above:</p><p class="math-container">\[\begin{aligned}
+[R_z, R_x + i R_y]
+  &amp;= [R_z, R_x] + i [R_z, R_y] = i R_y - i i R_x = R_x + i R_y,
+\\
+[R_z, R_x - i R_y]
+  &amp;= [R_z, R_x] - i [R_z, R_y] = i R_y + i i R_x = -\left(R_x - i R_y\right).
+\end{aligned}\]</p><p>So we see that we&#39;ve reproduced precisely the standard expressions for the spin-weighted spherical functions (depicted as functions on the 2-sphere) from the expressions for the angular-momentum operators acting on general functions on the 3-sphere.  The standard expressions appear arbitrarily, and are not even well defined as functions on the 2-sphere because they also need input from tangent space of the sphere — which is not part of the 2-sphere proper.  (Although, as discussed elsewhere in this documentation, it <em>is</em> possible to define them on the spherical coordinate space <span>$I×𝕊¹$</span>.)  On the other hand, the expressions from the 3-sphere are mathematically and physically well defined and intuitive.  Note that the latter is complete in itself; it can stand alone without reference to the 2-sphere.  Rather, what we have done here is just shown the connection to the inadequate standard presentation.  But it is important to recognize that our complete treatment on <span>$\mathrm{Spin}(3)$</span> is the more fundamental one, and can be used without reference to the older treatment.</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../10-comparisons/zettili_2009/">« Zettili (2009)</a><a class="docs-footer-nextpage" href="../metrics_and_integration/">Metrics and integration »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Tuesday 22 September 2026 04:14">Tuesday 22 September 2026</span>. Using Julia version 1.13.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
