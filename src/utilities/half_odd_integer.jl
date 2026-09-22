@@ -334,7 +334,13 @@ end
 
 # Convert the index-valued keyword arguments of a public entry point.  Only the names that
 # are indices are touched; anything else (`Nᵣ`, say) is passed through untouched.
-const INDEX_KEYWORDS = (:m′ₘₐₓ, :m′ₘᵢₙ, :mₘₐₓ, :mₘᵢₙ, :mp_max, :mp_min, :m_max, :m_min)
+const INDEX_KEYWORDS = (
+    :m′ₘₐₓ, :m′ₘᵢₙ, :mₘₐₓ, :mₘᵢₙ, :mp_max, :mp_min, :m_max, :m_min,
+    # `SpinMatrix` and `SpinMatrixBatch` take their spin bounds by keyword, and those
+    # are indices of the same kind as the rest; without them the `Rational`-ℓ
+    # constructors hand an unconverted `Rational` to a method typed on `IT`.
+    :sₘₐₓ, :sₘᵢₙ, :s_max, :s_min,
+)
 function half_integer_kwargs(kwargs)
     pairs(NamedTuple(
         k => (k in INDEX_KEYWORDS ? half_integer(v) : v) for (k, v) in pairs(kwargs)

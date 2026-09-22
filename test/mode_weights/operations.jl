@@ -185,3 +185,44 @@ end
     @test inplace(out, ð, w) == 0
     @test out == ð * w
 end
+
+# Evaluation at many rotors at once, and the refusals on the evaluation side — the rotation
+# side is covered above, but `check_evaluation` has its own ℓ-range and spin-range checks,
+# and the kind mismatch is reported with the name of the kind the container actually holds.
+
+@testitem "Evaluating mode weights: many rotors, and the refusals" begin
+    using Quaternionic: Rotor, RotorF64
+    import SphericalFunctions: half_integer
+    using Random
+
+    rng = Random.Xoshiro(2026)
+    ℓₘₐₓ = 4
+    s, ℓₘᵢₙ = -2, 2
+    w = ModeWeights(randn(rng, ComplexF64, Ysize(ℓₘᵢₙ, ℓₘₐₓ)), s, ℓₘᵢₙ, ℓₘₐₓ)
+
+    # A vector of rotors evaluates at each, and agrees with evaluating one at a time
+    R⃗ = randn(rng, RotorF64, 5)
+    vals = w(R⃗)
+    @test length(vals) == length(R⃗)
+    for (i, R) ∈ enumerate(R⃗)
+        @test vals[i] ≈ w(R)
+    end
+    # A one-element vector still gives a vector, not a scalar
+    @test length(w(R⃗[1:1])) == 1
+
+    R = R⃗[1]
+
+    # A calculator whose ℓ range does not cover the weights says so, and names the fix
+    @test_throws "ℓ range of" sYlmCalculator(R, 2, s) * w
+    @test_throws "Build it with ℓₘₐₓ=4" sYlmCalculator(R, 2, s) * w
+
+    # A calculator that does not serve this spin weight says which ones it does
+    @test_throws "spin weight" sYlmCalculator(R, ℓₘₐₓ, 1) * w
+
+    # Mixing the two kinds of index is refused, and the message names the kind the container
+    # actually holds, which is what `index_kind_name` is for
+    wh = ModeWeights(randn(rng, ComplexF64, Ysize(1//2, 7//2)), 1//2)
+    @test_throws "must be of one kind" sYlmCalculator(R, ℓₘₐₓ, s) * wh
+    @test_throws "integers" sYlmCalculator(R, ℓₘₐₓ, s) * wh
+    @test_throws "half-odd-integers" sYlmCalculator(R, half_integer(7//2), half_integer(1//2)) * w
+end

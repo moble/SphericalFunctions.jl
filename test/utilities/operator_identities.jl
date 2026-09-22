@@ -1,4 +1,4 @@
-# Tests of the parts of `src/utilities/operators.jl` that carry no numbers.
+# Tests of the parts of `src/utilities/operators.jl` that compute no numbers.
 #
 # `test/operators.jl` and `test/utilities/explicit_operators.jl` check what the operators
 # compute.  What neither checks is that each operator can say what it *is*: its name, how it

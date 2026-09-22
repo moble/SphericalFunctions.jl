@@ -157,8 +157,17 @@ end
 @inline Base.in(::Real, ::WignerRange) = false
 # `Base` has `in(::Integer, ::AbstractUnitRange{<:Integer})`, which is neither more nor less
 # specific than either method above, so without this one `1 ∈ axes(w, 1)` on an
-# integer-indexed container is an ambiguity error rather than an answer.
+# integer-indexed container is an ambiguity error rather than an answer.  Aqua's ambiguity
+# check catches its absence.
 @inline Base.in(x::Integer, r::WignerRange{<:Integer}) = first(r) ≤ x ≤ last(r)
+# That one is deliberately loose — it has to cover `in(::Int8, ::WignerRange{Int})` and the
+# rest of the intersection with `Base`'s method — which leaves it ambiguous in turn with the
+# `IntegerHalf` method above whenever the value and the range share one integer type.  This
+# third method ties the two together and so is more specific than both, which settles it.
+# Aqua does *not* catch its absence: `Test.detect_ambiguities` reports nothing for that pair
+# on either Julia 1.12 or 1.13, even though `0 ∈ WignerRange(-2:3)` throws without it.  The
+# direct calls in `test/wigner/wigner_matrix.jl` are the only guard.
+@inline Base.in(x::T, r::WignerRange{T}) where {T<:Integer} = first(r) ≤ x ≤ last(r)
 
 
 ### Bounds checking

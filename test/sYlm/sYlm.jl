@@ -828,3 +828,54 @@ end
     # Half-integer ℓ has no spin-weight-zero analogue
     @test_throws MethodError YlmCalculator(R, 7//2)
 end
+
+# The items above check the values.  These cover the entry points and refusals around them:
+# the unweighted `Ylm` wrapper in its vector form, reusing a calculator for a different set of
+# rotors, and the three ways a call is turned away.
+
+@testitem "sYlm: the `Ylm` wrapper and the calculator refusals" begin
+    using Quaternionic: Rotor, RotorF64
+    import SphericalFunctions: Nᵣ, spins
+    using Random
+
+    rng = Random.Xoshiro(2026)
+    ℓₘₐₓ = 5
+    R = randn(rng, RotorF64)
+    R⃗ = randn(rng, RotorF64, 4)
+
+    # `Ylm` is `sYlm` at spin weight zero, for one rotor and for many
+    @test Ylm(R, ℓₘₐₓ) == sYlm(R, ℓₘₐₓ, 0)
+    @test Ylm(R⃗, ℓₘₐₓ) == sYlm(R⃗, ℓₘₐₓ, 0)
+    @test Ylm(R, ℓₘₐₓ; ℓₘᵢₙ=2) == sYlm(R, ℓₘₐₓ, 0; ℓₘᵢₙ=2)
+    @test Ylm(R⃗, ℓₘₐₓ; ℓₘᵢₙ=2) == sYlm(R⃗, ℓₘₐₓ, 0; ℓₘᵢₙ=2)
+    @test Nᵣ(Ylm(R⃗, ℓₘₐₓ)) == length(R⃗)
+    # ... and one rotor of the batch is the single-rotor answer
+    @test array_view(Ylm(R⃗, ℓₘₐₓ))[2, :] == array_view(Ylm(R⃗[2], ℓₘₐₓ))
+
+    # `similar(calc, R)` rebuilds a calculator around new rotor data, but only for the same
+    # number of rotors it was built to hold
+    c1 = sYlmCalculator(R, ℓₘₐₓ, 0)
+    @test Nᵣ(similar(c1, randn(rng, RotorF64))) == 1
+    @test_throws "handles Nᵣ=1" similar(c1, randn(rng, RotorF64, 3))
+    c4 = sYlmCalculator(R⃗, ℓₘₐₓ, 0)
+    @test Nᵣ(similar(c4, randn(rng, RotorF64, 4))) == 4
+    @test_throws "handles Nᵣ=4" similar(c4, randn(rng, RotorF64, 2))
+
+    # A calculator built for one spin weight refuses another, and names the ones it serves
+    cs = sYlmCalculator(R, ℓₘₐₓ, -2)
+    @test spins(cs) == -2:-2
+    @test_throws "not among them" sYlm!(zeros(ComplexF64, Ysize(1, ℓₘₐₓ)), cs, R, 1)
+
+    crange = sYlmCalculator(R, ℓₘₐₓ, -2:2)
+    @test spins(crange) == -2:2
+    # a spin weight inside the range is served, and agrees with computing it afresh
+    Y1 = sYlm!(zeros(ComplexF64, Ysize(1, ℓₘₐₓ)), crange, R, 1)
+    @test Y1 ≈ array_view(sYlm(R, ℓₘₐₓ, 1))
+    @test_throws "not among them" sYlm!(zeros(ComplexF64, Ysize(3, ℓₘₐₓ)), crange, R, 3)
+
+    # An output vector shorter than the modes it must hold is refused rather than truncated
+    needed = Ysize(0, ℓₘₐₓ)
+    @test length(sYlm!(zeros(ComplexF64, needed), c1, R, 0)) == needed
+    @test_throws "is needed" sYlm!(zeros(ComplexF64, needed - 1), c1, R, 0)
+    @test_throws "Output vector has length" sYlm!(zeros(ComplexF64, 3), c1, R, 0)
+end

@@ -1,7 +1,7 @@
 # Tests of the containers in `src/wigner/wigner_matrix.jl`.
 #
 # The calculators in `test/wigner/calculators.jl` and the harmonics in `test/sYlm/` build
-# these containers constantly, so the parts that carry numbers are well covered already.
+# these containers constantly, so the parts that hold numbers are well covered already.
 # What those tests never touch is the rest of the container interface: constructing one by
 # hand from storage, the errors that refuses, `copy`/`similar`/`==`/`iterate`, conversion to
 # a plain array, and display.  Each item below takes one container through that interface.
@@ -45,13 +45,16 @@
 
     # Membership is just the bracket, and a value of the other index kind is never a member.
     # Without the extra `in` methods, `1 ∈ r` is an ambiguity error rather than an answer.
-    # BROKEN: `in(x::Integer, r::WignerRange{<:Integer})` was added to resolve exactly this,
-    # but it is itself ambiguous with `in(x::T, r::WignerRange{T}) where {T<:IntegerHalf}`
-    # when `T<:Integer`, so the ambiguity the comment there describes is still thrown.  A
-    # method `in(x::T, r::WignerRange{T}) where {T<:Integer}` would be more specific than
-    # both candidates and would fix it.
-    @test_broken 0 ∈ r && -2 ∈ r && 3 ∈ r
-    @test_broken 4 ∉ r && -3 ∉ r
+    # These two are the regression test for the `in` ambiguity, which needs *two* guard
+    # methods and not one.  The loose `in(::Integer, ::WignerRange{<:Integer})` settles
+    # `in(::Real, ::WignerRange)` against `Base`'s `in(::Integer, ::AbstractUnitRange)`, and
+    # Aqua fails if it goes missing.  Being loose, it is then ambiguous in turn with the
+    # `IntegerHalf` method whenever the value and the range share one integer type, which
+    # `in(x::T, ::WignerRange{T}) where {T<:Integer}` settles by being more specific than
+    # both.  Aqua does not see that second pair — `Test.detect_ambiguities` reports nothing
+    # for it on either Julia 1.12 or 1.13 — so these direct calls are its only guard.
+    @test 0 ∈ r && -2 ∈ r && 3 ∈ r
+    @test 4 ∉ r && -3 ∉ r
     @test half_integer(1//2) ∉ r
     @test 0.5 ∉ r
     @test half_integer(1//2) ∈ h && half_integer(-3//2) ∈ h
@@ -419,16 +422,21 @@ end
     @test_throws "second dimension" SpinMatrixBatch(zeros(2, 3, 5), 2; sₘₐₓ=2, sₘᵢₙ=-2)
     @test_throws "third dimension" SpinMatrixBatch(zeros(2, 5, 3), 2; sₘₐₓ=2, sₘᵢₙ=-2)
 
-    # A `Rational` ℓ is converted, along with the keyword spin bounds
-    # BROKEN: `half_integer_kwargs` converts only the `m′`/`m` keywords — `INDEX_KEYWORDS`
-    # in `half_odd_integer.jl` omits `sₘₐₓ` and `sₘᵢₙ` — so the `Rational`-ℓ constructor
-    # passes the spin bounds through unconverted and the inner method rejects them with a
-    # `TypeError`.  These are the only two containers that take spin bounds, so the
-    # `Rational` convenience is unusable for both.
-    @test_broken SpinMatrix(zeros(4, 4), 3//2; sₘₐₓ=3//2, sₘᵢₙ=-3//2) isa SpinMatrix
-    @test_broken SpinMatrixBatch(zeros(2, 4, 4), 3//2; sₘₐₓ=3//2, sₘᵢₙ=-3//2) isa SpinMatrixBatch
+    # A `Rational` ℓ is converted, along with the keyword spin bounds The spin bounds are
+    # index keywords like any other, so `half_integer_kwargs` has to convert them: without
+    # `:sₘₐₓ`/`:sₘᵢₙ` in `INDEX_KEYWORDS` the `Rational`-ℓ constructor hands an unconverted
+    # `Rational` to a method typed on `IT` and throws a `TypeError`.  These two containers
+    # are the only ones that take spin bounds.
+    br = SpinMatrix(zeros(4, 4), 3//2; sₘₐₓ=3//2, sₘᵢₙ=-3//2)
+    @test br isa SpinMatrix
+    @test ℓ(br) == half_integer(3//2)
+    @test sₘₐₓ(br) == half_integer(3//2) && sₘᵢₙ(br) == half_integer(-3//2)
+    bbr = SpinMatrixBatch(zeros(2, 4, 4), 3//2; sₘₐₓ=3//2, sₘᵢₙ=-3//2)
+    @test bbr isa SpinMatrixBatch
+    @test ℓ(bbr) == half_integer(3//2)
+    @test sₘₐₓ(bbr) == half_integer(3//2) && sₘᵢₙ(bbr) == half_integer(-3//2)
 
-    # The `HalfOddInteger` spelling works, and is what the containers actually store
+    # ... and it agrees with the `HalfOddInteger` spelling, which is what they store
     b = SpinMatrix(zeros(4, 4), half_integer(3//2);
                    sₘₐₓ=half_integer(3//2), sₘᵢₙ=half_integer(-3//2))
     @test ℓ(b) == half_integer(3//2)

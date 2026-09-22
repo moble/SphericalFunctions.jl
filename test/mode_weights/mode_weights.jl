@@ -1326,3 +1326,105 @@ end
     @test ð(wi) isa ModeWeights{Float64, HalfOddInteger}
     @test spin(ð(wi)) === h(3//2)
 end
+
+# The items above cover construction, indexing, the operators and evaluation.  What is left
+# is the small change of the array interface that generic code reaches for — the dimension
+# queries, the conversions, the banded products and the unary operators — together with the
+# two-argument constructor that deduces `ℓₘₐₓ` from the length of the data.
+
+@testitem "ModeWeights: the rest of the array interface" begin
+    using LinearAlgebra: Bidiagonal, Tridiagonal, Diagonal, dot
+    import SphericalFunctions: ℓₘᵢₙ, ℓₘₐₓ, spin, half_integer
+    using Random
+
+    rng = Random.Xoshiro(2026)
+    s, lo, hi = -2, 2, 5
+    n = Ysize(lo, hi)
+    w = ModeWeights(randn(rng, ComplexF64, n), s, lo, hi)
+
+    # Dimension queries: a `ModeWeights` is one-dimensional, and trailing dimensions behave
+    # as they do for an ordinary vector
+    @test ndims(w) == 1
+    @test ndims(typeof(w)) == 1
+    @test size(w) == (n,) && size(w, 1) == n && size(w, 2) == 1
+    @test axes(w, 1) == Base.OneTo(n)
+    @test axes(w, 2) == Base.OneTo(1)
+    @test collect(keys(w)) == collect(1:n)
+    @test eachindex(w) == Base.OneTo(n)
+    @test firstindex(w) == 1 && lastindex(w) == n
+
+    # The three conversions all give the same plain vector
+    @test Array(w) == collect(w)
+    @test Vector(w) == collect(w)
+    @test Array(w) isa Vector{ComplexF64}
+    @test w[2:5] == collect(w)[2:5]
+
+    # Equality and `dot` both work with a plain vector on either side.  `dot` conjugates —
+    # it is deliberately *not* what evaluating the weights does.
+    v = collect(w)
+    @test isequal(v, w)
+    @test isequal(w, v)
+    @test v == w && w == v
+    @test dot(v, w) == dot(v, v)
+    @test dot(w, v) == dot(v, v)
+
+    # Unary plus is the identity, and unary minus negates
+    @test +w === w
+    @test collect(-w) == -v
+    @test spin(-w) == s && ℓₘᵢₙ(-w) == lo && ℓₘₐₓ(-w) == hi
+
+    # The banded matrices the operators produce all multiply a `ModeWeights`
+    d = randn(rng, ComplexF64, n)
+    @test Diagonal(d) * w == Diagonal(d) * v
+    B = Bidiagonal(d, randn(rng, ComplexF64, n-1), :U)
+    @test B * w == B * v
+    T3 = Tridiagonal(randn(rng, ComplexF64, n-1), d, randn(rng, ComplexF64, n-1))
+    @test T3 * w == T3 * v
+    # ... and multiplying on the other side is the outer product
+    @test w * reshape(v, 1, n) == v * reshape(v, 1, n)
+
+    # Broadcasting keeps the wrapper when the shape is unchanged, and the labels with it
+    b = w .+ 1
+    @test b isa ModeWeights
+    @test spin(b) == s && ℓₘᵢₙ(b) == lo && ℓₘₐₓ(b) == hi
+    @test collect(b) == v .+ 1
+    @test (2 .* w) isa ModeWeights
+    @test (w .+ w) isa ModeWeights
+    @test collect(w .* 2) == v .* 2
+end
+
+@testitem "ModeWeights: `ℓₘₐₓ` deduced from the length of the data" begin
+    import SphericalFunctions: ℓₘᵢₙ, ℓₘₐₓ, spin, half_integer
+    using Random
+
+    rng = Random.Xoshiro(11)
+
+    # Integer indices: (ℓₘₐₓ+1)² = length + ℓₘᵢₙ²
+    for s ∈ (-2, 0, 3), lo ∈ (abs(s), abs(s) + 1), hi ∈ (abs(s) + 2, abs(s) + 4)
+        data = randn(rng, ComplexF64, Ysize(lo, hi))
+        w = ModeWeights(data, s; ℓₘᵢₙ=lo)
+        @test spin(w) == s
+        @test ℓₘᵢₙ(w) == lo
+        @test ℓₘₐₓ(w) == hi                     # deduced, not given
+        @test w == ModeWeights(data, s, lo, hi)
+    end
+
+    # The default `ℓₘᵢₙ` is `abs(s)`
+    w = ModeWeights(randn(rng, ComplexF64, Ysize(2, 5)), -2)
+    @test ℓₘᵢₙ(w) == 2 && ℓₘₐₓ(w) == 5
+
+    # Half-odd-integer indices use the doubled form, and the root must square back exactly
+    for twos ∈ (-3, 1), twolo ∈ (abs(twos), abs(twos) + 2), twohi ∈ (abs(twos) + 2, abs(twos) + 6)
+        s, lo, hi = half_integer(twos//2), half_integer(twolo//2), half_integer(twohi//2)
+        data = randn(rng, ComplexF64, Ysize(lo, hi))
+        w = ModeWeights(data, s; ℓₘᵢₙ=lo)
+        @test spin(w) == s && ℓₘᵢₙ(w) == lo && ℓₘₐₓ(w) == hi
+    end
+
+    # A `Rational` spelling reaches the same place
+    wr = ModeWeights(randn(rng, ComplexF64, Ysize(half_integer(1//2), half_integer(7//2))), 1//2)
+    @test ℓₘᵢₙ(wr) == half_integer(1//2) && ℓₘₐₓ(wr) == half_integer(7//2)
+
+    # A length that no ℓₘₐₓ can produce is refused rather than silently rounded
+    @test_throws Exception ModeWeights(randn(rng, ComplexF64, 7), 0; ℓₘᵢₙ=0)
+end
