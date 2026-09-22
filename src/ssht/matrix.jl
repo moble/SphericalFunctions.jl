@@ -1,24 +1,24 @@
 """
     SSHTMatrix(s, ℓₘₐₓ; decomposition=LinearAlgebra.lu, T=Float64, Rθϕ=golden_ratio_spiral_rotors(s, ℓₘₐₓ, T), inplace=…)
 
-Construct an ``s``-SHT object that uses the "Matrix" method: the dense matrix of harmonics
+Construct an ``s``-SHT object that uses the "Matrix" method.  The dense matrix of harmonics
 [`sYlm_matrix`](@ref) evaluated at the rotors `Rθϕ` is stored, so that synthesis is a
 matrix-vector product and analysis is a linear solve using the given `decomposition` of that
 matrix.  Also see [`SSHT`](@ref) for general information about how to use these objects.
 
-By default, this uses precisely optimal sampling — meaning that the number of points on which
-the function is evaluated, represented by `Rθϕ`, is *equal to* the number of modes.  However,
-it is equally possible to evaluate on *more* points than there are modes, in which case the
-analysis is a least-squares solve.  This can be useful, for example, when processing multiple
-fields with different spin weights; the function could be evaluated on points appropriate
-for the lowest value of ``|s|``, and therefore could also be used to solve for fields of all
-other spin weights.
+By default, this uses precisely optimal sampling — meaning that the number of points on
+which the function is evaluated, represented by `Rθϕ`, is *equal to* the number of modes.
+However, it is equally possible to evaluate on *more* points than there are modes, in which
+case the analysis is a least-squares solve.  This can be useful, for example, when
+processing multiple fields with different spin weights; the function could be evaluated on
+points appropriate for the lowest value of ``|s|``, and therefore could also be used to
+solve for fields of all other spin weights.
 
 LU decomposition (`LinearAlgebra.lu`) is used by default for a square matrix; any function
-that decomposes the matrix into something capable of solving the linear problem may be passed
-as `decomposition`.  In particular, QR decomposition (`LinearAlgebra.qr`) will typically be
-around 3 times slower, but have an error level roughly 10 times lower; it is also the default
-when there are more points than modes.
+that decomposes the matrix into something capable of solving the linear problem may be
+passed as `decomposition`.  In particular, QR decomposition (`LinearAlgebra.qr`) will
+typically be around 3 times slower, but have an error level roughly 10 times lower; it is
+also the default when there are more points than modes.
 
 In-place operation is possible for this type when the length of the input `Rθϕ` is equal to
 the number of modes given `s` and `ℓₘₐₓ` — and is the default behavior when possible.  See

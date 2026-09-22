@@ -38,6 +38,9 @@ design memo, §5.2).  The single expression below serves both index types.
 """
     HWedge{IT, RT, ST} <: AbstractWignerMatrix{IT, RT, ST}
 
+A compact, real-valued workspace holding the ``Hˡ`` matrix of one ``ℓ`` for `Nᵣ` rotors at
+once.
+
 The ``Hˡ`` matrix is critical to efficient and stable computation of the Wigner ``D`` and
 ``d`` matrices — in fact, it essentially *is* the ``d`` matrix with signs adjusted to avoid
 numerical problems with alternating signs.  This gives it additional symmetries that reduce

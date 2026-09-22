@@ -190,9 +190,9 @@ Base.ndims(::Type{<:AbstractWignerMatrix}) = 2
 """
     Matrix(w::AbstractWignerMatrix)
 
-Materialize the block of the Wigner matrix represented by `w` as an ordinary `Matrix`, with
-rows and columns in order of increasing `m′` and `m` (so the element `w[m′, m]` is at
-`[Int(m′-m′ₘᵢₙ)+1, Int(m-mₘᵢₙ)+1]`).
+Materialize the block of the Wigner matrix represented by `w` as an ordinary `Matrix`.  The
+rows and columns are in order of increasing `m′` and `m`, so that the element `w[m′, m]` is
+at `[Int(m′-m′ₘᵢₙ)+1, Int(m-mₘᵢₙ)+1]`.
 """
 function Base.Matrix(w::AbstractWignerMatrix{IT, NT}) where {IT, NT}
     [w[m′, m] for m′ ∈ m′ₘᵢₙ(w):m′ₘₐₓ(w), m ∈ mₘᵢₙ(w):mₘₐₓ(w)]
@@ -403,8 +403,7 @@ A new `WignerMatrix` with the same ℓ and the same natural `(m′, m)` axes as 
 uninitialized storage of element type `T`.  The storage is a plain `Matrix` sized exactly to
 the block, even when `parent(w)` is a larger array or a view.
 """
-Base.similar(w::WignerMatrix) = similar(w, eltype(w))
-function Base.similar(w::WignerMatrix{IT}, ::Type{T}) where {IT, T}
+function Base.similar(w::WignerMatrix{IT}, ::Type{T}=eltype(w)) where {IT, T}
     let p = Matrix{T}(undef, size(w))
         WignerMatrix{IT, T, typeof(p)}(p, w.ℓ, w.m′ₘₐₓ, w.m′ₘᵢₙ, w.mₘₐₓ, w.mₘᵢₙ)
     end
@@ -515,8 +514,7 @@ end
 A new `WignerMatrixBatch` with the same ℓ, `Nᵣ`, and natural axes as `w`, with uninitialized
 storage of element type `T`.
 """
-Base.similar(w::WignerMatrixBatch) = similar(w, eltype(w))
-function Base.similar(w::WignerMatrixBatch{IT}, ::Type{T}) where {IT, T}
+function Base.similar(w::WignerMatrixBatch{IT}, ::Type{T}=eltype(w)) where {IT, T}
     let p = Array{T, 3}(undef, size(w))
         WignerMatrixBatch{IT, T, typeof(p)}(
             p, w.ℓ, w.m′ₘₐₓ, w.m′ₘᵢₙ, w.mₘₐₓ, w.mₘᵢₙ, w.Nᵣ
@@ -635,8 +633,7 @@ end
 A new `DegreeBlock` with the same ℓ and natural `m` axis as `v`, with uninitialized storage
 of element type `T`.
 """
-Base.similar(v::DegreeBlock) = similar(v, eltype(v))
-function Base.similar(v::DegreeBlock{IT}, ::Type{T}) where {IT, T}
+function Base.similar(v::DegreeBlock{IT}, ::Type{T}=eltype(v)) where {IT, T}
     let p = Vector{T}(undef, length(v))
         DegreeBlock{IT, T, typeof(p)}(p, v.ℓ, v.mₘₐₓ, v.mₘᵢₙ)
     end
@@ -740,8 +737,7 @@ end
 A new `DegreeBlockBatch` with the same ℓ, `Nᵣ`, and natural `m` axis as `v`, with
 uninitialized storage of element type `T`.
 """
-Base.similar(v::DegreeBlockBatch) = similar(v, eltype(v))
-function Base.similar(v::DegreeBlockBatch{IT}, ::Type{T}) where {IT, T}
+function Base.similar(v::DegreeBlockBatch{IT}, ::Type{T}=eltype(v)) where {IT, T}
     let p = Matrix{T}(undef, size(v))
         DegreeBlockBatch{IT, T, typeof(p)}(p, v.ℓ, v.mₘₐₓ, v.mₘᵢₙ, v.Nᵣ)
     end
@@ -884,8 +880,7 @@ A new `SpinMatrix` with the same ℓ and the same natural `(s, m)` axes as `b`, 
 uninitialized storage of element type `T`.  The storage is a plain `Matrix` sized exactly to
 the block, even when `parent(b)` is a larger array or a view.
 """
-Base.similar(b::SpinMatrix) = similar(b, eltype(b))
-function Base.similar(b::SpinMatrix{IT}, ::Type{T}) where {IT, T}
+function Base.similar(b::SpinMatrix{IT}, ::Type{T}=eltype(b)) where {IT, T}
     let p = Matrix{T}(undef, size(b))
         SpinMatrix{IT, T, typeof(p)}(p, b.ℓ, b.sₘₐₓ, b.sₘᵢₙ, b.mₘₐₓ, b.mₘᵢₙ)
     end
@@ -1053,8 +1048,7 @@ end
 A new `SpinMatrixBatch` with the same ℓ, `Nᵣ`, and natural `(s, m)` axes as `b`, with
 uninitialized storage of element type `T`.
 """
-Base.similar(b::SpinMatrixBatch) = similar(b, eltype(b))
-function Base.similar(b::SpinMatrixBatch{IT}, ::Type{T}) where {IT, T}
+function Base.similar(b::SpinMatrixBatch{IT}, ::Type{T}=eltype(b)) where {IT, T}
     let p = Array{T, 3}(undef, size(b))
         SpinMatrixBatch{IT, T, typeof(p)}(p, b.ℓ, b.sₘₐₓ, b.sₘᵢₙ, b.mₘₐₓ, b.mₘᵢₙ, b.Nᵣ)
     end

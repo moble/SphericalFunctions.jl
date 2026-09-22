@@ -13,20 +13,10 @@ using Documenter
 using Literate
 using DocumenterCitations
 using DocumenterInterLinks
-
-links = InterLinks(
-    "Quaternionic" => "https://moble.github.io/Quaternionic.jl/stable/",
-    "Julia" => "https://docs.julialang.org/en/v1/",
-)
+using DocumenterCodeBlocks
 
 docs_src_dir = joinpath(@__DIR__, "src")
 package_root = dirname(@__DIR__)
-
-# Run `make_literate.jl` to generate the literate files
-include(joinpath(@__DIR__, "make_literate.jl"))
-include("local_notes.jl")
-(notes_pages, notes_remotes) = local_notes()
-
 
 # Documenter treats a broken doctest, a dead cross-reference or a missing docstring as an
 # error, by default.  That is what we want from a normal build and from CI, so the default
@@ -39,11 +29,21 @@ include("local_notes.jl")
 const warnonly = ("warnonly" in ARGS) || get(ENV, "SPHERICALFUNCTIONS_DOCS_WARNONLY", "false") == "true"
 @info "Building with warnonly=$warnonly"
 
-
+# Plugin configuration
+links = InterLinks(
+    "Quaternionic" => "https://moble.github.io/Quaternionic.jl/stable/",
+    "Julia" => "https://docs.julialang.org/en/v1/",
+)
 bib = CitationBibliography(
     joinpath(docs_src_dir, "references.bib");
     #style=:authoryear,
 )
+codeblocks = CodeBlocks(;line_counter=:continue)
+
+# Run `make_literate.jl` to generate the literate files
+include(joinpath(@__DIR__, "make_literate.jl"))
+include("local_notes.jl")
+(notes_pages, notes_remotes) = local_notes()
 
 using SphericalFunctions
 
@@ -56,7 +56,7 @@ DocMeta.setdocmeta!(
 )
 
 makedocs(
-    plugins=[links, bib],
+    plugins=[links, bib, codeblocks],
     sitename="SphericalFunctions.jl",
     modules = [SphericalFunctions],
     remotes=notes_remotes,

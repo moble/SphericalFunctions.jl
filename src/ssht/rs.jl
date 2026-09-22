@@ -281,10 +281,11 @@ end
     salm2map(salm, s, ℓₘₐₓ, Nϕ, Nθ)
     salm2map(salm, 𝒯::SSHTRS)
 
-Evaluate the spin-weighted function with mode weights `salm` (in the canonical ordering
-`ℓ ∈ abs(s):ℓₘₐₓ, m ∈ -ℓ:ℓ` along the first dimension, e.g. a [`ModeWeights`](@ref)) on the
-equiangular ``N_ϕ × N_θ`` grid used by [`map2salm`](@ref).  The result has size ``N_ϕ × N_θ``
-followed by the trailing dimensions of `salm`.
+Evaluate the spin-weighted function with mode weights `salm` on the equiangular ``N_ϕ ×
+N_θ`` grid used by [`map2salm`](@ref).  The mode weights must be given in the canonical
+ordering `ℓ ∈ abs(s):ℓₘₐₓ, m ∈ -ℓ:ℓ` along the first dimension, as in a
+[`ModeWeights`](@ref).  The result has size ``N_ϕ × N_θ`` followed by the trailing
+dimensions of `salm`.
 """
 function salm2map(salm::MapOrModes, s::IndexArgument, ℓₘₐₓ::IndexArgument, Nϕ::Integer, Nθ::Integer)
     T = real(eltype(salm))

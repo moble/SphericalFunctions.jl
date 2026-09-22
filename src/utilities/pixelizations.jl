@@ -131,10 +131,10 @@ end
 """
     sorted_ring_pixels(s, ℓₘₐₓ, [T=Float64])
 
-Cover the sphere 𝕊² with `Ysize(abs(s), ℓₘₐₓ)` pixels — the number of modes of spin weight
-`s` with ``|s| ≤ ℓ ≤ ℓₘₐₓ``, which is ``(ℓₘₐₓ+1)²-s²`` — distributed in rings provided by
-[`sorted_rings`](@ref); see that function's documentation for more description, including
-the half-odd-integer values that `s` and `ℓₘₐₓ` may take.
+Cover the sphere 𝕊² with `Ysize(abs(s), ℓₘₐₓ)` pixels, distributed in the rings provided by
+[`sorted_rings`](@ref).  That count is the number of modes of spin weight `s` with ``|s| ≤ ℓ
+≤ ℓₘₐₓ``, which is ``(ℓₘₐₓ+1)²-s²``; see the documentation of [`sorted_rings`](@ref) for
+more description, including the half-odd-integer values that `s` and `ℓₘₐₓ` may take.
 
 The returned quantity is a vector of 2-SVectors containing the spherical coordinates of each
 pixel.  See also [`sorted_ring_rotors`](@ref) for the corresponding `Rotor`s.
@@ -156,10 +156,10 @@ end
 """
     sorted_ring_rotors(s, ℓₘₐₓ, [T=Float64])
 
-Cover the sphere 𝕊² with `Ysize(abs(s), ℓₘₐₓ)` pixels — the number of modes of spin weight
-`s` with ``|s| ≤ ℓ ≤ ℓₘₐₓ``, which is ``(ℓₘₐₓ+1)²-s²`` — distributed in rings provided by
-[`sorted_rings`](@ref); see that function's documentation for more description, including
-the half-odd-integer values that `s` and `ℓₘₐₓ` may take.
+Cover the sphere 𝕊² with `Ysize(abs(s), ℓₘₐₓ)` pixels, distributed in the rings provided by
+[`sorted_rings`](@ref).  That count is the number of modes of spin weight `s` with ``|s| ≤ ℓ
+≤ ℓₘₐₓ``, which is ``(ℓₘₐₓ+1)²-s²``; see the documentation of [`sorted_rings`](@ref) for
+more description, including the half-odd-integer values that `s` and `ℓₘₐₓ` may take.
 
 The returned quantity is a vector of `Rotor`s.  See also [`sorted_ring_pixels`](@ref) for
 the corresponding spherical coordinates.
