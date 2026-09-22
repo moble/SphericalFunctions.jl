@@ -44,5 +44,5 @@ jobs:
       - uses: codecov/codecov-action@v7
         if: "matrix.version == '1' && matrix.os == 'ubuntu-latest'"
         with:
-          file: lcov.info
+          files: lcov.info
           token: ${{ secrets.CODECOV_TOKEN }}
