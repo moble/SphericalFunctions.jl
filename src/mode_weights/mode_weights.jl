@@ -178,12 +178,12 @@ The `(ℓ, m)` pairs of `w`, in storage order (see [`Yrange`](@ref)).
 """
 modes(w::ModeWeights) = Yrange(w.ℓₘᵢₙ, w.ℓₘₐₓ)
 
-# The array-like interface, written out rather than inherited.  A `ModeWeights` was an
-# `AbstractVector` before version 3, which made `op * w` and `w .+ 1` work through the generic
-# machinery; it is now an [`AbstractModeContainer`](@ref) like the rest, and these are the
-# methods that keep the useful part of the old behavior.  Losing the subtyping costs less than
-# it appears to: the transforms in `ssht/` never used it, reaching for the raw storage before
-# every `mul!` and `ldiv!` (what is now called [`array_view`](@ref)).
+# The array-like interface, written out rather than inherited.  A `ModeWeights` is an
+# [`AbstractModeContainer`](@ref) like the rest, not an `AbstractVector`, so `op * w` and
+# `w .+ 1` do not come for free from the generic machinery; these are the methods that supply
+# the useful part of that behavior.  Forgoing the subtyping costs less than it appears to: the
+# transforms in `ssht/` reach for the raw storage before every `mul!` and `ldiv!` anyway,
+# through [`array_view`](@ref).
 Base.size(w::ModeWeights) = size(w.data)
 Base.size(w::ModeWeights, d::Integer) = d ≤ 1 ? size(w)[d] : 1
 Base.length(w::ModeWeights) = length(w.data)
@@ -227,8 +227,8 @@ Base.copy(w::ModeWeights) = ModeWeights(copy(w.data), w.s, w.ℓₘᵢₙ, w.ℓ
 # Broadcasting preserves the `ModeWeights` wrapper when the shape is unchanged.  An
 # elementwise operation cannot change which modes are held, so the spin weight and the range of
 # ℓ that label them survive it; only a broadcast that changes the length drops back to a plain
-# `Vector`.  This used a `Broadcast.ArrayStyle` before version 3, which is available only to an
-# `AbstractArray`; a style of this type's own does the same job, given a `broadcastable` that
+# `Vector`.  A `Broadcast.ArrayStyle` would be the usual way to do this, but it is available
+# only to an `AbstractArray`; a style of this type's own does the same job, given a `broadcastable` that
 # hands back the container rather than `collect`ing it, and the `axes` and linear `getindex`
 # defined above.  Writing *into* one with `.=` is handled with the other containers, in
 # `array_view.jl`.
@@ -265,8 +265,8 @@ end
 Base.map(f, w::ModeWeights) = ModeWeights(map(f, w.data), w.s, w.ℓₘᵢₙ, w.ℓₘₐₓ)
 
 # Arithmetic that cannot change which modes are held keeps the label; `similar` keeps it for
-# the same length and falls back to a plain array for any other shape.  These were inherited
-# from `AbstractVector` before version 3 and are written out now.
+# the same length and falls back to a plain array for any other shape.  An `AbstractVector`
+# would inherit these, so they are written out here.
 Base.:-(w::ModeWeights) = ModeWeights(-w.data, w.s, w.ℓₘᵢₙ, w.ℓₘₐₓ)
 Base.:+(w::ModeWeights) = w
 Base.similar(w::ModeWeights, n::Integer) = similar(w, eltype(w), n)

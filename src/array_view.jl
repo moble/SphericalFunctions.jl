@@ -2,8 +2,9 @@
 #
 # The containers in this package are deliberately not `AbstractArray`s: their natural indices
 # may be half-odd-integers, which cannot satisfy that interface.  That keeps linear algebra
-# from being applied to them by accident — which matters, because the `OffsetArray`s used
-# before version 3 accepted `*` and `mul!` and returned silently wrong answers.
+# from being applied to them by accident — which matters, because an `OffsetArray` with
+# non-trivial offsets, the obvious alternative, accepts `*` and `mul!` and returns silently
+# wrong answers.
 #
 # What is offered instead is an explicit, named route to the underlying numbers.
 # `array_view` hands back a 1-based `StridedArray` aliasing the storage, on which BLAS and

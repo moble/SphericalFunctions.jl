@@ -2,244 +2,202 @@
 
 ## 3.0.0 (unreleased)
 
-Version 3 is a rewrite.  The interface is new, the `Deprecated` module
-that held version 2 is gone, and — most important for anyone upgrading
-— **the convention for Wigner's ``𝔇`` matrices is the complex
-conjugate of the one version 2 used.**
+Version 3 is a major rewrite of the code, with a new interface, new
+capabilities, and a new convention for Wigner's ``𝔇`` matrices.  The
+convention change deserves particular attention when porting, because
+code that is updated only by renaming functions will run without
+complaint, but will give the complex conjugate of the intended result.
+Almost everything else in version 2's interface has been replaced, and
+the table under "What replaces what" maps each old function to its
+successor.  The most significant additions are support for
+half-integer indices throughout the package, and the `ModeWeights`
+container, which can be evaluated, rotated, and acted on by the
+differential operators directly.  The entries below are relative to
+version 2.2.9.
 
 ### Breaking
 
-### Added
-
-* **Rotating mode weights: `𝔇 * w`.**  Given the Wigner matrices of a rotor — as a
-  `WignerSeries` from `D`, or a `DCalculator`, which streams one ℓ at a time — this
-  gives the weights of the actively rotated function, ``f′(𝐐) = f(𝐑^{-1}𝐐)``.  There is
-  **no complex conjugate**: version 2's ``𝔇`` was the conjugate of this one, so ported code
-  must drop a `conj` rather than add one.  The derivation is now written out in the
-  conventions section, under "Rotation of mode weights".  `mul!(w′, 𝔇, w)` writes into an
-  existing container.
-* **Evaluating a function: `Y * w`.**  Given the harmonics at one or more rotors — a
-  `HarmonicValues` from `sYlm`, or an `sYlmCalculator` — this gives the function's values
-  there.  It is written `*` and **not** `⋅`, because `⋅` is `LinearAlgebra.dot`, which
-  conjugates its first argument, and evaluation must not; `dot` on these types raises an error
-  saying so rather than answering with the wrong phase.  `w(R)` and `w(R⃗)` are the same
-  product, written as a call.
-* **The real harmonics: `sλlm`, `sλlm!`, `sλlm_matrix` and `sλlmCalculator`.**  These give
-  ``{}_sλ_{ℓ,m}(θ) = {}_sY_{ℓ,m}(θ, 0) / i^{2s}``, which is real for integer and half-odd
-  spin weights alike, in the same containers as `sYlm` and with the same iteration and
-  indexing.  They share one struct, `HarmonicCalculator`, with the complex family, exactly as
-  `dCalculator` shares `WignerCalculator` with `DCalculator`: the ``H`` recursion
-  is real either way, and only the factor ``e^{-i(mα - sγ)}`` ever made a result complex.  A
-  real calculator therefore allocates no phase tables at all.  It refuses a `Rotor`, at
-  construction and through `set_R!`, because a rotor specifies the angles ``α`` and ``γ``
-  whose phases it has nowhere to put; `set_θ!` is its setter.
-
-  `SSHTRS` and `SSHTMinimal` now build their ``Λ`` tables with one of these instead of
-  reading the real part out of a complex table at every access in their innermost loops.  The
-  values are bit-for-bit what they were, so nothing downstream changes.
-
-### Breaking
-
-* **The differential operators are objects, not functions.**  `L²`, `Lz`, `L₊`, `L₋`, `Lx`,
-  `Ly`, `R²`, `Rz`, `R₊`, `R₋`, `ð` and `ð̄` are now zero-size singleton instances of
-  subtypes of `DifferentialOperator`, so an operator knows its own effect on the spin weight
-  (`Δspin`) and its own band structure.  Every existing call still works — `ð(w)` for the
-  labelled result and `ð(s, ℓₘᵢₙ, ℓₘₐₓ, [T])` for the matrix — and `ð * w` is added
-  alongside `ð(w)`.  Applying one to mode weights no longer builds the matrix: a loop does
-  it, so `ð * w` allocates only its result, and `mul!(w′, ð, w)` allocates nothing.  The
-  results are bit-for-bit what the matrix product gave, because the matrix builders and the
-  loops evaluate the same coefficient functions.
-* **Underscore-prefixed internal names are gone.**  Where a worker could simply be another
-  method of the public function — reached by dispatch, and undocumented rather than hidden —
-  it now is; where it could not, because that would have added a public overload the design
-  refuses, it has an ordinary descriptive name instead.
-* **`OffsetArray`s are gone from every return value.**  Through
-  version 2 the integer path returned `OffsetArray`s, so that a block
-  could be indexed by its natural ``m'`` and ``m``; the half-integer
-  path could not, and grew its own containers.  Both paths now return
-  those containers.  The reason is not uniformity but safety: an
-  `OffsetArray` with non-trivial offsets *accepts* `*` and `mul!` and
-  returns silently wrong answers — a product of two blocks comes back
-  as a 1-based `Matrix` of mostly zeros, and an adjoint product comes
-  back holding uninitialized memory.  Written the obvious way, the
-  composition law ``𝔇(R₁R₂) = 𝔇(R₁)𝔇(R₂)`` was wrong in the first
-  digit with no error raised.  The containers are deliberately not
-  `AbstractArray`s, so the same code is now a `MethodError`.
-* **`strided` and `relabel` are the route to and from linear
-  algebra.**  `strided(w)` gives a 1-based `StridedArray` **aliasing**
-  the container's storage, which BLAS and LAPACK take at full speed —
-  contiguity is not required, only a unit leading stride, which an
-  unbatched block already has.  `relabel(w, A)` puts the natural
-  indices back on a plain array.  `Matrix`, `Array` and `collect`
-  remain the copying forms.  So `𝔇₁[ℓ] * 𝔇₂[ℓ]` becomes
-  `strided(𝔇₁[ℓ]) * strided(𝔇₂[ℓ])`.
-* **`D` and `d` return a `WignerSeries` for integer ``ℓ`` too**,
-  rather than an `OffsetVector` of blocks.  It knows its own `ℓₘᵢₙ`
-  and `ℓₘₐₓ`, and refuses an `ℓ` it does not hold with a sentence
-  rather than a `BoundsError` about axes.
-* **`sYlm` returns a `HarmonicValues`,** indexed by ``ℓ`` and then
-  naturally, rather than a flat `Vector` reached through `Yindex`.
-  `sYlm` also accepts a vector of rotors, so a block has four possible
-  shapes: `[m]`, `[iᵣ, m]`, `[s, m]` and `[iᵣ, s, m]`.  The flat array
-  is `strided(sY)`, in the same canonical ordering as before, and
-  `sYlm_matrix` is unchanged — it remains the direct way to ask for
-  the bare synthesis array.
-* **`ModeWeights` is no longer an `AbstractVector`.**  It is an
-  `AbstractModeContainer`, the supertype it shares with
-  `HarmonicValues`.  Indexing, broadcasting (which still preserves the
-  wrapper), `map`, `similar`, `copy`, reductions, `norm`, `dot`,
-  `adjoint` and products with matrices all still work; `strided(w)` is
-  the flat storage, and is what the transforms take.
 * **``𝔇`` is conjugated.**  The convention is now
-  ``𝔇^{(ℓ)}_{m',m}(α, β, γ) = e^{-i m' α} d^{(ℓ)}_{m',m}(β) e^{-i m
-  γ}``, which agrees with LALSuite, Wikipedia, Sakurai, Shankar,
-  Zettili and Varshalovich et al., and is the complex conjugate of
-  what Wigner, Edmonds, Goldberg et al., Boyle (2016) and versions of
-  this package before 3.0 used.  This closes issue #42.  Code that
-  rotated mode weights with `conj(D_matrices(...))` should now use
-  `D(...)` with no conjugation.  The ``d`` matrices and the
-  spin-weighted spherical harmonics are numerically unchanged.
-* **Calculators take their rotor data at construction, and take it
-  first** — `DCalculator(R, ℓₘₐₓ)`, `dCalculator(β, ℓₘₐₓ)`,
-  `HCalculator(β, ℓₘₐₓ)`, `sYlmCalculator(R, ℓₘₐₓ, s)`.  A
-  calculator is therefore usable the moment it exists, and the
-  `Nᵣ` keyword is gone: a vector argument is what makes one batched.
-  The old argument order is a `MethodError` at the call site.
-* **`sYlmCalculator` is built for the spin weights it will serve.**
-  The third argument is a spin weight, or an ascending range of them:
-  `sYlmCalculator(R, ℓₘₐₓ, 2)` serves ``s = 2`` alone, and
-  `sYlmCalculator(R, ℓₘₐₓ, -2:2)` serves all five.  It follows that the
-  calculator has something to yield, so it iterates like the Wigner
-  ones — `for (ℓ, ₛYₗ) ∈ calc` — with the block indexed `ₛYₗ[m]` in the
-  first case and `ₛYₗ[s, m]` in the second.  One spin weight of such a
-  block is the slice `ₛYₗ[s, :]`, and `spins` and `spin` report what a
-  calculator was built for.  The flat `sYlm`, `sYlm!` and `sYlm_matrix` take ranges
-  too, laying the spin weights along a new axis of a plain array.
-  Half-integer ranges are written the same way, `-3//2:3//2`, and their
-  blocks are the new `SpinMatrix` and `SpinMatrixBatch` containers.
-* **The element type is the input's, and there is no argument to
-  override it.**  The positional element type is gone from every
-  calculator constructor, and the `T` keyword from `sYlm`,
-  `sYlm_matrix` and `Ylm`; `sYlm!` no longer takes its working type
-  from the output buffer.  A result's type is decided by its input's
-  type, if and only if — to compute in another type, convert the data,
-  which is also the honest way to say it, since the type of the data is
-  the claim being made about the points.  `SSHT`, the pixelizations,
-  the weights and the operators keep their `T` arguments, because they
-  build their own numbers rather than being handed any.
-* **Type mismatches are errors rather than silent conversions.**
-  `sYlm!` requires `eltype(Y)` to be `Complex` of its calculator's
-  float type, and `set_R!`, `set_β!`, `set_θ!` and
-  `similar(calc, data)` require the new data to match the calculator's.
-* **Rotations must be `Rotor`s.**  A general `Quaternion` has a
-  magnitude that these functions would divide out, and a `QuatVec` is a
-  vector rather than a rotation; both are refused with a message naming
-  `rotor(q)` or `exp(v/2)`.  Vectors of rotor data must also have a
-  concrete element type, so a `Vector{Any}` is refused rather than
-  guessed at.
-* **The calculators are named for their functions.**
-  `WignerDCalculator`, `WignerdCalculator` and `WignerHCalculator` are
-  now `DCalculator`, `dCalculator` and `HCalculator`, so that every
-  calculator is its function's name plus `Calculator`, as
-  `sYlmCalculator` and `YlmCalculator` already were.
-* **`recurrence!` returns the block** rather than the calculator, and
-  **the calculators are no longer indexed.**  `calc[ℓ]` had to be given
-  the ``ℓ`` just computed and threw for any other, so it asserted what
-  the caller already knew rather than looking anything up; reading a
-  result by hand is now one call, `𝔇ˡ = recurrence!(calc, ℓ)`.  This is
-  also how an `HCalculator` hands back its wedge, in place of the field
-  access `calc.Hˡ`, and how one spin weight is reached, as
-  `recurrence!(calc, ℓ)[s, :]` in place of `calc[ℓ, s]`.
-* **`eachℓ` and `eachell` are removed.**  `eachℓ(calc)` was bare
-  iteration under another name; a restricted range and a single spin
-  weight are both a `for` loop over `recurrence!`.
-* **`SphericalFunctions.Deprecated` is removed**, and with it the
-  whole version-2 API: `D_matrices`, `D_prep`, `D_iterator`,
-  `d_matrices`, `d_prep`, `d_iterator`, `sYlm_values`, `sYlm_prep`,
-  `sYlm_iterator`, `ₛ𝐘`, `H!`, `λ_iterator`, the
-  `WignerHsize`/`WignerDindex` family, and the version-2 `SSHT` types.
-  The table below gives the replacements.
-* **`SSHTDirect` is now `SSHTMatrix`**, and the `SSHT` method name
-  `"Direct"` is accepted with a deprecation warning.  The default
-  method is now `"RS"` rather than the dense matrix.
-* **`map2salm` output starts at ``ℓ = |s|``** rather than ``ℓ = 0`` (issue #59).
-* The dependencies `ProgressMeter` and `LoopVectorization` are
-  dropped, and `Quaternionic` 4 is now allowed.
+  ``𝔇^{(ℓ)}_{m',m}(α, β, γ) = e^{-i m' α}\, d^{(ℓ)}_{m',m}(β)\, e^{-i m γ}``,
+  which agrees with LALSuite, Wikipedia, Sakurai, Shankar, Zettili and
+  Varshalovich et al.  It is the complex conjugate of what Wigner,
+  Edmonds, Goldberg et al., Boyle (2016) and every earlier version of
+  this package used.  Code that rotated mode weights with the conjugate
+  of version 2's ``𝔇`` should now use `D` with no conjugation — or,
+  more simply, `D(R, ℓₘₐₓ) * w`.  The ``d`` matrices and the
+  spin-weighted spherical harmonics are numerically unchanged.  (Issue
+  #42.)  The conventions are described in full in the documentation,
+  along with comparisons to other sources that are tested
+  automatically.
+* **Julia 1.10 or later is required**, rather than 1.6.
+* **The version-2 interface is removed.**  This includes `D_matrices`,
+  `D_matrices!`, `D_prep`, `D_iterator`, `d_matrices`, `d_matrices!`,
+  `d_prep`, `d_iterator`, `sYlm_values`, `sYlm_values!`, `sYlm_prep`,
+  `sYlm_iterator`, `λ_iterator`, `ₛ𝐘`, `H!`, `H_recursion_coefficients`,
+  the associated-Legendre functions `ALFRecursionCoefficients`,
+  `ALFrecurse!`, `ALFcompute!` and `ALFcompute`, the index functions
+  `WignerHsize`, `WignerHindex`, `WignerHrange`, `WignerDsize`,
+  `WignerDindex` and `WignerDrange`, the helpers `deduce_limits`,
+  `theta_phi` and `phi_theta`, and the legacy aliases `Diterator`,
+  `diterator`, `Yiterator`, `λiterator`, `d!`, `D!`, `Y!`, `dprep`,
+  `Dprep` and `Yprep`.  The table below gives the replacements.  Note
+  that the names `D` and `d` survive with a new meaning: version 2's
+  legacy `d(expiβ, ℓₘₐₓ)` returned a flat vector, while the new
+  functions return the containers described next.
+* **Results are indexed by their natural labels, rather than stored in
+  flat vectors.**  `D` and `d` return a `WignerSeries`, indexed as
+  `𝔇[ℓ][m′, m]` with ``m′`` and ``m`` running over `-ℓ:ℓ`, and `sYlm`
+  returns a `HarmonicValues`, indexed as `Y[ℓ][m]`.  There is no longer
+  any index arithmetic with `WignerDindex`.  (Issues #41 and #48.)  The
+  first index of each block is ``m′``; version 2's `D_iterator` and
+  `d_iterator` returned the transpose of the blocks their documentation
+  described, and warned so on every call.  These containers are
+  deliberately not `AbstractArray`s, since their indices may be
+  half-integers; linear algebra on them goes through `array_view`
+  (described under "Added"), so that `𝔇₁[ℓ] * 𝔇₂[ℓ]` is written
+  `array_view(𝔇₁[ℓ]) * array_view(𝔇₂[ℓ])`.
+* **Rotations must be given as `Rotor`s.**  The Euler-angle and
+  spherical-coordinate forms, such as `D_matrices(α, β, γ, ℓₘₐₓ)` and
+  `sYlm_values(θ, ϕ, ℓₘₐₓ, s)`, have no counterparts; convert with
+  `from_euler_angles(α, β, γ)` or `from_spherical_coordinates(θ, ϕ)`
+  from Quaternionic.  A general `Quaternion` or a `QuatVec` is refused,
+  with a message suggesting `rotor(q)` or `exp(v/2)`.  The functions of
+  ``β`` alone — `d`, `dCalculator` and `HCalculator` — still accept
+  ``β``, ``e^{iβ}`` or a `Rotor`.
+* **The element type of a result is that of its input.**  Version 2
+  chose the type through arguments such as `D_prep(ℓₘₐₓ, T)`; now there
+  is no such argument, and to compute in another type the rotor (or
+  angle) must be converted.  A mismatch between the input and a
+  preallocated output, as in `sYlm!`, is an error rather than a silent
+  conversion.  `SSHT`, the pixelizations, the quadrature weights and the
+  operator matrices keep their `T` arguments, since they construct
+  their own numbers.
+* **The differential operators are objects rather than functions.**
+  `L²`, `Lz`, `L₊`, `L₋`, `R²`, `Rz`, `R₊`, `R₋`, `ð` and `ð̄` are now
+  singleton instances of subtypes of `DifferentialOperator`.  Calling
+  one as in version 2, `ð(s, ℓₘᵢₙ, ℓₘₐₓ, [T])`, returns the same matrix
+  as before; what is new is described under "Added".
+* **The transforms have changed defaults and names.**  `SSHT` now uses
+  the `"RS"` method by default, rather than the dense matrix.
+  `SSHTDirect` is renamed `SSHTMatrix`, and the method name `"Direct"`
+  is accepted with a deprecation warning in favor of `"Matrix"`.
+  `SSHTMatrix` factorizes with `lu` rather than `qr` when the number of
+  points equals the number of modes.  Analysis of a one-dimensional set
+  of function values, `𝒯 \ f`, returns a `ModeWeights` rather than a
+  `Vector`.
+* **`map2salm` has a new signature and output.**  It is called as
+  `map2salm(map, s, ℓₘₐₓ)` or `map2salm(map, 𝒯::SSHTRS)`; the
+  `show_progress` argument is gone.  The output starts at ``ℓ = |s|``
+  rather than ``ℓ = 0`` (issue #59), and is a `ModeWeights` for a single
+  map.  `map2salm!` and `plan_map2salm` are removed; the plan is now an
+  `SSHTRS`, which the unexported `map2salm_plan` constructs.
+* The dependencies `AbstractFFTs`, `DoubleFloats`, `Hwloc`,
+  `LoopVectorization` and `ProgressMeter` are dropped, and
+  `FixedSizeArrays` is added.
 
 ### What replaces what
 
 | Version 2 | Version 3 |
 |---|---|
 | `D_matrices(R, ℓₘₐₓ)` + `D_iterator` | `D(R, ℓₘₐₓ)`, indexed `𝔇[ℓ][m′, m]` (conjugated; see above) |
-| `D_prep` + `D_matrices!` | `DCalculator(R, ℓₘₐₓ)`, iterated, or stepped with `recurrence!` |
-| `d_matrices(β, ℓₘₐₓ)` | `d(β, ℓₘₐₓ)`, indexed `𝔡[ℓ][m′, m]` |
-| `sYlm_values(R, ℓₘₐₓ, s)` | `sYlm(R, ℓₘₐₓ, s)` |
-| `sYlm_prep(ℓₘₐₓ, sₘₐₓ)` + `sYlm_values!` | `sYlmCalculator(R, ℓₘₐₓ, s)` + `sYlm!(Y, calc, R)` |
+| `D_matrices(α, β, γ, ℓₘₐₓ)` | `D(from_euler_angles(α, β, γ), ℓₘₐₓ)` |
+| `D_prep` + `D_matrices!` | `DCalculator(R, ℓₘₐₓ)`, iterated or stepped with `recurrence!`, and reused with `set_R!` |
+| `d_matrices(β, ℓₘₐₓ)` + `d_iterator` | `d(β, ℓₘₐₓ)`, indexed `𝔡[ℓ][m′, m]` |
+| `d_prep` + `d_matrices!` | `dCalculator(β, ℓₘₐₓ)`, reused with `set_β!` |
+| `H!`, `H_recursion_coefficients` | `HCalculator(β, ℓₘₐₓ)` |
+| `sYlm_values(R, ℓₘₐₓ, s)` + `sYlm_iterator` | `sYlm(R, ℓₘₐₓ, s)`, indexed `Y[ℓ][m]` |
+| `sYlm_values(θ, ϕ, ℓₘₐₓ, s)` | `sYlm(from_spherical_coordinates(θ, ϕ), ℓₘₐₓ, s)` |
+| `sYlm_prep` + `sYlm_values!` | `sYlmCalculator(R, ℓₘₐₓ, s)` + `sYlm!(Y, calc, R)` |
 | `ₛ𝐘(s, ℓₘₐₓ, T, R⃗)` | `sYlm_matrix(R⃗, ℓₘₐₓ, s)` |
+| `λ_iterator` | `SphericalFunctions.sλlm` or `SphericalFunctions.sλlmCalculator` |
+| `ALFcompute` and relatives | no direct replacement; `sλlm(θ, ℓₘₐₓ, 0)` gives ``Y_{ℓ,m}(θ, 0)`` |
+| `WignerDindex`, `WignerHsize`, … | not needed: blocks are indexed by ``(ℓ, m′, m)`` directly |
 | `SSHTDirect` | `SSHTMatrix` |
-| `WignerHsize`, `WignerDindex`, … | not needed: matrices are indexed by ``(ℓ, m', m)`` through views |
+| `map2salm(map, s, ℓₘₐₓ, show_progress)` | `map2salm(map, s, ℓₘₐₓ)` |
+| `plan_map2salm` + `map2salm!` | `𝒯 = map2salm_plan(map, s, ℓₘₐₓ)` + `map2salm(map, 𝒯)` |
 
 ### Added
 
-* **Half-integer ``ℓ``.**  `d`, `D` and the calculators accept a
-  `Rational` index type, so `D(R, 7//2)` and
-  `DCalculator(R, 15//2)` work, and `sYlmCalculator` accepts
-  half-integer spin weights.  Verified against two independent
-  references to ``10^{-16}`` for ``J ≤ 31/2`` and by oracle-free
-  identities to ``J = 101/2``.  (Issue #29.)  The same `Rational`
-  indices are accepted by everything built on the canonical mode
-  ordering: `sYlm`, `sYlm!` and `sYlm_matrix`; `Ysize`, `Yindex`,
-  `Yrange` and `ModeWeights`; the angular-momentum operators; the
-  pixelizations; and the `"RS"` and `"Matrix"` transforms, with
-  `map2salm` and `salm2map`.  `Ylm` and the `"Minimal"` method remain
-  integer-only, and say so.  A call that mixes integer and half-integer
-  indices is refused with a message naming both kinds.
-* **Batched calculators.**  Give a calculator a vector of rotors and it
-  evaluates all of them at once, which is two to ten times faster per
-  rotor than looping, and is what the transforms now use internally.
-  Batching is internal because the recurrence is sequential in every
-  index a single rotation has, leaving the rotation index as the only
-  one that can be vectorized.  (Issue #32.)
-* **Natural indexing.**  `D(R, ℓₘₐₓ)[ℓ][m′, m]` uses the real ranges
-  `-ℓ:ℓ`; there is no index arithmetic to get wrong.  (Issues #41,
-  #48.)
-* `ModeWeights`, a vector of mode weights that knows its spin weight
-  and its ``ℓ`` range, with `w[ℓ, m]`, `w[ℓ, :]`, `modes`, `spin` and
-  evaluation `w(R)`.  Everything that takes mode weights still also
-  accepts a plain vector in the canonical ordering.
-* **The calculators iterate over ``ℓ``.**  `for (ℓ, 𝔇ˡ) ∈ calc` yields
-  `ℓ => block` pairs, one ``ℓ`` at a time, which is how to reach large
-  ``ℓₘₐₓ`` without holding every matrix at once; a whole pass allocates
-  nothing.  With it come `keys`, `length`, `eltype`, `pairs`, and a
-  `collect` that copies every block, since the blocks themselves are
-  views that the next step overwrites.  A sweep over part of the range,
-  or in some other order, is a `for` loop over `recurrence!`.
-* `set_R!`, `set_β!` and `set_θ!` point an existing calculator at new
-  data, each named for what its calculator actually holds.
-* `Ylm(R, ℓₘₐₓ)`, the ordinary scalar spherical harmonics, which are
-  the spin-weight-zero case of `sYlm`.
-* `floattype(calc)` reports the floating-point type a calculator works
-  in.
-* `sYlm_matrix`, the dense synthesis matrix, as a public function.
-* The angular-momentum operators `Lx` and `Ly`.  (There is
-  deliberately no `Rx` or `Ry`; see the `Lx` docstring.)
-* `SSHT` objects accept any number of trailing array dimensions and
-  transform them independently.
+* **Half-integer indices.**  `D`, `d`, the calculators, `sYlm`,
+  `sYlm!`, `sYlm_matrix`, `Ysize`, `Yindex`, `Yrange`, `ModeWeights`,
+  the differential operators, the pixelizations, and the `"RS"` and
+  `"Matrix"` transforms (with `map2salm` and `salm2map`) all accept
+  half-integer ``ℓ``, ``m`` and ``s``, passed as `Rational`s with
+  denominator 2 — as in `D(R, 7//2)` or `SSHT(1//2, 7//2)`.  The
+  results are indexed exactly as in the integer case.  They have been
+  verified against two independent references to ``10^{-16}`` for
+  ``ℓ ≤ 31/2``, and by identities that need no reference to
+  ``ℓ = 101/2``.  `Ylm` and the `"Minimal"` transform remain
+  integer-only, and say so; a call that mixes integer and half-integer
+  indices is refused.  (Issue #29.)
+* **`ModeWeights`**, which holds the mode weights of a spin-weighted
+  function in the canonical ordering, together with its spin weight and
+  range of ``ℓ``.  It is indexed as `w[ℓ, m]` or `w[ℓ, :]`, and `modes`
+  and `spin` report its labels.  It supports
+  - evaluation at a rotor or a vector of rotors, `w(R)`, which is the
+    same as the product `Y * w` with harmonics from `sYlm` or an
+    `sYlmCalculator` (this is written `*` rather than `⋅`, since `dot`
+    conjugates its first argument, and `dot` on these types raises an
+    error saying so);
+  - active rotation, `D(R, ℓₘₐₓ) * w` (or with a `DCalculator` in place
+    of `D`), which gives the weights of ``f′(𝐐) = f(𝐑^{-1}𝐐)``; and
+  - the differential operators, written `ð(w)` or `ð * w`, which return
+    a `ModeWeights` with the spin weight adjusted appropriately.  These
+    are applied by a loop rather than by building a matrix, so the only
+    allocation is the result, and `mul!(w′, ð, w)` allocates nothing.
+
+  Rotation also has an in-place form, `mul!(w′, 𝔇, w)`.  The
+  transforms accept a `ModeWeights` directly, and check its range of
+  ``ℓ`` against their own.
+* **Calculators** — `DCalculator`, `dCalculator`, `HCalculator`,
+  `sYlmCalculator` and `YlmCalculator` — take the same arguments as the
+  corresponding functions, and compute one ``ℓ`` at a time, so that
+  large ``ℓₘₐₓ`` can be reached without holding every matrix at once.
+  Iterating one, as in `for (ℓ, 𝔇ˡ) ∈ calc`, yields each block as a
+  view that the next step overwrites, and allocates nothing;
+  `recurrence!(calc, ℓ)` computes a single step, and `collect` copies
+  every block.  `set_R!`, `set_β!` and `set_θ!` point an existing
+  calculator at new data.
+* **Batched evaluation.**  Given a vector of rotors, the calculators and
+  `sYlm` evaluate all of them at once, with the rotor as the leading
+  index of each block.  This is two to ten times faster per rotor than
+  a loop, because the rotor index is the only one that the recursions
+  allow to be vectorized.  The transforms use it internally.  (Issue
+  #32.)
+* **Restricted ranges.**  The keywords `m′ₘₐₓ`, `m′ₘᵢₙ`, `mₘₐₓ` and
+  `mₘᵢₙ` of `D`, `d` and their calculators limit the part of each matrix
+  that is computed, and `sYlm` and its relatives accept an `ℓₘᵢₙ`
+  keyword and an ascending range of spin weights such as `-2:2`.
+* **`array_view` and `relabel`.**  `array_view(x)` gives the contents of
+  a container as a 1-based `StridedArray` that aliases its storage, so
+  that BLAS and LAPACK can operate on it without copying; for mode
+  weights and harmonics this is the flat array in the canonical
+  ordering.  `relabel(x, A)` puts the natural indices back on a plain
+  array.  `Matrix`, `Array` and `collect` give copies.
+* `Ylm`, the ordinary scalar spherical harmonics, and `sYlm_matrix`,
+  the dense synthesis matrix.
+* The real harmonics
+  ``{}_sλ_{ℓ,m}(θ) = {}_sY_{ℓ,m}(θ, 0) / i^{2s}``, through the public
+  but unexported `sλlm`, `sλlm!`, `sλlm_matrix` and `sλlmCalculator`.
+* The angular-momentum operators `Lx` and `Ly`.  (There is deliberately
+  no `Rx` or `Ry`; see the `Lx` docstring.)
+* `salm2map`, the inverse of `map2salm`.
+* The pixelizations `driscoll_healy_pixels`, `driscoll_healy_rotors`,
+  `mcewen_wiaux_pixels` and `mcewen_wiaux_rotors`, which are public but
+  unexported.
+* `ComplexPowers`, an iterator over the powers of a unit complex
+  number.
+* The accessors `ℓₘᵢₙ`, `ℓₘₐₓ`, `spins`, `Nᵣ`, `floattype` and others,
+  with ASCII aliases such as `ellmax`, are declared public but not
+  exported.
 
 ### Fixed
 
-* Size functions no longer return negative numbers for inverted ``ℓ``
-  ranges; they throw.  (Issue #52.)
-* Broadcasting a function over the axis of a half-integer container —
-  `Rational.(axes(w[ℓ, :], 1))`, say — gives the axis values; it used
-  to misread positions as values.
-* `map2salm!` no longer raises a `BoundsError`.  (Issue #59.)
-* Spinor phases are computed in the calculator's precision rather than
-  the rotor's, so asking for `Double64` results from `Float64` rotors
-  no longer silently loses half the digits.
+* The size functions throw for an inverted range of ``ℓ``, rather than
+  returning a negative number.  (Issue #52.)
 * `complex_powers!` works for wrapper element types such as
-  `ForwardDiff.Dual`, including at the phase exactly 1, where it used
-  to produce `NaN` derivatives.
+  `ForwardDiff.Dual`, including at the phase 1, where it used to
+  produce `NaN` derivatives.
 * The ring-based transform handles rings with different numbers of
-  points, and uniform counts above ``2ℓₘₐₓ+1``; version 2 returned
-  garbage for both.
+  points, and rings with more than ``2ℓₘₐₓ+1`` points; version 2 gave
+  wrong results in both cases.

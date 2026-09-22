@@ -19,9 +19,48 @@ coordinates and Euler angles.[^1] Among other applications, those
 functions permit "synthesis" (evaluation of the spin-weighted
 spherical functions) of spin-weighted spherical harmonic coefficients
 on regular or distorted grids.  This package also includes functions
-enabling efficient "analysis" (decomposition into mode coefficients)
-of functions evaluated on regular grids to high order and accuracy.
+enabling efficient and accurate "analysis" (decomposition into mode
+coefficients) of functions evaluated on regular grids to high order,
+or arbitrary grids to intermediate order.
 
+## Outline of capabilities
+
+- Basic functions [`D`](@ref), [`d`](@ref), [`sYlm`](@ref), and
+  [`Ylm`](@ref)
+  - Evaluate all terms up to a given ``ℓₘₐₓ`` at once
+  - Half-integer indices are supported throughout, passed as
+    `Rational` arguments with denominator 2
+  - Optional restricted ranges of ``m'``,  ``m``, and/or ``s``
+  - Functions of a single rotation or of a vector of them
+  - Return objects indexed directly by ``ℓ``, ``m``, etc., even for
+    negative or half-integer indices
+- Iterative calculators [`DCalculator`](@ref), [`dCalculator`](@ref),
+  [`sYlmCalculator`](@ref), and [`YlmCalculator`](@ref)
+  - Take the same arguments as the basic functions
+  - Calculate one ``ℓ`` at a time, returning a view into the storage
+  - Dramatically reduced memory footprint
+  - Can be reused for multiple rotations with `set_R!`, etc.
+- Differential operators [`ð`](@ref), [`ð̄`](@ref),
+  [`Lz`](@ref),[`L₊`](@ref), [`L₋`](@ref), [`Rz`](@ref),[`R₊`](@ref),
+  and [`R₋`](@ref)
+  - Act on [`ModeWeights`](@ref) objects, returning new ones
+  - Can be called as functions or multiplied as operators with no 
+    allocation
+  - Can be called to return a matrix form
+- [`ModeWeights`](@ref) objects
+  - Hold the coefficients of a spin-weighted function in the
+    ``{}_{s}Y_{ℓ,m}`` basis, with the spin weight and ``ℓ`` range
+    attached
+  - Can be evaluated at a rotation, or multiplied by the harmonics at
+    that rotation
+  - Can be rotated by Wigner matrices, or acted on by differential
+    operators, to produce new `ModeWeights` objects
+- Spin-spherical-harmonic transforms [`SSHT`](@ref)
+  - Transform between a function's mode weights and values on a grid
+  - Support fast and exact transforms on
+    equiangular grids to very high ``ℓ`` with [`SSHTRS`](@ref)
+  - Support fast and exact transforms on arbitrary *minimal* grids for
+    ``ℓₘₐₓ ≲ 64`` with  [`SSHTMinimal`](@ref)
 
 ## Quick start
 
@@ -139,13 +178,16 @@ julia> norms ≈ [2ℓ + 1 for ℓ ∈ 0:ℓₘₐₓ]
 true
 ```
 
-The block returned by each iterations a view into the calculator,
+The block returned by each iteration is a view into the calculator,
 which the next step overwrites, so `copy` it if it has to outlive the
-iteration.  The calculators themselves, the `set_R!` family that
-points an existing calculator at a new rotation, and the restricted
-form of the iteration are all described on the [Wigner matrix
-interface](@ref interface_wigner_matrices) page; an
-[`sYlmCalculator`](@ref) does the same for the harmonics.
+iteration.
+
+A calculator can also be reused for multiple rotations, by calling
+[`set_R!`](@ref):
+
+```jldoctest quickstart
+julia> set_R!(calc, from_spherical_coordinates(π/5, π/7));
+```
 
 Finally, a calculator built from a *vector* of rotations evaluates all
 of them simultaneously, returning an object with the rotation index as
@@ -164,19 +206,26 @@ julia> size(recurrence!(batch, ℓₘₐₓ))
 ```
 This allows SIMD instructions to be used efficiently — which is not
 normally very effective because of the recursive nature of the
-calculations.  How much that arrangement is worth, and the structure
-of the recursion it follows from, are described under [reusing the
-storage](@ref Iterating-over-ℓ-and-reusing-the-storage).
+calculations, as described under [reusing the storage](@ref
+Iterating-over-ℓ-and-reusing-the-storage).  The entire vector of
+rotors can be replaced with [`set_R!`](@ref) as well, though the
+replacement must be the same length as the original vector.
 
-Everything so far computes the harmonics themselves.  They are a
-basis, so the other half of the story is the coefficients of those
-harmonics in an expansion with respect to the harmonics.  A
-[`ModeWeights`](@ref) object holds the ``f_{ℓ,m}`` of a spin-weighted
-function ``f = \sum_{ℓ,m} f_{ℓ,m}\, {}_sY_{ℓ,m}``, in the canonical
-ordering described above, together with the spin weight and the range
-of ``ℓ`` they belong to.  Keeping those labels beside the numbers is
-what lets the operations below know what they are acting on, and raise
-an appropriate error for a combination that means nothing:
+The [`dCalculator`](@ref), [`sYlmCalculator`](@ref), and
+[`YlmCalculator`](@ref) functions return comparable objects.  The
+functions [`set_β!`](@ref) and [`set_θ!`](@ref) are the equivalents
+for the `d` and `Ylm` calculators of the `set_R!` function.
+
+Everything so far computes the harmonics themselves (or related
+quantities).  They form a basis, so the other half of the story is the
+coefficients of those harmonics in an expansion with respect to the
+harmonics.  A [`ModeWeights`](@ref) object holds the ``f_{ℓ,m}`` of a
+spin-weighted function ``f = \sum_{ℓ,m} f_{ℓ,m}\, {}_sY_{ℓ,m}``, in
+the canonical ordering described above, together with the spin weight
+and the range of ``ℓ`` they belong to.  Keeping those labels beside
+the numbers is what lets the operations below know what they are
+acting on, and raise an appropriate error for a combination that means
+nothing:
 
 ```jldoctest quickstart
 julia> w = ModeWeights{ComplexF64}(undef, -2, 4);  # spin weight -2, so ℓ runs over 2:4
@@ -248,11 +297,6 @@ weights](@ref mode_weight_operations), and the full list of operators
 instead — is on the [differential operators](@ref
 interface_differential_operators) page.
 
-[^2]: The in-place form of multiplication `mul!` also works.
-    Alternatively, they can be called as in `ð(s, ℓₘᵢₙ, ℓₘₐₓ,
-    FloatType)` to return a matrix subtype — though this will be
-    relatively inefficient.  The `ℓₘᵢₙ` and `FloatType` are optional.
-
 These quantities are computed using recursion relations, which makes
 it possible to compute to very high ℓ values.  Unlike direct
 evaluation of individual elements, which would generally cause
@@ -280,13 +324,21 @@ denominator 2, as in `D(R, 7//2)` or `SSHT(1//2, 7//2)`.  See
 transformations_half_integer) for what a function of half-integer spin
 weight is a function *of*.
 
-The conventions for this package diverge from previous versions of
-this package, as well as its predecessors found
+## What's new in version 3
+
+Version 3.0 of this package is a complete rewrite, with a new
+interface and new capabilities — including the introduction of
+half-integer indices.  The most important *breaking* change is the
+change in the convention for Wigner's 𝔇 matrices, which now agree
+with most significant modern sources — though disagree with previous
+versions of this package, as well as its predecessors found
 [here](https://moble.github.io/spherical_functions/) and
-[here](https://moble.github.io/spherical/), but are described in
-detail on [this page](@ref Summary) and the following pages, including
-detailed comparisons to other sources that are tested automatically
-with each change to this code.
+[here](https://moble.github.io/spherical/).  All the conventions used
+in this package are described in detail on [this page](@ref Summary)
+and the following pages, including detailed comparisons to other
+sources that are tested automatically with each change to this code.
+
+## Other packages
 
 Note that numerous other packages cover some of these use cases,
 including
@@ -309,3 +361,8 @@ higher-precision numbers, which are what this package provides.
     need to be done if this package used Euler angles internally —
     meaning that this approach is as efficient as any — that work can
     be avoided entirely if you work with quaternions directly.
+
+[^2]: The in-place form of multiplication `mul!` also works.
+    Alternatively, they can be called as in `ð(s, ℓₘᵢₙ, ℓₘₐₓ,
+    FloatType)` to return a matrix subtype — though this will be
+    relatively inefficient.  The `ℓₘᵢₙ` and `FloatType` are optional.
