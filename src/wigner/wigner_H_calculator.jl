@@ -45,7 +45,7 @@ calculator for half-integer ``ℓ, m′, m``.  Then `m′ₘₐₓ` must also be
 `recurrence!(calc, ℓ)` accepts only half-integer `ℓ`.  The recurrence is the same one:
 the ``m'=0`` axis is run at the *integer* order ``j = ℓ - 1/2``, the rows ``m' = ±1/2`` are
 seeded from it by a Clebsch–Gordan step, and the ``m'`` ladder then proceeds unchanged (see
-the notes on the [``H`` recursion](@ref "Algorithm for computing ``H`` (redesigned)")).  Note that the
+the notes on the [``H`` recursion](@ref "Algorithm for computing ``H``")).  Note that the
 ``H`` matrix is then symmetric only up to the sign
 ``σ = \\mathrm{sgn}(m)\\,\\mathrm{sgn}(m')`` (see [`transpose_sign`](@ref)), which
 [`wedge_value`](@ref) applies for you.

@@ -155,7 +155,7 @@ indices ``H`` is symmetric only up to the sign ``σ =
 transposes it by hand will get the wrong sign for half of the
 elements; use [`wedge_value`](@ref SphericalFunctions.wedge_value),
 which applies ``σ`` for you.  See the notes on the [``H``
-recursion](@ref "Algorithm for computing ``H`` (redesigned)").
+recursion](@ref "Algorithm for computing ``H``").
 
 ## Half-integer spin weight
 

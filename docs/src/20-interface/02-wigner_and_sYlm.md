@@ -15,8 +15,8 @@ describe how spin-weighted spherical functions transform under
 rotation.  But their accurate and efficient computation is
 surprisingly subtle.  This package implements the current
 state-of-the-art techniques for their fast and accurate computation,
-based on the [``H`` recursion](@ref "Algorithm for computing ``H``
-(redesigned)") introduced by [Gumerov_2015](@citet).
+based on the [``H`` recursion](@ref "Algorithm for computing ``H``")
+introduced by [Gumerov_2015](@citet).
 
 The convention used here is that
 ```math

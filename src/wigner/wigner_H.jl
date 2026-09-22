@@ -248,7 +248,7 @@ end
 Sign ``σ`` relating the transposed element of the ``H`` matrix to the original:
 ``H_{m,m′} = σ H_{m′,m}`` and ``H_{-m′,-m} = σ H_{m′,m}``.  For integer indices
 ``σ ≡ 1``; for half-integer indices ``σ = sgn(m) sgn(m′)``, with ``sgn(0) = 1``; see the
-notes on the [``H`` recursion](@ref "Algorithm for computing ``H`` (redesigned)").
+notes on the [``H`` recursion](@ref "Algorithm for computing ``H``").
 
 Which rule applies is settled by the index *type*, so each specialization compiles to a
 constant or to two cheap comparisons.

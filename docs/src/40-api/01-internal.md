@@ -15,7 +15,7 @@ holds two buffers — an [`HWedge`](@ref) holding about a quarter of
 ``H^ℓ`` for a batch of rotors, and an [`HAxis`](@ref) holding the
 ``m'=0``, ``m ≥ 0`` axis that seeds it — and [`recurrence!`](@ref)
 walks them from one ``ℓ`` to the next through the [``H``
-recursion](@ref "Algorithm for computing ``H`` (redesigned)") below.
+recursion](@ref "Algorithm for computing ``H``") below.
 The axis is always at integer order, labelled by `axis_ℓ`: for integer
 ``ℓ`` it is copied straight into the wedge's ``m'=0`` row, and for
 half-integer ``ℓ``, where there is no such row, it seeds the two rows
@@ -28,7 +28,7 @@ recursion plus a phase.
 
 The recurrence is described [Gumerov_2015](@citet), in the form
 derived in the notes on the [``H`` recursion](@ref "Algorithm for
-computing ``H`` (redesigned)"), which is where the recurrence
+computing ``H``"), which is where the recurrence
 coefficients themselves are written out.  Each step fills one region
 of ``H^ℓ`` from regions already filled: steps 1 and 2 run the ``ℓ``
 ladder along the ``m'=0`` axis, steps 3–5 run the ``m'`` ladders at
@@ -92,7 +92,7 @@ SphericalFunctions.axis_ℓ
 ## Reading the ``H`` wedge
 
 Only about a quarter of each ``H^ℓ`` matrix is stored (see the notes on the [``H``
-recursion](@ref "Algorithm for computing ``H`` (redesigned)")); every other element is
+recursion](@ref "Algorithm for computing ``H``")); every other element is
 obtained from a stored one by symmetry, together with a sign ``σ`` that is ``+1`` for integer
 indices and ``\mathrm{sgn}(m)\,\mathrm{sgn}(m')`` for half-integer ones.  The functions below
 are the only place in the package where those symmetries are encoded.  They are not part of

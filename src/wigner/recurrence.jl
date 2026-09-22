@@ -201,7 +201,7 @@ H^ℓ_{m′, m} &= H^ℓ_{-m′, -m}.
 
     Both of those symmetries acquire the sign ``σ = \mathrm{sgn}(m)\,\mathrm{sgn}(m')`` for
     half-integer indices (see [`transpose_sign`](@ref) and the notes on the
-    [``H`` recursion](@ref "Algorithm for computing ``H`` (redesigned)")); only
+    [``H`` recursion](@ref "Algorithm for computing ``H``")); only
     ``H^ℓ_{m′, m} = H^ℓ_{-m, -m′}`` is sign-free.  This
     function is therefore restricted to integer indices.  The batched engine never runs
     step 6 at all: every out-of-wedge element is read through
