@@ -169,7 +169,7 @@ end
 
 # The ladder coefficients, indexed by the *output* mode `(ℓ, m)`.  Both vanish exactly at the
 # edge of their ℓ block — `√0` at `m = -ℓ` for the raising one and at `m = +ℓ` for the lowering
-# one — which is what keeps an ℓ block from coupling to its neighbours.
+# one — which is what keeps an ℓ block from coupling to its neighbors.
 @inline function subdiagonal_coefficient(op::LeftRaising, ::Type{T}, s, ℓ, m) where {T}
     ℓ < support_ℓ(op, s) ? zero(T) : √T((ℓ+m)*(ℓ-m+1))
 end
@@ -264,7 +264,7 @@ end
 # `l[i-1]*b₋ + d[i]*b₀ + u[i]*b₊` does with `d` identically zero.
 #
 # The ladder coefficients vanish *exactly* at the edge of each ℓ block — √0 at `m = -ℓ` for the
-# raising one and at `m = +ℓ` for the lowering one — so no block ever couples to its neighbour
+# raising one and at `m = +ℓ` for the lowering one — so no block ever couples to its neighbor
 # and the loops need no per-block special case.  Only the very first and very last position in
 # the whole vector need a branch, because there the matrix has no band entry at all.
 

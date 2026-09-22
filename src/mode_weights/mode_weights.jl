@@ -404,7 +404,7 @@ end
 (op::DifferentialOperator)(w::ModeWeights) = op * w
 
 # The in-place form, for a loop over many sets of weights.  Aliasing is refused for the banded
-# operators, whose kernels read a neighbour that an in-place write may already have clobbered;
+# operators, whose kernels read a neighbor that an in-place write may already have clobbered;
 # it would be safe for the diagonal ones, but allowing it there only would be a trap.
 function LinearAlgebra.mul!(
     w′::ModeWeights, op::DifferentialOperator, w::ModeWeights{T}
@@ -418,7 +418,7 @@ function LinearAlgebra.mul!(
     end
     if Base.mightalias(w′.data, w.data)
         error(
-            "The output aliases the input.  $(nameof(op)) reads neighbouring modes, so it "
+            "The output aliases the input.  $(nameof(op)) reads neighboring modes, so it "
             * "cannot be applied in place; pass a separate destination, such as `similar(w)`."
         )
     end

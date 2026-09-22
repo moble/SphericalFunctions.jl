@@ -89,10 +89,11 @@ to convert one back.
 ## What the calls return
 
 Nothing, which is the point.  Through version 2 the integer path
-returned [`OffsetArray`](@ref OffsetArrays.OffsetArray)s, so that a
-block could be indexed by its natural ``m`` and ``m'``; half-odd
-indices could not be handled that way, because `OffsetArray`s cannot
-use non-integer axes, and this package grew its own family of
+returned
+[`OffsetArray`s](https://juliaarrays.github.io/OffsetArrays.jl/stable/reference/#OffsetArrays.OffsetArray),
+so that a block could be indexed by its natural ``m`` and ``m'``;
+half-odd indices could not be handled that way, because `OffsetArray`s
+cannot use non-integer axes, and this package grew its own family of
 containers for them.  Since version 3 those containers are what
 *every* call returns, whichever kind of index is in play, so there is
 no table of correspondences to learn:

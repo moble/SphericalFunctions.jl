@@ -388,7 +388,7 @@ quantities that depend only on ``β``, such as ``d`` and ``H`` — the angle ``�
 In the second form, the rotor data from the previous call is reused.  Successive calls with
 ``ℓ, ℓ+1, ℓ+2, …`` are the cheap path: each costs ``O(N_r ℓ^2)``.  Requesting a smaller ``ℓ``
 than the current one restarts the recurrence from ``ℓ_{min}``, so a loop that reads two
-neighbouring ``ℓ`` together pays that restart at every step.
+neighboring ``ℓ`` together pays that restart at every step.
 
 This is the only way to read a calculator by hand — the calculators are not indexed — and it
 is what iterating one calls for each ``ℓ``:

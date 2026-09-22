@@ -172,7 +172,7 @@ end
 # `lo ≤ m ≤ hi`.  There is no parity test to perform: `m` is of the container's own index
 # type, so a whole number cannot reach a half-integer container in the first place.  (Before
 # `HalfOddInteger` existed, indices were `Rational`s and `0//1` had to be rejected here to
-# keep it from being floored onto a neighbouring element.)
+# keep it from being floored onto a neighboring element.)
 @inline inrange(::Type{IT}, m, lo, hi) where {IT} = lo ≤ m ≤ hi
 
 function Base.axes(w::AbstractWignerMatrix{IT}) where {IT}

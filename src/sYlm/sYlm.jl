@@ -6,8 +6,8 @@ Calculator producing the spin-weighted spherical harmonics ``{}_sY_{ℓ,m}`` (wh
 ``ℓ`` at a time.  Use the constructors [`sYlmCalculator`](@ref) and [`sλlmCalculator`](@ref).
 
 Internally this wraps a [`HCalculator`](@ref), which runs the recurrence that both
-flavours share, plus a buffer holding the block for the current ``ℓ``.  The phase tables `Z₊`
-and `Z₋` are empty for the real flavour, which is the whole of the saving: the ``H``
+flavors share, plus a buffer holding the block for the current ``ℓ``.  The phase tables `Z₊`
+and `Z₋` are empty for the real flavor, which is the whole of the saving: the ``H``
 recurrence is real, and it is only the ``e^{-i(mα - sγ)}`` factor that ever made the result
 complex.
 
@@ -202,7 +202,7 @@ function allocate_Y(
     H = allocate_H(IT, RT, ℓₘₐₓ, sₕ, Nᵣ)
     Yˡ = Array{NT, 3}(undef, Nᵣ, nspins(s), 2ℓₘₐₓ + 1)
     # The phase tables are what a real calculator does not have: with `K = 0` they are empty
-    # rather than merely unread, so the ``{}_sλ_{ℓ,m}`` flavour allocates nothing for them.
+    # rather than merely unread, so the ``{}_sλ_{ℓ,m}`` flavor allocates nothing for them.
     # This is the same trick `allocate_W` uses to separate ``𝔇`` from ``d``.
     K = NT <: Complex ? Int(2ℓₘₐₓ) + 1 : 0
     Z₊ = Matrix{Complex{RT}}(undef, K, Nᵣ)
@@ -247,8 +247,8 @@ floattype(::HarmonicCalculator{IT, RT}) where {IT, RT} = RT
 number_type(::HarmonicCalculator{IT, RT, NT}) where {IT, RT, NT} = NT
 # Which of the two constructors produced a calculator, for messages that should name the
 # type the caller actually wrote rather than the struct they share.
-flavour_name(::Type{<:Complex}) = "sYlmCalculator"
-flavour_name(::Type{<:Real}) = "sλlmCalculator"
+flavor_name(::Type{<:Complex}) = "sYlmCalculator"
+flavor_name(::Type{<:Real}) = "sλlmCalculator"
 Nᵣ(c::HarmonicCalculator) = Nᵣ(c.H)
 isbatched(::HarmonicCalculator{IT, RT, NT, ST, S, B}) where {IT, RT, NT, ST, S, B} = B
 
@@ -263,7 +263,7 @@ spin(c::HarmonicCalculator{IT, RT, NT, ST, S}) where {IT, RT, NT, ST, S<:Integer
 function Base.show(io::IO, c::HarmonicCalculator{IT, RT, NT}) where {IT, RT, NT}
     print(
         io,
-        "$(flavour_name(NT)){$IT, $RT} for ℓₘₐₓ=$(ℓₘₐₓ(c)), s=$(c.s), Nᵣ=$(Nᵣ(c))",
+        "$(flavor_name(NT)){$IT, $RT} for ℓₘₐₓ=$(ℓₘₐₓ(c)), s=$(c.s), Nᵣ=$(Nᵣ(c))",
         c.ℓ[] < ℓₘᵢₙ(c) ? " (nothing computed yet)" : ", currently at ℓ=$(c.ℓ[])"
     )
 end
@@ -336,7 +336,7 @@ function set_rotors!(c::sλlmCalculator, R::Union{Rotor, AbstractVector{<:Rotor}
     )
 end
 # One catch-all rather than two, so that it stays strictly less specific than every method
-# above: a pair of them, keyed on the flavour, would be ambiguous with the angle methods,
+# above: a pair of them, keyed on the flavor, would be ambiguous with the angle methods,
 # which name the argument type but not the calculator's.  The branch is on a type parameter,
 # so only the message costs anything, and only on the way to an error.
 function set_rotors!(c::HarmonicCalculator{IT, RT, NT}, R) where {IT, RT<:Real, NT}
@@ -407,8 +407,8 @@ end
 # division being the whole of the difference between ₛYₗₘ(θ,0) and ₛλₗₘ(θ).
 #
 # The two half-odd coefficients differ by exactly the factor i^{2s}, and `Complex * Real` is
-# computed componentwise, so the real flavour's value is bit-for-bit ±imag of the complex
-# flavour's — which is what the transforms used to extract by hand, and what the regression
+# computed componentwise, so the real flavor's value is bit-for-bit ±imag of the complex
+# flavor's — which is what the transforms used to extract by hand, and what the regression
 # test asserts with `==` rather than `≈`.
 @inline function sYlm_coefficient(
     ::Type{NT}, ::Type{RT}, σ::Int, m::IT, s::IT, prefactor::RT
@@ -592,7 +592,7 @@ function sYlm_helper(make, R, ℓₘₐₓ::IT, s, ℓₘᵢₙ::IT) where {IT<:
     check_sYlm_args(ℓₘₐₓ, s, ℓₘᵢₙ)
     # The calculator decides the element type, and the output buffer follows it, so that
     # there is exactly one place where that decision is made.  `make` is what chooses the
-    # flavour: `sYlmCalculator_helper` for the complex harmonics, `sλlmCalculator_helper` for
+    # flavor: `sYlmCalculator_helper` for the complex harmonics, `sλlmCalculator_helper` for
     # the real ones.  Everything below is common to both.
     calc = make(R, ℓₘₐₓ, s)
     Y = allocate_sYlm(number_type(calc), s, ℓₘᵢₙ, ℓₘₐₓ)
@@ -928,7 +928,7 @@ function fill_sYlm_matrix!(Y::AbstractArray{<:Any, 3}, calc, s::AbstractUnitRang
 end
 
 
-### The real flavour: ₛλₗₘ(θ) = ₛYₗₘ(θ, 0) / i^{2s}
+### The real flavor: ₛλₗₘ(θ) = ₛYₗₘ(θ, 0) / i^{2s}
 #
 # Every one of these is the corresponding ₛYₗₘ form with `sλlmCalculator_helper` in place of
 # `sYlmCalculator_helper`, and an angle in place of a rotor.  There is no separate machinery:
@@ -967,7 +967,7 @@ end
 
 Write ``{}_sλ_{ℓ,m}(θ)`` into the existing real array `Y`, which must have the layout
 [`sλlm`](@ref) would return and an element type matching the calculator's.  This is
-[`sYlm!`](@ref) for the real flavour, and behaves identically in every other respect.
+[`sYlm!`](@ref) for the real flavor, and behaves identically in every other respect.
 """
 function sλlm!(Y::HarmonicValues, args...; kwargs...)
     sλlm!(array_view(Y), args...; kwargs...)
@@ -999,7 +999,7 @@ end
 
 The dense real matrix ``{}_sλ_{ℓ,m}(θ_i)``, with rows indexed by the angles in `θ⃗` and columns
 by the modes in the canonical ordering of [`Yindex`](@ref).  This is [`sYlm_matrix`](@ref) for
-the real flavour; `s` may likewise be a range, in which case the result is three-dimensional
+the real flavor; `s` may likewise be a range, in which case the result is three-dimensional
 and indexed `[angle, spin, mode]`.
 """
 function sλlm_matrix(

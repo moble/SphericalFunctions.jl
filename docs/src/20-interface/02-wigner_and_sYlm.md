@@ -108,7 +108,7 @@ does not apply to it directly; [`array_view`](@ref) gives a 1-based
 speed, and [`relabel`](@ref) puts the natural indices back on the
 result.  `Matrix(𝔇[ℓ])` gives an independent copy.  The reasons for
 that arrangement, which is new in version 3, are set out under
-[Containers](@ref) below.
+[Containers](@ref interface_containers) below.
 
 For the ``d`` matrices the interface is the same, except that the
 argument is the angle ``β`` rather than a rotor, and the values are
@@ -264,7 +264,7 @@ Beginning above the calculator's own ``ℓₘᵢₙ`` costs nothing in
 accuracy: the recursion runs through the values below either way, and
 the result is bit-for-bit what a full sweep gives.  Values of ``ℓ``
 taken in *decreasing* order are a different matter — each one restarts
-the recursion from ``ℓₘᵢₙ``, so a loop that reads two neighbouring
+the recursion from ``ℓₘᵢₙ``, so a loop that reads two neighboring
 ``ℓ`` together pays that restart at every step.
 
 For the same reason, two loops over one calculator cannot be
@@ -327,11 +327,11 @@ forms of it.  Everything else is as it is for the complex family: the
 same blocks, the same iteration, the same half-integer spellings, and
 the same containers, which are generic in the number type.
 
-The two flavours share one struct, [`HarmonicCalculator`](@ref),
+The two flavors share one struct, [`HarmonicCalculator`](@ref),
 exactly as [`DCalculator`](@ref) and [`dCalculator`](@ref)
 do — and for the same reason.  The underlying ``H`` recursion is real
 either way; it is only the factor ``e^{-i(mα - sγ)}`` that ever makes a
-result complex, and an angle sets ``α = γ = 0``.  So the real flavour
+result complex, and an angle sets ``α = γ = 0``.  So the real flavor
 runs precisely the same recursion, allocates no phase tables at all,
 and writes half as many numbers.
 

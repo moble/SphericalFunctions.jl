@@ -406,7 +406,7 @@ end
 
     # Half-integer indices may be spelled as `Rational`s with denominator exactly 2, which
     # the public entry points convert to `HalfOddInteger`.  Everything else must fail loudly,
-    # and in particular must never be silently floored to a neighbouring index.
+    # and in particular must never be silently floored to a neighboring index.
     𝟙 = Rotor{Float64}(1)
 
     # ℓₘₐₓ must be a half-integer, not an integer-valued Rational and not a Float
@@ -442,7 +442,7 @@ end
 
     # An integer ℓ on a half-integer `WignerSeries` must say so, rather than throwing a bare
     # `InexactError` out of the index arithmetic (or, under `@inbounds`, quietly returning a
-    # neighbouring block)
+    # neighboring block)
     𝔇 = D(𝟙, 7//2)
     @test_throws "is not one of the ℓ values" 𝔇[2]
     @test_throws "is not one of the ℓ values" 𝔇[3//1]

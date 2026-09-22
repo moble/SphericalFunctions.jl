@@ -1,4 +1,4 @@
-# Tests of the real flavour of the harmonics — `sλlmCalculator`, `sλlm`, `sλlm!` and
+# Tests of the real flavor of the harmonics — `sλlmCalculator`, `sλlm`, `sλlm!` and
 # `sλlm_matrix` — which share their struct, their recurrence and their containers with the
 # complex `sYlmCalculator` and differ only in the number type they store.
 #
@@ -65,7 +65,7 @@ end
         cλ = sλlmCalculator(0.3, ℓmax, s)
         cY = sYlmCalculator(0.3, ℓmax, s)
         # The tables are empty rather than merely unread, which is the point of the `K` trick
-        # in `allocate_Y`: they cost nothing at all for the real flavour.
+        # in `allocate_Y`: they cost nothing at all for the real flavor.
         @test isempty(cλ.Z₊) && isempty(cλ.Z₋)
         @test !isempty(cY.Z₊) && !isempty(cY.Z₋)
         @test size(cλ.Z₊, 2) == size(cY.Z₊, 2)    # the rotor axis is still there
@@ -96,12 +96,12 @@ end
     @test_throws MethodError sλlm(R, 4, -2)
     @test_throws MethodError sλlm_matrix([R], 4, -2)
 
-    # `set_θ!` is what serves it, and re-setting works as for the complex flavour
+    # `set_θ!` is what serves it, and re-setting works as for the complex flavor
     set_θ!(cλ, 0.9)
     reference = sλlmCalculator(0.9, 4, -2)
     @test collect(recurrence!(cλ, 3)) == collect(recurrence!(reference, 3))
 
-    # The complex flavour still takes both
+    # The complex flavor still takes both
     cY = sYlmCalculator(0.3, 4, -2)
     @test set_R!(cY, R) === cY
     @test set_θ!(cY, 0.3) === cY

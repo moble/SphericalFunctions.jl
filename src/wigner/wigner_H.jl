@@ -317,7 +317,7 @@ Value of ``H_{m′,m}`` for rotor `iᵣ`, for *any* ``|m′|, |m| ≤ ℓ`` (at 
 
 `m′` and `m` are of the wedge's own index type, so a wrong-parity index — a whole number for
 a half-integer wedge, say — cannot be expressed, let alone silently floored onto a
-neighbouring element.
+neighboring element.
 """
 @inline function wedge_value(H::HWedge{IT}, iᵣ::Int, m′::IT, m::IT) where {IT}
     @boundscheck if !(iᵣ > 0 && iᵣ ≤ Nᵣ(H))

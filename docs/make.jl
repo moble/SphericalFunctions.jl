@@ -65,6 +65,9 @@ makedocs(
         edit_link = "main",  # Link out to "main" branch on github
         canonical = "https://moble.github.io/SphericalFunctions.jl/stable/",
         assets = String["assets/citations.css", "assets/extras.css"],
+        size_threshold = 300 * 2^10, # 300 KiB
+        size_threshold_warn = 200 * 2^10, # 200 KiB
+        search_size_threshold_warn = 1 * 2^20, # 1 MiB
     ),
     pages = [
         "index.md",
@@ -119,10 +122,14 @@ makedocs(
     #draft=true,  # Skips running code in the docs for speed
 )
 
-deploydocs(
-    repo="github.com/moble/SphericalFunctions.jl",
-    devbranch="main",
-    push_preview=true
-)
+if get(ENV, "CI", "false") == "true"
+    deploydocs(
+        repo="github.com/moble/SphericalFunctions.jl",
+        devbranch="main",
+        push_preview=true
+    )
+else
+    @info "Skipping docs deployment because CI environment variable is not set."
+end
 
 println("Docs built in ", time() - start, " seconds.\n")

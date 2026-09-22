@@ -148,14 +148,8 @@ interface](@ref interface_wigner_matrices) page; an
 [`sYlmCalculator`](@ref) does the same for the harmonics.
 
 Finally, a calculator built from a *vector* of rotations evaluates all
-of them together, adding the rotation index to the front of each
-block.  Handing the whole batch to the library, rather than writing
-the loop over rotations yourself, is what makes that worth doing: the
-recursion is sequential in every index a single rotation has — each
-``ℓ`` comes from the one before, and each element of a matrix from its
-neighbours — so the rotation index is the only one along which the
-same arithmetic can be done independently:
-
+of them simultaneously, returning an object with the rotation index as
+the first dimension:
 ```jldoctest quickstart
 julia> rotors = [from_spherical_coordinates(θ, π/4) for θ ∈ range(0, π, 8)];
 
@@ -168,14 +162,15 @@ julia> for (ℓ, 𝔇ˡ) ∈ batch
 julia> size(recurrence!(batch, ℓₘₐₓ))
 (8, 17, 17)
 ```
-
-How much that arrangement is worth, and the structure of the recursion
-it follows from, are described under [reusing the storage](@ref
-Iterating-over-ℓ-and-reusing-the-storage).
+This allows SIMD instructions to be used efficiently — which is not
+normally very effective because of the recursive nature of the
+calculations.  How much that arrangement is worth, and the structure
+of the recursion it follows from, are described under [reusing the
+storage](@ref Iterating-over-ℓ-and-reusing-the-storage).
 
 Everything so far computes the harmonics themselves.  They are a
 basis, so the other half of the story is the coefficients of those
-harmonics in an expansion with respect to them.  A
+harmonics in an expansion with respect to the harmonics.  A
 [`ModeWeights`](@ref) object holds the ``f_{ℓ,m}`` of a spin-weighted
 function ``f = \sum_{ℓ,m} f_{ℓ,m}\, {}_sY_{ℓ,m}``, in the canonical
 ordering described above, together with the spin weight and the range
@@ -224,13 +219,13 @@ true
 Here, `w'` is the version of `w` obtained by *actively* rotating `w`
 by `R`.
 
-The angular-momentum operators are applied by calling them, as
-[`ð`](@ref)`(w)`.  (Multiplication, `ð * w`, does the same thing, but
-an operator is a function rather than a matrix here, and calling it
-says so.)  Each gives a new `ModeWeights`, with the spin weight
-adjusted where the operator changes it — the point of labelling the
-weights in the first place, since ``ð`` maps a function of spin weight
-``s`` to one of spin weight ``s+1``:
+The [differential operators](@ref interface_differential_operators)
+are applied by calling them — for example, as [`ð`](@ref)`(w)`.
+Multiplication as `ð * w` does the same thing.[^2]  Each gives a new
+`ModeWeights`, with the spin weight adjusted where the operator
+changes it — the point of labelling the weights in the first place,
+since ``ð`` maps a function of spin weight ``s`` to one of spin weight
+``s+1``:
 
 ```jldoctest quickstart
 julia> spin(ð(w)), spin(ð̄(w))
@@ -252,6 +247,11 @@ weights](@ref mode_weight_operations), and the full list of operators
 — along with the matrix forms of them, which act on a plain vector
 instead — is on the [differential operators](@ref
 interface_differential_operators) page.
+
+[^2]: The in-place form of multiplication `mul!` also works.
+    Alternatively, they can be called as in `ð(s, ℓₘᵢₙ, ℓₘₐₓ,
+    FloatType)` to return a matrix subtype — though this will be
+    relatively inefficient.  The `ℓₘᵢₙ` and `FloatType` are optional.
 
 These quantities are computed using recursion relations, which makes
 it possible to compute to very high ℓ values.  Unlike direct
@@ -280,7 +280,8 @@ denominator 2, as in `D(R, 7//2)` or `SSHT(1//2, 7//2)`.  See
 transformations_half_integer) for what a function of half-integer spin
 weight is a function *of*.
 
-The conventions for this package diverge from its predecessors found
+The conventions for this package diverge from previous versions of
+this package, as well as its predecessors found
 [here](https://moble.github.io/spherical_functions/) and
 [here](https://moble.github.io/spherical/), but are described in
 detail on [this page](@ref Summary) and the following pages, including
@@ -295,8 +296,7 @@ including
 [`WignerFamilies.jl`](https://github.com/xzackli/WignerFamilies.jl).
 However, I need support for quaternions (via
 [`Quaternionic.jl`](https://github.com/moble/Quaternionic.jl)) and for
-higher-precision numbers — even at the cost of a very slight decrease
-in speed in some cases — which are what this package provides.
+higher-precision numbers, which are what this package provides.
 
 [^1]: Euler angles are quite generally a very poor choice for
     computing with rotations.  (The only context in which they may be

@@ -907,7 +907,7 @@ end
     # The destination must be labelled with what the operator actually produces
     @test_throws "gives s=1" mul!(similar(w), ð, w)
     @test_throws "ℓ ∈ 0:3" mul!(ModeWeights(zeros(ComplexF64, Ysize(0, 4)), 0, 0, 4), Lz, w)
-    # ... and it may not be the input: the banded kernels read a neighbour
+    # ... and it may not be the input: the banded kernels read a neighbor
     @test_throws "aliases the input" mul!(w, Lz, w)
     # A correctly labelled, separate destination works
     dst = ModeWeights(similar(parent(w)), 1, 0, 3)
