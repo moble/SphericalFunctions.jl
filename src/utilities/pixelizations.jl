@@ -1,10 +1,10 @@
 # Pixelizations of the sphere.
 #
 # The golden-ratio spiral and the sorted rings are sized by the spin weight `s` and the band
-# limit `ℓₘₐₓ`, which may be integers or half-odd-integers, the latter spelled as `Rational`s
+# limit `ℓₘₐₓ`, which may be integers or half-odd-integers, the latter passed as `Rational`s
 # with denominator 2 or as `HalfOddInteger`s.  Each of the three functions that compute points
 # — `golden_ratio_spiral_pixels`, `sorted_rings` and `sorted_ring_pixels` — is a boundary
-# method, typed `IndexSpelling` on its indices, which does nothing but normalize the two with
+# method, typed `IndexArgument` on its indices, which does nothing but normalize the two with
 # `unify_indices` and re-dispatch to a private worker whose signature is
 # `where {IT<:IntegerHalf, T}`.  The worker therefore sees two indices of one concrete type
 # and never a `Rational`, and a call mixing the two kinds of index is refused at the boundary
@@ -32,7 +32,7 @@ present on either the North or South poles.
 
 The number of pixels is [`Ysize(abs(s), ℓₘₐₓ)`](@ref Ysize), the number of modes of spin
 weight `s` with ``|s| ≤ ℓ ≤ ℓₘₐₓ``, which is ``(ℓₘₐₓ+1)^2 - s^2`` for either kind of index.
-The spin weight and `ℓₘₐₓ` may be integers or half-odd-integers, the latter spelled as
+The spin weight and `ℓₘₐₓ` may be integers or half-odd-integers, the latter passed as
 `Rational`s with denominator 2, as in `golden_ratio_spiral_pixels(1//2, 7//2)`.  The two
 must be of one kind; a call that mixes them, such as `golden_ratio_spiral_pixels(1//2, 3)`,
 is an error, and so is a spin weight with ``|s| > ℓₘₐₓ``, for which there are no modes.
@@ -45,7 +45,7 @@ The returned quantity is a vector of 2-SVectors providing the spherical coordina
 pixel.  See also [`golden_ratio_spiral_rotors`](@ref) for the corresponding `Rotor`s.
 """
 function golden_ratio_spiral_pixels(
-    s::IndexSpelling, ℓₘₐₓ::IndexSpelling, ::Type{T}=Float64
+    s::IndexArgument, ℓₘₐₓ::IndexArgument, ::Type{T}=Float64
 ) where T
     golden_ratio_spiral_pixels(unify_indices(s, ℓₘₐₓ)..., T)
 end
@@ -76,7 +76,7 @@ half-odd-integer values that `s` and `ℓₘₐₓ` may take.  The quantity retu
 function is a vector of `Rotor`s providing each pixel.
 """
 function golden_ratio_spiral_rotors(
-    s::IndexSpelling, ℓₘₐₓ::IndexSpelling, ::Type{T}=Float64
+    s::IndexArgument, ℓₘₐₓ::IndexArgument, ::Type{T}=Float64
 ) where T
     from_spherical_coordinates.(golden_ratio_spiral_pixels(s, ℓₘₐₓ, T))
 end
@@ -94,7 +94,7 @@ used to solve for mode weights from function values.  In particular, I use this 
 initialize the Minimal algorithm, which is then fed into an optimizer to fine-tune the
 positions of the rings.
 
-The spin weight and `ℓₘₐₓ` may be integers or half-odd-integers, the latter spelled as
+The spin weight and `ℓₘₐₓ` may be integers or half-odd-integers, the latter passed as
 `Rational`s with denominator 2, as in `sorted_rings(1//2, 7//2)`; the two must be of one
 kind.  There are then ``ℓₘₐₓ - |s| + 1`` rings, and ring ``j`` has ``2j+1`` pixels, both of
 which are whole numbers for either kind of index.  A spin weight with ``|s| > ℓₘₐₓ``
@@ -105,7 +105,7 @@ of the rings on which the pixels will be placed.  The pixels themselves are prov
 [`sorted_ring_pixels`](@ref).
 """
 function sorted_rings(
-    s::IndexSpelling, ℓₘₐₓ::IndexSpelling, ::Type{T}=Float64
+    s::IndexArgument, ℓₘₐₓ::IndexArgument, ::Type{T}=Float64
 ) where T
     sorted_rings(unify_indices(s, ℓₘₐₓ)..., T)
 end
@@ -140,7 +140,7 @@ The returned quantity is a vector of 2-SVectors containing the spherical coordin
 pixel.  See also [`sorted_ring_rotors`](@ref) for the corresponding `Rotor`s.
 """
 function sorted_ring_pixels(
-    s::IndexSpelling, ℓₘₐₓ::IndexSpelling, ::Type{T}=Float64
+    s::IndexArgument, ℓₘₐₓ::IndexArgument, ::Type{T}=Float64
 ) where T
     sorted_ring_pixels(unify_indices(s, ℓₘₐₓ)..., T)
 end
@@ -165,7 +165,7 @@ The returned quantity is a vector of `Rotor`s.  See also [`sorted_ring_pixels`](
 the corresponding spherical coordinates.
 """
 function sorted_ring_rotors(
-    s::IndexSpelling, ℓₘₐₓ::IndexSpelling, ::Type{T}=Float64
+    s::IndexArgument, ℓₘₐₓ::IndexArgument, ::Type{T}=Float64
 ) where T
     from_spherical_coordinates.(sorted_ring_pixels(s, ℓₘₐₓ, T))
 end

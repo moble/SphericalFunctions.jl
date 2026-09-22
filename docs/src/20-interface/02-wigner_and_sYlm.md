@@ -166,7 +166,7 @@ array_view(sY)[Yindex(ℓ, m, abs(s))] == sY[ℓ][m]
 
 That flat form is what a product with a vector of mode weights takes,
 to synthesize a function at the rotors; [`sYlm_matrix`](@ref) is the
-direct spelling of it for those who want the bare array, and
+direct name for it, for those who want the bare array, and
 [`ModeWeights`](@ref) is the container for the weights themselves.
 
 Modes with ``ℓ < |s|`` do not exist (or are inherently zero), so by
@@ -218,7 +218,7 @@ What the recursion costs is governed by the *largest* ``|s|`` asked
 for, so reading the rest of the range out of it is close to free;
 naming a single spin weight is a saving in storage and in the final
 assembly rather than in the recursion itself.  A single spin weight of
-such a block is `ₛYₗ[s, :]`, which is spelled the same way whichever
+such a block is `ₛYₗ[s, :]`, which is written the same way whichever
 kind of index the calculator has.
 [`spins`](@ref SphericalFunctions.spins)
 reports the range a calculator serves, and [`spin`](@ref) the one
@@ -324,7 +324,7 @@ end
 An [`sλlmCalculator`](@ref) stores its values as *real* numbers, and
 [`sλlm`](@ref), [`sλlm!`](@ref) and [`sλlm_matrix`](@ref) are the flat
 forms of it.  Everything else is as it is for the complex family: the
-same blocks, the same iteration, the same half-integer spellings, and
+same blocks, the same iteration, the same half-integer types, and
 the same containers, which are generic in the number type.
 
 The two flavors share one struct, [`HarmonicCalculator`](@ref),
@@ -427,7 +427,7 @@ restrictions cannot rotate anything, because every ``m`` mixes into
 every ``m′``.
 
 !!! warning
-    Evaluation is spelled `*` and **not** `⋅`.  `⋅` is
+    Evaluation is written `*` and **not** `⋅`.  `⋅` is
     `LinearAlgebra.dot`, which conjugates its first argument;
     evaluation must not conjugate the harmonics.  Calling `dot` on
     these types raises an error saying so, rather than quietly
@@ -513,7 +513,7 @@ HAxis
 ## Methods of `Base` functions
 
 Indexing a calculator or a container, copying one, emptying one, gathering every ``ℓ`` of
-one, and converting one to an ordinary `Array` are all spelled with the usual `Base`
+one, and converting one to an ordinary `Array` are all written with the usual `Base`
 functions.  Every specialization the package defines is collected here, for the Wigner
 calculators and containers and for the [`sYlmCalculator`](@ref) alike.
 

@@ -17,16 +17,16 @@
 # ±R_±.  Spin-weighted functions satisfy R_z η = s η, and ð = R_+, ð̄ = -R_-.
 #
 # Each operator is one function with two kinds of method: a *boundary* method typed
-# `IndexSpelling`, which normalizes the indices and re-dispatches, and a *worker* method typed
+# `IndexArgument`, which normalizes the indices and re-dispatches, and a *worker* method typed
 # `where {IT<:IntegerHalf}`, which does the arithmetic.  The worker is reached by dispatch
 # rather than by a separate underscore-prefixed name: `IT<:IntegerHalf` with one `IT` for all
-# three indices is strictly more specific than three independent `IndexSpelling`s, so the
+# three indices is strictly more specific than three independent `IndexArgument`s, so the
 # worker always wins once the indices agree, and `unify_indices` guarantees that they do.
 # Being methods of the exported name, the workers are simply undocumented rather than hidden.
 #
-# The indices `s`, `ℓₘᵢₙ` and `ℓₘₐₓ` may be integers or half-odd-integers, the latter spelled
+# The indices `s`, `ℓₘᵢₙ` and `ℓₘₐₓ` may be integers or half-odd-integers, the latter passed
 # as `Rational`s with denominator 2 or as `HalfOddInteger`s.  Each public function is a
-# boundary method, typed `IndexSpelling` on its indices, which does nothing but normalize the
+# boundary method, typed `IndexArgument` on its indices, which does nothing but normalize the
 # three with `unify_indices` and re-dispatch to a private worker — `L²` for `L²`, and so on —
 # whose signature is `where {IT<:IntegerHalf, T}`.  The worker therefore sees three indices of
 # one concrete type and never a `Rational`, and a call that mixes the two kinds of index is
@@ -42,7 +42,7 @@ const _operator_signature_note = """
 The argument `ℓₘᵢₙ` may be omitted, in which case it defaults to `abs(s)`.  The result acts
 on a vector of mode weights ordered as `[f(ℓ, m) for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ for m ∈ -ℓ:ℓ]`; any
 entries with ``ℓ < |s|`` are mapped to zero.  The indices `s`, `ℓₘᵢₙ` and `ℓₘₐₓ` may be
-integers or half-odd-integers, the latter spelled as `Rational`s with denominator 2 — as in
+integers or half-odd-integers, the latter passed as `Rational`s with denominator 2 — as in
 `L²(1//2, 7//2)` — in which case every ``ℓ`` and ``m`` of the ordering is a half-odd-integer.
 The indices in one call must all be of one kind; a call that mixes them, such as
 `L²(1//2, 0, 7//2)`, is an error.
@@ -191,16 +191,16 @@ end
 ### The three call shapes, written once for every operator.
 #
 # These replace the thirty-six methods — three per operator — that the twelve names used to
-# carry between them.  The first two are the `IndexSpelling` boundaries, which normalize and
+# carry between them.  The first two are the `IndexArgument` boundaries, which normalize and
 # re-dispatch; the third is the worker, reached once the three indices agree in kind, and it
 # builds the matrix from the band structure and the coefficients above.
 
 function (op::DifferentialOperator)(
-    s::IndexSpelling, ℓₘᵢₙ::IndexSpelling, ℓₘₐₓ::IndexSpelling, ::Type{T}=Float64
+    s::IndexArgument, ℓₘᵢₙ::IndexArgument, ℓₘₐₓ::IndexArgument, ::Type{T}=Float64
 ) where T
     op(unify_indices(s, ℓₘᵢₙ, ℓₘₐₓ)..., T)
 end
-function (op::DifferentialOperator)(s::IndexSpelling, ℓₘₐₓ::IndexSpelling, ::Type{T}=Float64) where T
+function (op::DifferentialOperator)(s::IndexArgument, ℓₘₐₓ::IndexArgument, ::Type{T}=Float64) where T
     s, ℓₘₐₓ = unify_indices(s, ℓₘₐₓ)
     op(s, abs(s), ℓₘₐₓ, T)
 end

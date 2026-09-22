@@ -9,9 +9,9 @@
 # generic over every integer type.  The `HalfOddInteger` methods are the same formulas written
 # on the doubled indices 2ℓ, 2m and 2ℓₘᵢₙ, which are odd `Int`s, so that the arithmetic never
 # leaves `Int`: the quarter-integers that would appear in ℓ(ℓ+1) and ℓₘᵢₙ² cancel against each
-# other, and the final division by 4 is exact.  The boundary methods accept any mixture of
-# `Integer`, `HalfOddInteger` and `Rational` spellings, normalize them with `half_integers`,
-# and re-dispatch; they are also what refuses a call such as `Ysize(0, 7//2)`, which mixes the
+# other, and the final division by 4 is exact.  The boundary methods accept `Integer`,
+# `HalfOddInteger` and `Rational` indices alike, normalize them with `half_integers`, and
+# re-dispatch; they are also what refuses a call such as `Ysize(0, 7//2)`, which mixes the
 # two kinds of index, with an explanation rather than a bare `MethodError`.
 
 """
@@ -21,7 +21,7 @@
 Total number of mode weights ``(ℓ, m)`` with ``ℓₘᵢₙ ≤ ℓ ≤ ℓₘₐₓ`` and ``-ℓ ≤ m ≤ ℓ``, which is
 ``(ℓₘₐₓ+1)^2 - ℓₘᵢₙ^2``.
 
-The indices may be integers or half-odd-integers, the latter spelled either as `Rational`s
+The indices may be integers or half-odd-integers, the latter passed either as `Rational`s
 with denominator 2 (`7//2`) or as [`HalfOddInteger`](@ref)s.  Both indices in one call must be
 of the same kind; a call that mixes them, such as `Ysize(0, 7//2)`, throws an `ArgumentError`
 saying so.  The formula holds for either kind — for half-odd ``ℓₘᵢₙ`` and ``ℓₘₐₓ`` the quarters
@@ -55,10 +55,10 @@ end
 # The one-argument form starts the ordering at the floor of the index type: 0 for an integer
 # ℓₘₐₓ, and 1/2 for a half-odd one.
 Ysize(ℓₘₐₓ::IT) where {IT<:IntegerHalf} = Ysize(ℓₘᵢₙ(IT), ℓₘₐₓ)
-# The boundary methods, which are the only ones that see a `Rational`.  `IndexSpelling` is
+# The boundary methods, which are the only ones that see a `Rational`.  `IndexArgument` is
 # defined beside `IntegerHalf` in `half_odd_integer.jl`.
 Ysize(ℓₘₐₓ::Rational) = Ysize(half_integer(ℓₘₐₓ))
-function Ysize(ℓₘᵢₙ::IndexSpelling, ℓₘₐₓ::IndexSpelling)
+function Ysize(ℓₘᵢₙ::IndexArgument, ℓₘₐₓ::IndexArgument)
     Ysize(half_integers(ℓₘᵢₙ, ℓₘₐₓ)...)
 end
 
@@ -69,7 +69,7 @@ end
 Index of the mode weight ``(ℓ, m)`` in the canonical ordering
 `[f(ℓ, m) for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ for m ∈ -ℓ:ℓ]`, which is ``ℓ(ℓ+1) - ℓₘᵢₙ^2 + m + 1``.
 
-As for [`Ysize`](@ref), the indices may be integers or half-odd-integers, spelled as
+As for [`Ysize`](@ref), the indices may be integers or half-odd-integers, passed as
 `Rational`s with denominator 2 or as [`HalfOddInteger`](@ref)s, and all of the indices in one
 call must be of the same kind.  The formula gives a whole number for either kind, because for
 half-odd indices the quarters in ``ℓ(ℓ+1)`` and ``ℓₘᵢₙ^2`` cancel.  `ℓₘᵢₙ` defaults to the
@@ -89,10 +89,10 @@ See also [`Ysize`](@ref) and [`Yrange`](@ref).
 end
 @inline Yindex(ℓ::HalfOddInteger, m::HalfOddInteger) = Yindex(ℓ, m, ℓₘᵢₙ(HalfOddInteger))
 # The boundary methods, which are the only ones that see a `Rational`.
-@inline function Yindex(ℓ::IndexSpelling, m::IndexSpelling)
+@inline function Yindex(ℓ::IndexArgument, m::IndexArgument)
     Yindex(half_integers(ℓ, m)...)
 end
-@inline function Yindex(ℓ::IndexSpelling, m::IndexSpelling, ℓₘᵢₙ::IndexSpelling)
+@inline function Yindex(ℓ::IndexArgument, m::IndexArgument, ℓₘᵢₙ::IndexArgument)
     Yindex(half_integers(ℓ, m, ℓₘᵢₙ)...)
 end
 
@@ -103,12 +103,12 @@ end
 Vector of the ``(ℓ, m)`` pairs in the canonical ordering, so that `Yrange(ℓₘᵢₙ, ℓₘₐₓ)[i]` is
 the pair stored at index `i`.
 
-As for [`Ysize`](@ref), the indices may be integers or half-odd-integers, spelled as
+As for [`Ysize`](@ref), the indices may be integers or half-odd-integers, passed as
 `Rational`s with denominator 2 or as [`HalfOddInteger`](@ref)s, and both indices in one call
-must be of the same kind.  For half-odd-integers the pairs are of `HalfOddInteger`s — however
-the arguments were spelled — as is every other index value the package hands back; use
-`Rational(x)` to convert an element to the familiar spelling.  `ℓₘᵢₙ` defaults to the smallest
-``ℓ`` of the given kind, which is 0 for integers and 1/2 for half-odd-integers.
+must be of the same kind.  For half-odd-integers the pairs are of `HalfOddInteger`s —
+whatever the type of the arguments — as is every other index value the package hands back;
+use `Rational(x)` to convert an element to the more familiar `Rational`.  `ℓₘᵢₙ` defaults to
+the smallest ``ℓ`` of the given kind, which is 0 for integers and 1/2 for half-odd-integers.
 
 See also [`Ysize`](@ref) and [`Yindex`](@ref).
 """
@@ -122,6 +122,6 @@ end
 Yrange(ℓₘₐₓ::IT) where {IT<:IntegerHalf} = Yrange(ℓₘᵢₙ(IT), ℓₘₐₓ)
 # The boundary methods, which are the only ones that see a `Rational`.
 Yrange(ℓₘₐₓ::Rational) = Yrange(half_integer(ℓₘₐₓ))
-function Yrange(ℓₘᵢₙ::IndexSpelling, ℓₘₐₓ::IndexSpelling)
+function Yrange(ℓₘᵢₙ::IndexArgument, ℓₘₐₓ::IndexArgument)
     Yrange(half_integers(ℓₘᵢₙ, ℓₘₐₓ)...)
 end

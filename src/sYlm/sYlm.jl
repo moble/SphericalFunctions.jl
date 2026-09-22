@@ -87,7 +87,7 @@ so that they are functions on the rotation group; for spherical coordinates use
 
 # Half-integer indices
 
-`ℓₘₐₓ` and the spin weights may all be half-integers, spelled as `Rational`s with denominator
+`ℓₘₐₓ` and the spin weights may all be half-integers, passed as `Rational`s with denominator
 2 or as [`HalfOddInteger`](@ref)s, in which case ``ℓ``, ``m`` and ``s`` are all half-integers.
 A range is written the same way, as `-3//2:3//2`.  The prefactor ``(-1)^s`` is then ``\\pm
 i``; the principal branch ``(-1)^s ≡ e^{iπs} = i^{2s}`` settled in the "Conventions" section
@@ -98,7 +98,7 @@ constant phase out).  The blocks are the same containers as for integer indices 
 [`SpinMatrix`](@ref) or [`SpinMatrixBatch`](@ref) for several — indexed exactly as described
 above.  The flat
 interfaces [`sYlm`](@ref), [`sYlm!`](@ref) and [`sYlm_matrix`](@ref) accept the same
-spellings, and lay the values out in the canonical mode-weight ordering of [`Yindex`](@ref),
+types, and lay the values out in the canonical mode-weight ordering of [`Yindex`](@ref),
 which holds for half-odd indices exactly as it does for integers.
 
 See also [`sYlm`](@ref) and [`sYlm_matrix`](@ref) for simpler interfaces, and
@@ -119,7 +119,7 @@ Calculator for the real functions
 for all ``ℓ ≤ ℓₘₐₓ``, with elements of the angle's own real type.  The first argument is the
 angle ``θ``, or an `AbstractVector` of `Nᵣ` of them; later values are supplied with
 [`set_θ!`](@ref).  Otherwise this behaves exactly like [`sYlmCalculator`](@ref) — the same
-blocks, the same iteration, the same half-integer spellings — but stores real numbers rather
+blocks, the same iteration, the same half-integer types — but stores real numbers rather
 than complex ones, and allocates no phase tables at all.
 
 The division by ``i^{2s}`` is what makes the definition uniform in the kind of the indices.
@@ -140,13 +140,13 @@ See also [`sλlm`](@ref) and [`sλlm_matrix`](@ref) for simpler interfaces, and
 const sλlmCalculator{IT, RT, ST, S, B} =
     HarmonicCalculator{IT, RT, RT, ST, S, B} where {IT, RT<:Real, ST, S, B}
 
-# The spellings the spin-weight argument accepts: one index, however spelled, or a range of
+# What the spin-weight argument accepts: one index, of any permitted type, or a range of
 # them.  The argument is typed rather than left open so that a call whose arguments are in the
 # wrong order — `sYlmCalculator(3, 1, Float64)`, say — is still the `MethodError` it should be
 # rather than a puzzling complaint from the index normalizer.
-const SpinSpelling = Union{IndexSpelling, AbstractRange}
+const SpinArgument = Union{IndexArgument, AbstractRange}
 
-function sYlmCalculator(R, ℓₘₐₓ::IndexSpelling, s::SpinSpelling)
+function sYlmCalculator(R, ℓₘₐₓ::IndexArgument, s::SpinArgument)
     sYlmCalculator_helper(R, spin_indices(ℓₘₐₓ, s)...)
 end
 function sYlmCalculator_helper(R, ℓₘₐₓ::IT, s) where {IT<:IntegerHalf}
@@ -156,7 +156,7 @@ function sYlmCalculator_helper(R, ℓₘₐₓ::IT, s) where {IT<:IntegerHalf}
     set_rotors!(allocate_Y(IT, RT, Complex{RT}, ℓₘₐₓ, s, nrotors(R)), R)
 end
 
-function sλlmCalculator(θ, ℓₘₐₓ::IndexSpelling, s::SpinSpelling)
+function sλlmCalculator(θ, ℓₘₐₓ::IndexArgument, s::SpinArgument)
     sλlmCalculator_helper(θ, spin_indices(ℓₘₐₓ, s)...)
 end
 function sλlmCalculator_helper(θ, ℓₘₐₓ::IT, s) where {IT<:IntegerHalf}
@@ -514,7 +514,7 @@ end
 
 ### Convenience functions
 #
-# Each public function here is a boundary method: it accepts every spelling of an index —
+# Each public function here is a boundary method: it accepts an index of any type —
 # `Integer`, `HalfOddInteger`, or a `Rational` with denominator 2 — and of a range of them,
 # normalizes them, and re-dispatches to a worker whose `where {IT<:IntegerHalf}` signature is
 # what the rest of the package sees.  The split is made at the function boundary rather than by
@@ -566,7 +566,7 @@ range straddles zero, so rows below their own ``|s|`` are zero.
 Underneath, the values are held in one array whose *last* axis is the modes in the canonical
 ordering `[ₛYₗₘ for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ for m ∈ -ℓ:ℓ]` (see [`Yindex`](@ref)), and whose leading axes
 are the rotors and spin weights.  [`array_view`](@ref) hands that array back, which is the form a
-product with mode weights takes; [`sYlm_matrix`](@ref) is the direct spelling of it for
+product with mode weights takes; [`sYlm_matrix`](@ref) is the direct name for it, for
 callers who want the bare array.
 
 For spherical coordinates use `R = from_spherical_coordinates(θ, ϕ)`.  For repeated
@@ -577,7 +577,7 @@ see the "Conventions" section of the documentation.
 
 # Half-integer indices
 
-`ℓₘₐₓ` and `s` may be half-integers, spelled as `Rational`s with denominator 2 — as in
+`ℓₘₐₓ` and `s` may be half-integers, passed as `Rational`s with denominator 2 — as in
 `sYlm(R, 7//2, 1//2)`, or `sYlm(R, 7//2, -3//2:3//2)` — in which case every ``ℓ`` and ``m`` is
 a half-odd-integer, and so is `ℓₘᵢₙ`, which may be as small as `1//2`.  The indices in one
 call must all be of one kind, integers or half-odd-integers; a call that mixes them, such as
@@ -585,7 +585,7 @@ call must all be of one kind, integers or half-odd-integers; a call that mixes t
 ``i^{2s} = \\pm i``, so the values include that phase and are not real multiples of
 ``\\overline{𝔇}``; the choice of branch is explained under [`sYlmCalculator`](@ref).
 """
-function sYlm(R::Rotor, ℓₘₐₓ::IndexSpelling, s::SpinSpelling; ℓₘᵢₙ=nothing)
+function sYlm(R::Rotor, ℓₘₐₓ::IndexArgument, s::SpinArgument; ℓₘᵢₙ=nothing)
     sYlm_helper(sYlmCalculator_helper, R, flat_indices(ℓₘₐₓ, s, ℓₘᵢₙ)...)
 end
 function sYlm_helper(make, R, ℓₘₐₓ::IT, s, ℓₘᵢₙ::IT) where {IT<:IntegerHalf}
@@ -603,7 +603,7 @@ end
 # Many rotors at once.  The storage and the recursion are `sYlm_matrix`'s — that is the
 # efficient path, and there is no reason to have two — so this labels the same array rather
 # than computing it again.  `sYlm_matrix` remains the way to ask for the bare array.
-function sYlm(R⃗::AbstractVector{<:Rotor}, ℓₘₐₓ::IndexSpelling, s::SpinSpelling; ℓₘᵢₙ=nothing)
+function sYlm(R⃗::AbstractVector{<:Rotor}, ℓₘₐₓ::IndexArgument, s::SpinArgument; ℓₘᵢₙ=nothing)
     sYlm_batch_helper(sYlmCalculator_helper, R⃗, flat_indices(ℓₘₐₓ, s, ℓₘᵢₙ)...)
 end
 function sYlm_batch_helper(
@@ -714,7 +714,7 @@ for a calculator built for several is the matrix form.  With one, that spin weig
 out of [`spins`](@ref)`(calc)` and the result is a vector; calling this once per spin weight is
 the other way to evaluate several of them at one point.
 
-The indices may be half-integers, spelled as `Rational`s with denominator 2, on the terms
+The indices may be half-integers, passed as `Rational`s with denominator 2, on the terms
 described under [`sYlm`](@ref): all of one kind, with `ℓₘᵢₙ` defaulting to the smallest ``|s|``
 and the values including the phase ``i^{2s}``.  In the calculator forms the kind is already
 fixed by the calculator, whose ``ℓ`` are integers or half-odd-integers according to how it was
@@ -727,7 +727,7 @@ function sYlm!(Y::HarmonicValues, args...; kwargs...)
     Y
 end
 function sYlm!(
-    Y::AbstractVecOrMat{<:Complex}, R::Rotor, ℓₘₐₓ::IndexSpelling, s::SpinSpelling;
+    Y::AbstractVecOrMat{<:Complex}, R::Rotor, ℓₘₐₓ::IndexArgument, s::SpinArgument;
     ℓₘᵢₙ=nothing
 )
     sYlm_flat_helper!(Y, R, flat_indices(ℓₘₐₓ, s, ℓₘᵢₙ)...)
@@ -749,7 +749,7 @@ function sYlm!(
     )
 end
 function sYlm!(
-    Y::AbstractVector{<:Complex}, calc::sYlmCalculator, R::Rotor, s::IndexSpelling;
+    Y::AbstractVector{<:Complex}, calc::sYlmCalculator, R::Rotor, s::IndexArgument;
     ℓₘᵢₙ=nothing
 )
     let s = half_integer(s)
@@ -865,13 +865,13 @@ indexed `[rotor, spin, mode]`, and is a stack of the matrices above rather than 
 weights takes.  The spin index is an ordinary 1-based position, and `ℓₘᵢₙ` defaults to the
 smallest ``|s|`` in the range.
 
-The indices may be half-integers, spelled as `Rational`s with denominator 2, on the terms
+The indices may be half-integers, passed as `Rational`s with denominator 2, on the terms
 described under [`sYlm`](@ref): all of one kind, with `ℓₘᵢₙ` defaulting to the smallest
 ``|s|`` and the values including the phase ``i^{2s}``.  The columns are then indexed by half-odd
 ``(ℓ, m)`` in the same canonical ordering, and [`Yindex`](@ref) locates them as before.
 """
 function sYlm_matrix(
-    R⃗::AbstractVector{<:Rotor}, ℓₘₐₓ::IndexSpelling, s::SpinSpelling; ℓₘᵢₙ=nothing
+    R⃗::AbstractVector{<:Rotor}, ℓₘₐₓ::IndexArgument, s::SpinArgument; ℓₘᵢₙ=nothing
 )
     sYlm_matrix_helper(sYlmCalculator_helper, R⃗, flat_indices(ℓₘₐₓ, s, ℓₘᵢₙ)...)
 end
@@ -952,10 +952,10 @@ weight it removes the ``\\pm i`` that would otherwise make the value imaginary. 
 
 The indices may be half-integers on exactly the terms described under [`sYlm`](@ref).
 """
-function sλlm(θ::Real, ℓₘₐₓ::IndexSpelling, s::SpinSpelling; ℓₘᵢₙ=nothing)
+function sλlm(θ::Real, ℓₘₐₓ::IndexArgument, s::SpinArgument; ℓₘᵢₙ=nothing)
     sYlm_helper(sλlmCalculator_helper, θ, flat_indices(ℓₘₐₓ, s, ℓₘᵢₙ)...)
 end
-function sλlm(θ::AbstractVector{<:Real}, ℓₘₐₓ::IndexSpelling, s::SpinSpelling; ℓₘᵢₙ=nothing)
+function sλlm(θ::AbstractVector{<:Real}, ℓₘₐₓ::IndexArgument, s::SpinArgument; ℓₘᵢₙ=nothing)
     sYlm_batch_helper(sλlmCalculator_helper, θ, flat_indices(ℓₘₐₓ, s, ℓₘᵢₙ)...)
 end
 
@@ -974,7 +974,7 @@ function sλlm!(Y::HarmonicValues, args...; kwargs...)
     Y
 end
 function sλlm!(
-    Y::AbstractVecOrMat{<:Real}, θ::Real, ℓₘₐₓ::IndexSpelling, s::SpinSpelling; ℓₘᵢₙ=nothing
+    Y::AbstractVecOrMat{<:Real}, θ::Real, ℓₘₐₓ::IndexArgument, s::SpinArgument; ℓₘᵢₙ=nothing
 )
     let (ℓₘₐₓ, s, ℓₘᵢₙ) = flat_indices(ℓₘₐₓ, s, ℓₘᵢₙ)
         check_sYlm_args(ℓₘₐₓ, s, ℓₘᵢₙ)
@@ -987,7 +987,7 @@ function sλlm!(Y::AbstractVecOrMat{<:Real}, calc::sλlmCalculator, θ::Real; �
     )
 end
 function sλlm!(
-    Y::AbstractVector{<:Real}, calc::sλlmCalculator, θ::Real, s::IndexSpelling; ℓₘᵢₙ=nothing
+    Y::AbstractVector{<:Real}, calc::sλlmCalculator, θ::Real, s::IndexArgument; ℓₘᵢₙ=nothing
 )
     let s = half_integer(s)
         sYlm_helper!(Y, calc, θ, s, ℓₘᵢₙ === nothing ? abs(s) : half_integer(ℓₘᵢₙ))
@@ -1003,7 +1003,7 @@ the real flavor; `s` may likewise be a range, in which case the result is three-
 and indexed `[angle, spin, mode]`.
 """
 function sλlm_matrix(
-    θ⃗::AbstractVector{<:Real}, ℓₘₐₓ::IndexSpelling, s::SpinSpelling; ℓₘᵢₙ=nothing
+    θ⃗::AbstractVector{<:Real}, ℓₘₐₓ::IndexArgument, s::SpinArgument; ℓₘᵢₙ=nothing
 )
     sYlm_matrix_helper(sλlmCalculator_helper, θ⃗, flat_indices(ℓₘₐₓ, s, ℓₘᵢₙ)...)
 end

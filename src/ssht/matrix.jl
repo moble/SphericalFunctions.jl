@@ -41,7 +41,7 @@ inplaceable(s, ℓₘₐₓ, Rθϕ) = Ysize(abs(s), ℓₘₐₓ) == length(Rθ�
 
 # The public constructor is the boundary: it normalizes the two indices and re-dispatches
 # to the worker, whose keyword defaults are then computed from indices of one kind.
-function SSHTMatrix(s::IndexSpelling, ℓₘₐₓ::IndexSpelling; T::Type{TT}=Float64, kwargs...) where {TT}
+function SSHTMatrix(s::IndexArgument, ℓₘₐₓ::IndexArgument; T::Type{TT}=Float64, kwargs...) where {TT}
     SSHTMatrix(transform_indices(s, ℓₘₐₓ)..., TT; kwargs...)
 end
 function SSHTMatrix(

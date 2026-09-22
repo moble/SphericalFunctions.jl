@@ -50,7 +50,7 @@ at the same time; construct one object per thread.
 
 # Half-integer indices
 
-The spin weight and ``ℓₘₐₓ`` may be half-integers, spelled as `Rational`s with denominator 2
+The spin weight and ``ℓₘₐₓ`` may be half-integers, passed as `Rational`s with denominator 2
 — `SSHT(1//2, 7//2)` — for the `"RS"` and `"Matrix"` methods; the `"Minimal"` method is
 defined only for integer spin weights, and says so.  The mode weights are then indexed by
 half-odd ``ℓ`` and ``m`` in the same canonical ordering, and the function values are, as
@@ -64,7 +64,7 @@ rotor, and changes the sign.  The sampling requirements are otherwise unchanged 
 ``N_ϕ ≥ 2ℓₘₐₓ+1`` and ``N_θ ≥ 2ℓₘₐₓ+1``, both of which are even numbers when ``ℓₘₐₓ`` is a
 half-odd-integer.
 """
-function SSHT(s::IndexSpelling, ℓₘₐₓ::IndexSpelling; method="RS", kwargs...)
+function SSHT(s::IndexArgument, ℓₘₐₓ::IndexArgument; method="RS", kwargs...)
     s, ℓₘₐₓ = transform_indices(s, ℓₘₐₓ)
     if method == "RS"
         return SSHTRS(s, ℓₘₐₓ; kwargs...)

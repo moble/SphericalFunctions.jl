@@ -163,7 +163,7 @@ end
 
 ### Bounds checking
 #
-# `m ∈ axes(w, 2)` is the obvious spelling of the checks below, but it builds a fresh
+# `m ∈ axes(w, 2)` is the obvious way to write the checks below, but it builds a fresh
 # `WignerRange` and then calls the generic `in`, which together cost roughly ten times the
 # load they guard: 145 ns per element for a half-integer block, against 0.9 ns for the
 # `OffsetMatrix` that earlier versions returned.  The helpers here test the stored limits
@@ -854,7 +854,7 @@ end
     b[s, :]
 
 The row of one spin weight of a [`SpinMatrix`](@ref), as a [`DegreeBlock`](@ref) view; it is
-then indexed naturally as `b[s, :][m]`.  The spelling follows [`ModeWeights`](@ref)'s
+then indexed naturally as `b[s, :][m]`.  The notation follows [`ModeWeights`](@ref)'s
 `w[ℓ, :]`, so that a loop over spin weights reads the same in both places.
 """
 @propagate_inbounds function Base.getindex(b::SpinMatrix{IT, NT}, s::IT, ::Colon) where {IT, NT}
@@ -1007,7 +1007,7 @@ end
 
 The rows of one spin weight of a [`SpinMatrixBatch`](@ref), over every rotor, as a
 [`DegreeBlockBatch`](@ref) view; it is then indexed naturally as `b[:, s, :][iᵣ, m]`.  The
-spelling follows [`SpinMatrix`](@ref)'s `b[s, :]`.
+notation follows [`SpinMatrix`](@ref)'s `b[s, :]`.
 """
 @propagate_inbounds function Base.getindex(
     b::SpinMatrixBatch{IT, NT}, ::Colon, s::IT, ::Colon
@@ -1387,18 +1387,17 @@ end
 #
 # Every block container answers two questions about itself, and the whole array interface is
 # written once in terms of the answers: `axis_roles` names its axes, in the order they are
-# indexed, and `natural_axes` gives the matching ranges.  Before version 3 each container spelled
-# out `size`, `length`, `ndims`, `axes` and their trailing-dimension forms for itself, which came
-# to some forty near-identical methods differing only in rank and in which fields held the bounds.
+# indexed, and `natural_axes` gives the matching ranges.
 #
 # `getindex` and `setindex!` are deliberately *not* written this way, and neither are the
-# accessors `ℓ`, `mₘₐₓ`, `sₘᵢₙ` and the rest.  Those are the hot path: the bounds check there
-# reads the stored limits directly rather than building a range to test membership in, which is
-# the difference the note above `inrange` measures at 145 ns against 0.9 ns per element.
+# accessors `ℓ`, `mₘₐₓ`, `sₘᵢₙ` and the rest.  Those are the hot path: the bounds check
+# there reads the stored limits directly rather than building a range to test membership in,
+# which is the difference the note above `inrange` measures at 145 ns against 0.9 ns per
+# element.
 #
 # `HWedge` and `HAxis` are outside this union on purpose.  They are workspaces for the
-# recursion rather than blocks handed to a caller, their storage is triangular, and `size` of
-# one is the size of that storage rather than of any block; they keep the generic
+# recursion rather than blocks handed to a caller, their storage is triangular, and `size`
+# of one is the size of that storage rather than of any block; they keep the generic
 # `AbstractWignerMatrix` methods above.
 
 const BlockContainer = Union{

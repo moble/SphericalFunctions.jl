@@ -747,10 +747,10 @@ end
         @test_throws "denominator 2" O(1//3, 1//3, 7//3, T)
         @test_throws "denominator 2" O(s, 3//1, T)
     end
-    # Each public function carries both layers: a boundary method typed `IndexSpelling`, and a
+    # Each public function carries both layers: a boundary method typed `IndexArgument`, and a
     # worker typed `where {IT<:IntegerHalf}`.  The worker is reached by dispatch rather than by
     # a separate name — one `IT` for all three indices is strictly more specific than three
-    # independent `IndexSpelling`s — so anything that is not already three indices of one kind
+    # independent `IndexArgument`s — so anything that is not already three indices of one kind
     # lands on the boundary, which normalizes it or explains why it cannot.
     for O ∈ ops
         worker = which(O, (HalfOddInteger, HalfOddInteger, HalfOddInteger, Type{Float64}))

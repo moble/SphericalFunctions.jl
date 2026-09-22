@@ -20,10 +20,10 @@ conjugate of the one version 2 used.**
   existing container.
 * **Evaluating a function: `Y * w`.**  Given the harmonics at one or more rotors — a
   `HarmonicValues` from `sYlm`, or an `sYlmCalculator` — this gives the function's values
-  there.  It is spelled `*` and **not** `⋅`, because `⋅` is `LinearAlgebra.dot`, which
+  there.  It is written `*` and **not** `⋅`, because `⋅` is `LinearAlgebra.dot`, which
   conjugates its first argument, and evaluation must not; `dot` on these types raises an error
   saying so rather than answering with the wrong phase.  `w(R)` and `w(R⃗)` are the same
-  product, spelled as a call.
+  product, written as a call.
 * **The real harmonics: `sλlm`, `sλlm!`, `sλlm_matrix` and `sλlmCalculator`.**  These give
   ``{}_sλ_{ℓ,m}(θ) = {}_sY_{ℓ,m}(θ, 0) / i^{2s}``, which is real for integer and half-odd
   spin weights alike, in the same containers as `sYlm` and with the same iteration and
@@ -43,7 +43,7 @@ conjugate of the one version 2 used.**
 * **The differential operators are objects, not functions.**  `L²`, `Lz`, `L₊`, `L₋`, `Lx`,
   `Ly`, `R²`, `Rz`, `R₊`, `R₋`, `ð` and `ð̄` are now zero-size singleton instances of
   subtypes of `DifferentialOperator`, so an operator knows its own effect on the spin weight
-  (`Δspin`) and its own band structure.  Every existing spelling still works — `ð(w)` for the
+  (`Δspin`) and its own band structure.  Every existing call still works — `ð(w)` for the
   labelled result and `ð(s, ℓₘᵢₙ, ℓₘₐₓ, [T])` for the matrix — and `ð * w` is added
   alongside `ð(w)`.  Applying one to mode weights no longer builds the matrix: a loop does
   it, so `ð * w` allocates only its result, and `mul!(w′, ð, w)` allocates nothing.  The
@@ -115,7 +115,7 @@ conjugate of the one version 2 used.**
   block is the slice `ₛYₗ[s, :]`, and `spins` and `spin` report what a
   calculator was built for.  The flat `sYlm`, `sYlm!` and `sYlm_matrix` take ranges
   too, laying the spin weights along a new axis of a plain array.
-  Half-integer ranges are spelled the same way, `-3//2:3//2`, and their
+  Half-integer ranges are written the same way, `-3//2:3//2`, and their
   blocks are the new `SpinMatrix` and `SpinMatrixBatch` containers.
 * **The element type is the input's, and there is no argument to
   override it.**  The positional element type is gone from every
@@ -186,14 +186,14 @@ conjugate of the one version 2 used.**
   `DCalculator(R, 15//2)` work, and `sYlmCalculator` accepts
   half-integer spin weights.  Verified against two independent
   references to ``10^{-16}`` for ``J ≤ 31/2`` and by oracle-free
-  identities to ``J = 101/2``.  (Issue #29.)  The same spelling is
-  accepted by everything built on the canonical mode ordering: `sYlm`,
-  `sYlm!` and `sYlm_matrix`; `Ysize`, `Yindex`, `Yrange` and
-  `ModeWeights`; the angular-momentum operators; the pixelizations; and
-  the `"RS"` and `"Matrix"` transforms, with `map2salm` and `salm2map`.
-  `Ylm` and the `"Minimal"` method remain integer-only, and say so.  A
-  call that mixes integer and half-integer indices is refused with a
-  message naming both spellings.
+  identities to ``J = 101/2``.  (Issue #29.)  The same `Rational`
+  indices are accepted by everything built on the canonical mode
+  ordering: `sYlm`, `sYlm!` and `sYlm_matrix`; `Ysize`, `Yindex`,
+  `Yrange` and `ModeWeights`; the angular-momentum operators; the
+  pixelizations; and the `"RS"` and `"Matrix"` transforms, with
+  `map2salm` and `salm2map`.  `Ylm` and the `"Minimal"` method remain
+  integer-only, and say so.  A call that mixes integer and half-integer
+  indices is refused with a message naming both kinds.
 * **Batched calculators.**  Give a calculator a vector of rotors and it
   evaluates all of them at once, which is two to ten times faster per
   rotor than looping, and is what the transforms now use internally.

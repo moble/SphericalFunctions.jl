@@ -219,19 +219,19 @@ end
 
 
 @testitem "HalfOddInteger: the boundary helpers" begin
-    using SphericalFunctions: HalfOddInteger, IntegerHalf, IndexSpelling, unify_indices, index_value
+    using SphericalFunctions: HalfOddInteger, IntegerHalf, IndexArgument, unify_indices, index_value
     using SphericalFunctions: half_integer, Ysize, Yindex, L², sorted_rings, ModeWeights
     using DoubleFloats: Double64
     h(x) = HalfOddInteger(x)
 
-    # `IndexSpelling` is exactly the set of spellings a boundary method accepts: the two kinds
+    # `IndexArgument` is exactly the set of spellings a boundary method accepts: the two kinds
     # of index, and the `Rational` in which users write a half-odd-integer
-    @test IndexSpelling === Union{IntegerHalf, Rational}
+    @test IndexArgument === Union{IntegerHalf, Rational}
     for x in (3, Int8(3), big(3), h(7//2), 7//2, 7//1, big(7)//2)
-        @test x isa IndexSpelling
+        @test x isa IndexArgument
     end
     for x in (3.5, 3.0, 7//2 + 0im, "3", nothing)
-        @test !(x isa IndexSpelling)
+        @test !(x isa IndexArgument)
     end
 
     # `unify_indices` is `half_integers` followed by `promote`: integers of different types
@@ -253,7 +253,7 @@ end
     @test Base.infer_return_type(unify_indices, (Int8, Int)) === Tuple{Int, Int}
     @test Base.infer_return_type(unify_indices, (Int, Rational{Int})) === Union{}
 
-    # Every `Rational` in `IndexSpelling` converts, whatever its integer type: the numerator is
+    # Every `Rational` in `IndexArgument` converts, whatever its integer type: the numerator is
     # brought to the stored `Int`, and only a numerator that does not fit an `Int` is refused,
     # with the ordinary `InexactError`
     for x in (Int8(7)//Int8(2), Int16(7)//Int16(2), Int32(7)//Int32(2), UInt8(7)//UInt8(2), big(7)//2)

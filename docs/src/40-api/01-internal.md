@@ -113,7 +113,7 @@ such as ``(ℓ-m)(ℓ+m+1)`` is therefore integer arithmetic for both index type
 written exactly as the references write it.  That type, and the `IntegerHalf` union it
 belongs to, are described on the [half-integer page](@ref interface_half_integers); the
 functions below are the boundary machinery that produces them.  A public entry point accepts
-a half-integer index spelled as a `Rational`, and normalizes it with [`half_integer`](@ref
+a half-integer index passed as a `Rational`, and normalizes it with [`half_integer`](@ref
 SphericalFunctions.half_integer) — or, where several indices arrive together and must be of
 one kind, with [`half_integers`](@ref SphericalFunctions.half_integers) — before anything is
 computed.

@@ -32,7 +32,7 @@ The harmonics on the rings are computed with one batched [`sλlmCalculator`](@re
 at a time, so the cost is ``O(N_θ ℓₘₐₓ^2)`` and the memory ``O(N_θ ℓₘₐₓ)``.  The object holds
 that workspace, so it must not be used from several threads at once.
 
-Half-integer `s` and `ℓₘₐₓ` are accepted, spelled as `Rational`s with denominator 2; see
+Half-integer `s` and `ℓₘₐₓ` are accepted as `Rational`s with denominator 2; see
 [`SSHT`](@ref) for what the function values then mean.  The algorithm is the same one: the
 harmonics on a ring are ``i^{2s}`` times real functions of ``θ``, so the ``θ`` stage works
 with those real functions and restores the phase once per ring, and ``e^{imϕ}`` with half-odd
@@ -57,7 +57,7 @@ end
 
 # The public constructor is the boundary: it normalizes the two indices and re-dispatches
 # to the worker, whose keyword defaults are then computed from indices of one kind.
-function SSHTRS(s::IndexSpelling, ℓₘₐₓ::IndexSpelling; T::Type{TT}=Float64, kwargs...) where {TT}
+function SSHTRS(s::IndexArgument, ℓₘₐₓ::IndexArgument; T::Type{TT}=Float64, kwargs...) where {TT}
     SSHTRS(transform_indices(s, ℓₘₐₓ)..., TT; kwargs...)
 end
 function SSHTRS(
@@ -245,13 +245,13 @@ For repeated use with different `map`s of the same shape, construct the transfor
 `map2salm_plan(map, s, ℓₘₐₓ)` (an [`SSHTRS`](@ref) on the Clenshaw–Curtis rings) and pass it
 as the second argument.  See also [`salm2map`](@ref).
 
-The spin weight and ``ℓₘₐₓ`` may be half-integers, spelled as `Rational`s with denominator 2.
+The spin weight and ``ℓₘₐₓ`` may be half-integers, passed as `Rational`s with denominator 2.
 The map is then antiperiodic in ``ϕ`` — its values are those of the function at the rotors
 `from_spherical_coordinates(θ, ϕ)`, and a full circuit of the azimuth reaches the antipodal
 rotor — and the requirements ``N_ϕ ≥ 2ℓₘₐₓ+1``, ``N_θ ≥ 2ℓₘₐₓ+1`` are unchanged in form; see
 [`SSHT`](@ref).
 """
-function map2salm(map::MapOrModes, s::IndexSpelling, ℓₘₐₓ::IndexSpelling)
+function map2salm(map::MapOrModes, s::IndexArgument, ℓₘₐₓ::IndexArgument)
     map2salm(map, map2salm_plan(map, s, ℓₘₐₓ))
 end
 function map2salm(map::MapOrModes, 𝒯::SSHTRS)
@@ -269,7 +269,7 @@ end
 Construct the [`SSHTRS`](@ref) transform used by [`map2salm`](@ref) and [`salm2map`](@ref)
 for maps of the shape of `map` (``N_ϕ × N_θ × …``) on the Clenshaw–Curtis grid.
 """
-function map2salm_plan(map::AbstractArray{Complex{T}}, s::IndexSpelling, ℓₘₐₓ::IndexSpelling) where {T<:Real}
+function map2salm_plan(map::AbstractArray{Complex{T}}, s::IndexArgument, ℓₘₐₓ::IndexArgument) where {T<:Real}
     Nϕ, Nθ = size(map, 1), size(map, 2)
     SSHTRS(
         s, ℓₘₐₓ; T,
@@ -286,7 +286,7 @@ Evaluate the spin-weighted function with mode weights `salm` (in the canonical o
 equiangular ``N_ϕ × N_θ`` grid used by [`map2salm`](@ref).  The result has size ``N_ϕ × N_θ``
 followed by the trailing dimensions of `salm`.
 """
-function salm2map(salm::MapOrModes, s::IndexSpelling, ℓₘₐₓ::IndexSpelling, Nϕ::Integer, Nθ::Integer)
+function salm2map(salm::MapOrModes, s::IndexArgument, ℓₘₐₓ::IndexArgument, Nϕ::Integer, Nθ::Integer)
     T = real(eltype(salm))
     𝒯 = SSHTRS(
         s, ℓₘₐₓ; T,

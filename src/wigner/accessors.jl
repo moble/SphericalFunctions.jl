@@ -22,8 +22,8 @@ function ℓ end
 
 The smallest ``ℓ`` that `x` can hold: `0` for an integer index type and `1//2` for a
 half-integer one.  Also defined on the index type itself, as `ℓₘᵢₙ(Int)` and
-`ℓₘᵢₙ(HalfOddInteger)`; a `Rational` is a spelling that users write at the entry points rather
-than an index type, so `ℓₘᵢₙ(Rational{Int})` is not defined.
+`ℓₘᵢₙ(HalfOddInteger)`; a `Rational` is something users pass at the entry points rather than
+an index type, so `ℓₘᵢₙ(Rational{Int})` is not defined.
 """
 function ℓₘᵢₙ end
 

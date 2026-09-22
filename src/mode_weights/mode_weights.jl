@@ -21,7 +21,7 @@ addition
 - the differential operators [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref),
   [`Lx`](@ref), [`Ly`](@ref), [`R²`](@ref), [`Rz`](@ref), [`R₊`](@ref), [`R₋`](@ref),
   [`ð`](@ref), [`ð̄`](@ref) give a new `ModeWeights` with the spin weight adjusted where
-  appropriate, spelled either `ð * w` or `ð(w)`.  These build no matrix: the operator is
+  appropriate, written either `ð * w` or `ð(w)`.  These build no matrix: the operator is
   applied by a loop, so the only allocation is the result, and `mul!(w′, ð, w)` into a
   correctly labelled destination allocates nothing at all,
 - multiplying by an operator *matrix* instead — `ð(s, ℓₘᵢₙ, ℓₘₐₓ) * w` — gives a plain
@@ -36,13 +36,13 @@ defaults to `abs(s)`, as it does when `data` is given.
 
 # Half-integer indices
 
-The spin weight and the range of ``ℓ`` may be half-integers, spelled as `Rational`s with
+The spin weight and the range of ``ℓ`` may be half-integers, passed as `Rational`s with
 denominator 2 — as in `ModeWeights(data, 1//2)` or `ModeWeights{T}(undef, 1//2, 1//2, 7//2)`
 — in which case every ``ℓ`` and ``m`` of the ordering is a half-odd-integer, and `ℓₘᵢₙ` may be
 as small as `1//2`.  The indices in one call must all be of one kind, integers or
 half-odd-integers; a call that mixes them, such as `ModeWeights(data, 1//2, 0, 7//2)`, is an
 error.  The parameters are stored as [`HalfOddInteger`](@ref)s, which is also what `modes(w)`
-and the axis of `w[ℓ, :]` are made of; `w[ℓ, m]` accepts either spelling.  For such a `w`,
+and the axis of `w[ℓ, :]` are made of; `w[ℓ, m]` accepts either type.  For such a `w`,
 `w[ℓ, :]` is a [`DegreeBlock`](@ref), indexed by `m ∈ -ℓ:ℓ`, exactly as it is for integer
 indices.
 """
@@ -72,7 +72,7 @@ struct ModeWeights{T, IT<:IntegerHalf, V<:AbstractVector{T}} <: AbstractModeCont
     end
 end
 
-# The outer constructors are boundary methods: each accepts every spelling of an index —
+# The outer constructors are boundary methods: each accepts an index of any permitted type —
 # `Integer`, `HalfOddInteger`, or a `Rational` with denominator 2 — and normalizes them with
 # `unify_indices`, which is also what refuses a mixture of the two kinds of index with an
 # explanation.  The inner constructor above is the only one reached with three indices of one
@@ -83,22 +83,22 @@ end
 # spin weight is normalized before `abs` is taken, so that not even that is applied to a
 # `Rational`.
 function ModeWeights(
-    data::AbstractVector, s::IndexSpelling=0; ℓₘᵢₙ::IndexSpelling=abs(half_integer(s))
+    data::AbstractVector, s::IndexArgument=0; ℓₘᵢₙ::IndexArgument=abs(half_integer(s))
 )
     deduced_mode_weights(data, unify_indices(s, ℓₘᵢₙ)...)
 end
 function ModeWeights(
-    data::AbstractVector, s::IndexSpelling, ℓₘᵢₙ::IndexSpelling, ℓₘₐₓ::IndexSpelling
+    data::AbstractVector, s::IndexArgument, ℓₘᵢₙ::IndexArgument, ℓₘₐₓ::IndexArgument
 )
     ModeWeights(data, unify_indices(s, ℓₘᵢₙ, ℓₘₐₓ)...)
 end
 function ModeWeights{T}(
-    ::UndefInitializer, s::IndexSpelling, ℓₘᵢₙ::IndexSpelling, ℓₘₐₓ::IndexSpelling
+    ::UndefInitializer, s::IndexArgument, ℓₘᵢₙ::IndexArgument, ℓₘₐₓ::IndexArgument
 ) where {T}
     s, ℓₘᵢₙ, ℓₘₐₓ = unify_indices(s, ℓₘᵢₙ, ℓₘₐₓ)
     ModeWeights(Vector{T}(undef, Ysize(ℓₘᵢₙ, ℓₘₐₓ)), s, ℓₘᵢₙ, ℓₘₐₓ)
 end
-function ModeWeights{T}(::UndefInitializer, s::IndexSpelling, ℓₘₐₓ::IndexSpelling) where {T}
+function ModeWeights{T}(::UndefInitializer, s::IndexArgument, ℓₘₐₓ::IndexArgument) where {T}
     s, ℓₘₐₓ = unify_indices(s, ℓₘₐₓ)
     ModeWeights{T}(undef, s, abs(s), ℓₘₐₓ)
 end
@@ -183,7 +183,7 @@ modes(w::ModeWeights) = Yrange(w.ℓₘᵢₙ, w.ℓₘₐₓ)
 # machinery; it is now an [`AbstractModeContainer`](@ref) like the rest, and these are the
 # methods that keep the useful part of the old behavior.  Losing the subtyping costs less than
 # it appears to: the transforms in `ssht/` never used it, reaching for the raw storage before
-# every `mul!` and `ldiv!` (what is now spelled [`array_view`](@ref)).
+# every `mul!` and `ldiv!` (what is now called [`array_view`](@ref)).
 Base.size(w::ModeWeights) = size(w.data)
 Base.size(w::ModeWeights, d::Integer) = d ≤ 1 ? size(w)[d] : 1
 Base.length(w::ModeWeights) = length(w.data)
@@ -214,7 +214,7 @@ end
 # one, `L₊(s, ℓₘᵢₙ, ℓₘₐₓ)` leaves it alone, and the two are both `Diagonal`/`Bidiagonal`
 # matrices of numbers with nothing to tell them apart.  Without these methods the generic
 # `AbstractVector` machinery would hand the result `w`'s own spin weight, which for the
-# spin-changing operators is silently wrong; `ð(w)` is the spelling that keeps the label
+# spin-changing operators is silently wrong; `ð(w)` is the expression that keeps the label
 # right.  These three cover every matrix type the operators in this package return.
 Base.:*(A::AbstractMatrix, w::ModeWeights) = A * parent(w)
 # ... and on the other side, which is the outer product `w * w'`.
@@ -296,7 +296,7 @@ LinearAlgebra.dot(a::AbstractVector, b::ModeWeights) = LinearAlgebra.dot(a, b.da
 #
 # Each of `w[ℓ, m]`, `w[ℓ, m] = v` and `w[ℓ, :]` has a method for each kind of index — with
 # the indices of the same kind as `w`'s own — and a boundary method that accepts any other
-# spelling, normalizes it, checks that it is of `w`'s kind, and re-dispatches.  The boundary
+# type, normalizes it, checks that it is of `w`'s kind, and re-dispatches.  The boundary
 # is what admits `w[3//2, 1//2]`, and what turns an integer index applied to a half-integer
 # `w` into an explanation rather than a `MethodError` deep inside `Yindex`.
 
@@ -333,7 +333,7 @@ end
     w[ℓ, m]
 
 The mode weight of ``(ℓ, m)`` in the [`ModeWeights`](@ref) `w`.  For a `w` with half-integer
-indices, `ℓ` and `m` may be spelled as `Rational`s — `w[3//2, 1//2]` — or as
+indices, `ℓ` and `m` may be passed as `Rational`s — `w[3//2, 1//2]` — or as
 [`HalfOddInteger`](@ref)s; for a `w` with integer indices they must be integers.
 """
 @propagate_inbounds function Base.getindex(w::ModeWeights{T, <:Integer}, ℓ::Integer, m::Integer) where {T}
@@ -346,7 +346,7 @@ end
     @boundscheck check_mode(w, ℓ, m)
     @inbounds w.data[Yindex(ℓ, m, w.ℓₘᵢₙ)]
 end
-@propagate_inbounds function Base.getindex(w::ModeWeights, ℓ::IndexSpelling, m::IndexSpelling)
+@propagate_inbounds function Base.getindex(w::ModeWeights, ℓ::IndexArgument, m::IndexArgument)
     w[natural_indices(w, ℓ, m)...]
 end
 @propagate_inbounds function Base.setindex!(w::ModeWeights{T, <:Integer}, v, ℓ::Integer, m::Integer) where {T}
@@ -359,7 +359,7 @@ end
     @boundscheck check_mode(w, ℓ, m)
     @inbounds w.data[Yindex(ℓ, m, w.ℓₘᵢₙ)] = v
 end
-@propagate_inbounds function Base.setindex!(w::ModeWeights, v, ℓ::IndexSpelling, m::IndexSpelling)
+@propagate_inbounds function Base.setindex!(w::ModeWeights, v, ℓ::IndexArgument, m::IndexArgument)
     ℓ′, m′ = natural_indices(w, ℓ, m)
     w[ℓ′, m′] = v
 end
@@ -369,7 +369,7 @@ end
 
 A view of the mode weights of the [`ModeWeights`](@ref) `w` for the given ``ℓ``, indexed by
 `m ∈ -ℓ:ℓ`.  This is a [`DegreeBlock`](@ref) for either kind of index; where the indices are
-half-odd-integers they may be spelled either as `Rational`s or as [`HalfOddInteger`](@ref)s.
+half-odd-integers they may be passed either as `Rational`s or as [`HalfOddInteger`](@ref)s.
 Writing through the view writes into `w`.
 """
 function Base.getindex(w::ModeWeights{T, IT}, ℓ::IT, ::Colon) where {T, IT<:IntegerHalf}
@@ -379,7 +379,7 @@ function Base.getindex(w::ModeWeights{T, IT}, ℓ::IT, ::Colon) where {T, IT<:In
     i₀ = Yindex(ℓ, -ℓ, w.ℓₘᵢₙ)
     DegreeBlock(view(w.data, i₀:i₀+2ℓ), ℓ)
 end
-Base.getindex(w::ModeWeights, ℓ::IndexSpelling, ::Colon) = w[natural_index(w, ℓ), :]
+Base.getindex(w::ModeWeights, ℓ::IndexArgument, ::Colon) = w[natural_index(w, ℓ), :]
 
 function Base.show(io::IO, ::MIME"text/plain", w::ModeWeights{T}) where {T}
     println(io, "ModeWeights{$T} with s=$(w.s), ℓ ∈ $(w.ℓₘᵢₙ):$(w.ℓₘₐₓ):")
@@ -392,7 +392,7 @@ end
 #
 # One method covers all twelve: the operator is a value, so it says its own effect on the spin
 # weight through `Δspin`, and the container already holds three normalized indices of one kind,
-# so `op(...)` reaches the worker directly rather than going through the `IndexSpelling`
+# so `op(...)` reaches the worker directly rather than going through the `IndexArgument`
 # boundary again.  The range of ℓ is unchanged even where the spin weight moves — entries that
 # fall outside the new |s| are zeroed by the coefficients, not dropped.
 function Base.:*(op::DifferentialOperator, w::ModeWeights{T}) where {T}

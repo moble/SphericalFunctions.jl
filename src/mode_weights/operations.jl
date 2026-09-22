@@ -359,7 +359,7 @@ function Base.:*(
 end
 
 
-### Evaluation at a rotor, spelled as a call.
+### Evaluation at a rotor, written as a call.
 
 """
     w(R)

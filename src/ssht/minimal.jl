@@ -63,7 +63,7 @@ alternating_countdown(ℓₘₐₓ::Integer) = reverse(alternating_countup(ℓ�
 
 # The public constructor is the boundary; the indices arrive at the worker as `Int`s, or as
 # `HalfOddInteger`s, for which the worker is the refusal described in the docstring.
-function SSHTMinimal(s::IndexSpelling, ℓₘₐₓ::IndexSpelling; T::Type{TT}=Float64, kwargs...) where {TT}
+function SSHTMinimal(s::IndexArgument, ℓₘₐₓ::IndexArgument; T::Type{TT}=Float64, kwargs...) where {TT}
     SSHTMinimal(transform_indices(s, ℓₘₐₓ)..., TT; kwargs...)
 end
 function SSHTMinimal(s::HalfOddInteger, ℓₘₐₓ::HalfOddInteger, ::Type; kwargs...)

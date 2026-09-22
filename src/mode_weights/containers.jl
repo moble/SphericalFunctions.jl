@@ -78,7 +78,7 @@ and are views into the storage rather than copies, so writing through one writes
 [`array_view`](@ref) gives the flat storage: a `Vector` of modes, or an array whose *last* axis is
 the modes in the canonical ordering (see [`Yindex`](@ref)) and whose leading axes are the
 rotors and spin weights.  That is the form a product with mode weights takes, and
-[`sYlm_matrix`](@ref) is the direct spelling of it.
+[`sYlm_matrix`](@ref) is the direct name for it.
 
 `spins(Y)` is the range of spin weights served, `spin(Y)` the single value when there is only
 one, `Nᵣ(Y)` the number of rotors, and `ℓₘᵢₙ(Y)`/`ℓₘₐₓ(Y)` the range of ``ℓ``.  Iterating gives

@@ -131,8 +131,8 @@ See also [`d`](@ref).
 """
 const dCalculator{IT, RT, ST, B} = WignerCalculator{IT, RT, RT, ST, B} where {IT, RT<:Real, ST, B}
 
-# `ℓₘₐₓ` is constrained to `IntegerHalf` here (with the `Rational` methods at the bottom of
-# this file taking the half-integer spelling) so that a call in the old argument order —
+# `ℓₘₐₓ` is constrained to `IntegerHalf` here (with the `Rational`s taken by the methods at
+# the bottom of this file) so that a call in the old argument order —
 # `DCalculator(ℓₘₐₓ, Float64)` — is an immediate `MethodError` at the call site rather
 # than something that dispatches with the element type in the rotor's place.
 # The element type is derived here and passed on as a *type*, to the helpers below, rather
@@ -422,7 +422,7 @@ const Nr = Nᵣ
 #
 # The recurrences want a `HalfOddInteger`, but `3//2` is what a caller naturally writes, and
 # is what every previous version of this package accepted.  These methods convert and
-# re-dispatch, so the `Rational` spelling never reaches the hot code.  See
+# re-dispatch, so no `Rational` ever reaches the hot code.  See
 # [`half_integer`](@ref).
 
 function DCalculator(R, ℓₘₐₓ::Rational; kwargs...)

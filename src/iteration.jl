@@ -2,7 +2,7 @@
 #
 # The calculators hold one ``ℓ`` at a time, which is the whole point of them: the recurrence
 # is what makes large ℓₘₐₓ reachable, and holding every matrix at once is what makes it
-# expensive.  This file gives that shape its natural spelling, so that a whole sweep is a
+# expensive.  This file gives that shape its natural expression, so that a whole sweep is a
 # `for` loop rather than a hand-written one over `recurrence!`.
 #
 # A calculator iterates as key–value pairs, ℓ => block.  That is the `AbstractDict` shape

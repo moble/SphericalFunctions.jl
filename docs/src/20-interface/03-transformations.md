@@ -177,7 +177,7 @@ Everything above extends to half-integer spin weights, and the `"RS"`
 and `"Matrix"` methods accept them; only the `"Minimal"` method does
 not, because its bookkeeping of rings and aliased modes is written for
 integer indices, and it says so when asked.  As elsewhere in this
-package, a half-integer is spelled as a `Rational` with denominator 2,
+package, a half-integer is passed as a `Rational` with denominator 2,
 and the mode weights are then indexed by half-odd ``ℓ`` and ``m`` in
 the same canonical ordering:
 ```julia
