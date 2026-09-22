@@ -1,6 +1,6 @@
 # Changelog
 
-## 3.0.0 (unreleased)
+## 3.0.0
 
 Version 3 is a major rewrite of the code, with a new interface, new
 capabilities, and a new convention for Wigner's ``𝔇`` matrices.  The
@@ -48,10 +48,10 @@ version 2.2.9.
   flat vectors.**  `D` and `d` return a `WignerSeries`, indexed as
   `𝔇[ℓ][m′, m]` with ``m′`` and ``m`` running over `-ℓ:ℓ`, and `sYlm`
   returns a `HarmonicValues`, indexed as `Y[ℓ][m]`.  There is no longer
-  any index arithmetic with `WignerDindex`.  (Issues #41 and #48.)  The
-  first index of each block is ``m′``; version 2's `D_iterator` and
-  `d_iterator` returned the transpose of the blocks their documentation
-  described, and warned so on every call.  These containers are
+  any index arithmetic with `WignerDindex`.  The first index of each
+  block is ``m′``; version 2's `D_iterator` and `d_iterator` returned
+  the transpose of the blocks their documentation described, and warned
+  so on every call.  (Issues #41 and #48.)  These containers are
   deliberately not `AbstractArray`s, since their indices may be
   half-integers; linear algebra on them goes through `array_view`
   (described under "Added"), so that `𝔇₁[ℓ] * 𝔇₂[ℓ]` is written
@@ -88,9 +88,12 @@ version 2.2.9.
 * **`map2salm` has a new signature and output.**  It is called as
   `map2salm(map, s, ℓₘₐₓ)` or `map2salm(map, 𝒯::SSHTRS)`; the
   `show_progress` argument is gone.  The output starts at ``ℓ = |s|``
-  rather than ``ℓ = 0`` (issue #59), and is a `ModeWeights` for a single
-  map.  `map2salm!` and `plan_map2salm` are removed; the plan is now an
-  `SSHTRS`, which the unexported `map2salm_plan` constructs.
+  rather than ``ℓ = 0``, and is a `ModeWeights` for a single map.
+  `map2salm!` and `plan_map2salm` are removed; the plan is now an
+  `SSHTRS`, which the unexported `map2salm_plan` constructs.  Because
+  `map2salm` is now implemented by the ring-based transform, the
+  `BoundsError` that version 2's `map2salm!` raised under
+  `--check-bounds=yes` is gone.  (Issue #59.)
 * The dependencies `AbstractFFTs`, `DoubleFloats`, `Hwloc`,
   `LoopVectorization` and `ProgressMeter` are dropped, and
   `FixedSizeArrays` is added.
@@ -157,13 +160,17 @@ version 2.2.9.
   view that the next step overwrites, and allocates nothing;
   `recurrence!(calc, ℓ)` computes a single step, and `collect` copies
   every block.  `set_R!`, `set_β!` and `set_θ!` point an existing
-  calculator at new data.
+  calculator at new data.  (Issue #32.)
 * **Batched evaluation.**  Given a vector of rotors, the calculators and
   `sYlm` evaluate all of them at once, with the rotor as the leading
   index of each block.  This is two to ten times faster per rotor than
   a loop, because the rotor index is the only one that the recursions
-  allow to be vectorized.  The transforms use it internally.  (Issue
-  #32.)
+  allow to be vectorized.  The transforms use it internally.
+* **Spinor phases.**  The phases of a rotor that the recursions need
+  are computed directly from its components as
+  ``e^{i(α±γ)/2}`` and ``\cos(β/2)``, ``\sin(β/2)``, rather than
+  through Euler angles.  This is accurate near both poles, and gives
+  ``𝔇(-R) = -𝔇(R)`` for half-integer indices.  (Issue #57.)
 * **Restricted ranges.**  The keywords `m′ₘₐₓ`, `m′ₘᵢₙ`, `mₘₐₓ` and
   `mₘᵢₙ` of `D`, `d` and their calculators limit the part of each matrix
   that is computed, and `sYlm` and its relatives accept an `ℓₘᵢₙ`
