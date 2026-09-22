@@ -1,70 +1,83 @@
 module SphericalFunctions
 
-using FastTransforms: FFTW, fft, fftshift!, ifft, ifftshift!, irfft,
-                      plan_bfft!, plan_fft, plan_fft!
-using LinearAlgebra: LinearAlgebra, Bidiagonal, Diagonal, convert, ldiv!, mul!
-using OffsetArrays: OffsetArray, OffsetVector
-using ProgressMeter: Progress, next!
-using Quaternionic: Quaternionic, Rotor, from_spherical_coordinates,
-                    to_euler_phases, to_spherical_coordinates
+using TestItems: @testitem, @testsnippet
+using FastTransforms: FastTransforms, FFTW, ifft, irfft, plan_fft!, plan_bfft!, fftshift!, ifftshift!
+using LinearAlgebra: LinearAlgebra, mul!, ldiv!
+using Base.Threads: @threads
+using Quaternionic: Quaternionic, AbstractQuaternion, Rotor, QuatVec, from_spherical_coordinates
 using StaticArrays: @SVector
-using SpecialFunctions, DoubleFloats
-using LoopVectorization: @turbo
-using Hwloc: num_physical_cores
-using Base.Threads: @threads, nthreads
-using TestItems: @testitem
-
-const MachineFloat = Union{Float16, Float32, Float64}
+using SpecialFunctions
+using LinearAlgebra: Diagonal, Bidiagonal, Tridiagonal
+using FixedSizeArrays: FixedSizeVectorDefault, FixedSizeVector
+using OffsetArrays: OffsetArray, OffsetVector, OffsetMatrix
+import Base: @propagate_inbounds
 
 
-include("utils.jl")
+# Base.IEEEFloat is not public, so we just define our own
+const IEEEFloat = Union{Float16, Float32, Float64}
 
-include("pixelizations.jl")
+include("utilities/utils.jl")
+
+include("utilities/half_odd_integer.jl")
+
+include("utilities/pixelizations.jl")
 export golden_ratio_spiral_pixels, golden_ratio_spiral_rotors
 export sorted_rings, sorted_ring_pixels, sorted_ring_rotors
 export fejer1_rings, fejer2_rings, clenshaw_curtis_rings
 
-include("complex_powers.jl")
-export complex_powers, complex_powers!
+include("utilities/complex_powers.jl")
+export complex_powers, complex_powers!, ComplexPowers
 
-include("indexing.jl")
-export Ysize, Yrange, Yindex, deduce_limits, theta_phi, phi_theta
-export WignerHsize, WignerHindex, _WignerHindex, WignerHrange
-export WignerDsize, WignerDindex, WignerDrange
-
-include("iterators.jl")
-export D_iterator, d_iterator, sYlm_iterator, λ_iterator
-# Legacy API:
-export Diterator, diterator, Yiterator, λiterator
-
-include("associated_legendre.jl")
-export ALFRecursionCoefficients, ALFrecurse!, ALFcompute!, ALFcompute
-
-include("Hrecursion.jl")
-export H!, H_recursion_coefficients
-
-include("evaluate.jl")
-export d_prep, d_matrices, d_matrices!
-export D_prep, D_matrices, D_matrices!
-export sYlm_prep, sYlm_values, sYlm_values!
-# Legacy API:
-export d!, d, D!, Y!, dprep, Dprep, Yprep, ₛ𝐘
-
-include("weights.jl")
+include("utilities/weights.jl")
 export fejer1, fejer2, clenshaw_curtis
 
-include("ssht.jl")
-export SSHT, pixels, rotors
+include("utilities/operators.jl")
+export L², Lz, L₊, L₋, Lx, Ly, R², Rz, R₊, R₋, ð, ð̄
 
-include("map2salm.jl")
-export map2salm, map2salm!, plan_map2salm
+include("wigner/wigner.jl")
+export AbstractWignerMatrix, WignerMatrix, WignerDMatrix, WignerdMatrix
+export WignerMatrixBatch, DegreeBlock, DegreeBlockBatch, WignerSeries
+export SpinMatrix, SpinMatrixBatch
+export WignerCalculator, DCalculator, dCalculator, HCalculator
+export recurrence!, D, d
 
-include("operators.jl")
-export L², Lz, L₊, L₋, R², Rz, R₊, R₋, ð, ð̄
+include("mode_weights/indexing.jl")
+export Ysize, Yindex, Yrange
 
-#include("rotate.jl")
-#export rotate!
+include("mode_weights/containers.jl")
+export HarmonicValues
 
+include("sYlm/sYlm.jl")
+export sYlmCalculator, sYlm, sYlm!, sYlm_matrix, Ylm, YlmCalculator
 
+include("set_rotor_data.jl")
+export set_R!, set_β!, set_θ!
 
-end # module
+include("iteration.jl")
+
+include("mode_weights/mode_weights.jl")
+export ModeWeights, modes, spin
+
+include("array_view.jl")
+export array_view, relabel
+
+include("mode_weights/operations.jl")
+
+include("ssht/ssht.jl")
+export SSHT, SSHTMatrix, SSHTRS, SSHTMinimal, pixels, rotors, map2salm, salm2map
+
+# Names that are part of the documented interface but are not exported, either because they
+# are accessors whose names are too generic to export, or because they are storage types that
+# most users never name.  `public` is a keyword only from Julia 1.11 on; the package supports
+# Julia 1.10, where this is simply skipped.
+VERSION ≥ v"1.11.0-DEV.469" && eval(Meta.parse(
+    "public ℓ, ℓₘᵢₙ, ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, sₘₐₓ, sₘᵢₙ, spins, Nᵣ, "
+    * "AbstractModeContainer, DifferentialOperator, Δspin, "
+    * "HarmonicCalculator, sλlmCalculator, sλlm, sλlm!, sλlm_matrix, "
+    * "ell, ellmin, ellmax, mpmax, mpmin, mmax, mmin, smax, smin, Nr, ishalfinteger, isbatched, "
+    * "HalfOddInteger, IntegerHalf, "
+    * "nmodes, npixels, HWedge, HAxis, rotor_basetype, nrotors, floattype, "
+    * "driscoll_healy_pixels, driscoll_healy_rotors, mcewen_wiaux_pixels, mcewen_wiaux_rotors"
+))
+
+end # module SphericalFunctions

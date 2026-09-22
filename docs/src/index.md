@@ -1,56 +1,420 @@
 # Introduction
 
-This is a Julia package for evaluating and transforming Wigner's 𝔇 matrices,
-and spin-weighted spherical harmonics ``{}_{s}Y_{\ell,m}`` (which includes the
-ordinary scalar spherical harmonics).  Because [*both* 𝔇 *and* the harmonics
-are most correctly considered](@cite Boyle_2016) functions on the rotation group
-``𝐒𝐎(3)`` — or more generally, the spin group ``𝐒𝐩𝐢𝐧(3)`` that covers it —
-these functions are evaluated directly in terms of quaternions.  Concessions are
-also made for more standard forms of spherical coordinates and Euler angles.[^1]
-Among other applications, those functions permit "synthesis" (evaluation of the
-spin-weighted spherical functions) of spin-weighted spherical harmonic
-coefficients on regular or distorted grids.  This package also includes
-functions enabling efficient "analysis" (decomposition into mode coefficients)
-of functions evaluated on regular grids to high order and accuracy.
+```@meta
+CurrentModule = SphericalFunctions
+DocTestSetup = quote
+    using SphericalFunctions, Quaternionic
+end
+```
 
-These quantities are computed using recursion relations, which makes it possible
-to compute to very high ℓ values.  Unlike direct evaluation of individual
-elements, which would generally cause overflow or underflow beyond ℓ≈30 when
-using double precision, these recursion relations should be valid for far higher
-ℓ values.  More precisely, when using *this* package, `Inf` values appear
-starting at ℓ=128 for `Float16`, but I have not yet found any for values up to
-at least ℓ=1024 with `Float32`, and presumably far higher for `Float64`.
-`BigFloat` also works, and presumably will not overflow for any ℓ value that
-could reasonably fit into computer memory — though it is far slower.  Also note
-that [`DoubleFloats`](https://github.com/JuliaMath/DoubleFloats.jl) will work,
-and achieve significantly greater accuracy (but no greater ℓ range) than
-`Float64`.  In all cases, results are typically accurate to roughly ℓ times the
-precision of the input quaternion.
+This is a Julia package for evaluating and transforming Wigner's 𝔇
+matrices, and spin-weighted spherical harmonics ``{}_{s}Y_{ℓ,m}``
+(which includes the ordinary scalar spherical harmonics).  Because
+[*both* 𝔇 *and* the harmonics are most correctly considered](@cite
+Boyle_2016) functions on the rotation group ``𝐒𝐎(3)`` — or more
+generally, the spin group ``𝐒𝐩𝐢𝐧(3) \cong 𝐒𝐔(2)`` that covers it
+— these functions are evaluated directly in terms of quaternions,
+given as `Rotor`s from
+[`Quaternionic.jl`](https://github.com/moble/Quaternionic.jl), which
+also provides conversions from spherical coordinates and Euler
+angles.[^1] Among other applications, those
+functions permit "synthesis" (evaluation of the spin-weighted
+spherical functions) of spin-weighted spherical harmonic coefficients
+on regular or distorted grids.  This package also includes functions
+enabling efficient and accurate "analysis" (decomposition into mode
+coefficients) of functions evaluated on regular grids to high order,
+or arbitrary grids to intermediate order.
 
-The conventions for this package are mostly inherited from — and are described
-in detail by — its predecessors found
+## Outline of capabilities
+
+- Basic functions [`D`](@ref), [`d`](@ref), [`sYlm`](@ref), and
+  [`Ylm`](@ref)
+  - Evaluate all terms up to a given ``ℓₘₐₓ`` at once
+  - Half-integer indices are supported throughout (except by `Ylm`,
+    which is integer by definition), passed as `Rational` arguments
+    with denominator 2
+  - Optional restricted ranges of ``m'``,  ``m``, and/or ``s``
+  - Functions of a single rotation or of a vector of them
+  - Return objects indexed directly by ``ℓ``, ``m``, etc., even for
+    negative or half-integer indices
+- Iterative calculators [`DCalculator`](@ref), [`dCalculator`](@ref),
+  [`sYlmCalculator`](@ref), and [`YlmCalculator`](@ref)
+  - Take the same arguments as the basic functions
+  - Calculate one ``ℓ`` at a time, returning a view into the storage
+  - Dramatically reduced memory footprint
+  - Can be reused for multiple rotations with `set_R!`, etc.
+- Differential operators [`ð`](@ref), [`ð̄`](@ref), [`L²`](@ref),
+  [`Lx`](@ref), [`Ly`](@ref), [`Lz`](@ref), [`L₊`](@ref),
+  [`L₋`](@ref), [`R²`](@ref), [`Rz`](@ref), [`R₊`](@ref), and
+  [`R₋`](@ref)
+  - Act on [`ModeWeights`](@ref) objects, returning new ones
+  - Can be called as functions or multiplied as operators, without
+    building a matrix, or applied with `mul!` with no allocation at
+    all
+  - Can be called to return a matrix form
+- [`ModeWeights`](@ref) objects
+  - Hold the coefficients of a spin-weighted function in the
+    ``{}_{s}Y_{ℓ,m}`` basis, with the spin weight and ``ℓ`` range
+    attached
+  - Can be evaluated at a rotation, or multiplied by the harmonics at
+    that rotation
+  - Can be rotated by Wigner matrices, or acted on by differential
+    operators, to produce new `ModeWeights` objects
+- Spin-spherical-harmonic transforms [`SSHT`](@ref)
+  - Transform between a function's mode weights and values on a grid
+  - Support fast and exact transforms on
+    equiangular grids to very high ``ℓ`` with [`SSHTRS`](@ref)
+  - Support fast and exact transforms on arbitrary *minimal* grids for
+    ``ℓₘₐₓ ≲ 64`` with  [`SSHTMinimal`](@ref) (integer spin weights
+    only)
+  - Support transforms on freely chosen points for moderate ``ℓₘₐₓ``
+    with [`SSHTMatrix`](@ref)
+  - Simple functional forms [`map2salm`](@ref) and [`salm2map`](@ref)
+
+## Quick start
+
+A handful of functions cover most first uses of the package.  Each
+returns values for *every* ``ℓ`` up to a given ``ℓₘₐₓ``, rather than
+for one ``ℓ`` at a time, because the recursion relations that compute
+them (described at the end of this section) produce them that way.
+
+The most direct of them is [`D`](@ref), which gives Wigner's
+``𝔇^{(ℓ)}_{m',m}`` matrices for a single rotation.  Its result is
+indexed by ``ℓ`` first, and then by the two matrix indices, each of
+which runs over its own natural range — so there is no index
+arithmetic to get wrong:
+
+```jldoctest quickstart
+julia> using SphericalFunctions, Quaternionic
+
+julia> R = from_spherical_coordinates(π/3, π/4);  # the point (θ, ϕ), as a rotation
+
+julia> ℓₘₐₓ = 8;
+
+julia> 𝔇 = D(R, ℓₘₐₓ);
+
+julia> size(𝔇[3])  # each block is (2ℓ+1)×(2ℓ+1)
+(7, 7)
+
+julia> axes(𝔇[3])  # and is indexed as 𝔇[ℓ][m′, m], with m′, m ∈ -ℓ:ℓ
+(-3:1:3, -3:1:3)
+
+julia> 𝔇[1][0, 0] ≈ cos(π/3)  # for m′ = m = 0 the phases drop out, leaving d = cos β
+true
+```
+
+The [Wigner matrix interface](@ref interface_wigner_matrices)
+describes what `D` returns in full, including the half-integer case.
+
+Wigner's ``d^{(ℓ)}_{m',m}`` matrices are the factor of ``𝔇`` that
+depends on the single Euler angle ``β``, and they are real.
+Accordingly, [`d`](@ref) takes that angle in place of a rotation, and
+is otherwise used exactly like `D`:
+
+```jldoctest quickstart
+julia> 𝔡 = d(π/3, ℓₘₐₓ);
+
+julia> eltype(𝔡[3])
+Float64
+
+julia> round(𝔡[2][1, -1], digits=12)
+0.5
+```
+
+The same page documents `d` beside `D`, along with the other ways of
+giving ``β``.
+
+The spin-weighted spherical harmonics are given by [`sYlm`](@ref),
+which takes the spin weight ``s`` as a third argument.  A harmonic has
+only one index besides ``ℓ``, so a block here is a vector rather than
+a matrix, but the result is indexed the same way: by ``ℓ`` first, and
+then naturally.  The lower limit defaults to ``|s|``, because every
+harmonic below it vanishes.  The spin-weight-zero case is common
+enough to have its own name, [`Ylm`](@ref):
+
+```jldoctest quickstart
+julia> Y = sYlm(R, ℓₘₐₓ, -2);  # spin weight -2, so ℓ starts at 2
+
+julia> repr(Y)
+"HarmonicValues{ComplexF64} for ℓ ∈ 2:8, s = -2"
+
+julia> axes(Y[3])  # one ℓ, indexed by m ∈ -ℓ:ℓ
+(-3:1:3,)
+
+julia> sum(abs2, array_view(Y[3])) ≈ 7 / (4π)  # Σₘ |ₛYₗₘ|² = (2ℓ+1)/4π
+true
+
+julia> Ylm(R, ℓₘₐₓ)[0][0] ≈ 1 / √(4π)  # here ℓ starts at 0, and Y₀₀ = 1/√(4π)
+true
+```
+
+Underneath, the values are held in one flat array in the canonical
+ordering of mode weights, `[ₛYₗₘ for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ for m ∈ -ℓ:ℓ]`,
+and [`array_view`](@ref) hands that array back.  It is what a product
+with a vector of mode weights takes, and [`Yindex`](@ref) gives the
+position of any one mode in it:
+
+```jldoctest quickstart
+julia> length(array_view(Y)) == Ysize(2, ℓₘₐₓ)
+true
+
+julia> array_view(Y)[Yindex(3, -3, 2)] == Y[3][-3]
+true
+```
+
+The [interface page](@ref interface_wigner_matrices) describes both
+functions, alongside ``𝔇`` and ``d`` themselves.
+
+Each of the functions above allocates its entire result and fills it,
+which is convenient at moderate ``ℓₘₐₓ`` and wasteful at large
+``ℓₘₐₓ``: storing every matrix up to ``ℓₘₐₓ`` takes ``O(ℓₘₐₓ^3)``
+numbers, while the recursion that produces them needs only the current
+``ℓ``, which is ``O(ℓₘₐₓ^2)``.  A *calculator* holds just that part of
+the storage.  Iterating one walks through the values of ``ℓ`` in turn,
+handing back the block for each, which is how to reach large ``ℓₘₐₓ``
+without ever holding every matrix at once:
+
+```jldoctest quickstart
+julia> calc = DCalculator(R, ℓₘₐₓ);
+
+julia> norms = Float64[];
+
+julia> for (ℓ, 𝔇ˡ) ∈ calc
+           push!(norms, sum(abs2, 𝔇ˡ))  # each 𝔇ˡ is unitary, so this is 2ℓ+1
+       end
+
+julia> norms ≈ [2ℓ + 1 for ℓ ∈ 0:ℓₘₐₓ]
+true
+```
+
+The block returned by each iteration is a view into the calculator,
+which the next step overwrites, so `copy` it if it has to outlive the
+iteration.
+
+A calculator can also be reused for multiple rotations, by calling
+[`set_R!`](@ref):
+
+```jldoctest quickstart
+julia> set_R!(calc, from_spherical_coordinates(π/5, π/7));
+```
+
+Finally, a calculator built from a *vector* of rotations evaluates all
+of them simultaneously, returning an object with the rotation index as
+the first dimension:
+```jldoctest quickstart
+julia> R⃗ = [from_spherical_coordinates(θ, π/4) for θ ∈ range(0, π, 8)];
+
+julia> batch = DCalculator(R⃗, ℓₘₐₓ);
+
+julia> for (ℓ, 𝔇ˡ) ∈ batch
+           @assert axes(𝔇ˡ) == (1:8, -ℓ:ℓ, -ℓ:ℓ)  # now indexed as 𝔇ˡ[iᵣ, m′, m]
+       end
+
+julia> size(recurrence!(batch, ℓₘₐₓ))
+(8, 17, 17)
+```
+This allows SIMD instructions to be used efficiently — which is not
+normally very effective because of the recursive nature of the
+calculations, as described under [reusing the storage](@ref
+Iterating-over-ℓ-and-reusing-the-storage).  The entire vector of
+rotors can be replaced with [`set_R!`](@ref) as well, though the
+replacement must be the same length as the original vector.
+
+The [`dCalculator`](@ref), [`sYlmCalculator`](@ref), and
+[`YlmCalculator`](@ref) functions return comparable objects.  The
+functions [`set_β!`](@ref) and [`set_θ!`](@ref) are the equivalents
+for the `d` and `Ylm` calculators of the `set_R!` function.
+
+Everything so far computes the harmonics themselves (or related
+quantities).  They form a basis, so the other half of the story is the
+coefficients of those harmonics in an expansion with respect to the
+harmonics.  A [`ModeWeights`](@ref) object holds the ``f_{ℓ,m}`` of a
+spin-weighted function ``f = \sum_{ℓ,m} f_{ℓ,m}\, {}_sY_{ℓ,m}``, in
+the canonical ordering described above, together with the spin weight
+and the range of ``ℓ`` they belong to.  Keeping those labels beside
+the numbers is what lets the operations below know what they are
+acting on, and raise an appropriate error for a combination that means
+nothing:
+
+```jldoctest quickstart
+julia> w = ModeWeights{ComplexF64}(undef, -2, 4);  # spin weight -2, so ℓ runs over 2:4
+
+julia> w .= 0; w[2, -1] = 0.5; w[3, 2] = im;  # example data
+
+julia> spin(w), length(modes(w)), w[2, -1]
+(-2, 21, 0.5 + 0.0im)
+```
+
+The function those weights describe can be evaluated at a point by
+calling the `ModeWeights` with a `Rotor` (or a vector of them) as an
+argument.  Writing the sum out instead — as a product with the
+harmonics at the same point — gives the same number, and is the form
+to prefer when the harmonics are already in hand or are wanted for
+many sets of weights:
+
+```jldoctest quickstart
+julia> w(R) ≈ sYlm(R, 4, -2) * w
+true
+
+julia> w(R) ≈ sYlmCalculator(R, 4, -2) * w  # one ℓ at a time, for repeated use
+true
+```
+
+Multiplying by Wigner matrices rotates the function rigidly.  The
+result is a new `ModeWeights` with the same spin weight and the same
+range of ``ℓ``, since a rotation changes neither, and it satisfies the
+property that defines it:
+
+```jldoctest quickstart
+julia> Q = from_spherical_coordinates(π/5, π/6);
+
+julia> w′ = D(R, 4) * w;
+
+julia> w′(Q) ≈ w(inv(R) * Q)
+true
+```
+
+Here, `w'` is the version of `w` obtained by *actively* rotating `w`
+by `R`.
+
+The [differential operators](@ref interface_differential_operators)
+are applied by calling them — for example, as [`ð`](@ref)`(w)`.
+Multiplication as `ð * w` does the same thing.[^2]  Each gives a new
+`ModeWeights`, with the spin weight adjusted where the operator
+changes it — the point of labelling the weights in the first place,
+since ``ð`` maps a function of spin weight ``s`` to one of spin weight
+``s+1``:
+
+```jldoctest quickstart
+julia> spin(ð(w)), spin(ð̄(w))
+(-1, -3)
+
+julia> ℓ = 3;
+
+julia> L²(w)[ℓ, 2] == ℓ * (ℓ + 1) * w[ℓ, 2]  # L² is diagonal, with eigenvalue ℓ(ℓ+1)
+true
+```
+
+No matrix is built for any of this: the operator is applied by a loop,
+so the only allocation is the result, and using
+[`LinearAlgebra.mul!`](@extref) with an existing container allocates
+nothing at all — though you have to preallocate the result, and set
+the correct spin weight for it.  The rest of what a `ModeWeights`
+supports is described under [rotating and evaluating mode
+weights](@ref mode_weight_operations), and the full list of operators
+— along with the matrix forms of them, which act on a plain vector
+instead — is on the [differential operators](@ref
+interface_differential_operators) page.
+
+The last piece connects mode weights to the values of the function on
+a grid of points.  An [`SSHT`](@ref) object is constructed for a given
+spin weight and ``ℓₘₐₓ``.  Multiplying mode weights by it evaluates
+the function at the points that [`rotors`](@ref) returns — synthesis —
+and dividing the function values by it recovers the mode weights, as a
+new `ModeWeights` — analysis:
+
+```jldoctest quickstart
+julia> 𝒯 = SSHT(-2, 4);  # the default "RS" method, on rings of constant colatitude
+
+julia> f = 𝒯 * w;  # the function's values at the points rotors(𝒯)
+
+julia> f ≈ w(rotors(𝒯))  # evaluating the ModeWeights directly gives the same values
+true
+
+julia> 𝒯 \ f ≈ w  # "analyze" function values to find the mode weights
+true
+```
+
+The available algorithms and grids, and the ways to transform many
+functions at once or in place, are described on the
+[transformations](@ref interface_transformations) page.
+
+The harmonics and Wigner matrices are computed using recursion
+relations, which makes it possible to compute to very high ℓ values.
+Unlike direct evaluation of individual elements, which would generally
+cause overflow or underflow beyond ℓ≈30 when using double precision
+(`Float64`), these recursion relations should be valid for far higher
+ℓ values.  More precisely, when using *this* package, `Inf` values
+appear starting at ℓ=128 for `Float16`, but I have not yet found any
+for values up to at least ℓ=1024 with `Float32`, and presumably far
+higher for `Float64`.  `BigFloat` also works, and presumably will not
+overflow for any ℓ value that could reasonably fit into computer
+memory — though it is far slower.  Also note that
+[`DoubleFloats`](https://github.com/JuliaMath/DoubleFloats.jl) will
+work, and achieve significantly greater accuracy (but no greater ℓ
+range) than `Float64`.  The element type of every result is that of
+its input, so the way to compute in one of these types is to convert
+the rotor, as in `Rotor{BigFloat}(R)` or `Rotor{Double64}(R)`.  In all
+cases, results are typically accurate to roughly ℓ times the precision
+of the underlying float type.
+
+Half-integer ``ℓ, m', m`` — the representations of ``𝐒𝐩𝐢𝐧(3)``
+that do not descend to ``𝐒𝐎(3)`` — are supported throughout: by
+``𝔇``, ``d`` and the spin-weighted harmonics, by the mode weights and
+the operators on them, and by the transforms, at the same accuracy and
+essentially the same speed as integer indices.  Pass a `Rational` with
+denominator 2, as in `D(R, 7//2)` or `SSHT(1//2, 7//2)`.  See
+[Half-integer indices](@ref interface_half_integers), and the
+[half-integer section of the transforms page](@ref
+transformations_half_integer) for what a function of half-integer spin
+weight is a function *of*.
+
+## What's new in version 3
+
+Version 3.0 of this package is a complete rewrite, with a new
+interface and new capabilities — including the introduction of
+half-integer indices.  The most important *breaking* change is the
+change in the convention for Wigner's 𝔇 matrices, which now agree
+with most significant modern sources — though disagree with previous
+versions of this package, as well as its predecessors found
 [here](https://moble.github.io/spherical_functions/) and
-[here](https://moble.github.io/spherical/).
+[here](https://moble.github.io/spherical/).  Code that is ported by
+renaming functions alone will run without complaint, but will give the
+complex conjugate of the intended result.  Two other changes affect
+most code: every rotation is given as a `Rotor`, and the element type
+of every result is that of its input, rather than being chosen by an
+argument.  The
+[changelog](https://github.com/moble/SphericalFunctions.jl/blob/main/CHANGELOG.md)
+lists all the changes, with a table giving the replacement for each
+function of version 2.
 
-Note that numerous other packages cover some of these use cases, including
+The conventions used in this package are summarized on [this
+page](@ref Summary), and derived from first principles on the
+[following page](@ref Details).  They are then compared in detail with
+thirty other sources, each on its own page: from Euler (1767),
+Hamilton and Tait, through the standard texts and papers of quantum
+mechanics and relativity, to current references and software such as
+the NIST DLMF, LALSuite, Mathematica, SciPy and SymPy.  For the
+twenty-four sources whose formulas can be evaluated, those formulas
+are checked numerically against this package, and the checks run as
+tests with each change to this code.
+
+## Other packages
+
+Note that numerous other packages cover some of these use cases,
+including
 [`FastTransforms.jl`](https://JuliaApproximation.github.io/FastTransforms.jl/),
 [`FastSphericalHarmonics.jl`](https://eschnett.github.io/FastSphericalHarmonics.jl/dev/),
 [`WignerSymbols.jl`](https://github.com/Jutho/WignerSymbols.jl), and
-[`WignerFamilies.jl`](https://github.com/xzackli/WignerFamilies.jl).  However, I
-need support for quaternions (via
+[`WignerFamilies.jl`](https://github.com/xzackli/WignerFamilies.jl).
+However, I need support for quaternions (via
 [`Quaternionic.jl`](https://github.com/moble/Quaternionic.jl)) and for
-higher-precision numbers — even at the cost of a very slight decrease in speed
-in some cases — which are what this package provides.
+higher-precision numbers, which are what this package provides.
 
+[^1]: Euler angles are quite generally a very poor choice for
+    computing with rotations.  (The only context in which they may be
+    preferred is when *analytically* integrating some analytically
+    known functions.)  Almost universally, it is best to use
+    quaternions when computing with rotations.  All the computations
+    done within this package use quaternions, so spherical coordinates
+    and Euler angles must be converted first, with
+    `from_spherical_coordinates(θ, ϕ)` or `from_euler_angles(α, β,
+    γ)`.  While the calculations needed for those conversions would
+    still need to be done if this package used Euler angles internally
+    — meaning that this approach is as efficient as any — that work
+    can be avoided entirely if you work with quaternions directly.
 
-[^1]:
-    Euler angles are quite generally a very poor choice for computing with
-    rotations.  (The only context in which they may be preferred is when
-    *analytically* integrating some analytically known functions.)  Almost
-    universally, it is best to use quaternions when computing with rotations.
-    All the computations done within this package use quaternions; the user
-    interfaces involving Euler angles essentially convert to/from quaternions.
-    While the calculations needed for those conversions would still need to be
-    done if this package used Euler angles internally — meaning that this
-    approach is as efficient as any — that work can be avoided entirely if you
-    work with quaternions directly.
+[^2]: The in-place form of multiplication `mul!` also works.
+    Alternatively, they can be called as in `ð(s, ℓₘᵢₙ, ℓₘₐₓ,
+    FloatType)` to return a matrix subtype — though this will be
+    relatively inefficient.  The `ℓₘᵢₙ` and `FloatType` are optional.

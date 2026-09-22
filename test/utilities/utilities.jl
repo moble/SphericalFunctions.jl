@@ -1,13 +1,45 @@
 @testsnippet Utilities begin
 
+ℓmrange(ℓₘᵢₙ, ℓₘₐₓ) = [(ℓ, m) for ℓ in ℓₘᵢₙ:ℓₘₐₓ for m in -ℓ:ℓ]
+ℓmrange(ℓₘₐₓ) = ℓmrange(0, ℓₘₐₓ)
+function sℓmrange(ℓₘₐₓ, sₘₐₓ)
+    sₘₐₓ = min(abs(sₘₐₓ), ℓₘₐₓ)
+    [
+        (s, ℓ, m)
+        for s in -sₘₐₓ:sₘₐₓ
+        for ℓ in abs(s):ℓₘₐₓ
+        for m in -ℓ:ℓ
+    ]
+end
+function ℓm′mrange(ℓₘₐₓ)
+    [
+        (ℓ, m′, m)
+        for ℓ in 0:ℓₘₐₓ
+        for m′ in -ℓ:ℓ
+        for m in -ℓ:ℓ
+    ]
+end
+
 αrange(::Type{T}, n=15) where T = T[
     0; nextfloat(T(0)); rand(T(0):eps(T(π)):T(π), n÷2); prevfloat(T(π)); T(π);
     nextfloat(T(π)); rand(T(π):eps(2T(π)):2T(π), n÷2); prevfloat(T(π)); 2T(π)
 ]
-βrange(::Type{T}, n=15) where T = T[
-    0; nextfloat(T(0)); rand(T(0):eps(T(π)):T(π), n); prevfloat(T(π)); T(π)
+βrange(::Type{T}=Float64, n=15; avoid_poles=0) where T = T[
+    avoid_poles; nextfloat(T(avoid_poles));
+    rand(T(0):eps(T(π)):T(π), n);
+    prevfloat(T(π)-avoid_poles); T(π)-avoid_poles
 ]
 γrange(::Type{T}, n=15) where T = αrange(T, n)
+αβγrange(::Type{T}=Float64, n=15; avoid_poles=0) where T = vec(collect(
+    Iterators.product(αrange(T, n), βrange(T, n; avoid_poles), γrange(T, n))
+))
+
+const θrange = βrange
+const φrange = αrange
+θϕrange(::Type{T}=Float64, n=15; avoid_poles=0) where T = vec(collect(
+    Iterators.product(θrange(T, n; avoid_poles), φrange(T, n))
+))
+
 v̂range(::Type{T}, n=15) where T = QuatVec{T}[
     𝐢; 𝐣; 𝐤;
     -𝐢; -𝐣; -𝐤;
@@ -17,7 +49,8 @@ function Rrange(::Type{T}, n=15) where T
     invsqrt2 = inv(√T(2))
     [
         [
-            sign*R
+            # `sign*R` promotes to `Quaternion`; these are rotations, so say so.
+            Rotor{T}(sign*R)
             for R in [
                 Rotor{T}(1);
                 [Rotor{T}(𝐯) for 𝐯 in (𝐢,𝐣,𝐤)];
@@ -29,6 +62,7 @@ function Rrange(::Type{T}, n=15) where T
         randn(Rotor{T}, n)
     ]
 end
+
 epsilon(k) = ifelse(k>0 && isodd(k), -1, 1)
 
 """
@@ -50,7 +84,7 @@ function array_equal(a1::T1, a2::T2, equal_nan=false) where {T1, T2}
 end
 
 function sYlm(s::Int, ell::Int, m::Int, theta::T, phi::T) where {T<:Real}
-    # Eqs. (II.7) and (II.8) of https://arxiv.org/abs/0709.0093v3 [Ajith_2007](@cite)
+    # Eqs. (II.7) and (II.8) of https://arxiv.org/abs/0709.0093v3 [AjithEtAl_2011](@cite)
     # Note their weird definition w.r.t. `-s`
     k_min = max(0, m + s)
     k_max = min(ell + m, ell + s)
@@ -65,6 +99,39 @@ function sYlm(s::Int, ell::Int, m::Int, theta::T, phi::T) where {T<:Real}
             for k in k_min:k_max
         )) *
         cis(m * phi)
+end
+
+"""
+    sYlm_pixels(s, ℓ, m, pixels)
+
+The closed-form `sYlm` above, evaluated on a whole list of `(θ, ϕ)` pixels, with the
+pixel-independent factorials hoisted out of the loop.  That is about 40 times faster, which
+is what makes pixel-by-pixel comparisons against a transform affordable; it is the same
+transcription of the conventions-page formula, so it owes nothing to the package.
+
+Checked against `sYlm` itself in the "SSHT synthesis" test item.
+"""
+function sYlm_pixels(s::Int, ℓ::Int, m::Int, p::AbstractVector{<:AbstractVector{T}}) where {T}
+    kmin, kmax = max(0, m + s), min(ℓ + m, ℓ + s)
+    𝒩 = sqrt(
+        factorial(big(ℓ + m)) * factorial(big(ℓ - m))
+        * factorial(big(ℓ - s)) * factorial(big(ℓ + s))
+    )
+    c = T[
+        (-1)^k * 𝒩 / (
+            factorial(big(ℓ + m - k)) * factorial(big(ℓ + s - k))
+            * factorial(big(k)) * factorial(big(k - s - m))
+        )
+        for k in kmin:kmax
+    ]
+    pre = T(-1)^(-s) * sqrt((2ℓ + 1) / (4 * T(π)))
+    map(p) do θϕ
+        sθ, cθ = sincos(θϕ[1] / 2)
+        pre * sum(
+            c[k-kmin+1] * cθ^(2ℓ + m + s - 2k) * sθ^(2k - s - m)
+            for k in kmin:kmax
+        ) * cis(m * θϕ[2])
+    end
 end
 
 ε(j,k,l) = ifelse(

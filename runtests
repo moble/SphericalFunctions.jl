@@ -1,9 +1,8 @@
 #! /usr/bin/env bash
 
-# This runs the test suite (or any tests matching the args to this command)
-# with coverage enabled, then processes that coverage into `lcov.info`, and
-# finally deletes all the *.cov files generated during the tests.
+# Run the whole test suite with coverage, and write `lcov.info`.  This
+# is a thin wrapper around `scripts/test.jl`, which does the actual
+# work; see docs/src/development/index.md for the faster ways to run
+# tests while developing.
 
-time julia --project=. --code-coverage=user test/runtests.jl "$@"
-julia --project=test test/coverage.jl
-find . -name \*.cov -exec /bin/rm {} \+
+exec julia -t auto --project=. scripts/test.jl --coverage "$@"
