@@ -122,8 +122,8 @@ end
 
 
 @testitem "Transforms: map2salm plan reuse" setup=[Utilities] begin
-    import SphericalFunctions: map2salm, map2salm_plan, SSHTRS, ModeWeights, Ysize,
-        clenshaw_curtis_rings, pixels, spin, ℓₘₐₓ
+    import SphericalFunctions: map2salm, map2salm_plan, salm2map, SSHTRS, ModeWeights, Ysize,
+        clenshaw_curtis_rings, fejer1, pixels, spin, ℓₘₐₓ
     using Random
 
     ℓmax = 7
@@ -169,6 +169,19 @@ end
             @test_throws "planned for a different grid" map2salm(h, plan)
             @test_throws ErrorException map2salm(f, map2salm_plan(h, s, ℓmax))
         end
+
+        # So is a plan of the right shape on other rings, or with other quadrature weights.
+        # The default `SSHT(s, ℓₘₐₓ)` is the trap: its Fejér grid of 2ℓₘₐₓ+1 rings with
+        # 2ℓₘₐₓ+1 points has exactly the shape of the smallest Clenshaw–Curtis grid.
+        cc = "works on the Clenshaw–Curtis grid"
+        fejér = SSHTRS(s, ℓmax; T, Nϕ)
+        @test size(f) == (only(unique(fejér.Nϕ)), length(fejér.θ))
+        @test_throws cc map2salm(f, fejér)
+        @test_throws cc salm2map(map2salm(f, plan), fejér)
+        θcc = clenshaw_curtis_rings(Nθ, T)
+        wrong_weights = SSHTRS(s, ℓmax; T, Nϕ, θ=θcc, quadrature_weights=fejer1(Nθ, T))
+        @test_throws cc map2salm(f, wrong_weights)
+        @test_throws cc salm2map(map2salm(f, plan), wrong_weights)
     end
 end
 

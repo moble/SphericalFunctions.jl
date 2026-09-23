@@ -26,6 +26,14 @@ which makes those operations work on a copy of the input.  See [`SSHT`](@ref).
 The values ``{}_sλ_{ℓ,m}(θ_j)`` needed by the algorithm are precomputed at construction (with
 one batched [`sλlmCalculator`](@ref)) and stored, which takes ``O(ℓₘₐₓ^3)`` memory.
 
+The accuracy of this method depends on how well conditioned its sample points are, and the
+default rings are well conditioned only for ``s = 0``.  For any other spin weight the error
+grows by more than an order of magnitude with each unit of ℓₘₐₓ: at ``s = 2`` in `Float64` a
+round trip loses about half the available digits by ℓₘₐₓ = 10 and nearly all of them by
+ℓₘₐₓ = 14, and `Float32` reaches the same point already at ℓₘₐₓ ≈ 6.  The constructor
+therefore measures the error of one round trip, and warns when fewer than half the digits of
+`T` would survive; the `"RS"` method has no such limitation.
+
 This method is defined only for integer spin weights.  Its bookkeeping — rings of ``2j+1``
 points indexed by ``j``, and the aliasing of ``m`` into rings too small to hold it — is
 written for integer indices throughout, and has not been extended; a half-integer spin weight
@@ -144,11 +152,39 @@ function SSHTMinimal(
         [LinearAlgebra.lu(2TT(π) * parent(Λ[m])) for m ∈ -ℓₘₐₓ:ℓₘₐₓ], -ℓₘₐₓ:ℓₘₐₓ
     )
 
-    SSHTMinimal{TT, inplace, eltype(plans), eltype(bplans)}(
+    𝒯 = SSHTMinimal{TT, inplace, eltype(plans), eltype(bplans)}(
         s, ℓₘₐₓ, OffsetVector(θ, J), OffsetVector(θindices, J),
         OffsetVector(plans, J), OffsetVector(bplans, J),
         ₛΛ, Λ, luΛ, ₛfₘ, ₛf̃ₘ, ₛf̃ⱼ
     )
+    warn_if_inaccurate(𝒯)
+    𝒯
+end
+
+# The rings from `sorted_rings` make this sampling badly conditioned for s ≠ 0: the error of
+# a round trip grows by more than an order of magnitude per unit of ℓₘₐₓ, so that at s = 2
+# in Float64 it is about 1e-9 at ℓₘₐₓ = 8, 1e-6 at 10 and 1e-3 at 12, and at ℓₘₐₓ = 14
+# nothing of the input survives.  (The conditioning is that of the sample points themselves, not of this
+# algorithm's per-m solves, so "Matrix" on the same points fares no better.)  Nothing in an
+# individual transform reveals this, so the constructor measures it once, by synthesizing
+# and analyzing a fixed set of unit weights with quasi-random phases — about the cost of one
+# transform — and warns when fewer than half the digits of `T` survive.
+function warn_if_inaccurate(𝒯::SSHTMinimal{T}) where {T}
+    φ = (√5 - 1) / 2
+    f̃ = [cis(T(2π) * T(mod(i * φ, 1))) for i ∈ 1:nmodes(𝒯)]
+    f = copy(f̃)
+    ldiv!(𝒯, mul!(𝒯, f))
+    maxerror = maximum(abs, f - f̃)
+    if !(maxerror ≤ √eps(T))  # also catches NaN
+        @warn (
+            "The \"Minimal\" s-SHT with s=$(𝒯.s), ℓₘₐₓ=$(𝒯.ℓₘₐₓ) and T=$T is inaccurate: a "
+            * "round trip of unit mode weights has a maximum error of "
+            * "$(round(Float64(maxerror), sigdigits=2)).  Its sample points are badly "
+            * "conditioned for s ≠ 0 at this ℓₘₐₓ; the \"RS\" method (the default) is accurate "
+            * "here."
+        )
+    end
+    nothing
 end
 
 function pixels(𝒯::SSHTMinimal{T}) where {T}

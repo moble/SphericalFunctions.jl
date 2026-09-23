@@ -110,6 +110,14 @@
     @test_logs SSHTMatrix(0, 8)
     @test_logs SSHT(0, 8; method="RS")
     @test_logs SSHT(0, 8; method="Minimal")
+
+    # "Minimal" warns when its sample points are too badly conditioned for half the digits of
+    # T to survive a round trip, which for s ≠ 0 happens at moderate ℓₘₐₓ, and is quiet below
+    @test_logs (:warn, r"\"Minimal\" s-SHT with s=2, ℓₘₐₓ=12 and T=Float64 is inaccurate") SSHT(2, 12; method="Minimal")
+    @test_logs (:warn, r"is inaccurate") SSHT(-2, 12; method="Minimal", inplace=false)
+    @test_logs (:warn, r"T=Float32 is inaccurate") SSHT(2, 8; method="Minimal", T=Float32)
+    @test_logs SSHT(2, 8; method="Minimal")
+    @test_logs SSHT(0, 16; method="Minimal")
 end
 
 
@@ -492,6 +500,7 @@ end
 
 @testitem "SSHT analysis" setup=[Utilities] begin
     import SphericalFunctions: SSHT, SSHTMatrix, pixels, rotors, Ysize, Yindex, ModeWeights, spin
+    import SphericalFunctions: salm2map, map2salm_plan
     import SphericalFunctions: nmodes, npixels  # unexported
     using DoubleFloats: Double64
     using LinearAlgebra: mul!, ldiv!
@@ -642,6 +651,21 @@ end
         @test_throws ErrorException ldiv!(zeros(ComplexF64, n + 1), 𝒯, zeros(ComplexF64, N))
         @test_throws ErrorException ldiv!(zeros(ComplexF64, n), 𝒯, zeros(ComplexF64, N + 1))
         @test_throws ErrorException ldiv!(ModeWeights(zeros(ComplexF64, Ysize(0, ℓₘₐₓ)), s; ℓₘᵢₙ=0), 𝒯, zeros(ComplexF64, N))
+        # ModeWeights of the wrong spin weight but the right length: -s, or 0 with ℓₘᵢₙ = |s|.
+        # Both synthesis and the output of `ldiv!` refuse them, rather than treating them as
+        # (or filling them with) weights of spin s.
+        for w in (
+            ModeWeights(ones(ComplexF64, n), -s),
+            ModeWeights(ones(ComplexF64, n), 0; ℓₘᵢₙ=abs(s)),
+        )
+            @test_throws "ModeWeights have spin weight s=$(spin(w)), but the transform is for s=$s" 𝒯 * w
+            @test_throws "ModeWeights have spin weight" mul!(zeros(ComplexF64, N), 𝒯, w)
+            @test_throws "ModeWeights have spin weight" ldiv!(w, 𝒯, zeros(ComplexF64, N))
+            if method == "RS"  # salm2map needs its own Clenshaw–Curtis plan
+                plan = map2salm_plan(zeros(ComplexF64, 2ℓₘₐₓ+1, 2ℓₘₐₓ+1), s, ℓₘₐₓ)
+                @test_throws "ModeWeights have spin weight" salm2map(w, plan)
+            end
+        end
     end
 end
 

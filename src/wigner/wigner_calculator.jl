@@ -234,6 +234,9 @@ end
 function set_rotors!(
     c::WignerCalculator{IT, RT, Complex{RT}}, R::AbstractVector{<:Rotor}
 ) where {IT, RT<:Real}
+    # The loop writes the calculator's 1-based buffers at the input's own indices, under
+    # `@inbounds`, so an offset vector would write outside them.
+    Base.require_one_based_indexing(R)
     if length(R) != Nᵣ(c)
         error("Expected $(Nᵣ(c)) rotors (Nᵣ), but got $(length(R)).")
     end

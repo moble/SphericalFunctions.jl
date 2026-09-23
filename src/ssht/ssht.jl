@@ -186,7 +186,16 @@ end
 # which accepts either and hands back the raw storage.
 const MapOrModes = Union{AbstractArray{<:Complex}, ModeWeights}
 
+# The labels are checked, not just the length: weights of spin -s (or 0) have the same length
+# as those of spin s, and would otherwise be synthesized as spin s — or, as the output of
+# `ldiv!`, be filled with spin-s weights while keeping the wrong label.
 function check_modes(𝒯::SSHT, f̃::ModeWeights)
+    if spin(f̃) != 𝒯.s
+        error(
+            "The ModeWeights have spin weight s=$(spin(f̃)), but the transform is for "
+            * "s=$(𝒯.s)."
+        )
+    end
     if f̃.ℓₘᵢₙ != abs(𝒯.s) || f̃.ℓₘₐₓ != 𝒯.ℓₘₐₓ
         error(
             "The ModeWeights have ℓ ∈ $(f̃.ℓₘᵢₙ):$(f̃.ℓₘₐₓ), but the transform requires "

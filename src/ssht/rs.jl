@@ -261,8 +261,24 @@ function map2salm(map::MapOrModes, 𝒯::SSHTRS)
     if 𝒯.Nϕ != fill(Nϕ, Nθ) || length(𝒯.θ) != Nθ
         error("The transform was planned for a different grid than the $(Nϕ)×$(Nθ) map.")
     end
+    check_clenshaw_curtis(𝒯, "map2salm")
     f = reshape(map, Nϕ * Nθ, size(map)[3:end]...)
     𝒯 \ f
+end
+
+# `map2salm` and `salm2map` promise the Clenshaw–Curtis grid, but the shape alone does not
+# establish it: any `SSHTRS` with the right numbers of rings and points has that shape, and in
+# particular the default `SSHT(s, ℓₘₐₓ)`, on the Fejér rings, has exactly the shape of the
+# smallest such grid.  The rings and weights themselves are therefore compared.  (The rings
+# are compared first, so the weights are not computed for a degenerate single ring.)
+function check_clenshaw_curtis(𝒯::SSHTRS{T}, name) where {T}
+    Nθ = length(𝒯.θ)
+    if !(𝒯.θ ≈ clenshaw_curtis_rings(Nθ, T)) || !(𝒯.quadrature_weights ≈ clenshaw_curtis(Nθ, T))
+        error(
+            "$name works on the Clenshaw–Curtis grid, but this transform has other rings or "
+            * "quadrature weights; construct it with `map2salm_plan(map, s, ℓₘₐₓ)`."
+        )
+    end
 end
 
 """
@@ -305,6 +321,7 @@ function salm2map(salm::MapOrModes, 𝒯::SSHTRS)
     if 𝒯.Nϕ != fill(Nϕ, Nθ)
         error("salm2map requires the same number of points on every ring.")
     end
+    check_clenshaw_curtis(𝒯, "salm2map")
     f = 𝒯 * salm
     reshape(f, Nϕ, Nθ, size(salm)[2:end]...)
 end

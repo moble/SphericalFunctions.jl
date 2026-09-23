@@ -90,9 +90,10 @@ ring.  These rings are then sorted, so that the ring with the most pixels
 (``j = ℓₘₐₓ``) is closest to the equator, and the next-largest ring is placed just above or
 below the equator (depending on the sign of ``s``), the next just below or above, and so on.
 This is generally a fairly good first guess when minimizing the condition number of matrices
-used to solve for mode weights from function values.  In particular, I use this to
-initialize the Minimal algorithm, which is then fed into an optimizer to fine-tune the
-positions of the rings.
+used to solve for mode weights from function values, and it is the default for the Minimal
+algorithm.  It is only a first guess, though: no optimizer to fine-tune the positions of the
+rings is included in this package, and for ``s ≠ 0`` these rings become badly conditioned as
+``ℓₘₐₓ`` grows; see [`SSHTMinimal`](@ref).
 
 The spin weight and `ℓₘₐₓ` may be integers or half-odd-integers, the latter passed as
 `Rational`s with denominator 2, as in `sorted_rings(1//2, 7//2)`; the two must be of one

@@ -308,6 +308,9 @@ end
 end
 
 function set_rotors!(w::HCalculator{IT, RT}, eⁱᵝ::AbstractVector{<:Complex}) where {IT, RT<:Real}
+    # The loops below write the calculator's 1-based buffers at the input's own indices, under
+    # `@inbounds`, so an offset vector would write outside them.
+    Base.require_one_based_indexing(eⁱᵝ)
     if length(eⁱᵝ) != Nᵣ(w)
         error("Expected $(Nᵣ(w)) rotors (Nᵣ), but got $(length(eⁱᵝ)).")
     end
@@ -342,6 +345,7 @@ function set_rotors!(w::HCalculator, R)
     )
 end
 function set_rotors!(w::HCalculator{IT, RT}, β::AbstractVector{<:Real}) where {IT, RT<:Real}
+    Base.require_one_based_indexing(β)  # as for eⁱᵝ above
     if length(β) != Nᵣ(w)
         error("Expected $(Nᵣ(w)) rotors (Nᵣ), but got $(length(β)).")
     end
@@ -353,6 +357,7 @@ function set_rotors!(w::HCalculator{IT, RT}, β::AbstractVector{<:Real}) where {
     w
 end
 function set_rotors!(w::HCalculator{IT, RT}, R::AbstractVector{<:Rotor}) where {IT, RT<:Real}
+    Base.require_one_based_indexing(R)  # as for eⁱᵝ above
     if length(R) != Nᵣ(w)
         error("Expected $(Nᵣ(w)) rotors (Nᵣ), but got $(length(R)).")
     end

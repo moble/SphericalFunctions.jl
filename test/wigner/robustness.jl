@@ -543,3 +543,49 @@ end
     end
     @test fetch.(tasksH) == serialH
 end
+
+@testitem "Offset rotor and output arrays are refused before any write" begin
+    import SphericalFunctions: DCalculator, dCalculator, HCalculator, sYlmCalculator,
+        sλlmCalculator, sYlm, sYlm!, sλlm!, sYlm_matrix, set_R!, set_β!, set_θ!, array_view
+    import Quaternionic: from_euler_angles
+    import OffsetArrays: OffsetVector, OffsetArray
+
+    # Every one of these once wrote the calculator's 1-based buffers (or the caller's output)
+    # at the input's own indices, under `@inbounds`, so that an offset array wrote outside
+    # them.  Each must now be refused, with the ArgumentError from
+    # `Base.require_one_based_indexing`, before anything is written.
+    offset = "offset arrays are not supported"
+    R = [from_euler_angles(0.1i, 0.2i, 0.3i) for i ∈ 1:2]
+    β = [0.3, 0.4]
+    Ro, βo = OffsetVector(R, 0:1), OffsetVector(β, 0:1)
+
+    # Rotor data, at construction and when reset
+    @test_throws offset DCalculator(Ro, 2)
+    @test_throws offset dCalculator(βo, 2)
+    @test_throws offset dCalculator(cis.(βo), 2)
+    @test_throws offset dCalculator(βo, 7//2)
+    @test_throws offset HCalculator(βo, 2)
+    @test_throws offset sYlmCalculator(Ro, 2, 1)
+    @test_throws offset sλlmCalculator(βo, 2, 1)
+    @test_throws offset sYlm(Ro, 2, 1)
+    @test_throws offset sYlm_matrix(Ro, 2, 1)
+    @test_throws offset set_R!(DCalculator(R, 2), Ro)
+    @test_throws offset set_R!(sYlmCalculator(R, 2, 1), Ro)
+    @test_throws offset set_β!(dCalculator(β, 2), βo)
+    @test_throws offset set_θ!(sλlmCalculator(β, 2, 1), βo)
+
+    # A refused reset leaves the calculator as it was
+    c = DCalculator(R, 2)
+    @test_throws offset set_R!(c, Ro)
+    @test c.H.eⁱᵝ == DCalculator(R, 2).H.eⁱᵝ
+
+    # Output arrays, for one spin weight and for a range of them
+    Y = OffsetVector(zeros(ComplexF64, 8), 0:7)
+    @test_throws offset sYlm!(Y, R[1], 2, 1)
+    @test_throws offset sYlm!(Y, sYlmCalculator(R[1], 2, 1), R[1])
+    @test_throws offset sYlm!(OffsetArray(zeros(ComplexF64, 3, 9), 0:2, 0:8), R[1], 2, -1:1)
+    @test_throws offset sλlm!(OffsetVector(zeros(8), 0:7), sλlmCalculator(0.3, 2, 1), 0.3)
+
+    # The ordinary 1-based forms are unaffected
+    @test sYlm!(zeros(ComplexF64, 8), R[1], 2, 1) == array_view(sYlm(R[1], 2, 1))
+end

@@ -303,6 +303,9 @@ function set_rotors!(c::HarmonicCalculator{IT, RT}, θ::Real) where {IT, RT<:Rea
     c
 end
 function set_rotors!(c::sYlmCalculator{IT, RT}, R::AbstractVector{<:Rotor}) where {IT, RT<:Real}
+    # The loop writes the calculator's 1-based buffers at the input's own indices, under
+    # `@inbounds`, so an offset vector would write outside them.
+    Base.require_one_based_indexing(R)
     if length(R) != Nᵣ(c)
         error("Expected $(Nᵣ(c)) rotors (Nᵣ), but got $(length(R)).")
     end
@@ -702,6 +705,11 @@ ordering, and returns `Y`.  For a single spin weight `Y` is a vector, and its fi
 `Ysize(ℓₘᵢₙ, ℓₘₐₓ)` elements are written; for a range of them `Y` is a matrix, and the first
 `length(s)` rows and `Ysize(ℓₘᵢₙ, ℓₘₐₓ)` columns are.
 
+`Y` may also be a [`HarmonicValues`](@ref) built for one rotor, such as an earlier result of
+`sYlm`, which is then refilled in place.  Its labels do not change, so the arguments must agree
+with them — the same ``ℓₘₐₓ`` and spin weights, and the same `ℓₘᵢₙ`, which defaults to the
+container's own rather than to ``|s|`` — and anything else is an error.
+
 The element type of `Y` must be `Complex` of the rotor's own floating-point type — or, in the
 calculator forms, of the calculator's.  A mismatch is an error rather than a silent
 conversion: the type of the rotor is what decides the arithmetic, and `Y` is where the answer
@@ -720,11 +728,54 @@ and the values including the phase ``i^{2s}``.  In the calculator forms the kind
 fixed by the calculator, whose ``ℓ`` are integers or half-odd-integers according to how it was
 constructed, and a spin weight or `ℓₘᵢₙ` of the other kind is refused with a message saying so.
 """
-function sYlm!(Y::HarmonicValues, args...; kwargs...)
-    # A `HarmonicValues` is filled by writing through its storage; the labels do not change,
-    # so the container itself comes back.
-    sYlm!(array_view(Y), args...; kwargs...)
+# A `HarmonicValues` is filled by writing through its storage, and its labels do not change,
+# so the arguments must describe exactly what those labels say it holds: one rotor, the same
+# ℓₘₐₓ and spin weights, and the same ℓₘᵢₙ.  An ℓₘᵢₙ that is not given is therefore taken from
+# the container, rather than defaulting to the smallest |s| and writing a different layout
+# under the old labels.  The container itself comes back.
+function sYlm!(
+    Y::HarmonicValues, R::Rotor, ℓₘₐₓ::IndexArgument, s::SpinArgument; ℓₘᵢₙ=nothing
+)
+    check_harmonic_labels(Y, flat_indices(ℓₘₐₓ, s, ℓₘᵢₙ)..., ℓₘᵢₙ !== nothing)
+    sYlm!(array_view(Y), R, ℓₘₐₓ, s; ℓₘᵢₙ=Y.ℓₘᵢₙ)
     Y
+end
+function sYlm!(Y::HarmonicValues, calc::sYlmCalculator, R::Rotor; ℓₘᵢₙ=nothing)
+    check_harmonic_labels(Y, calc, calc.s, ℓₘᵢₙ)
+    sYlm!(array_view(Y), calc, R; ℓₘᵢₙ=Y.ℓₘᵢₙ)
+    Y
+end
+function sYlm!(
+    Y::HarmonicValues, calc::sYlmCalculator, R::Rotor, s::IndexArgument; ℓₘᵢₙ=nothing
+)
+    check_harmonic_labels(Y, calc, half_integer(s), ℓₘᵢₙ)
+    sYlm!(array_view(Y), calc, R, s; ℓₘᵢₙ=Y.ℓₘᵢₙ)
+    Y
+end
+
+# The calculator forms: the calculator fixes ℓₘₐₓ, and the spin weight is the calculator's or
+# the one picked out of it.
+function check_harmonic_labels(Y::HarmonicValues, calc::HarmonicCalculator, s, ℓₘᵢₙ)
+    check_harmonic_labels(
+        Y, SphericalFunctions.ℓₘₐₓ(calc), s,
+        ℓₘᵢₙ === nothing ? Y.ℓₘᵢₙ : half_integer(ℓₘᵢₙ), ℓₘᵢₙ !== nothing
+    )
+end
+function check_harmonic_labels(Y::HarmonicValues, ℓₘₐₓ, s, ℓₘᵢₙ, ℓₘᵢₙ_given::Bool)
+    if Nᵣ(Y) != 1
+        error(
+            "Only a HarmonicValues built for one rotor can be filled in place; this one has "
+            * "Nᵣ=$(Nᵣ(Y))."
+        )
+    end
+    if ℓₘₐₓ != Y.ℓₘₐₓ || s != Y.s || (ℓₘᵢₙ_given && ℓₘᵢₙ != Y.ℓₘᵢₙ)
+        asked = ℓₘᵢₙ_given ? "ℓ ∈ $ℓₘᵢₙ:$ℓₘₐₓ" : "ℓₘₐₓ=$ℓₘₐₓ"
+        error(
+            "The HarmonicValues hold s=$(Y.s) and ℓ ∈ $(Y.ℓₘᵢₙ):$(Y.ℓₘₐₓ), and cannot be "
+            * "filled with s=$s and $asked; the labels would no longer describe the values."
+        )
+    end
+    nothing
 end
 function sYlm!(
     Y::AbstractVecOrMat{<:Complex}, R::Rotor, ℓₘₐₓ::IndexArgument, s::SpinArgument;
@@ -770,6 +821,7 @@ function sYlm_helper!(
     check_spin(calc, s)
     check_sYlm_calculator(calc, R)
     check_sYlm_eltype(Y, calc)
+    Base.require_one_based_indexing(Y)  # Y is written at 1-based positions under `@inbounds`
     let needed = Ysize(ℓₘᵢₙ, ℓₘₐₓ)
         if length(Y) < needed
             error("Output vector has length $(length(Y)); at least $needed is needed.")
@@ -799,6 +851,7 @@ function sYlm_helper!(
     check_spin(calc, last(s))
     check_sYlm_calculator(calc, R)
     check_sYlm_eltype(Y, calc)
+    Base.require_one_based_indexing(Y)  # Y is written at 1-based positions under `@inbounds`
     let needed = Ysize(ℓₘᵢₙ, ℓₘₐₓ), n = length(s)
         if size(Y, 1) < n || size(Y, 2) < needed
             error(
@@ -967,10 +1020,28 @@ end
 
 Write ``{}_sλ_{ℓ,m}(θ)`` into the existing real array `Y`, which must have the layout
 [`sλlm`](@ref) would return and an element type matching the calculator's.  This is
-[`sYlm!`](@ref) for the real flavor, and behaves identically in every other respect.
+[`sYlm!`](@ref) for the real flavor, and behaves identically in every other respect; in
+particular, a `HarmonicValues` must be refilled with arguments that agree with its labels.
 """
-function sλlm!(Y::HarmonicValues, args...; kwargs...)
-    sλlm!(array_view(Y), args...; kwargs...)
+# As for `sYlm!` into a `HarmonicValues`: the arguments must agree with the labels, and ℓₘᵢₙ
+# defaults to the container's own.
+function sλlm!(
+    Y::HarmonicValues, θ::Real, ℓₘₐₓ::IndexArgument, s::SpinArgument; ℓₘᵢₙ=nothing
+)
+    check_harmonic_labels(Y, flat_indices(ℓₘₐₓ, s, ℓₘᵢₙ)..., ℓₘᵢₙ !== nothing)
+    sλlm!(array_view(Y), θ, ℓₘₐₓ, s; ℓₘᵢₙ=Y.ℓₘᵢₙ)
+    Y
+end
+function sλlm!(Y::HarmonicValues, calc::sλlmCalculator, θ::Real; ℓₘᵢₙ=nothing)
+    check_harmonic_labels(Y, calc, calc.s, ℓₘᵢₙ)
+    sλlm!(array_view(Y), calc, θ; ℓₘᵢₙ=Y.ℓₘᵢₙ)
+    Y
+end
+function sλlm!(
+    Y::HarmonicValues, calc::sλlmCalculator, θ::Real, s::IndexArgument; ℓₘᵢₙ=nothing
+)
+    check_harmonic_labels(Y, calc, half_integer(s), ℓₘᵢₙ)
+    sλlm!(array_view(Y), calc, θ, s; ℓₘᵢₙ=Y.ℓₘᵢₙ)
     Y
 end
 function sλlm!(

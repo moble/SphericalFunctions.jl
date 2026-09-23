@@ -125,6 +125,63 @@ end
     @test array_view(Y) != before
 end
 
+@testitem "HarmonicValues: sYlm! and sλlm! respect the container's labels" begin
+    import SphericalFunctions: sYlmCalculator, sλlmCalculator, sλlm, sλlm!
+    using Quaternionic: Rotor
+    using Random
+
+    rng = Random.Xoshiro(10)
+    R₁ = randn(rng, Rotor{Float64})
+    R₂ = randn(rng, Rotor{Float64})
+    labels = "the labels would no longer describe the values"
+
+    # ℓₘᵢₙ defaults to the container's own, so the natural refill of a container built with
+    # ℓₘᵢₙ = 0 writes that layout, not the ℓₘᵢₙ = |s| one under the old labels
+    Y = sYlm(R₁, 4, 2; ℓₘᵢₙ=0)
+    sYlm!(Y, R₂, 4, 2)
+    @test array_view(Y) == array_view(sYlm(R₂, 4, 2; ℓₘᵢₙ=0))
+    @test Y[2][-2] == sYlm(R₂, 4, 2)[2][-2]
+    @test_throws labels sYlm!(Y, R₂, 4, 2; ℓₘᵢₙ=2)
+    sYlm!(Y, R₁, 4, 2; ℓₘᵢₙ=0)  # an explicit ℓₘᵢₙ that agrees is fine
+    @test array_view(Y) == array_view(sYlm(R₁, 4, 2; ℓₘᵢₙ=0))
+
+    # A different spin weight or ℓₘₐₓ is refused, and the container is left untouched
+    Y = sYlm(R₁, 4, -2)
+    before = copy(array_view(Y))
+    @test_throws "hold s=-2 and ℓ ∈ 2:4, and cannot be filled with s=2" sYlm!(Y, R₂, 4, 2)
+    @test_throws labels sYlm!(Y, R₂, 3, -2)
+    @test_throws labels sYlm!(Y, sYlmCalculator(R₂, 4, 2), R₂)
+    @test_throws labels sYlm!(Y, sYlmCalculator(R₂, 4, -2:2), R₂)
+    @test_throws labels sYlm!(Y, sYlmCalculator(R₂, 4, -2:2), R₂, 2)
+    @test array_view(Y) == before
+
+    # The calculator forms that agree with the labels work
+    sYlm!(Y, sYlmCalculator(R₂, 4, -2), R₂)
+    @test array_view(Y) == array_view(sYlm(R₂, 4, -2))
+    sYlm!(Y, sYlmCalculator(R₁, 4, -2:2), R₁, -2)
+    @test array_view(Y) == array_view(sYlm(R₁, 4, -2))
+
+    # A range of spin weights, and half-integer indices
+    Y = sYlm(R₁, 4, -1:1)
+    sYlm!(Y, R₂, 4, -1:1)
+    @test array_view(Y) == array_view(sYlm(R₂, 4, -1:1))
+    @test_throws labels sYlm!(Y, R₂, 4, -1:0)
+    Y = sYlm(R₁, 7//2, 3//2; ℓₘᵢₙ=1//2)
+    sYlm!(Y, R₂, 7//2, 3//2)
+    @test array_view(Y) == array_view(sYlm(R₂, 7//2, 3//2; ℓₘᵢₙ=1//2))
+    @test_throws labels sYlm!(Y, R₂, 7//2, -3//2)
+
+    # A container built for several rotors cannot be refilled from one
+    @test_throws "built for one rotor" sYlm!(sYlm([R₁, R₂], 3, 1), R₂, 3, 1)
+
+    # The real flavor follows the same rules
+    Λ = sλlm(0.3, 4, 1; ℓₘᵢₙ=0)
+    sλlm!(Λ, 0.9, 4, 1)
+    @test array_view(Λ) == array_view(sλlm(0.9, 4, 1; ℓₘᵢₙ=0))
+    @test_throws labels sλlm!(Λ, 0.9, 4, -1)
+    @test_throws labels sλlm!(Λ, sλlmCalculator(0.9, 4, -1), 0.9)
+end
+
 # The items above check the four shapes and the indexing.  This one covers the rest of the
 # container interface — the type-level queries, the copy/equality pair, and display — none of
 # which the transform tests reach.
