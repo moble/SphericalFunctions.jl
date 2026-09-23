@@ -728,14 +728,14 @@ and the values including the phase ``i^{2s}``.  In the calculator forms the kind
 fixed by the calculator, whose ``ℓ`` are integers or half-odd-integers according to how it was
 constructed, and a spin weight or `ℓₘᵢₙ` of the other kind is refused with a message saying so.
 """
-# A `HarmonicValues` is filled by writing through its storage, and its labels do not change,
-# so the arguments must describe exactly what those labels say it holds: one rotor, the same
-# ℓₘₐₓ and spin weights, and the same ℓₘᵢₙ.  An ℓₘᵢₙ that is not given is therefore taken from
-# the container, rather than defaulting to the smallest |s| and writing a different layout
-# under the old labels.  The container itself comes back.
 function sYlm!(
     Y::HarmonicValues, R::Rotor, ℓₘₐₓ::IndexArgument, s::SpinArgument; ℓₘᵢₙ=nothing
 )
+    # A `HarmonicValues` is filled by writing through its storage, and its labels do not
+    # change, so the arguments must describe exactly what those labels say it holds: one
+    # rotor, the same ℓₘₐₓ and spin weights, and the same ℓₘᵢₙ.  An ℓₘᵢₙ that is not given
+    # is therefore taken from the container, rather than defaulting to the smallest |s| and
+    # writing a different layout under the old labels.  The container itself comes back.
     check_harmonic_labels(Y, flat_indices(ℓₘₐₓ, s, ℓₘᵢₙ)..., ℓₘᵢₙ !== nothing)
     sYlm!(array_view(Y), R, ℓₘₐₓ, s; ℓₘᵢₙ=Y.ℓₘᵢₙ)
     Y
@@ -1023,11 +1023,11 @@ Write ``{}_sλ_{ℓ,m}(θ)`` into the existing real array `Y`, which must have t
 [`sYlm!`](@ref) for the real flavor, and behaves identically in every other respect; in
 particular, a `HarmonicValues` must be refilled with arguments that agree with its labels.
 """
-# As for `sYlm!` into a `HarmonicValues`: the arguments must agree with the labels, and ℓₘᵢₙ
-# defaults to the container's own.
 function sλlm!(
     Y::HarmonicValues, θ::Real, ℓₘₐₓ::IndexArgument, s::SpinArgument; ℓₘᵢₙ=nothing
 )
+    # As for `sYlm!` into a `HarmonicValues`: the arguments must agree with the labels, and
+    # ℓₘᵢₙ defaults to the container's own.
     check_harmonic_labels(Y, flat_indices(ℓₘₐₓ, s, ℓₘᵢₙ)..., ℓₘᵢₙ !== nothing)
     sλlm!(array_view(Y), θ, ℓₘₐₓ, s; ℓₘᵢₙ=Y.ℓₘᵢₙ)
     Y

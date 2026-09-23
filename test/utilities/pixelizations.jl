@@ -3,8 +3,9 @@
 # The golden-ratio spiral and the sorted rings are exercised thoroughly by the transform
 # tests in `test/ssht/`, which is where they matter; what is left over — and what this file
 # covers — is the part of the module no transform reaches.  That is the two equiangular
-# grids, Driscoll–Healy and McEwen–Wiaux, which are public but which nothing in the package
-# defaults to, and the two-argument entry points whose only job is to supply `T=Float64`.
+# grids, Driscoll–Healy and McEwen–Wiaux, and the Leja points, which are public but which
+# nothing in the package defaults to, and the two-argument entry points whose only job is to
+# supply `T=Float64`.
 #
 # Each grid is checked against the formula its docstring quotes from the paper it cites,
 # rather than against a stored table, so a change of convention has to be deliberate.
@@ -157,4 +158,60 @@ end
     # Mixing the two kinds of index is refused with an explanation rather than a MethodError
     @test_throws ArgumentError sorted_ring_pixels(1//2, 3)
     @test_throws ArgumentError golden_ratio_spiral_pixels(1//2, 3)
+end
+
+@testitem "Pixelizations: Leja points" begin
+    import SphericalFunctions: leja_pixels, leja_rotors, golden_ratio_spiral_pixels,
+        golden_ratio_spiral_rotors, sYlm_matrix, Ysize, SSHT
+    import SphericalFunctions
+    using DoubleFloats: Double64
+    using LinearAlgebra: cond
+    using Quaternionic: Rotor, from_spherical_coordinates
+    using StaticArrays: SVector
+    using Random
+
+    # The shape of the result: exactly as many points as modes, a subset of the golden-ratio
+    # spiral of twice as many candidates, in the spiral's order (so strictly increasing θ),
+    # for either kind of index and each element type
+    for T ∈ (Float64, Double64, Float32), (s, ℓₘₐₓ) ∈ ((0, 5), (2, 6), (-1, 4), (1//2, 9//2))
+        p = leja_pixels(s, ℓₘₐₓ, T)
+        N = Ysize(abs(s), ℓₘₐₓ)
+        @test p isa Vector{SVector{2, T}}
+        @test length(p) == N
+        @test issubset(p, SphericalFunctions.golden_ratio_spiral(2N, T))
+        @test issorted(first.(p)) && allunique(p)
+        @test leja_rotors(s, ℓₘₐₓ, T) == from_spherical_coordinates.(p)
+        @test leja_rotors(s, ℓₘₐₓ, T) isa Vector{Rotor{T}}
+    end
+    @test leja_pixels(2, 6) == leja_pixels(2, 6, Float64)
+    @test leja_rotors(2, 6) == leja_rotors(2, 6, Float64)
+
+    # The point of them: the harmonics on them are well conditioned where those on the spiral
+    # of the same number of points are not.  Measured condition numbers: 71 and 100 against
+    # 9.0e4 and 5.8e4 at ℓₘₐₓ = 32 for s = 0 and 2, and 19 against 4540 at ℓₘₐₓ = 31/2 for
+    # s = 1/2.
+    for (s, ℓₘₐₓ) ∈ ((0, 32), (2, 32), (1//2, 31//2))
+        @test cond(sYlm_matrix(leja_rotors(s, ℓₘₐₓ), ℓₘₐₓ, s)) < 250
+        @test cond(sYlm_matrix(golden_ratio_spiral_rotors(s, ℓₘₐₓ), ℓₘₐₓ, s)) > 1000
+    end
+    # ... which is what the "Matrix" transform's accuracy depends on: a round trip on them at
+    # ℓₘₐₓ = 32 measured 2.2e-13, against 1.9e-10 on its default spiral
+    let s = 2, ℓₘₐₓ = 32
+        𝒯 = SSHT(s, ℓₘₐₓ; method="Matrix", Rθϕ=leja_rotors(s, ℓₘₐₓ), inplace=false)
+        f̃ = randn(Random.Xoshiro(3), ComplexF64, Ysize(abs(s), ℓₘₐₓ))
+        @test collect(𝒯 \ (𝒯 * f̃)) ≈ f̃ atol=5e-12 rtol=0
+    end
+
+    # `oversampling`: with no extra candidates every one is chosen, and the spiral comes back;
+    # more candidates still give the right number of points; fewer than the number of points
+    # is refused
+    @test leja_pixels(0, 8; oversampling=1) == golden_ratio_spiral_pixels(0, 8)
+    @test length(leja_pixels(2, 6; oversampling=3.5)) == Ysize(2, 6)
+    @test_throws "must be at least 1" leja_pixels(0, 4; oversampling=0.5)
+    @test_throws "must be at least 1" leja_rotors(0, 4; oversampling=0.5)
+
+    # The same refusals as the other pixelizations, at the boundary
+    @test_throws "exceeds ℓₘₐₓ" leja_pixels(4, 3)
+    @test_throws "exceeds ℓₘₐₓ" leja_rotors(-4, 3)
+    @test_throws ArgumentError leja_pixels(1//2, 3)
 end

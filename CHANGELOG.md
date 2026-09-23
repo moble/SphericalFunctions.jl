@@ -86,7 +86,9 @@ relative to version 2.2.9.
   `SSHTMatrix` factorizes with `lu` rather than `qr` when the number of
   points equals the number of modes.  Analysis of a one-dimensional set
   of function values, `𝒯 \ f`, returns a `ModeWeights` rather than a
-  `Vector`.
+  `Vector`.  For ``s ≠ 0`` the `"Minimal"` transform samples on
+  different rings (see "Fixed"), so its sample points, and the meaning
+  of its `θ` keyword, have changed; for ``s = 0`` they are as before.
 * **`map2salm` has a new signature and output.**  It is called as
   `map2salm(map, s, ℓₘₐₓ)` or `map2salm(map, 𝒯::SSHTRS)`; the
   `show_progress` argument is gone.  The output starts at ``ℓ = |s|``
@@ -212,6 +214,12 @@ relative to version 2.2.9.
 * The pixelizations `driscoll_healy_pixels`, `driscoll_healy_rotors`,
   `mcewen_wiaux_pixels` and `mcewen_wiaux_rotors`, which are public but
   unexported.
+* The pixelizations `leja_pixels` and `leja_rotors`, which choose
+  exactly as many points as there are modes, as discrete Leja points
+  drawn from a golden-ratio spiral, so that the matrix of harmonics on
+  them is well conditioned.  With `SSHTMatrix`, whose default spiral
+  loses all its digits by ``ℓₘₐₓ = 64``, a round trip on these points
+  loses about 2.
 * `ComplexPowers`, an iterator over the powers of a unit complex
   number.
 * The accessors `ℓₘᵢₙ`, `ℓₘₐₓ`, `spins`, `Nᵣ`, `floattype` and others,
@@ -228,3 +236,13 @@ relative to version 2.2.9.
 * The ring-based transform handles rings with different numbers of
   points, and rings with more than ``2ℓₘₐₓ+1`` points; version 2 gave
   wrong results in both cases.
+* The `"Minimal"` transform is accurate for ``s ≠ 0``.  Its rings of
+  ``2j+1`` points, which work well for ``s = 0``, are badly conditioned
+  for any other spin weight: at ``s = 2`` a round trip lost half its
+  digits by ``ℓₘₐₓ = 10`` and all of them by ``ℓₘₐₓ = 14``, silently.
+  The rings are now arranged as `minimal_rings` describes, and the
+  analysis solves small groups of ``m`` values together; at ``s = 2``
+  and ``ℓₘₐₓ = 16`` the error of a round trip falls from ``10^2`` to
+  ``10^{-13}``.  The sample points still become badly conditioned at
+  larger ``ℓₘₐₓ``, for every spin weight, and the constructor now warns
+  when a round trip would lose more than half the digits.

@@ -22,6 +22,7 @@ include("utilities/half_odd_integer.jl")
 
 include("utilities/pixelizations.jl")
 export golden_ratio_spiral_pixels, golden_ratio_spiral_rotors
+export leja_pixels, leja_rotors
 export sorted_rings, sorted_ring_pixels, sorted_ring_rotors
 export fejer1_rings, fejer2_rings, clenshaw_curtis_rings
 
@@ -77,7 +78,8 @@ VERSION ≥ v"1.11.0-DEV.469" && eval(Meta.parse(
     * "ell, ellmin, ellmax, mpmax, mpmin, mmax, mmin, smax, smin, Nr, ishalfinteger, isbatched, "
     * "HalfOddInteger, IntegerHalf, "
     * "nmodes, npixels, HWedge, HAxis, rotor_basetype, nrotors, floattype, "
-    * "driscoll_healy_pixels, driscoll_healy_rotors, mcewen_wiaux_pixels, mcewen_wiaux_rotors"
+    * "driscoll_healy_pixels, driscoll_healy_rotors, mcewen_wiaux_pixels, mcewen_wiaux_rotors, "
+    * "minimal_rings"
 ))
 
 end # module SphericalFunctions

@@ -164,12 +164,16 @@ different advantages and disadvantages:
      minor improvements.  This algorithm is fast and — as the name
      implies — also achieves optimal dimensionality, and its storage
      scales as ``ℓ_\mathrm{max}^3``.  However, its pixelization is
-     restricted, and for any spin weight other than ``s=0`` its
-     default sample points are badly conditioned: at ``s=2`` in
-     `Float64`, a round trip loses about half the available digits by
-     ``ℓ_\mathrm{max}=10`` and nearly all of them by
-     ``ℓ_\mathrm{max}=14`` (the constructor warns when this happens).
-     The "RS" algorithm has no such limitation.  The algorithm itself is not
+     restricted, and its sample points become badly conditioned as
+     ``ℓ_\mathrm{max}`` grows: in `Float64`, a round trip loses about
+     5 digits by ``ℓ_\mathrm{max}=32`` and 10 by
+     ``ℓ_\mathrm{max}=48`` at ``s=0``, and more at larger ``|s|`` —
+     about 10 by ``ℓ_\mathrm{max}=32`` at ``s=2`` (the constructor
+     warns when fewer than half the digits survive).  The "RS"
+     algorithm has no such limitation.  For ``s ≠ 0`` the rings are
+     not arranged as they are for ``s=0``, an arrangement that is far
+     worse conditioned for any other spin weight; see
+     [`minimal_rings`](@ref).  The algorithm itself is not
      actually fully specified by Elahi et al., and leaves out some
      relatively simple improvements, so I have had to take some
      liberties with my interpretation.

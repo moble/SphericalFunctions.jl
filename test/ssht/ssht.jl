@@ -112,19 +112,23 @@
     @test_logs SSHT(0, 8; method="Minimal")
 
     # "Minimal" warns when its sample points are too badly conditioned for half the digits of
-    # T to survive a round trip, which for s ≠ 0 happens at moderate ℓₘₐₓ, and is quiet below
-    @test_logs (:warn, r"\"Minimal\" s-SHT with s=2, ℓₘₐₓ=12 and T=Float64 is inaccurate") SSHT(2, 12; method="Minimal")
-    @test_logs (:warn, r"is inaccurate") SSHT(-2, 12; method="Minimal", inplace=false)
-    @test_logs (:warn, r"T=Float32 is inaccurate") SSHT(2, 8; method="Minimal", T=Float32)
-    @test_logs SSHT(2, 8; method="Minimal")
-    @test_logs SSHT(0, 16; method="Minimal")
+    # T to survive a round trip, which happens at large ℓₘₐₓ — sooner for s ≠ 0 — and is quiet
+    # below.  (With the rings of `sorted_rings` rather than `minimal_rings`, s = 2 warned
+    # already at ℓₘₐₓ = 10, and was garbage by ℓₘₐₓ = 14.)
+    @test_logs (:warn, r"\"Minimal\" s-SHT with s=2, ℓₘₐₓ=32 and T=Float64 is inaccurate") SSHT(2, 32; method="Minimal")
+    @test_logs (:warn, r"is inaccurate") SSHT(0, 48; method="Minimal", inplace=false)
+    @test_logs (:warn, r"T=Float32 is inaccurate") SSHT(2, 24; method="Minimal", T=Float32)
+    @test_logs SSHT(2, 16; method="Minimal")
+    @test_logs SSHT(-2, 24; method="Minimal")
+    @test_logs SSHT(0, 32; method="Minimal")
+    @test_logs SSHT(2, 16; method="Minimal", T=Float32)
 end
 
 
 @testitem "SSHT pixels and rotors" begin
     import SphericalFunctions: SSHT, pixels, rotors
     import SphericalFunctions: npixels  # unexported
-    import SphericalFunctions: sorted_rings, sorted_ring_pixels, sorted_ring_rotors
+    import SphericalFunctions: sorted_rings, sorted_ring_pixels, sorted_ring_rotors, minimal_rings
     import SphericalFunctions: golden_ratio_spiral_pixels, golden_ratio_spiral_rotors, fejer1_rings
     using DoubleFloats: Double64
     using Quaternionic: Rotor, from_spherical_coordinates, to_spherical_coordinates
@@ -134,30 +138,46 @@ end
     rng = Random.Xoshiro(1729)
 
     for T in (Float64, Double64, Float32), ℓₘₐₓ in (3, 4, 5, 8, 13), s in -2:2
-        # Minimal: ring j ∈ |s|:ℓₘₐₓ at colatitude `sorted_rings(s, ℓₘₐₓ, T)[j]` has 2j+1
-        # equally spaced points starting at ϕ = 0; this is `sorted_ring_pixels` (up to the
-        # rounding of ϕ, which the two compute differently)
+        # Minimal: the rings of `minimal_rings`, in its order, each of Nϕ equally spaced points
+        # starting at ϕ = 0
         𝒯 = SSHT(s, ℓₘₐₓ; method="Minimal", T)
         p = pixels(𝒯)
         @test eltype(p) === SVector{2, T}
         @test eltype(rotors(𝒯)) === Rotor{T}
-        @test p ≈ sorted_ring_pixels(s, ℓₘₐₓ, T)
-        @test rotors(𝒯) ≈ sorted_ring_rotors(s, ℓₘₐₓ, T)
         @test rotors(𝒯) == from_spherical_coordinates.(p)
-        θs = sorted_rings(s, ℓₘₐₓ, T)
-        expected = [
-            SVector(θⱼ, k * 2T(π) / (2j + 1))
-            for (j, θⱼ) in zip(abs(s):ℓₘₐₓ, θs) for k in 0:2j
-        ]
+        rings = minimal_rings(s, ℓₘₐₓ, T)
+        @test 𝒯.θ == rings.θ && 𝒯.Nϕ == rings.Nϕ
+        expected = [SVector(θᵣ, k * 2T(π) / N) for (θᵣ, N) in zip(rings.θ, rings.Nϕ) for k in 0:N-1]
         @test p == expected
         @test length(p) == npixels(𝒯) == (ℓₘₐₓ + 1)^2 - s^2
+        @test length(rings.θ) == ℓₘₐₓ - abs(s) + 1 && all(isodd, rings.Nϕ)
+        @test issorted(rings.Nϕ)
 
-        # ... and those rings are what `sorted_rings` documents: the interior points of an
-        # equally spaced grid on [0, π] (so never a pole), ordered so that each successive
+        # ... and those rings are what `minimal_rings` documents: the interior points of an
+        # equally spaced grid on [0, π] (so never a pole); every m has as many rings whose
+        # windows include it as there are modes with that m; a ring centered on the side of -s
+        # lies in the northern hemisphere and one on the side of +s in the southern.  For s = 0
+        # they are the rings of `sorted_rings` and `sorted_ring_pixels`.
+        @test sort(rings.θ) == collect(LinRange{T}(0, T(π), ℓₘₐₓ - abs(s) + 3))[begin+1:end-1]
+        for m in -ℓₘₐₓ:ℓₘₐₓ
+            covering = count(abs(m - c) ≤ N ÷ 2 for (N, c) in zip(rings.Nϕ, rings.centers))
+            @test covering == ℓₘₐₓ - max(abs(m), abs(s)) + 1
+        end
+        @test all(c * s ≤ 0 || θᵣ > T(π) / 2 for (θᵣ, c) in zip(rings.θ, rings.centers))
+        @test all(c * s ≥ 0 || θᵣ < T(π) / 2 for (θᵣ, c) in zip(rings.θ, rings.centers))
+        if s == 0
+            @test rings.θ == sorted_rings(s, ℓₘₐₓ, T)
+            @test rings.Nϕ == [2j + 1 for j in 0:ℓₘₐₓ]
+            @test p ≈ sorted_ring_pixels(s, ℓₘₐₓ, T)
+            @test rotors(𝒯) ≈ sorted_ring_rotors(s, ℓₘₐₓ, T)
+        end
+
+        # `sorted_rings` itself: the same interior grid, ordered so that each successive
         # ring — which has one more pair of points than the last — lies at least as close
-        # to the equator as its predecessor.  Measured: the set matches the grid exactly, and
-        # the ordering is violated by at most 1 eps(T), among rings that are exactly equally
-        # far from the equator and whose order is therefore arbitrary.
+        # to the equator as its predecessor.  Measured: the ordering is violated by at most
+        # 1 eps(T), among rings that are exactly equally far from the equator and whose order
+        # is therefore arbitrary.
+        θs = sorted_rings(s, ℓₘₐₓ, T)
         @test sort(θs) == collect(LinRange{T}(0, T(π), ℓₘₐₓ - abs(s) + 3))[begin+1:end-1]
         @test all(0 < θⱼ < T(π) for θⱼ in θs)
         let d = abs.(θs .- T(π) / 2)
@@ -512,37 +532,18 @@ end
     # snippet; see "SSHT synthesis", where it is checked against `sYlm` itself.
 
     # Analysis tolerance.  Measured over every T, s ∈ -2:2 and single mode, in units of
-    # eps(T): "RS" ≤ 8, "Matrix" ≤ 18, and round trips of random weights ≤ 37, all growing
-    # only slowly with ℓₘₐₓ, so 100ℓₘₐₓ eps(T) leaves a factor of ≳ 13.  "Minimal" is a
-    # different story: its linear system is increasingly ill-conditioned, and the error grows
-    # by roughly a factor of 20 per unit ℓₘₐₓ — 47, 593, 7925 and 155955 eps(T) at ℓₘₐₓ = 3,
-    # 4, 5 and 6.  The formula below tracks that growth with a factor of 30–150 to spare.
-    #
-    # The `min` is essential, not cosmetic.  Unclamped, "Minimal" at ℓₘₐₓ = 6 asks for
-    # 2.4e7 eps(T), which is 2.86 in Float32 — larger than the unit coefficients being
-    # tested, so an all-zero, sign-flipped or wrong-mode result would pass every assertion
-    # below.  Capping at 0.05 keeps every assertion falsifiable (an all-zero result is off
-    # by 1 and a sign flip by 2, i.e. 20× and 40× above the cap) while still admitting
-    # everything measured for the combinations actually run: worst case Float32 "Minimal"
-    # at ℓₘₐₓ = 5, single mode 9.4e-4 (margin 53×) and the three-algorithm cross-check
-    # 2.6e-3 (margin 20×).
-    tolerance(method, ℓₘₐₓ, ::Type{T}) where {T} = min(
-        T(0.05),
-        method == "Minimal" ? 500ℓₘₐₓ * 20.0^(ℓₘₐₓ - 3) * eps(T) : 100ℓₘₐₓ * eps(T)
-    )
+    # eps(T): "RS" ≤ 8, "Matrix" ≤ 18, "Minimal" ≤ 50, and round trips of random weights ≤ 37,
+    # all growing only slowly with ℓₘₐₓ at these sizes, so 100ℓₘₐₓ eps(T) leaves a factor of
+    # ≳ 6.  (With the rings of `sorted_rings` rather than `minimal_rings`, "Minimal" was a
+    # different story: the error grew by a factor of about 20 per unit ℓₘₐₓ, to 1.6e5 eps(T)
+    # at ℓₘₐₓ = 6, and Float32 could not be tested beyond ℓₘₐₓ = 5.)
+    tolerance(method, ℓₘₐₓ, ::Type{T}) where {T} = 100ℓₘₐₓ * eps(T)
 
     rng = Random.Xoshiro(2718)
 
     for (method, T) in Iterators.product(("RS", "Minimal", "Matrix"), (Float64, Double64, Float32))
         kw = method == "RS" ? (;) : (; inplace=false)
         for ℓₘₐₓ in 3:6
-            # The one combination no honest tolerance can accommodate: Float32 "Minimal" at
-            # ℓₘₐₓ = 6 has a measured single-mode error of 1.9e-2 on a unit coefficient, so
-            # even the capped tolerance would clear it by only 2.7×, and any tolerance that
-            # admits it comfortably also admits a badly wrong answer.  (The conditioning is
-            # intrinsic, not a regression: the v2 implementation — the `Deprecated` module,
-            # removed in 3.0 — measured 1.97e5 eps there against v3's 1.56e5.)
-            method == "Minimal" && T === Float32 && ℓₘₐₓ > 5 && continue
             ϵ = tolerance(method, ℓₘₐₓ, T)
             for s in -2:2
                 𝒯 = SSHT(s, ℓₘₐₓ; method, T, kw...)
@@ -603,11 +604,12 @@ end
     end
 
     # The three methods are genuinely different algorithms — "RS" takes an FFT along each
-    # ring and applies a quadrature rule across rings, "Minimal" solves one small system per
-    # ring, "Matrix" factors one dense matrix — and they share no code path beyond the
-    # harmonics themselves.  Handing the "RS" and "Minimal" sample points to "Matrix" puts
-    # all three on a common grid, where they must agree.  (This is a cross-check inside the
-    # package, not an independent reference; the closed-form comparisons above are that.)
+    # ring and applies a quadrature rule across rings, "Minimal" solves a sequence of small
+    # systems for groups of m values, "Matrix" factors one dense matrix — and they share no
+    # code path beyond the harmonics themselves.  Handing the "RS" and "Minimal" sample
+    # points to "Matrix" puts all three on a common grid, where they must agree.  (This is a
+    # cross-check inside the package, not an independent reference; the closed-form
+    # comparisons above are that.)
     for T in (Float64, Double64, Float32), ℓₘₐₓ in (3, 5), s in (-2, 0, 1)
         n = Ysize(abs(s), ℓₘₐₓ)
         f̃ = randn(rng, Complex{T}, n)
@@ -616,9 +618,8 @@ end
             𝒯 = SSHT(s, ℓₘₐₓ; method, T, kw...)
             𝒯ᴹ = SSHTMatrix(s, ℓₘₐₓ; T, Rθϕ=rotors(𝒯), inplace=false)
             @test npixels(𝒯ᴹ) == npixels(𝒯)
-            # Measured over exactly these cases, in units of eps(T): synthesis ≤ 43,
-            # analysis ≤ 20 against "RS", and — with the same ill-conditioning as above —
-            # ≤ 8900 against "Minimal".  Margins are 12× and better.
+            # Measured over exactly these cases, in units of eps(T): synthesis ≤ 43, and
+            # analysis ≤ 20 against "RS" and ≤ 30 against "Minimal".
             ϵ = tolerance(method, ℓₘₐₓ, T)
             f = 𝒯 * f̃
             @test f ≈ 𝒯ᴹ * f̃ atol=ϵ rtol=ϵ
@@ -819,7 +820,7 @@ end
     # The docstring promises that any dimensions after the first are broadcast over.  Two
     # trailing dimensions exercise the reshaping that a matrix input does not.
     for method in ("RS", "Minimal", "Matrix"), (s, ℓₘₐₓ) in ((1, 4), (-2, 3))
-        ϵ = 500ℓₘₐₓ^3 * eps(Float64) * (method == "Minimal" ? 50 : 1)
+        ϵ = 500ℓₘₐₓ^3 * eps(Float64)
         kw = method == "RS" ? (;) : (; inplace=false)
         𝒯 = SSHT(s, ℓₘₐₓ; method, kw...)
         n, N = nmodes(𝒯), npixels(𝒯)

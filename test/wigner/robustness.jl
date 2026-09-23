@@ -546,7 +546,9 @@ end
 
 @testitem "Offset rotor and output arrays are refused before any write" begin
     import SphericalFunctions: DCalculator, dCalculator, HCalculator, sYlmCalculator,
-        sλlmCalculator, sYlm, sYlm!, sλlm!, sYlm_matrix, set_R!, set_β!, set_θ!, array_view
+        sλlmCalculator, sYlm, sYlm!, sλlm!, sYlm_matrix, set_R!, set_β!, set_θ!, array_view,
+        WignerMatrix, WignerMatrixBatch, DegreeBlock, DegreeBlockBatch, SpinMatrix,
+        SpinMatrixBatch, WignerSeries, relabel
     import Quaternionic: from_euler_angles
     import OffsetArrays: OffsetVector, OffsetArray
 
@@ -585,6 +587,20 @@ end
     @test_throws offset sYlm!(Y, sYlmCalculator(R[1], 2, 1), R[1])
     @test_throws offset sYlm!(OffsetArray(zeros(ComplexF64, 3, 9), 0:2, 0:8), R[1], 2, -1:1)
     @test_throws offset sλlm!(OffsetVector(zeros(8), 0:7), sλlmCalculator(0.3, 2, 1), 0.3)
+
+    # The block containers and `WignerSeries`, which index their storage as 1-based, refuse
+    # an offset parent however they are built: directly, by `relabel`, or as a series
+    @test_throws offset WignerMatrix(OffsetArray(zeros(ComplexF64, 5, 5), -2:2, -2:2), 2)
+    @test_throws offset WignerMatrixBatch(OffsetArray(zeros(ComplexF64, 2, 5, 5), 0:1, -2:2, -2:2), 2)
+    @test_throws offset DegreeBlock(OffsetVector(zeros(5), -2:2), 2)
+    @test_throws offset DegreeBlockBatch(OffsetArray(zeros(2, 5), 0:1, -2:2), 2)
+    @test_throws offset SpinMatrix(OffsetArray(zeros(3, 5), -1:1, -2:2), 2; sₘₐₓ=1, sₘᵢₙ=-1)
+    @test_throws offset SpinMatrixBatch(OffsetArray(zeros(2, 3, 5), 0:1, -1:1, -2:2), 2; sₘₐₓ=1, sₘᵢₙ=-1)
+    w = WignerMatrix(zeros(ComplexF64, 5, 5), 2)
+    @test_throws offset relabel(w, OffsetArray(zeros(ComplexF64, 5, 5), -2:2, -2:2))
+    blocks = [WignerMatrix(zeros(ComplexF64, 2ℓ+1, 2ℓ+1), ℓ) for ℓ ∈ 0:2]
+    @test_throws offset WignerSeries(OffsetVector(blocks, 0:2), 0, 2)
+    @test WignerSeries(blocks, 0, 2)[2] === blocks[3]
 
     # The ordinary 1-based forms are unaffected
     @test sYlm!(zeros(ComplexF64, 8), R[1], 2, 1) == array_view(sYlm(R[1], 2, 1))

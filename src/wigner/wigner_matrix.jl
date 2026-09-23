@@ -363,6 +363,13 @@ struct WignerMatrix{IT, NT, ST} <: AbstractWignerMatrix{IT, NT, ST}
     m′ₘᵢₙ::IT
     mₘₐₓ::IT
     mₘᵢₙ::IT
+    # The parent is indexed as 1-based throughout, much of it under `@inbounds`, so an
+    # offset array would be read and written outside its storage; `ModeWeights` and
+    # `HarmonicValues` refuse one in the same way.
+    function WignerMatrix{IT, NT, ST}(parent, ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ) where {IT, NT, ST}
+        Base.require_one_based_indexing(parent)
+        new{IT, NT, ST}(parent, ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
+    end
 end
 
 # The size of the *block* represented (the parent storage may be larger)
@@ -439,6 +446,11 @@ struct WignerMatrixBatch{IT, NT, ST} <: AbstractWignerMatrix{IT, NT, ST}
     mₘₐₓ::IT
     mₘᵢₙ::IT
     Nᵣ::Int
+    # As for `WignerMatrix`: the parent must be 1-based.
+    function WignerMatrixBatch{IT, NT, ST}(parent, ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, Nᵣ) where {IT, NT, ST}
+        Base.require_one_based_indexing(parent)
+        new{IT, NT, ST}(parent, ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, Nᵣ)
+    end
 end
 
 function WignerMatrixBatch(
@@ -580,6 +592,11 @@ struct DegreeBlock{IT, NT, ST<:AbstractVector{NT}} <: AbstractWignerMatrix{IT, N
     ℓ::IT
     mₘₐₓ::IT
     mₘᵢₙ::IT
+    # As for `WignerMatrix`: the parent must be 1-based.
+    function DegreeBlock{IT, NT, ST}(parent, ℓ, mₘₐₓ, mₘᵢₙ) where {IT, NT, ST}
+        Base.require_one_based_indexing(parent)
+        new{IT, NT, ST}(parent, ℓ, mₘₐₓ, mₘᵢₙ)
+    end
 end
 
 function DegreeBlock(parent::AbstractVector, ℓ::Rational; kwargs...)
@@ -677,6 +694,11 @@ struct DegreeBlockBatch{IT, NT, ST<:AbstractMatrix{NT}} <: AbstractWignerMatrix{
     mₘₐₓ::IT
     mₘᵢₙ::IT
     Nᵣ::Int
+    # As for `WignerMatrix`: the parent must be 1-based.
+    function DegreeBlockBatch{IT, NT, ST}(parent, ℓ, mₘₐₓ, mₘᵢₙ, Nᵣ) where {IT, NT, ST}
+        Base.require_one_based_indexing(parent)
+        new{IT, NT, ST}(parent, ℓ, mₘₐₓ, mₘᵢₙ, Nᵣ)
+    end
 end
 
 function DegreeBlockBatch(
@@ -801,6 +823,11 @@ struct SpinMatrix{IT, NT, ST<:AbstractMatrix{NT}} <: AbstractWignerMatrix{IT, NT
     sₘᵢₙ::IT
     mₘₐₓ::IT
     mₘᵢₙ::IT
+    # As for `WignerMatrix`: the parent must be 1-based.
+    function SpinMatrix{IT, NT, ST}(parent, ℓ, sₘₐₓ, sₘᵢₙ, mₘₐₓ, mₘᵢₙ) where {IT, NT, ST}
+        Base.require_one_based_indexing(parent)
+        new{IT, NT, ST}(parent, ℓ, sₘₐₓ, sₘᵢₙ, mₘₐₓ, mₘᵢₙ)
+    end
 end
 
 function SpinMatrix(parent::AbstractMatrix, ℓ::Rational; kwargs...)
@@ -940,6 +967,11 @@ struct SpinMatrixBatch{IT, NT, ST<:AbstractArray{NT, 3}} <: AbstractWignerMatrix
     mₘₐₓ::IT
     mₘᵢₙ::IT
     Nᵣ::Int
+    # As for `WignerMatrix`: the parent must be 1-based.
+    function SpinMatrixBatch{IT, NT, ST}(parent, ℓ, sₘₐₓ, sₘᵢₙ, mₘₐₓ, mₘᵢₙ, Nᵣ) where {IT, NT, ST}
+        Base.require_one_based_indexing(parent)
+        new{IT, NT, ST}(parent, ℓ, sₘₐₓ, sₘᵢₙ, mₘₐₓ, mₘᵢₙ, Nᵣ)
+    end
 end
 
 function SpinMatrixBatch(parent::AbstractArray{<:Any, 3}, ℓ::Rational; kwargs...)
@@ -1105,6 +1137,7 @@ struct WignerSeries{IT, VT<:AbstractVector}
     ℓₘᵢₙ::IT
     ℓₘₐₓ::IT
     function WignerSeries(blocks::VT, ℓₘᵢₙ::IT, ℓₘₐₓ::IT) where {IT, VT<:AbstractVector}
+        Base.require_one_based_indexing(blocks)  # `blocks[i]` is the block for ℓₘᵢₙ + (i-1)
         if length(blocks) != Int(ℓₘₐₓ - ℓₘᵢₙ) + 1
             error(
                 "Got $(length(blocks)) blocks, but ℓ ∈ $ℓₘᵢₙ:$ℓₘₐₓ needs "

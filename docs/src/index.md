@@ -65,8 +65,7 @@ or arbitrary grids to intermediate order.
   - Support fast and exact transforms on
     equiangular grids to very high ``ℓ`` with [`SSHTRS`](@ref)
   - Support fast and exact transforms on arbitrary *minimal* grids for
-    ``ℓₘₐₓ ≲ 64`` with  [`SSHTMinimal`](@ref) (integer spin weights
-    only)
+    ``ℓₘₐₓ ≲ 32`` with  [`SSHTMatrix`](@ref)
   - Support transforms on freely chosen points for moderate ``ℓₘₐₓ``
     with [`SSHTMatrix`](@ref)
   - Simple functional forms [`map2salm`](@ref) and [`salm2map`](@ref)

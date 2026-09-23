@@ -201,14 +201,16 @@ end
         # ... and the algorithm still inverts itself: worst case 3 eps, 200 asserted.
         @test 𝒯rs \ copy(f) ≈ f̃ atol=200eps(Float64) * maximum(abs, f̃)
 
-        # `SSHTMinimal` is defined only for integer spin weights.  Its round trip solves a
-        # minimally-sampled linear system and is far less well conditioned than `SSHTRS`'s —
-        # the measured worst case here is 26_000 eps, which is a property of the algorithm
-        # and not of these tables; 10^6 is asserted, as in `test/ssht/ssht.jl`.
+        # `SSHTMinimal` is defined only for integer spin weights.  Against the closed form its
+        # synthesis measured 12 eps at worst, and its round trip 11 eps; 200 is asserted for
+        # both.  (With the rings of `sorted_rings` the round trip at s = -2 measured 26_000
+        # eps, which was a property of those rings and not of these tables.)
         if isinteger(s)
             𝒯min = SSHTMinimal(s, ℓmax)
             g = 𝒯min * copy(f̃)
-            @test 𝒯min \ copy(g) ≈ f̃ atol=1_000_000eps(Float64) * maximum(abs, f̃)
+            reference = sYlm_matrix(rotors(𝒯min), ℓmax, s) * f̃
+            @test g ≈ reference atol=200eps(Float64) * maximum(abs, reference)
+            @test 𝒯min \ copy(g) ≈ f̃ atol=200eps(Float64) * maximum(abs, f̃)
         end
     end
 end

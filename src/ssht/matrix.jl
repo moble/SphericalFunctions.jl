@@ -14,6 +14,12 @@ processing multiple fields with different spin weights; the function could be ev
 points appropriate for the lowest value of ``|s|``, and therefore could also be used to
 solve for fields of all other spin weights.
 
+With precisely optimal sampling, the accuracy is limited by the conditioning of the points.
+The default golden-ratio spiral becomes badly conditioned beyond ℓₘₐₓ ≈ 12: a round trip loses
+about 3 digits at ℓₘₐₓ = 16, 5 at 32, and all of them at 64.  The points of
+[`leja_rotors`](@ref), chosen to keep the matrix well conditioned, lose about 2 digits at
+ℓₘₐₓ = 64; pass them as `Rθϕ=leja_rotors(s, ℓₘₐₓ, T)`.
+
 LU decomposition (`LinearAlgebra.lu`) is used by default for a square matrix; any function
 that decomposes the matrix into something capable of solving the linear problem may be
 passed as `decomposition`.  In particular, QR decomposition (`LinearAlgebra.qr`) will

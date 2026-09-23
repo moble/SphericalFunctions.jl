@@ -141,88 +141,98 @@ know *how* they alias, and can simply remove them from the Fourier
 transforms of those rings.  We then repeat, solving for the
 next-highest ``|k|`` values, and so on.
 
-Both algorithms below use the matrices of ``{}_{s}λ_{ℓ,m}`` values
-that [`SSHTMinimal`](@ref) precomputes at construction: `ₛΛ[m][j, ℓ]`
-is ``{}_{s}λ_{ℓ,m}(θ_j)`` for every ring ``j`` that the mode ``(ℓ,
-m)`` can reach, and `Λ[m]` is its square sub-block over the rings ``j
-∈ Δ:ℓₘₐₓ`` that include ``m`` directly.  (Earlier versions of the
-package evaluated these on the fly with a `λ_iterator`; recomputing
-the recursion once per ring per ``m`` cost more than storing it.)
+## Spin weights other than zero
 
-The following pseudo-code summarizes the analysis algorithm, modifying
-the input in place:
+The scheme above places a ring of ``2j+1`` points for each ``j ∈
+|s|:L``, and for ``s = 0`` that works well.  For any other spin weight
+it is badly conditioned, and no choice of the colatitudes cures it.
+The reason is visible in the behavior of the harmonics near the poles:
+``{}_{s}λ_{ℓ,m}(θ)`` is proportional to ``\sin^{|m+s|}(θ/2)\,
+\cos^{|m-s|}(θ/2)``, so near the north pole a function of spin weight
+``s`` is dominated by the modes with ``m`` near ``-s``, and near the
+south pole by those near ``+s``.  A small ring near the north pole
+measures the frequencies ``|m| ≤ j``, but it sees the ones near ``m =
++j`` only weakly, while the aliases of ``m = -(j+1), -(j+2), …`` land on
+its coefficients at nearly full strength.  Each step of the de-aliasing
+then amplifies the errors of the steps before it, and the error of a
+round trip grows by more than an order of magnitude with each unit of
+``L``: at ``s = 2`` in double precision, half the digits are gone by
+``L = 10``, and all of them by ``L = 14``.
+
+The fix is to center each polar ring's window of frequencies on the
+modes that dominate near its pole.  What the analysis needs is that
+every ``m`` be measured by as many rings as there are modes with that
+``m``, which is ``L - \max(|m|, |s|) + 1``.  The windows ``|m| ≤ a``
+and ``|m| ≤ a+2d`` together cover every ``m`` exactly as often as the
+windows ``|m+d| ≤ a+d`` and ``|m-d| ≤ a+d`` do, so pairs of the original
+windows can be replaced by pairs of windows of equal size, one centered
+on ``-d\,\mathrm{sign}(s)`` for a ring in the northern hemisphere and
+one on ``+d\,\mathrm{sign}(s)`` for a ring in the southern.  With ``d =
+|s|`` wherever possible, the condition number at ``s = 2`` and ``L =
+12`` drops from ``7×10^{12}`` to about 400.  The number of rings and of
+points is unchanged; [`minimal_rings`](@ref) gives the details.
+
+The price is in the de-aliasing.  A frequency ``m′`` outside a ring's
+window must be removed from that ring's coefficients before the
+frequency it aliases to can be solved for.  With every window centered
+on 0 this ordering is simply that of decreasing ``|m|``, but with two
+windows of equal size centered on ``±d`` some frequencies in each alias
+into the other, and neither can be solved first.  Those frequencies
+must be solved together.  The groups that must be solved together are
+the strongly connected components of the graph whose edges run from
+each such ``m′`` to the frequency it aliases to, and solving the groups
+in topological order restores the triangular structure.  In every case
+I have measured the groups hold at most ``4|s|-1`` values of ``m``,
+however large ``L`` is, so the cost remains ``O(L^3)``.
+
+Even so, the sample points become badly conditioned as ``L`` grows, for
+every spin weight — the error of a round trip in double precision is
+about ``10^{-11}`` at ``L = 32`` and ``10^{-6}`` at ``L = 48`` for ``s =
+0``, and grows faster for larger ``|s|`` — which is the limitation
+mentioned at the top of this page.
+
+
+## Implementation
+
+[`SSHTMinimal`](@ref) precomputes, at construction, the table
+`Λ[i, r]` of ``{}_{s}λ_{ℓ,m}(θ_r)`` for every mode ``i = (ℓ, m)`` on
+every ring ``r``, along with the groups of ``m`` values and the LU
+decomposition of the matrix of each.  A group's matrix couples its
+modes to the Fourier coefficients that measure its ``m`` values on
+every ring whose window includes them; a mode enters a coefficient
+whenever its ``m`` is congruent, modulo the size of the ring, to the
+frequency that coefficient measures.  (Earlier versions of the package
+evaluated the ``{}_{s}λ_{ℓ,m}`` on the fly with a `λ_iterator`;
+recomputing the recursion once per ring per ``m`` cost more than
+storing it.)
+
+The following pseudo-code summarizes the analysis algorithm:
 ```julia
-# Iterate over rings, doing Fourier decompositions on each
-for j ∈ abs(s):ℓₘₐₓ
-    fft!(ₛf[j])  # Perform in-place FFT
-    fftshift!(ₛf[j])  # Cycle order of FFT elements in place to match order of modes
-    ₛf[j] *= 2π / (2j+1)  # Change normalization
+# Fourier coefficients of each ring, normalized as (1/N) Σₖ f(ϕₖ) exp(-imϕₖ)
+for r ∈ rings
+    F[r] = fft(f[pixels of r]) / Nϕ[r]
 end
 
-for m ∈ alternating_countdown(ℓₘₐₓ)  # Iterate over +m, then -m, down to m=0
-    Δ = max(abs(s), abs(m))
+for group ∈ groups  # in topological order
+    # Every other mode that reaches these coefficients has already been removed
+    rhs = [F[r][mod(m, Nϕ[r]) + 1] for (r, m) ∈ coefficients(group)]
+    f̃[modes(group)] = lu(group) \ rhs
 
-    # Gather the `m` data from each ring into a temporary workspace
-    for j ∈ Δ:ℓₘₐₓ
-        ₛfₘ[j] = ₛf[Yindex(j, m, abs(s))]
+    # Remove this group's modes from the coefficients of every ring they reach
+    for r ∈ rings, i ∈ modes(group)
+        F[r][mod(m[i], Nϕ[r]) + 1] -= f̃[i] * Λ[i, r]
     end
-
-    # Solve for the mode weights from the Fourier components
-    ₛf̃ₘ[Δ:ℓₘₐₓ] = ₛΛ[m] \ ₛfₘ[Δ:ℓₘₐₓ]
-
-    # Distribute the data back into the output
-    for ℓ ∈ Δ:ℓₘₐₓ
-        ₛf[Yindex(ℓ, m, abs(s))] = ₛf̃ₘ[ℓ]
-    end
-
-    # De-alias Fourier components from rings with values of j < Δ
-    for j′ ∈ abs(s):abs(m)-1
-        m′ = mod(j′+m, 2j′+1)-j′  # `m` aliases into `(j′, m′)`
-        α = 2π * sum(ₛf̃ₘ[ℓ] * ₛΛ[m][j′, ℓ] for ℓ ∈ Δ:ℓₘₐₓ)
-        ₛf[Yindex(j′, m′, abs(s))] -= α
-    end
-
 end
 ```
 
-The following pseudo-code summarizes the synthesis algorithm,
-modifying the input in place:
+Synthesis needs no ordering at all, because every mode's contribution
+to every ring is known:
 ```julia
-for m ∈ alternating_countup(ℓₘₐₓ)  # Iterate over +m, then -m, up from m=0
-    Δ = max(abs(s), abs(m))
-
-    # Iterate over rings, combining contributions for this `m` value
-    for j ∈ Δ:ℓₘₐₓ
-        # We will accumulate into 𝒯.ₛfₘ, and write it out at the end of the loop
-        ₛfₘ[j] = false
-
-        # Direct (non-aliased) contributions from m′ == m
-        for ℓ ∈ Δ:ℓₘₐₓ
-            ₛfₘ[j] += ₛf̃[Yindex(ℓ, m, abs(s))] * Λ[m][j, ℓ]
-        end
-
-        # Aliased contributions from |m′| > j > |m|
-        for ℓ′ ∈ j:ℓₘₐₓ
-            for n ∈ cld(-ℓ′-m, 2j+1):fld(ℓ′-m, 2j+1)
-                m′ = m + n*(2j+1)
-                if abs(m′) > j
-                    ₛfₘ[j] += ₛf̃[Yindex(ℓ′, m′, abs(s))] * ₛΛ[m′][j, ℓ′]
-                end
-            end
-        end
-
-    end  # j
-
-    # Distribute the data back into the output
-    for j ∈ Δ:ℓₘₐₓ
-        ₛf̃[Yindex(j, m, abs(s))] = ₛfₘ[j]
+for r ∈ rings
+    F[r] .= 0
+    for i ∈ modes  # aliased or not
+        F[r][mod(m[i], Nϕ[r]) + 1] += f̃[i] * Λ[i, r]
     end
-
-end  # m
-
-# Iterate over rings, doing Fourier decompositions on each
-for j ∈ abs(s):ℓₘₐₓ
-    ifftshift!(ₛf̃[j]) # Cycle order of modes in place to match order of FFT elements
-    bfft!(ₛf̃ⱼ[j]) # Perform in-place BFFT
+    f[pixels of r] = bfft(F[r])  # Σₘ Fₘ exp(imϕₖ)
 end
 ```

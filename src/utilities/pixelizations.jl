@@ -1,21 +1,22 @@
 # Pixelizations of the sphere.
 #
-# The golden-ratio spiral and the sorted rings are sized by the spin weight `s` and the band
-# limit `ℓₘₐₓ`, which may be integers or half-odd-integers, the latter passed as `Rational`s
-# with denominator 2 or as `HalfOddInteger`s.  Each of the three functions that compute points
-# — `golden_ratio_spiral_pixels`, `sorted_rings` and `sorted_ring_pixels` — is a boundary
-# method, typed `IndexArgument` on its indices, which does nothing but normalize the two with
-# `unify_indices` and re-dispatch to a private worker whose signature is
-# `where {IT<:IntegerHalf, T}`.  The worker therefore sees two indices of one concrete type
-# and never a `Rational`, and a call mixing the two kinds of index is refused at the boundary
-# with an explanation rather than a bare `MethodError`; the two `_rotors` functions pass their
-# indices along to be normalized there.  Every quantity the workers form from the indices —
-# the pixel count `Ysize(abs(s), ℓₘₐₓ)`, the number of rings ℓₘₐₓ - |s| + 1, the 2j+1 points
-# on ring j, and the count of ulps `ceil(s)` — is an `Int` for either kind, so the workers
-# need no branch on the kind and the integer path is exactly what it was.  A spin weight with
-# |s| > ℓₘₐₓ describes no modes at all, and both families refuse it with the same message
-# before any point is placed.  The Driscoll–Healy and McEwen–Wiaux grids further down take
-# integer indices only: they do not depend on `s` at all, and no transform defaults to them.
+# The golden-ratio spiral, the Leja points and the sorted rings are sized by the spin weight
+# `s` and the band limit `ℓₘₐₓ`, which may be integers or half-odd-integers, the latter
+# passed as `Rational`s with denominator 2 or as `HalfOddInteger`s.  Each of the four
+# functions that compute points — `golden_ratio_spiral_pixels`, `leja_pixels`,
+# `sorted_rings` and `sorted_ring_pixels` — is a boundary method, typed `IndexArgument` on
+# its indices, which does nothing but normalize the two with `unify_indices` and re-dispatch
+# to a private worker whose signature is `where {IT<:IntegerHalf, T}`.  The worker therefore
+# sees two indices of one concrete type and never a `Rational`, and a call mixing the two
+# kinds of index is refused at the boundary with an explanation rather than a bare
+# `MethodError`; the three `_rotors` functions pass their indices along to be normalized
+# there.  Every quantity the workers form from the indices — the pixel count `Ysize(abs(s),
+# ℓₘₐₓ)`, the number of rings ℓₘₐₓ - |s| + 1, the 2j+1 points on ring j, and the count of
+# ulps `ceil(s)` — is an `Int` for either kind, so the workers need no branch on the kind
+# and the integer path is exactly what it was.  A spin weight with |s| > ℓₘₐₓ describes no
+# modes at all, and all of these functions refuse it with the same message before any point
+# is placed.  The Driscoll–Healy and McEwen–Wiaux grids further down take integer indices
+# only: they do not depend on `s` at all, and no transform defaults to them.
 
 @doc raw"""
     golden_ratio_spiral_pixels(s, ℓₘₐₓ, [T=Float64])
@@ -37,9 +38,9 @@ The spin weight and `ℓₘₐₓ` may be integers or half-odd-integers, the lat
 must be of one kind; a call that mixes them, such as `golden_ratio_spiral_pixels(1//2, 3)`,
 is an error, and so is a spin weight with ``|s| > ℓₘₐₓ``, for which there are no modes.
 
-This is also known as the "Fibonacci sphere" or "Fibonacci lattice" — though he had nothing
-to do with it; later authors pointed out relationships between his sequence and the golden
-ratio.
+This is also known as the "Fibonacci sphere" or "Fibonacci lattice" — though Fibonacci had
+nothing to do with it; later authors pointed out relationships between his sequence and the
+golden ratio.
 
 The returned quantity is a vector of 2-SVectors providing the spherical coordinates of each
 pixel.  See also [`golden_ratio_spiral_rotors`](@ref) for the corresponding `Rotor`s.
@@ -55,8 +56,13 @@ function golden_ratio_spiral_pixels(
     if abs(s) > ℓₘₐₓ
         error("|s|=$(abs(s)) exceeds ℓₘₐₓ=$ℓₘₐₓ; there are no such modes.")
     end
+    golden_ratio_spiral(Ysize(abs(s), ℓₘₐₓ), T)
+end
+
+# The spiral of any number `N` of points, which `leja_pixels` also uses, with more points
+# than modes, as its set of candidates
+function golden_ratio_spiral(N::Int, ::Type{T}) where {T}
     let π = T(π), φ = T(MathConstants.φ)
-        N = Ysize(abs(s), ℓₘₐₓ)
         # Note: the formula used here looks different from some sources,
         # but just represents spiraling in the opposite direction.
         Δϕ = 2π * (2 - φ)
@@ -82,6 +88,86 @@ function golden_ratio_spiral_rotors(
 end
 
 @doc raw"""
+    leja_pixels(s, ℓₘₐₓ, [T=Float64]; oversampling=2)
+
+Choose [`Ysize(abs(s), ℓₘₐₓ)`](@ref Ysize) pixels — as many as there are modes of spin
+weight `s` with ``|s| ≤ ℓ ≤ ℓₘₐₓ`` — so that the matrix of spin-weighted spherical harmonics
+at those points is well conditioned.  This is needed to solve for the mode weights from
+function values at exactly that many points.
+
+The golden-ratio spiral of [`golden_ratio_spiral_pixels`](@ref) spreads its points evenly,
+but that is not what such a solve needs, and with exactly as many points as modes the matrix
+becomes badly conditioned as ℓₘₐₓ grows: its condition number is about ``10^4`` at ℓₘₐₓ =
+16, ``10^5`` at 32 and ``10^{14}`` at 64.  The points chosen here are "discrete Leja points"
+(Bos, De Marchi, Sommariva and Vianello, SIAM J. Numer. Anal. 48, 1984, 2010), which
+approximate the Fekete points that maximize the determinant of the matrix: the harmonics are
+evaluated on a golden-ratio spiral of `oversampling` times as many candidate points, and an
+LU decomposition with partial pivoting of that tall matrix picks, one row at a time, the
+candidate that is least well represented by those already picked.  With the default
+`oversampling=2`, the condition number is about 30 at ℓₘₐₓ = 16, 70–100 at 32 and 200–400 at
+64, for either ``s = 0`` or ``s = 2``, and a round trip through [`SSHTMatrix`](@ref) on
+these points loses about 2 digits at ℓₘₐₓ = 64 rather than all of them.  (Up to ℓₘₐₓ ≈ 12
+the two are comparable, with condition numbers of order 10, and the spiral is sometimes
+slightly the better; beyond that it degrades and these points do not.)  Larger values of
+`oversampling` did not help consistently in tests, and cost more.
+
+The points depend on `s`, not just on their number, because the matrix does.  They are a
+subset of that spiral, returned in its order (from the north pole to the south), and are
+deterministic.  The cost is that of the LU decomposition of an ``N_c × N`` matrix, with
+``N`` the number of modes and ``N_c`` the number of candidates — about 2–3 times that of the
+decomposition [`SSHTMatrix`](@ref) itself performs, or 2–3 seconds at ℓₘₐₓ = 64 — and its
+``O(N^2)`` storage.  To use these points for that transform, pass them as its `Rθϕ` keyword:
+`SSHT(s, ℓₘₐₓ; method="Matrix", Rθϕ=leja_rotors(s, ℓₘₐₓ))`.
+
+The spin weight and `ℓₘₐₓ` may be integers or half-odd-integers, as for
+[`golden_ratio_spiral_pixels`](@ref), on the same terms.  The returned quantity is a vector
+of 2-SVectors providing the spherical coordinates of each pixel.  See also
+[`leja_rotors`](@ref) for the corresponding `Rotor`s.
+"""
+function leja_pixels(
+    s::IndexArgument, ℓₘₐₓ::IndexArgument, ::Type{T}=Float64; oversampling::Real=2
+) where T
+    leja_pixels(unify_indices(s, ℓₘₐₓ)..., T, oversampling)
+end
+function leja_pixels(
+    s::IT, ℓₘₐₓ::IT, ::Type{T}, oversampling::Real
+) where {IT<:IntegerHalf, T}
+    if abs(s) > ℓₘₐₓ
+        error("|s|=$(abs(s)) exceeds ℓₘₐₓ=$ℓₘₐₓ; there are no such modes.")
+    end
+    if !(oversampling ≥ 1)
+        throw(ArgumentError(
+            "oversampling=$oversampling must be at least 1, so that there are at least as many "
+            * "candidates as points to choose."
+        ))
+    end
+    N = Ysize(abs(s), ℓₘₐₓ)
+    candidates = golden_ratio_spiral(ceil(Int, oversampling * N), T)
+    # The rows of Y are the candidates; the first N row pivots are the points chosen.  With
+    # `check=false` a numerically singular trailing block is not an error: the pivots are
+    # chosen before it is reached.
+    Y = sYlm_matrix(from_spherical_coordinates.(candidates), ℓₘₐₓ, s)
+    F = LinearAlgebra.lu!(Y, LinearAlgebra.RowMaximum(); check=false)
+    candidates[sort(F.p[1:N])]
+end
+
+@doc raw"""
+    leja_rotors(s, ℓₘₐₓ, [T=Float64]; oversampling=2)
+
+Choose pixels on which the spin-weighted spherical harmonics are well conditioned, as
+discrete Leja points drawn from a golden-ratio spiral.
+
+See [`leja_pixels`](@ref) for more detailed explanation, including the half-odd-integer
+values that `s` and `ℓₘₐₓ` may take.  The quantity returned by this function is a vector of
+`Rotor`s providing each pixel.
+"""
+function leja_rotors(
+    s::IndexArgument, ℓₘₐₓ::IndexArgument, ::Type{T}=Float64; oversampling::Real=2
+) where T
+    from_spherical_coordinates.(leja_pixels(s, ℓₘₐₓ, T; oversampling))
+end
+
+@doc raw"""
     sorted_rings(s, ℓₘₐₓ, [T=Float64])
 
 Compute locations of a series of rings labelled by ``j ∈ |s|:ℓₘₐₓ`` (analogous to ``ℓ``).
@@ -90,10 +176,10 @@ ring.  These rings are then sorted, so that the ring with the most pixels
 (``j = ℓₘₐₓ``) is closest to the equator, and the next-largest ring is placed just above or
 below the equator (depending on the sign of ``s``), the next just below or above, and so on.
 This is generally a fairly good first guess when minimizing the condition number of matrices
-used to solve for mode weights from function values, and it is the default for the Minimal
-algorithm.  It is only a first guess, though: no optimizer to fine-tune the positions of the
-rings is included in this package, and for ``s ≠ 0`` these rings become badly conditioned as
-``ℓₘₐₓ`` grows; see [`SSHTMinimal`](@ref).
+used to solve for mode weights from function values, and for ``s = 0`` it gives the default
+rings of the Minimal algorithm.  For ``s ≠ 0`` these rings are badly conditioned, and the
+Minimal algorithm uses the different arrangement of [`minimal_rings`](@ref) instead; see
+[`SSHTMinimal`](@ref).
 
 The spin weight and `ℓₘₐₓ` may be integers or half-odd-integers, the latter passed as
 `Rational`s with denominator 2, as in `sorted_rings(1//2, 7//2)`; the two must be of one
@@ -117,8 +203,8 @@ function sorted_rings(s::IT, ℓₘₐₓ::IT, ::Type{T}) where {IT<:IntegerHalf
     # The spin weight is used here as a count of ulps by which the comparison point is moved
     # off the equator, which is what breaks the ties in the sort below and places the second
     # ring above or below the equator according to the sign of `s`.  A count must be a whole
-    # number, so a half-odd spin weight is rounded up: for an `Integer` `ceil` is the identity,
-    # and for a `HalfOddInteger` it is the `Int` just above.
+    # number, so a half-odd spin weight is rounded up: for an `Integer` `ceil` is the
+    # identity, and for a `HalfOddInteger` it is the `Int` just above.
     let πo2 = prevfloat(T(π)/2, ceil(s))
         sort(
             collect(LinRange{T}(0, π, 2+ℓₘₐₓ-abs(s)+1))[begin+1:end-1],
