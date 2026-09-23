@@ -24,26 +24,27 @@ or solve for the mode weights from the function values (analysis) as
 
     f̃ = 𝒯 \ f
 
-The first dimension of `f̃` must index the mode weights in the canonical ordering
-`[f̃(ℓ, m) for ℓ ∈ abs(s):ℓₘₐₓ for m ∈ -ℓ:ℓ]` (see [`Yindex`](@ref); a [`ModeWeights`](@ref)
-with `ℓₘᵢₙ = abs(s)` is accepted), and the first dimension of `f` must index the locations
-at which the function is evaluated, in the order given by [`rotors`](@ref) or
-[`pixels`](@ref).  Any following dimensions will be broadcast over.
+The first dimension of `f̃` must index the mode weights in the canonical ordering `[f̃(ℓ, m)
+for ℓ ∈ abs(s):ℓₘₐₓ for m ∈ -ℓ:ℓ]` (see [`Yindex`](@ref); a [`ModeWeights`](@ref) with `ℓₘᵢₙ
+= abs(s)` is accepted), and the first dimension of `f` must index the locations at which the
+function is evaluated, in the order given by [`rotors`](@ref) or [`pixels`](@ref).  Any
+following dimensions will be broadcast over.
 
 The available `method`s are
 - `"RS"` (default): [`SSHTRS`](@ref), the ring-based algorithm of Reinecke and Seljebotn,
   which scales as ``ℓₘₐₓ^3`` and is the choice for large ``ℓₘₐₓ``;
-- `"Minimal"`: [`SSHTMinimal`](@ref), the optimal-dimensionality algorithm of Elahi et al.,
-  which uses exactly as many samples as there are modes;
 - `"Matrix"`: [`SSHTMatrix`](@ref), the direct dense-matrix method, which is the most
-  accurate for small ``ℓₘₐₓ`` and lets the sample points be chosen freely.
+  accurate for small ``ℓₘₐₓ`` and lets the sample points be chosen freely;
+- `"Minimal"`: [`SSHTMinimal`](@ref), the optimal-dimensionality algorithm of Elahi et al.,
+  which uses exactly as many samples as there are modes; mostly experimental, not very
+  accurate.
 
-The remaining keyword arguments are passed to the constructor of the chosen type.  Certain
-types (`"Minimal"` and `"Matrix"`) also have an option to *always* act in place — meaning
-that they simply re-use the input storage, even in an expression like `𝒯 \ f`; this is the
-`inplace` keyword argument, and is part of the type of the resulting object.  Regardless of
-that option, `LinearAlgebra.mul!` and `LinearAlgebra.ldiv!` force operation in place for
-every type.
+The remaining keyword arguments are passed to the constructor of the chosen type.  Two of
+the types — `"Minimal"` and `"Matrix"` — also have an option to *always* act in place —
+meaning that they simply re-use the input storage, even in an expression like `𝒯 \ f`; this
+is the `inplace` keyword argument, and is part of the type of the resulting object.
+Regardless of that option, `LinearAlgebra.mul!` and `LinearAlgebra.ldiv!` force operation in
+place for every type.
 
 An `SSHT` object holds preallocated workspace, so it must not be used from several threads
 at the same time; construct one object per thread.

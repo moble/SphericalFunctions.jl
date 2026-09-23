@@ -94,8 +94,8 @@
     @test_throws ErrorException SSHT(-2, 8; method="matrix")
 
     # |s| > ℓₘₐₓ is an error for every method (there are no such modes) — including inside
-    # the default `Rθϕ=golden_ratio_spiral_rotors(s, ℓₘₐₓ, T)` of the "Matrix" method, which
-    # is evaluated before the constructor body runs its own check.
+    # the default `Rθϕ=leja_rotors(s, ℓₘₐₓ, T)` of the "Matrix" method, which is evaluated
+    # before the constructor body runs its own check.
     for method in ("RS", "Minimal", "Matrix"), (s, ℓₘₐₓ) in ((3, 2), (-3, 2), (1, 0))
         @test_throws "exceeds ℓₘₐₓ" SSHT(s, ℓₘₐₓ; method)
     end
@@ -130,6 +130,7 @@ end
     import SphericalFunctions: npixels  # unexported
     import SphericalFunctions: sorted_rings, sorted_ring_pixels, sorted_ring_rotors, minimal_rings
     import SphericalFunctions: golden_ratio_spiral_pixels, golden_ratio_spiral_rotors, fejer1_rings
+    import SphericalFunctions: leja_rotors
     using DoubleFloats: Double64
     using Quaternionic: Rotor, from_spherical_coordinates, to_spherical_coordinates
     using StaticArrays: SVector
@@ -200,8 +201,8 @@ end
         @test all(p[i][1] == p[i + 1][1] && p[i][2] < p[i + 1][2] for i in 1:2ℓₘₐₓ)
         @test issorted([p[1 + (2ℓₘₐₓ + 1) * r][1] for r in 0:2ℓₘₐₓ])
 
-        # Matrix: the golden-ratio spiral by default, or exactly the rotors given
-        R = golden_ratio_spiral_rotors(s, ℓₘₐₓ, T)
+        # Matrix: the Leja points by default, or exactly the rotors given
+        R = leja_rotors(s, ℓₘₐₓ, T)
         𝒯 = SSHT(s, ℓₘₐₓ; method="Matrix", T)
         @test rotors(𝒯) == R
         @test eltype(rotors(𝒯)) === Rotor{T}
@@ -211,13 +212,14 @@ end
         @test rotors(𝒯) == Rshuffled
         @test pixels(𝒯) == to_spherical_coordinates.(Rshuffled)
 
-        # ... and that default spiral is the one its docstring describes: N = (ℓₘₐₓ+1)² - s²
-        # points, successive azimuths separated by exactly Δϕ = 2π(2-φ), and cos θ at the
-        # midpoints of N equal subintervals of [-1, 1] — "uniformly distributed in cos θ",
-        # with no point on either pole.  Measured: ϕ is reproduced exactly (0 eps(T)) and
-        # cos θ to within 2 eps(T), for every (T, ℓₘₐₓ, s) here.
+        # ... and the golden-ratio spiral, the previous default, is the one its docstring
+        # describes: N = (ℓₘₐₓ+1)² - s² points, successive azimuths separated by exactly
+        # Δϕ = 2π(2-φ), and cos θ at the midpoints of N equal subintervals of [-1, 1] —
+        # "uniformly distributed in cos θ", with no point on either pole.  Measured: ϕ is
+        # reproduced exactly (0 eps(T)) and cos θ to within 2 eps(T), for every (T, ℓₘₐₓ, s)
+        # here.
         gp = golden_ratio_spiral_pixels(s, ℓₘₐₓ, T)
-        @test R == from_spherical_coordinates.(gp)
+        @test golden_ratio_spiral_rotors(s, ℓₘₐₓ, T) == from_spherical_coordinates.(gp)
         let N = (ℓₘₐₓ + 1)^2 - s^2, Δϕ = 2T(π) * (2 - T(MathConstants.φ))
             @test length(gp) == N
             @test maximum(abs, [gp[i+1][2] - i * Δϕ for i in 0:N-1]) ≤ 4eps(T) * N

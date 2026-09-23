@@ -99,25 +99,23 @@ The golden-ratio spiral of [`golden_ratio_spiral_pixels`](@ref) spreads its poin
 but that is not what such a solve needs, and with exactly as many points as modes the matrix
 becomes badly conditioned as ℓₘₐₓ grows: its condition number is about ``10^4`` at ℓₘₐₓ =
 16, ``10^5`` at 32 and ``10^{14}`` at 64.  The points chosen here are "discrete Leja points"
-(Bos, De Marchi, Sommariva and Vianello, SIAM J. Numer. Anal. 48, 1984, 2010), which
-approximate the Fekete points that maximize the determinant of the matrix: the harmonics are
-evaluated on a golden-ratio spiral of `oversampling` times as many candidate points, and an
-LU decomposition with partial pivoting of that tall matrix picks, one row at a time, the
-candidate that is least well represented by those already picked.  With the default
-`oversampling=2`, the condition number is about 30 at ℓₘₐₓ = 16, 70–100 at 32 and 200–400 at
-64, for either ``s = 0`` or ``s = 2``, and a round trip through [`SSHTMatrix`](@ref) on
-these points loses about 2 digits at ℓₘₐₓ = 64 rather than all of them.  (Up to ℓₘₐₓ ≈ 12
-the two are comparable, with condition numbers of order 10, and the spiral is sometimes
-slightly the better; beyond that it degrades and these points do not.)  Larger values of
-`oversampling` did not help consistently in tests, and cost more.
+[BosEtAl_2010](@cite), which approximate the Fekete points that maximize the determinant of
+the matrix: the harmonics are evaluated on a golden-ratio spiral of `oversampling` times as
+many candidate points, and an LU decomposition with partial pivoting of that tall matrix
+picks, one row at a time, the candidate that is least well represented by those already
+picked.  With the default `oversampling=2`, the condition number is about 30 at ℓₘₐₓ = 16,
+70–100 at 32 and 200–400 at 64, for either ``s = 0`` or ``s = 2``, and a round trip through
+[`SSHTMatrix`](@ref) on these points loses about 2 digits at ℓₘₐₓ = 64 rather than all of
+them.  (Up to ℓₘₐₓ ≈ 12 the two are comparable, with condition numbers of order 10, and the
+spiral is sometimes slightly the better; beyond that it degrades and these points do not.)
+Larger values of `oversampling` did not help consistently in tests, and cost more.
 
 The points depend on `s`, not just on their number, because the matrix does.  They are a
 subset of that spiral, returned in its order (from the north pole to the south), and are
 deterministic.  The cost is that of the LU decomposition of an ``N_c × N`` matrix, with
 ``N`` the number of modes and ``N_c`` the number of candidates — about 2–3 times that of the
 decomposition [`SSHTMatrix`](@ref) itself performs, or 2–3 seconds at ℓₘₐₓ = 64 — and its
-``O(N^2)`` storage.  To use these points for that transform, pass them as its `Rθϕ` keyword:
-`SSHT(s, ℓₘₐₓ; method="Matrix", Rθϕ=leja_rotors(s, ℓₘₐₓ))`.
+``O(N^2)`` storage.  These are the default sample points of [`SSHTMatrix`](@ref).
 
 The spin weight and `ℓₘₐₓ` may be integers or half-odd-integers, as for
 [`golden_ratio_spiral_pixels`](@ref), on the same terms.  The returned quantity is a vector

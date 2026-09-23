@@ -89,6 +89,10 @@ relative to version 2.2.9.
   `Vector`.  For ``s ≠ 0`` the `"Minimal"` transform samples on
   different rings (see "Fixed"), so its sample points, and the meaning
   of its `θ` keyword, have changed; for ``s = 0`` they are as before.
+  `SSHTMatrix` samples by default on the points of `leja_rotors`
+  rather than on the golden-ratio spiral, which is far worse
+  conditioned (see "Added"); pass
+  `Rθϕ=golden_ratio_spiral_rotors(s, ℓₘₐₓ, T)` for the old points.
 * **`map2salm` has a new signature and output.**  It is called as
   `map2salm(map, s, ℓₘₐₓ)` or `map2salm(map, 𝒯::SSHTRS)`; the
   `show_progress` argument is gone.  The output starts at ``ℓ = |s|``
@@ -217,9 +221,9 @@ relative to version 2.2.9.
 * The pixelizations `leja_pixels` and `leja_rotors`, which choose
   exactly as many points as there are modes, as discrete Leja points
   drawn from a golden-ratio spiral, so that the matrix of harmonics on
-  them is well conditioned.  With `SSHTMatrix`, whose default spiral
-  loses all its digits by ``ℓₘₐₓ = 64``, a round trip on these points
-  loses about 2.
+  them is well conditioned.  They are now the default sample points of
+  `SSHTMatrix`; on the spiral it used before, a round trip lost all its
+  digits by ``ℓₘₐₓ = 64``, and on these points it loses about 2.
 * `ComplexPowers`, an iterator over the powers of a unit complex
   number.
 * The accessors `ℓₘᵢₙ`, `ℓₘₐₓ`, `spins`, `Nᵣ`, `floattype` and others,

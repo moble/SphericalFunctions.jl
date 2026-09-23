@@ -1,5 +1,5 @@
 """
-    SSHTMatrix(s, ℓₘₐₓ; decomposition=LinearAlgebra.lu, T=Float64, Rθϕ=golden_ratio_spiral_rotors(s, ℓₘₐₓ, T), inplace=…)
+    SSHTMatrix(s, ℓₘₐₓ; decomposition=LinearAlgebra.lu, T=Float64, Rθϕ=leja_rotors(s, ℓₘₐₓ, T), inplace=…)
 
 Construct an ``s``-SHT object that uses the "Matrix" method.  The dense matrix of harmonics
 [`sYlm_matrix`](@ref) evaluated at the rotors `Rθϕ` is stored, so that synthesis is a
@@ -15,10 +15,12 @@ points appropriate for the lowest value of ``|s|``, and therefore could also be 
 solve for fields of all other spin weights.
 
 With precisely optimal sampling, the accuracy is limited by the conditioning of the points.
-The default golden-ratio spiral becomes badly conditioned beyond ℓₘₐₓ ≈ 12: a round trip loses
-about 3 digits at ℓₘₐₓ = 16, 5 at 32, and all of them at 64.  The points of
-[`leja_rotors`](@ref), chosen to keep the matrix well conditioned, lose about 2 digits at
-ℓₘₐₓ = 64; pass them as `Rθϕ=leja_rotors(s, ℓₘₐₓ, T)`.
+The default points, those of [`leja_rotors`](@ref), are chosen to keep the matrix well
+conditioned, and a round trip on them loses about 2 digits at ℓₘₐₓ = 64.  Choosing them costs
+about 2–3 times as much as the decomposition itself.  Points that merely spread evenly over
+the sphere are not enough: on the golden-ratio spiral of [`golden_ratio_spiral_rotors`](@ref)
+— the default before version 3 — a round trip loses about 3 digits at ℓₘₐₓ = 16, 5 at 32,
+and all of them at 64.
 
 LU decomposition (`LinearAlgebra.lu`) is used by default for a square matrix; any function
 that decomposes the matrix into something capable of solving the linear problem may be
@@ -52,7 +54,7 @@ function SSHTMatrix(s::IndexArgument, ℓₘₐₓ::IndexArgument; T::Type{TT}=F
 end
 function SSHTMatrix(
     s::IT, ℓₘₐₓ::IT, ::Type{TT};
-    Rθϕ=golden_ratio_spiral_rotors(s, ℓₘₐₓ, TT),
+    Rθϕ=leja_rotors(s, ℓₘₐₓ, TT),
     decomposition=(inplaceable(s, ℓₘₐₓ, Rθϕ) ? LinearAlgebra.lu : LinearAlgebra.qr),
     inplace=inplaceable(s, ℓₘₐₓ, Rθϕ)
 ) where {IT<:IntegerHalf, TT}

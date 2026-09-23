@@ -16,6 +16,13 @@ Construct an ``s``-SHT object that uses the optimal-dimensionality algorithm des
 there are modes.  This may also be achieved by calling the main [`SSHT`](@ref) function with
 the same keywords, along with `method="Minimal"`.
 
+!!! warning
+    This method is experimental and not very accurate.  The round-trip error grows
+    exponentially with ``ℓₘₐₓ``, and the constructor warns when fewer than half the digits
+    of `T` would survive.  The `"RS"` method (the default) has no such limitation, but does
+    not have optimal dimensionality.  The `"Matrix"` method does have optimal
+    dimensionality, but its memory consumption scales poorly.
+
 The function is sampled on ``ℓₘₐₓ-|s|+1`` "rings" at constant colatitude, each holding an odd
 number of equally spaced points starting at ``ϕ = 0``.  Their sizes, and the default
 colatitudes, are given by [`minimal_rings`](@ref); the `θ` keyword argument may give other
@@ -23,11 +30,11 @@ colatitudes, one for each ring in the order listed there, which is also the orde
 sample points.  See [`pixels`](@ref) and [`rotors`](@ref) for the sample points themselves.
 
 For ``s = 0`` the rings have ``1, 3, …, 2ℓₘₐₓ+1`` points.  For any other spin weight that
-choice is badly conditioned: near the north pole a function of spin weight
-``s`` is dominated by the modes with ``m`` near ``-s``, and near the south pole by those near
-``+s``, so that the smallest rings — which are placed nearest the poles — see some of the
-frequencies they are responsible for more weakly than the higher frequencies that alias
-onto them.  The error of a round trip then grows by more than an order of magnitude with each
+choice is badly conditioned: near the north pole a function of spin weight ``s`` is
+dominated by the modes with ``m`` near ``-s``, and near the south pole by those near ``+s``,
+so that the smallest rings — which are placed nearest the poles — see some of the
+frequencies they are responsible for more weakly than the higher frequencies that alias onto
+them.  The error of a round trip then grows by more than an order of magnitude with each
 unit of ℓₘₐₓ, and no choice of colatitudes cures it.  For ``s ≠ 0`` the rings are therefore
 arranged so that each polar ring is centered, in frequency, on the modes that dominate near
 its pole; see [`minimal_rings`](@ref).  The analysis is then no longer a sequence of solves
@@ -41,8 +48,9 @@ Whenever `T` is either `Float64` or `Float32`, the keyword arguments `plan_fft_f
 
 Because this algorithm achieves optimal dimensionality, the transformation is performed in
 place by default: `𝒯 * f̃` overwrites `f̃` with the function values (and returns it), and
-`𝒯 \\ f` overwrites `f`.  If this is not desired, pass the keyword argument `inplace=false`,
-which makes those operations work on a copy of the input.  See [`SSHT`](@ref).
+`𝒯 \\ f` overwrites `f`.  If this is not desired, pass the keyword argument
+`inplace=false`, which makes those operations work on a copy of the input.  See
+[`SSHT`](@ref).
 
 The values ``{}_sλ_{ℓ,m}(θ_r)`` of every mode on every ring are precomputed at construction
 (with one batched [`sλlmCalculator`](@ref)) and stored, which takes ``O(ℓₘₐₓ^3)`` memory, as
@@ -50,10 +58,10 @@ are the LU decompositions of the matrices for the groups of ``m`` values.  The o
 workspace for the transforms, so it must not be used from several threads at once.
 
 Even so, the sample points become increasingly badly conditioned as ℓₘₐₓ grows, for every
-spin weight: in `Float64` a round trip loses about 5 digits by ℓₘₐₓ = 32 and 10 by ℓₘₐₓ = 48 at
-``s = 0``, and more at larger ``|s|`` — about 10 by ℓₘₐₓ = 32 at ``s = 2``.  The constructor therefore measures the error of
-one round trip, and warns when fewer than half the digits of `T` would survive; the `"RS"`
-method has no such limitation.
+spin weight: in `Float64` a round trip loses about 5 digits by ℓₘₐₓ = 32 and 10 by ℓₘₐₓ = 48
+at ``s = 0``, and more at larger ``|s|`` — about 10 by ℓₘₐₓ = 32 at ``s = 2``.  The
+constructor therefore measures the error of one round trip, and warns when fewer than half
+the digits of `T` would survive; the `"RS"` method has no such limitation.
 
 This method is defined only for integer spin weights.  Its bookkeeping — rings of an odd
 number of points, and the aliasing of ``m`` into rings too small to hold it — is written for
