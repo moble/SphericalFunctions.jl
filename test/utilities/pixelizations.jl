@@ -223,3 +223,53 @@ end
     @test_throws "exceeds ℓₘₐₓ" leja_rotors(-4, 3)
     @test_throws ArgumentError leja_pixels(1//2, 3)
 end
+
+@testitem "Pixelizations: the quadrature ring sets validate the number of rings" begin
+    import SphericalFunctions: fejer1_rings, fejer2_rings, clenshaw_curtis_rings
+
+    # As for the weights of the same rules: at least one ring, and at least two for the
+    # Clenshaw–Curtis rule, whose rings include both poles
+    for T ∈ (Float64, Float32, BigFloat)
+        for N ∈ (0, -1)
+            @test_throws ArgumentError fejer1_rings(N, T)
+            @test_throws ArgumentError fejer2_rings(N, T)
+        end
+        for N ∈ (1, 0, -1)
+            @test_throws ArgumentError clenshaw_curtis_rings(N, T)
+        end
+        @test fejer1_rings(1, T) ≈ [T(π) / 2]
+        @test fejer2_rings(1, T) ≈ [T(π) / 2]
+        @test clenshaw_curtis_rings(2, T) ≈ [0, T(π)]
+    end
+    @test_throws ArgumentError fejer1_rings(0)
+    @test_throws ArgumentError fejer2_rings(0)
+    @test_throws ArgumentError clenshaw_curtis_rings(1)
+end
+
+@testitem "Pixelizations: the equiangular grids refuse a band limit that is not a non-negative integer" begin
+    import SphericalFunctions: driscoll_healy_pixels, driscoll_healy_rotors
+    import SphericalFunctions: mcewen_wiaux_pixels, mcewen_wiaux_rotors, HalfOddInteger
+
+    # Both grids are defined for an integer band limit only; spin-weighted functions of
+    # half-integer spin are sampled with the golden-ratio, Leja or sorted-ring pixelizations.
+    for f ∈ (driscoll_healy_pixels, driscoll_healy_rotors, mcewen_wiaux_pixels, mcewen_wiaux_rotors)
+        for ℓₘₐₓ ∈ (7//2, HalfOddInteger(7//2))
+            @test_throws ArgumentError f(ℓₘₐₓ)
+            @test_throws ArgumentError f(ℓₘₐₓ, Float32)
+            @test_throws ArgumentError f(1//2, ℓₘₐₓ)
+            @test_throws ArgumentError f(0, ℓₘₐₓ, Float32)
+            # ... with an explanation that says so
+            @test_throws r"integer" f(1//2, ℓₘₐₓ)
+        end
+        @test_throws ArgumentError f(2.5)
+        @test_throws ArgumentError f(0, 2.5)
+        @test_throws ArgumentError f(-1)
+        @test_throws ArgumentError f(0, -1)
+        @test_throws ArgumentError f(-1, Float32)
+
+        # The spin weight is not used, and so is not checked
+        @test f(-1//2, 3) == f(3)
+        @test f(2, 0) == f(0)
+        @test !isempty(f(0))
+    end
+end

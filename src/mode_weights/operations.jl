@@ -400,6 +400,11 @@ Evaluate the function with mode weights `w` at the rotor `R`, or at each of a ve
 This computes the harmonics afresh on every call.  For repeated evaluation build an
 [`sYlmCalculator`](@ref) once and use `calc * w`; for many rotors at once see
 [`sYlm_matrix`](@ref) and the transforms in the "Transformations" section.
+
+Mode weights whose ``|s|`` exceeds their ``ℓₘₐₓ`` hold no harmonics at all, and cannot be
+evaluated: the call is refused, as [`sYlm`](@ref) refuses such a spin weight.  Weights of that
+kind arise from [`ð`](@ref) applied to weights with ``s = ℓₘₐₓ``, for example, and the
+function they describe is zero.
 """
 (w::ModeWeights)(R::Rotor) = sYlm(R, ℓₘₐₓ(w), spin(w); ℓₘᵢₙ=ℓₘᵢₙ(w)) * w
 (w::ModeWeights)(R⃗::AbstractVector{<:Rotor}) = sYlm(R⃗, ℓₘₐₓ(w), spin(w); ℓₘᵢₙ=ℓₘᵢₙ(w)) * w

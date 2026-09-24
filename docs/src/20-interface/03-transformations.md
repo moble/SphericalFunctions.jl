@@ -1,5 +1,9 @@
 # [``s``-SHT Transformations](@id interface_transformations)
 
+```@meta
+CurrentModule = SphericalFunctions
+```
+
 Any square-integrable function on the sphere 𝕊² or 𝕊³ can be
 represented as an expansion in spherical harmonics or spin-weighted
 spherical harmonics, respectively.  For a particular spin-weight

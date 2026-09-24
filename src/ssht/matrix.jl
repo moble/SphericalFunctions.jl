@@ -95,11 +95,6 @@ npixels(𝒯::SSHTMatrix) = length(𝒯.Rθϕ)
 @inline function unflatten_trailing(flat, dims)
     length(dims) ≤ 2 ? flat : reshape(flat, size(flat, 1), Base.tail(dims)...)
 end
-function check_trailing(f, f̃)
-    if size(f)[2:end] != size(f̃)[2:end]
-        error("Trailing dimensions of f $(size(f)[2:end]) and f̃ $(size(f̃)[2:end]) differ.")
-    end
-end
 
 function Base.:*(𝒯::SSHTMatrix, f̃)
     check_modes(𝒯, f̃)

@@ -67,6 +67,27 @@ struct HCalculator{IT, RT<:Real, ST}
     m′ₘₐₓ::IT
     swapH::Base.RefValue{Bool}  # h⃗ˡ(w) returns h⃗ᵃ if `false`, otherwise h⃗ᵇ; and vice versa for h⃗ˡ⁺¹(w)
     axes_valid::Base.RefValue{Bool}  # h⃗ˡ and h⃗ˡ⁺¹ hold correct data for their ℓ labels
+    # The recurrence steps index every buffer under `@inbounds`, for each of the wedge's `Nᵣ`
+    # rotors, so each buffer must hold exactly that many.  `allocate_H` always builds them so;
+    # this checks the buffers wherever they come from, once, as they are brought together.
+    function HCalculator{IT, RT, ST}(
+        h⃗ᵃ, h⃗ᵇ, Hˡ, eⁱᵝ, cβ½, sβ½, ℓₘₐₓ, m′ₘₐₓ, swapH, axes_valid
+    ) where {IT, RT<:Real, ST}
+        let n = Nᵣ(Hˡ), nₕ = IT <: HalfOddInteger ? Nᵣ(Hˡ) : 0
+            if !(
+                Nᵣ(h⃗ᵃ) == n && Nᵣ(h⃗ᵇ) == n && length(eⁱᵝ) == n
+                && length(cβ½) == nₕ && length(sβ½) == nₕ
+            )
+                throw(DimensionMismatch(
+                    "The buffers of an HCalculator must each hold one entry per rotor of its "
+                    * "wedge, Nᵣ=$n (the half angles $nₕ); the axes hold $(Nᵣ(h⃗ᵃ)) and "
+                    * "$(Nᵣ(h⃗ᵇ)), e^{iβ} has length $(length(eⁱᵝ)), and the half angles "
+                    * "$(length(cβ½)) and $(length(sβ½))."
+                ))
+            end
+        end
+        new{IT, RT, ST}(h⃗ᵃ, h⃗ᵇ, Hˡ, eⁱᵝ, cβ½, sβ½, ℓₘₐₓ, m′ₘₐₓ, swapH, axes_valid)
+    end
 end
 
 function HCalculator(β, ℓₘₐₓ::Rational; kwargs...)
@@ -343,12 +364,15 @@ function set_rotors!(w::HCalculator{IT, RT}, eⁱᵝ::AbstractVector{<:Complex})
             )
         end
     end
+    # The axes are marked invalid before the first rotor is replaced, so that nothing
+    # computed from the old rotors can be combined with the new ones, even if a replacement
+    # were to fail part-way.
+    w.axes_valid[] = false
     @inbounds for i ∈ eachindex(eⁱᵝ)
         z = convert(Complex{RT}, eⁱᵝ[i])
         w.eⁱᵝ[i] = z
         set_half_angles_from_phase!(w, i, z)
     end
-    w.axes_valid[] = false
     w
 end
 function set_rotors!(w::HCalculator, R)
@@ -362,11 +386,21 @@ function set_rotors!(w::HCalculator{IT, RT}, β::AbstractVector{<:Real}) where {
     if length(β) != Nᵣ(w)
         error("Expected $(Nᵣ(w)) rotors (Nᵣ), but got $(length(β)).")
     end
+    # As for the phases above, everything is validated before anything is replaced.  An
+    # infinite angle has no phase — `cis`, and the `cos` and `sin` of the half angle, throw for
+    # one in some types, such as `Float64` and `Double64`, and return NaN in others, such as
+    # `BigFloat` — so it is refused here, for every type alike, rather than part-way through
+    # the loop below with some rotors already replaced.
+    for i ∈ eachindex(β)
+        if isinf(β[i])
+            throw(DomainError(β[i], "The angle of rotor $i is infinite, so it has no phase."))
+        end
+    end
+    w.axes_valid[] = false  # as for the phases above
     @inbounds for i ∈ eachindex(β)
         w.eⁱᵝ[i] = cis(convert(RT, β[i]))
         set_half_angles_from_angle!(w, i, β[i])
     end
-    w.axes_valid[] = false
     w
 end
 function set_rotors!(w::HCalculator{IT, RT}, R::AbstractVector{<:Rotor}) where {IT, RT<:Real}
@@ -374,12 +408,14 @@ function set_rotors!(w::HCalculator{IT, RT}, R::AbstractVector{<:Rotor}) where {
     if length(R) != Nᵣ(w)
         error("Expected $(Nᵣ(w)) rotors (Nᵣ), but got $(length(R)).")
     end
+    # There is nothing further to validate: `spinor_phases` accepts every rotor, giving NaNs
+    # for one with non-finite components rather than throwing.
+    w.axes_valid[] = false  # as for the phases above
     @inbounds for i ∈ eachindex(R)
         eⁱᵝᵢ, _, _, cβ½, sβ½ = spinor_phases(R[i], RT)
         w.eⁱᵝ[i] = eⁱᵝᵢ
         set_half_angles!(w, i, cβ½, sβ½)
     end
-    w.axes_valid[] = false
     w
 end
 function set_rotors!(w::HCalculator{IT, RT}, R::Union{Real, Complex, Rotor}) where {IT, RT<:Real}
@@ -472,8 +508,13 @@ end
 # Advance (or restart) the integer axis buffers so that h⃗ˡ holds order `j` and h⃗ˡ⁺¹ holds
 # `j+1`.  Shared by the integer and half-integer drivers; `j` is `ℓ` in the former case and
 # `ℓ - 1/2` in the latter.
+#
+# Stepping on is valid only from axes of consecutive orders, which is what step 2 leaves and
+# `increment_axes!` preserves.  Axes labelled otherwise — which a transform used from several
+# tasks at once can leave behind — are rebuilt from the start rather than trusted, so that
+# every later call succeeds instead of failing in the label check of step 2 or 3.
 function advance_axes!(w::HCalculator, j::Int)
-    if !w.axes_valid[] || h⃗ˡ(w).ℓ > j
+    if !w.axes_valid[] || h⃗ˡ(w).ℓ > j || h⃗ˡ⁺¹(w).ℓ != h⃗ˡ(w).ℓ + 1
         h⃗ˡ(w).ℓ = 0
         h⃗ˡ⁺¹(w).ℓ = 1
         recurrence_step1!(w)  # h⃗⁰₀₀ = 1

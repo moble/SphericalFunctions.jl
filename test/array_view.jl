@@ -194,3 +194,49 @@ end
     @test all(w[2, m] == 7 for m ∈ -2:2)
     @test w[1, 0] == 0    # other blocks untouched
 end
+
+@testitem "relabel refuses an array whose shape is not the block's" begin
+    import SphericalFunctions: WignerMatrix, WignerMatrixBatch, DegreeBlock, DegreeBlockBatch
+    import SphericalFunctions: SpinMatrix, SpinMatrixBatch, relabel, array_view
+    using Quaternionic: Rotor
+    using Random
+
+    rng = Random.Xoshiro(45)
+    ℓₘₐₓ, N = 4, 3
+    R = randn(rng, Rotor{Float64})
+    Rs = randn(rng, Rotor{Float64}, N)
+
+    # One block of each shape, built by hand and taken from a calculator, whose blocks sit in
+    # storage sized for its largest ℓ
+    containers = Any[
+        WignerMatrix(zeros(ComplexF64, 3, 3), 1),
+        WignerMatrixBatch(zeros(ComplexF64, 2, 3, 3), 1),
+        DegreeBlock(zeros(ComplexF64, 3), 1),
+        DegreeBlockBatch(zeros(ComplexF64, 2, 3), 1),
+        SpinMatrix(zeros(ComplexF64, 3, 3), 1; sₘₐₓ=1, sₘᵢₙ=-1),
+        SpinMatrixBatch(zeros(ComplexF64, 2, 3, 3), 1; sₘₐₓ=1, sₘᵢₙ=-1),
+        recurrence!(DCalculator(R, ℓₘₐₓ), 2),
+        recurrence!(DCalculator(Rs, ℓₘₐₓ), 2),
+        recurrence!(sYlmCalculator(R, ℓₘₐₓ, -2), 2),
+        recurrence!(sYlmCalculator(Rs, ℓₘₐₓ, -2), 2),
+        recurrence!(sYlmCalculator(R, ℓₘₐₓ, -2:2), 2),
+        recurrence!(sYlmCalculator(Rs, ℓₘₐₓ, -2:2), 2),
+    ]
+
+    # An array larger than the block, in any one dimension or in all of them, is refused
+    # rather than covered in its first entries
+    for w ∈ containers
+        n = size(w)
+        for d ∈ eachindex(n)
+            larger = ntuple(i -> n[i] + (i == d), length(n))
+            @test_throws DimensionMismatch relabel(w, zeros(ComplexF64, larger))
+        end
+        @test_throws DimensionMismatch relabel(w, zeros(ComplexF64, n .+ 2))
+
+        # The block's own shape is accepted, and used as the storage
+        A = randn(rng, ComplexF64, n)
+        r = relabel(w, A)
+        @test size(r) == n
+        @test array_view(r) == A
+    end
+end

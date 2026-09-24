@@ -10,9 +10,9 @@
 # pairs at consecutive indices, last pair at index `Ysize`) are checked as well.
 #
 # The item names use an "Indexing: " prefix so that they are distinguishable — to a human
-# reading a results list, and to `runtests.jl`'s `occursin` filters — from the v2 items,
-# which were also named `Ysize`, `Yindex` and `Yrange`.  Those items are gone with the
-# `Deprecated` module, but the prefix is kept: the names are what people filter on.
+# reading a results list, and to the name filters of `juliati` and the MCP runner — from the
+# v2 items, which were also named `Ysize`, `Yindex` and `Yrange`.  Those items are gone with
+# the `Deprecated` module, but the prefix is kept: the names are what people filter on.
 
 @testitem "Indexing: Ysize" begin
     import SphericalFunctions: Ysize
@@ -436,4 +436,41 @@ end
     @test @inferred(Yindex(3, -2)) === 11
     @test Base.return_types(Ysize, (Int, Int)) == [Int]
     @test Base.return_types(Yindex, (Int, Int, Int)) == [Int]
+end
+
+@testitem "Indexing: Yrange refuses what Ysize refuses" begin
+    import SphericalFunctions: Ysize, Yrange, HalfOddInteger
+
+    # `Yrange(ℓₘᵢₙ, ℓₘₐₓ)[i]` is the pair stored at index `i` of an ordering whose length is
+    # `Ysize(ℓₘᵢₙ, ℓₘₐₓ)`, so the two accept the same arguments: ℓₘᵢₙ ≥ 0 and ℓₘₐₓ ≥ ℓₘᵢₙ-1
+    for args ∈ (
+        (3, 0), (-2, 1), (-1, 3), (-3,),
+        (5//2, 1//2), (-1//2, 3//2), (-5//2,), (HalfOddInteger(-1//2), HalfOddInteger(3//2)),
+    )
+        @test_throws ArgumentError Ysize(args...)
+        @test_throws ArgumentError Yrange(args...)
+    end
+
+    # ... and agree wherever they are defined, including the empty ranges
+    for (ℓₘᵢₙ, ℓₘₐₓ) ∈ (
+        (0, -1), (3, 2), (0, 5), (2, 6), (1//2, -1//2), (5//2, 3//2), (1//2, 9//2), (3//2, 11//2),
+    )
+        @test length(Yrange(ℓₘᵢₙ, ℓₘₐₓ)) == Ysize(ℓₘᵢₙ, ℓₘₐₓ)
+    end
+    @test Yrange(5//2, 3//2) isa Vector{Tuple{HalfOddInteger, HalfOddInteger}}
+    @test Yrange(3, 2) isa Vector{Tuple{Int, Int}}
+end
+
+@testitem "Indexing: Yrange allocates only its result" begin
+    import SphericalFunctions: Ysize, Yrange
+
+    # The length of the ordering is known in closed form, so the vector is allocated once,
+    # at its final size, rather than grown pair by pair.  Measured inside a function, never at
+    # top level, where the result is meaningless.
+    allocations(ℓₘᵢₙ, ℓₘₐₓ) = @allocated Yrange(ℓₘᵢₙ, ℓₘₐₓ)
+    for (ℓₘᵢₙ, ℓₘₐₓ) ∈ ((0, 200), (3, 150), (1//2, 401//2))
+        allocations(ℓₘᵢₙ, ℓₘₐₓ)  # warm up
+        result_size = Ysize(ℓₘᵢₙ, ℓₘₐₓ) * sizeof(eltype(Yrange(ℓₘᵢₙ, ℓₘₐₓ)))
+        @test allocations(ℓₘᵢₙ, ℓₘₐₓ) < 1.5 * result_size
+    end
 end

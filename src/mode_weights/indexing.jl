@@ -118,12 +118,27 @@ See also [`Ysize`](@ref) and [`Yindex`](@ref).
 """
 function Yrange end
 
+# The length of the ordering is `Ysize`, so the vector is allocated once at that length and
+# then filled, which also gives `Yrange` exactly the validation and the messages of `Ysize`.
+# For integers the length is computed in `Int`, which is what a length is, so that the
+# squares in `Ysize` cannot overflow a narrower index type; the pairs keep the type of the
+# range `ℓₘᵢₙ:ℓₘₐₓ`.
 function Yrange(ℓₘᵢₙ::Integer, ℓₘₐₓ::Integer)
-    [(ℓ, m) for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ for m ∈ -ℓ:ℓ]
+    IT = eltype(ℓₘᵢₙ:ℓₘₐₓ)
+    ordering = Vector{Tuple{IT, IT}}(undef, Ysize(Int(ℓₘᵢₙ), Int(ℓₘₐₓ)))
+    mode_pairs!(ordering, ℓₘᵢₙ, ℓₘₐₓ)
 end
-# `UnitRange{HalfOddInteger}` iterates, so the comprehension is the same one.
 function Yrange(ℓₘᵢₙ::HalfOddInteger, ℓₘₐₓ::HalfOddInteger)
-    [(ℓ, m) for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ for m ∈ -ℓ:ℓ]
+    ordering = Vector{Tuple{HalfOddInteger, HalfOddInteger}}(undef, Ysize(ℓₘᵢₙ, ℓₘₐₓ))
+    mode_pairs!(ordering, ℓₘᵢₙ, ℓₘₐₓ)
+end
+# `UnitRange{HalfOddInteger}` iterates, so this is the same loop for either kind of index.
+function mode_pairs!(ordering, ℓₘᵢₙ, ℓₘₐₓ)
+    i = 0
+    for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ, m ∈ -ℓ:ℓ
+        ordering[i += 1] = (ℓ, m)
+    end
+    ordering
 end
 Yrange(ℓₘₐₓ::IT) where {IT<:IntegerHalf} = Yrange(ℓₘᵢₙ(IT), ℓₘₐₓ)
 # The boundary methods, which are the only ones that see a `Rational`.

@@ -12,10 +12,11 @@ A `ModeWeights` is an [`AbstractModeContainer`](@ref
 SphericalFunctions.AbstractModeContainer), not an `AbstractVector`; [`array_view`](@ref) gives
 the flat 1-based storage, which is what the transforms and the operator matrices take.  Linear
 indexing works.  So does the arithmetic of mode weights as the weights of functions, which
-keeps the labels: `a + b` and `a - b` (and their broadcast forms) when the labels agree, and
-products and quotients with numbers, or elementwise with a plain vector of factors (a
-diagonal operator, such as a filter).  Anything else — the elementwise product of two sets of
-weights, `conj.(w)`, `abs2.(w)` — would label numbers that are not the mode weights of any
+keeps the labels: `a + b` and `a - b` (and their broadcast forms) when the labels agree,
+`complex.(a, b)` from real and imaginary parts whose labels agree, and products and quotients
+with numbers, or elementwise with a plain vector of factors (a diagonal operator, such as a
+filter).  Anything else — adding a number to every weight, the elementwise product of two sets
+of weights, `conj.(w)`, `abs2.(w)` — would label numbers that are not the mode weights of any
 function, and is an error; arithmetic on the raw numbers goes through `array_view(w)`.  `≈` and
 `dot` between two `ModeWeights` require their labels to agree, and `map` returns plain
 numbers.  In addition
@@ -37,9 +38,15 @@ numbers.  In addition
 - `w(R)` evaluates the function at the rotor `R` (see [`sYlm`](@ref)).
 
 When constructed from `data` alone, `ℓₘₐₓ` is deduced from `length(data)` and `ℓₘᵢₙ`, which
-must match exactly.  The `data` vector is used as storage, not copied.  The `undef` forms
-allocate uninitialized storage of type `T` instead, and in the three-argument form `ℓₘᵢₙ`
-defaults to `abs(s)`, as it does when `data` is given.
+must match exactly.  The `data` vector is used as storage, not copied, so it must keep its
+length for as long as the `ModeWeights` is in use; the operators, `w[ℓ, :]`, and `w[ℓ, m]`
+outside `@inbounds` throw a `DimensionMismatch` when they find that it has been resized.  The
+`undef` forms allocate uninitialized storage of type `T` instead, and in the three-argument
+form `ℓₘᵢₙ` defaults to `abs(s)`, as it does when `data` is given.
+
+The weights are real or complex numbers, and a quaternion element type is refused.  A `Rotor`
+is a quaternion, so `R * w` is an error; the rotation of the function by `R` is
+`D(R, ℓₘₐₓ(w)) * w` (see [`D`](@ref)).
 
 # Half-integer indices
 
@@ -63,6 +70,17 @@ struct ModeWeights{T, IT<:IntegerHalf, V<:AbstractVector{T}} <: AbstractModeCont
     # half-odd-integer lies between 0 and 1/2.
     function ModeWeights(data::V, s::IT, ℓₘᵢₙ::IT, ℓₘₐₓ::IT) where {T, IT<:IntegerHalf, V<:AbstractVector{T}}
         Base.require_one_based_indexing(data)
+        # A `Rotor` is a `Number`, so `R * w` and `R .* w` would otherwise give quaternions
+        # under `w`'s labels, although quaternion-valued weights are the weights of no function
+        # that this package can evaluate: quaternions do not commute with the complex
+        # harmonics.  Refusing the element type here closes every route to them at once.
+        # (`Union{}` is a subtype of every type, and is the element type of some empty results.)
+        if T !== Union{} && T <: AbstractQuaternion
+            throw(ArgumentError(
+                "Mode weights are real or complex numbers, not quaternions of type $T.  To "
+                * "rotate the function with a rotor `R`, use `D(R, ℓₘₐₓ(w)) * w`."
+            ))
+        end
         if ℓₘᵢₙ < 0
             throw(ArgumentError("ℓₘᵢₙ=$ℓₘᵢₙ must be non-negative."))
         end
@@ -243,7 +261,8 @@ Base.copy(w::ModeWeights) = ModeWeights(copy(w.data), w.s, w.ℓₘᵢₙ, w.ℓ
 # would be the usual way to get a wrapped result, but it is available only to an
 # `AbstractArray`; a style of this type's own does the same job, given a `broadcastable` that
 # hands back the container rather than `collect`ing it, and the `axes` and linear `getindex`
-# defined above.
+# defined above.  Where an array of another style takes part, such as a `StaticArray`, the two
+# styles conflict and the result is a plain array, which has no labels to check.
 struct ModeWeightsStyle <: Broadcast.AbstractArrayStyle{1} end
 ModeWeightsStyle(::Val{0}) = ModeWeightsStyle()
 ModeWeightsStyle(::Val{1}) = ModeWeightsStyle()
@@ -270,18 +289,7 @@ function broadcast_label(bc::Broadcast.Broadcasted)
     isempty(labelled) && return nothing
     label, f = first(labelled), bc.f
     if f === (+) || f === (-)
-        if any(!=(label), labelled)
-            throw(ArgumentError(
-                "Mode weights can be added or subtracted only when their labels agree; got "
-                * join(("s=$(l[1]), ℓ ∈ $(l[2]):$(l[3])" for l ∈ labelled), " and ") * "."
-            ))
-        end
-        if any(is_broadcast_scalar, bc.args)
-            throw(ArgumentError(
-                "Adding a number to every mode weight does not give the mode weights of any "
-                * "function; use `array_view(w)` for arithmetic on the raw numbers."
-            ))
-        end
+        check_termwise(bc, labels)
     elseif f === (*)
         if length(labelled) > 1
             throw(ArgumentError(
@@ -299,19 +307,73 @@ function broadcast_label(bc::Broadcast.Broadcasted)
                 * "arithmetic on the raw numbers."
             ))
         end
-    elseif f === identity || f === float || f === complex || (f isa Type && f <: Number)
+    elseif length(bc.args) == 1 && (
+        f === identity || f === float || f === complex || (f isa Type && f <: Number)
+    )
         # a copy, or a change of number type, holds the same modes
+    elseif length(bc.args) == 2 && (f === complex || (f isa Type && f <: Complex))
+        # complex weights from their real and imaginary parts, which are then the weights of
+        # one function only if both parts are
+        check_termwise(bc, labels)
     else
         throw(ArgumentError(
             "Broadcasting `$f` over mode weights does not give the mode weights of any function "
-            * "with the same labels; only sums, differences, and products and quotients with "
+            * "with the same labels; only sums, differences, complex weights built from real "
+            * "and imaginary parts with the same labels, and products and quotients with "
             * "numbers or plain vectors of factors do.  Use `array_view(w)` for arithmetic on "
             * "the raw numbers."
         ))
     end
     label
 end
-is_broadcast_scalar(x) = x isa Number || x isa Ref || (x isa AbstractArray && ndims(x) == 0)
+
+# The rule for the operations that combine mode weights term by term into the weights of one
+# function — sums, differences, and complex weights built from their real and imaginary parts.
+# The mode weights among the arguments must have the same labels, and every other argument of
+# at most one dimension must hold one value per mode.  That refuses a number, however it is
+# written — a literal, a `Ref`, a zero-dimensional array, or a zero-dimensional broadcast such
+# as the `a .* b` of `w .+ a .* b` — and an array or tuple too short to hold one value per mode,
+# such as `[1.0]` or `(1,)`, which broadcasting would extend to every mode just as it does a
+# number.  An argument of two or more dimensions makes the result a matrix, such as the outer
+# sum `w .+ transpose(w)`, which is never labelled, so it is left alone.  The messages are
+# built only on the branches that throw them, so that a broadcast that passes allocates
+# nothing here.
+function check_termwise(bc::Broadcast.Broadcasted, labels)
+    labelled = filter(!isnothing, labels)
+    label = first(labelled)
+    sum_or_difference = bc.f === (+) || bc.f === (-)
+    if any(!=(label), labelled)
+        what = if sum_or_difference
+            "added or subtracted"
+        else
+            "combined as the real and imaginary parts of complex weights"
+        end
+        throw(ArgumentError(
+            "Mode weights can be $what only when their labels agree; got "
+            * join(("s=$(l[1]), ℓ ∈ $(l[2]):$(l[3])" for l ∈ labelled), " and ") * "."
+        ))
+    end
+    n = Ysize(label[2], label[3])
+    if any(map((x, l) -> l === nothing && extended_to_every_mode(x, n), bc.args, labels))
+        what = if sum_or_difference
+            "Adding a number to every mode weight"
+        else
+            "Using one number as the real or imaginary part of every mode weight"
+        end
+        throw(ArgumentError(
+            "$what does not give the mode weights of any function, whether the number is "
+            * "written as such, computed in the same broadcast, or given as an array or tuple "
+            * "that broadcasting extends to every mode; an array combined with mode weights "
+            * "must hold one value per mode.  Use `array_view(w)` for arithmetic on the raw "
+            * "numbers."
+        ))
+    end
+    nothing
+end
+function extended_to_every_mode(x, n)
+    ax = axes(x)
+    length(ax) == 0 || (length(ax) == 1 && length(only(ax)) != n)
+end
 
 # Writing into mode weights with `.=` checks the labels in the same way: whatever the right-hand
 # side computes must be what the destination's labels say it holds.  (The other containers go
@@ -417,10 +479,37 @@ LinearAlgebra.dot(a::AbstractVector, b::ModeWeights) = LinearAlgebra.dot(a, b.da
 
 # The comparisons here are defined for either kind of index, and between the two kinds, so
 # this is one method; a mixed call never reaches it, because the boundary method refuses it.
+# A mode within the labels is then looked up in the storage under `@inbounds`, at the position
+# the labels give it, so the storage is compared with that position as well: it is the
+# caller's vector, not a copy, and may have been resized since the constructor compared its
+# length with the labels.
 @inline function check_mode(w::ModeWeights, ℓ, m)
     if !(w.ℓₘᵢₙ ≤ ℓ ≤ w.ℓₘₐₓ && -ℓ ≤ m ≤ ℓ)
         throw(BoundsError(w, (ℓ, m)))
     end
+    check_storage(w, Yindex(ℓ, m, w.ℓₘᵢₙ))
+end
+@inline function check_storage(w::ModeWeights, i)
+    if i > length(w.data)
+        throw(storage_error(w, "an entry at position $i"))
+    end
+    nothing
+end
+# The operator kernels index the storage up to the length the labels imply, under `@inbounds`,
+# so they compare the whole length with the labels, once per call.
+@inline function check_storage_length(w::ModeWeights)
+    n = Ysize(w.ℓₘᵢₙ, w.ℓₘₐₓ)
+    if length(w.data) != n
+        throw(storage_error(w, "length $n"))
+    end
+    nothing
+end
+@noinline function storage_error(w::ModeWeights, needed)
+    DimensionMismatch(
+        "The storage of these mode weights, with s=$(w.s) and ℓ ∈ $(w.ℓₘᵢₙ):$(w.ℓₘₐₓ), has "
+        * "length $(length(w.data)), but the labels need $needed.  A `ModeWeights` uses its "
+        * "vector as storage without copying it, so the vector must not be resized."
+    )
 end
 
 # Normalize the natural indices of `w` and require them to be of `w`'s kind.  `half_integers`
@@ -479,6 +568,11 @@ end
     w[ℓ′, m′] = v
 end
 
+# As for `w[ℓ, m]`, a container with integer indices accepts an `Integer` of any type.  The
+# worker cannot require the container's own type exactly: `natural_index` leaves an integer's
+# type alone, so the boundary method below would then call itself forever for, say, an
+# `Int32` ℓ.  The block is labelled in the container's own type, after the bounds check, so
+# that an out-of-range index is a `BoundsError` rather than an `InexactError`.
 """
     w[ℓ, :]
 
@@ -487,11 +581,6 @@ A view of the mode weights of the [`ModeWeights`](@ref) `w` for the given ``ℓ`
 half-odd-integers they may be passed either as `Rational`s or as [`HalfOddInteger`](@ref)s.
 Writing through the view writes into `w`.
 """
-# As for `w[ℓ, m]`, a container with integer indices accepts an `Integer` of any type.  The
-# worker used to require the container's own type exactly, and since `natural_index` leaves
-# an integer's type alone, the boundary method below then called itself forever for, say, an
-# `Int32` ℓ.  The block is labelled in the container's own type, after the bounds check, so
-# that an out-of-range index is a `BoundsError` rather than an `InexactError`.
 Base.getindex(w::ModeWeights{T, <:Integer}, ℓ::Integer, ::Colon) where {T} = degree_block(w, ℓ)
 Base.getindex(w::ModeWeights{T, HalfOddInteger}, ℓ::HalfOddInteger, ::Colon) where {T} =
     degree_block(w, ℓ)
@@ -502,6 +591,7 @@ function degree_block(w::ModeWeights{T, IT}, ℓ) where {T, IT}
     end
     ℓ = convert(IT, ℓ)
     i₀ = Yindex(ℓ, -ℓ, w.ℓₘᵢₙ)
+    check_storage(w, i₀ + 2ℓ)
     DegreeBlock(view(w.data, i₀:i₀+2ℓ), ℓ)
 end
 
@@ -520,6 +610,9 @@ end
 # boundary again.  The range of ℓ is unchanged even where the spin weight moves — entries that
 # fall outside the new |s| are zeroed by the coefficients, not dropped.
 function Base.:*(op::DifferentialOperator, w::ModeWeights{T}) where {T}
+    # The result is allocated at the length of the input's storage, so this one check covers
+    # both of the vectors that the kernel indexes.
+    check_storage_length(w)
     Treal = real(float(T))
     out = similar(w.data, Base.promote_op(*, coefftype(op, Treal), T))
     apply_operator!(out, op, bandstructure(op), w.data, w.s, w.ℓₘᵢₙ, w.ℓₘₐₓ, Treal)
@@ -540,6 +633,8 @@ function LinearAlgebra.mul!(
             * "ℓ ∈ $(w.ℓₘᵢₙ):$(w.ℓₘₐₓ)."
         )
     end
+    check_storage_length(w)
+    check_storage_length(w′)
     if Base.mightalias(w′.data, w.data)
         error(
             "The output aliases the input.  $(nameof(op)) reads neighboring modes, so it "

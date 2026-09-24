@@ -103,20 +103,41 @@ function relabel end
 
 ### `relabel`
 
+# The block constructors accept storage larger than the block, because a block may sit in
+# storage sized for a larger one, as a calculator's blocks do.  The array given to `relabel`
+# is to hold exactly the block, so its shape is compared with the block's own; otherwise a
+# larger array would be accepted and labelled over its leading corner.  `size(w)` is the
+# extent of the block, which is also the shape of `array_view(w)`.
+function check_relabel_shape(w, A)
+    if size(A) != size(w)
+        throw(DimensionMismatch(
+            "The array has size $(size(A)), but this block has size $(size(w))."
+        ))
+    end
+end
+
 function relabel(w::WignerMatrix, A::AbstractMatrix)
+    check_relabel_shape(w, A)
     WignerMatrix(A, ℓ(w); m′ₘₐₓ=m′ₘₐₓ(w), m′ₘᵢₙ=m′ₘᵢₙ(w), mₘₐₓ=mₘₐₓ(w), mₘᵢₙ=mₘᵢₙ(w))
 end
 function relabel(w::WignerMatrixBatch, A::AbstractArray{<:Any, 3})
+    check_relabel_shape(w, A)
     WignerMatrixBatch(A, ℓ(w); m′ₘₐₓ=m′ₘₐₓ(w), m′ₘᵢₙ=m′ₘᵢₙ(w), mₘₐₓ=mₘₐₓ(w), mₘᵢₙ=mₘᵢₙ(w))
 end
-relabel(w::DegreeBlock, A::AbstractVector) =
+function relabel(w::DegreeBlock, A::AbstractVector)
+    check_relabel_shape(w, A)
     DegreeBlock(A, ℓ(w); mₘₐₓ=mₘₐₓ(w), mₘᵢₙ=mₘᵢₙ(w))
-relabel(w::DegreeBlockBatch, A::AbstractMatrix) =
+end
+function relabel(w::DegreeBlockBatch, A::AbstractMatrix)
+    check_relabel_shape(w, A)
     DegreeBlockBatch(A, ℓ(w); mₘₐₓ=mₘₐₓ(w), mₘᵢₙ=mₘᵢₙ(w))
+end
 function relabel(w::SpinMatrix, A::AbstractMatrix)
+    check_relabel_shape(w, A)
     SpinMatrix(A, ℓ(w); sₘₐₓ=sₘₐₓ(w), sₘᵢₙ=sₘᵢₙ(w), mₘₐₓ=mₘₐₓ(w), mₘᵢₙ=mₘᵢₙ(w))
 end
 function relabel(w::SpinMatrixBatch, A::AbstractArray{<:Any, 3})
+    check_relabel_shape(w, A)
     SpinMatrixBatch(A, ℓ(w); sₘₐₓ=sₘₐₓ(w), sₘᵢₙ=sₘᵢₙ(w), mₘₐₓ=mₘₐₓ(w), mₘᵢₙ=mₘᵢₙ(w))
 end
 relabel(w::ModeWeights, A::AbstractVector) = ModeWeights(A, spin(w), ℓₘᵢₙ(w), ℓₘₐₓ(w))

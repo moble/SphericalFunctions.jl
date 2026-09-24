@@ -30,6 +30,9 @@ conversion — narrowing a `BigFloat` rotor into a `Float64` calculator would th
 precision that nobody chose to throw away — so convert whichever side you meant, or build a
 calculator from data of the type you want.  `floattype(calc)` reports the type in use.
 
+Everything is checked before anything is replaced, so data that are refused leave the
+calculator exactly as it was, including whatever it had computed.
+
 ```julia
 calc = DCalculator(first(rotors), ℓₘₐₓ)
 for R ∈ rotors
@@ -88,7 +91,9 @@ This applies to [`dCalculator`](@ref) and [`HCalculator`](@ref).  Wigner's ``�
 matrices and the spin-weighted harmonics need the whole rotor, so their calculators take
 [`set_R!`](@ref) instead.
 
-As for [`set_R!`](@ref), the new value's floating-point type must match the calculator's.
+As for [`set_R!`](@ref), the new value's floating-point type must match the calculator's, and
+data that are refused leave the calculator as it was.  An infinite angle has no phase, and is
+refused with a `DomainError`.
 
 Half-integer ``d`` has period ``4π`` in ``β``, so an angle or a rotor determines it
 unambiguously, while a bare phase determines it only up to the double-cover sign
@@ -124,7 +129,9 @@ built on, with zero imaginary part; for a half-odd one they are ``i^{2s}`` times
 directly, as real numbers.  For a calculator built for `Nᵣ > 1`, pass an
 `AbstractVector` of exactly that many angles.
 
-As for [`set_R!`](@ref), the angle's floating-point type must match the calculator's.
+As for [`set_R!`](@ref), the angle's floating-point type must match the calculator's, and data
+that are refused leave the calculator as it was.  An infinite angle is refused with a
+`DomainError`.
 
 For a general point on the sphere use [`set_R!`](@ref) with
 `from_spherical_coordinates(θ, ϕ)`.

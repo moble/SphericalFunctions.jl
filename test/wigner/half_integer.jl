@@ -468,7 +468,7 @@ end
         WignerMatrix, WignerMatrixBatch, DegreeBlock, DegreeBlockBatch, WignerSeries,
         WignerDMatrix, WignerdMatrix, WignerRange, HalfOddInteger,
         SpinMatrix, SpinMatrixBatch,
-        ℓ, ℓₘᵢₙ, ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, sₘₐₓ, sₘᵢₙ
+        ℓ, ℓₘᵢₙ, ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, sₘₐₓ, sₘᵢₙ, spins
     import .HalfIntegerOracle: rotors
 
     R = rotors()[6]
@@ -683,7 +683,7 @@ end
         @test length(b) == 24
         @test axes(b) == (sr, -J:J) && axes(b, 1) == sr && axes(b, 3) == Base.OneTo(1)
         @test sₘₐₓ(b) == 3//2 && sₘᵢₙ(b) == -3//2 && mₘₐₓ(b) == J && mₘᵢₙ(b) == -J
-        @test ℓ(b) == J && ℓₘᵢₙ(b) == 1//2 && keys(b) == sr
+        @test ℓ(b) == J && ℓₘᵢₙ(b) == 1//2 && spins(b) == sr
         @test b[1//2, -J] == parent(b)[3, 1]
         # Each row is the very block a single-spin calculator would give
         for s ∈ sr

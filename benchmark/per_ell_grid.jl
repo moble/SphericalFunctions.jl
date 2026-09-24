@@ -1,17 +1,16 @@
-### The benchmark grid of the v3 design memo, section 9.
+### How the cost of the per-ℓ H recursion depends on ℓₘₐₓ and on the number of rotors.
 ###
 ### The version-2 code filled one large array of H values for all ℓ at once, for a single
 ### rotor at a time.  The version-3 engine computes one ℓ at a time for a batch of Nᵣ rotors
 ### at once, which is what the transforms need and what keeps memory bounded at large ℓₘₐₓ
-### (the whole-array form needed about 2.7 GB at ℓₘₐₓ = 1000).  The memo asked how much that
-### costs for a single rotor and how much it gains for a batch.  The version-2 implementation
-### was deleted in 3.0, so there is no longer a second implementation to time against; what
-### this script measures instead is the *shape* of the cost, which answers the same design
-### question:
+### (the whole-array form needed about 2.7 GB at ℓₘₐₓ = 1000).  The design question is how
+### much that costs for a single rotor and how much it gains for a batch.  Version 3 has no
+### second implementation to time against, so what this script measures is the *shape* of
+### the cost, which answers the same question:
 ###
-###   * Absolute nanoseconds per H element per rotor, over the grid.  This is directly
-###     comparable with the version-2 numbers recorded in memo section 9 (0.5 to 1.1 ns per
-###     element per rotor at ℓₘₐₓ ≥ 64, 3.6 ns at ℓₘₐₓ = 8).
+###   * Absolute nanoseconds per H element per rotor, over the grid.  For comparison, the
+###     version-2 code took 0.5 to 1.1 ns per element per rotor at ℓₘₐₓ ≥ 64, and 3.6 ns at
+###     ℓₘₐₓ = 8.
 ###   * The ratio of the single-rotor cost to the large-batch cost at the same ℓₘₐₓ.  Whatever
 ###     is left over at Nᵣ = 1 is per-ℓ fixed cost — recomputing recursion coefficients,
 ###     setting up the loop — and that is exactly what precomputing the coefficients would
@@ -21,7 +20,10 @@
 ###
 ###     julia --project=benchmark -t 1 benchmark/per_ell_grid.jl
 ###
-### Optional arguments narrow the grid, e.g. `... per_ell_grid.jl 8,64 1,8`.
+### Optional arguments narrow the grid, e.g. `... per_ell_grid.jl 8,64 1,8`.  The default
+### grid is large: its cell with ℓₘₐₓ = m′ₘₐₓ = 1024 and Nᵣ = 512 needs about 4.5 GB of memory
+### for the calculator alone, and takes several minutes, because each cell runs seven full
+### sweeps (one to warm up, the best of five, and one to count allocations).
 
 using SphericalFunctions
 using SphericalFunctions: HCalculator, recurrence!
@@ -90,10 +92,9 @@ function main()
     @printf("worst single-rotor overhead (Nᵣ=%d cost / Nᵣ=%d cost): %.2f×\n",
             first(Nᵣs), last(Nᵣs), worst_overhead)
     println("""
-        Memo section 9 asked whether the single-rotor path needs precomputed recursion
-        coefficients.  The per-rotor cost at Nᵣ = $(first(Nᵣs)) divided by the cost at
-        Nᵣ = $(last(Nᵣs)) is the per-ℓ fixed overhead that precomputation would remove; the
-        memo's threshold for acting on it was a factor of 2.""")
+        The per-rotor cost at Nᵣ = $(first(Nᵣs)) divided by the cost at Nᵣ = $(last(Nᵣs)) is the
+        per-ℓ fixed overhead that precomputed recursion coefficients would remove.  They are
+        worth adding to the single-rotor path only if that ratio exceeds about 2.""")
 end
 
 main()

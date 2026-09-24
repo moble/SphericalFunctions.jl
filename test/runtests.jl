@@ -10,9 +10,18 @@
 using TestItemRunner
 
 # `Pkg.test(...; test_args)` arrives here as `ARGS`.  The only filtering this shim supports is
-# by tag — written as `:sometag` — because that is all the CI workflows use.
+# by tag — written as `:sometag` — because that is all the CI workflows use.  Any other
+# argument is ignored, with a warning, so that a request for part of the suite does not
+# silently run all of it; filtering by name or file is left to `juliati` and the MCP runner.
 const CI = get(ENV, "CI", "false") == "true"
 const requested_tags = Symbol[Symbol(a[2:end]) for a ∈ ARGS if startswith(a, ":")]
+for a ∈ ARGS
+    startswith(a, ":") || @warn(
+        "`runtests.jl` filters only by tag, written as `:sometag`, so this argument is "
+        * "ignored.  To filter by name or file, use `juliati` or the `julia` MCP server.",
+        argument=a
+    )
+end
 
 function testfilter(testitem)
     (; tags) = testitem
@@ -32,8 +41,15 @@ end
 # Including the test files is not needed for discovery — `@run_package_tests` finds them on
 # its own — but it makes `Pkg.test` parse each one, so a syntax error shows up here rather
 # than as a silently missing test item.  Every file under `test/` is included, so that a new
-# one cannot be forgotten.
-for (root, _, files) ∈ walkdir(@__DIR__), file ∈ sort(files)
-    path = joinpath(root, file)
-    endswith(file, ".jl") && path != @__FILE__ && include(path)
+# one cannot be forgotten, except those in hidden directories: `test/.CondaPkg`, the Conda
+# environment that the `:python` items build, holds thousands of files that are not part of
+# the suite, and a `.jl` file among them must not be run here.  The comparisons with
+# `@__DIR__` and `@__FILE__` are parenthesized because a macro called without parentheses
+# takes the rest of the expression, `&&` and all, as its arguments.
+for (root, _, files) ∈ walkdir(@__DIR__)
+    (root != @__DIR__) && any(startswith("."), splitpath(relpath(root, @__DIR__))) && continue
+    for file ∈ sort(files)
+        path = joinpath(root, file)
+        endswith(file, ".jl") && (path != @__FILE__) && include(path)
+    end
 end

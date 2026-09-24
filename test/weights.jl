@@ -71,3 +71,44 @@ end
         @test wc ≈ clenshaw_curtis(N) rtol=ϵ atol=ϵ
     end
 end
+
+@testitem "weights: the number of nodes is validated" begin
+    import DoubleFloats: Double64
+
+    # Each rule needs at least one node, and the Clenshaw–Curtis rule, whose nodes include
+    # both poles, at least two.  (The node counts for which a rule's buffer would be empty,
+    # which differ between the machine floats and the other types, are the subject of the
+    # items in `test/bounds.jl`.)
+    for T ∈ (Float64, Float32, Double64, BigFloat)
+        for n ∈ (0, -1, -2)
+            @test_throws ArgumentError fejer1(n, T)
+        end
+        for n ∈ (0, -2)
+            @test_throws ArgumentError fejer2(n, T)
+        end
+        for n ∈ (0, -3)
+            @test_throws ArgumentError clenshaw_curtis(n, T)
+        end
+    end
+    @test_throws ArgumentError fejer1(0)
+    @test_throws ArgumentError fejer2(0)
+    @test_throws ArgumentError fejer2(-1)
+    @test_throws ArgumentError clenshaw_curtis(1)
+    @test_throws ArgumentError clenshaw_curtis(0)
+    # The refusal names the rule
+    @test_throws "fejer1" fejer1(0)
+    @test_throws "fejer2" fejer2(0)
+    @test_throws "clenshaw_curtis" clenshaw_curtis(1)
+
+    # The smallest rules are exact for the polynomials they can integrate: with one node at
+    # the equator, and with two nodes placed symmetrically, every weight is the same, and the
+    # weights sum to ∫ d(cos θ) = 2
+    for T ∈ (Float64, Float32, Double64, BigFloat)
+        ϵ = 10eps(T)
+        @test fejer1(1, T) ≈ [2] atol=ϵ
+        @test fejer2(1, T) ≈ [2] atol=ϵ
+        @test fejer1(2, T) ≈ [1, 1] atol=ϵ
+        @test fejer2(2, T) ≈ [1, 1] atol=ϵ
+        @test clenshaw_curtis(2, T) ≈ [1, 1] atol=ϵ
+    end
+end

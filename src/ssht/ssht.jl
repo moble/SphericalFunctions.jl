@@ -7,6 +7,33 @@ constructor), [`SSHTMatrix`](@ref), [`SSHTRS`](@ref) and [`SSHTMinimal`](@ref).
 abstract type SSHT{T<:Real} end
 
 
+# Sample data given to a transform must already be in the type `T` it works in.  Converting it
+# silently is how a `QuatVec` becomes a rotation by π about its own direction, an unnormalized
+# `Quaternion` scales every harmonic by a power of its norm, and `BigFloat` data is rounded to
+# `Float64`; so, as for the calculators (see `check_rotor_type`), anything else is refused and
+# the caller converts.  Integer colatitudes or weights convert exactly, and are accepted.
+function check_sample_rotors(::Type{T}, Rθϕ) where {T}
+    Rθϕ isa NonRotorData && error(not_a_rotor(Rθϕ))
+    if !(Rθϕ isa AbstractVector{Rotor{T}})
+        error(
+            "This transform works in $T, so `Rθϕ` must be a vector of `Rotor{$T}`s, but it is a "
+            * "$(typeof(Rθϕ)).  Pass `T` to work in another type, or convert the rotors."
+        )
+    end
+    nothing
+end
+function check_sample_reals(::Type{T}, x, name) where {T}
+    # (`float(Real) === Float64`, so the concreteness check is needed for a `Vector{Real}`.)
+    if !(x isa AbstractVector{<:Real} && isconcretetype(eltype(x)) && float(eltype(x)) === T)
+        error(
+            "This transform works in $T, so `$name` must be a vector of $T, but it is a "
+            * "$(typeof(x)).  Pass `T` to work in another type, or convert `$name`."
+        )
+    end
+    nothing
+end
+
+
 @doc raw"""
     SSHT(s, ℓₘₐₓ; [method="RS"], [T=Float64], [kwargs...])
 
@@ -79,32 +106,6 @@ rotor, and changes the sign.  The sampling requirements are otherwise unchanged 
 ``N_ϕ ≥ 2ℓₘₐₓ+1`` and ``N_θ ≥ 2ℓₘₐₓ+1``, both of which are even numbers when ``ℓₘₐₓ`` is a
 half-odd-integer.
 """
-# Sample data given to a transform must already be in the type `T` it works in.  Converting it
-# silently is how a `QuatVec` becomes a rotation by π about its own direction, an unnormalized
-# `Quaternion` scales every harmonic by a power of its norm, and `BigFloat` data is rounded to
-# `Float64`; so, as for the calculators (see `check_rotor_type`), anything else is refused and
-# the caller converts.  Integer colatitudes or weights convert exactly, and are accepted.
-function check_sample_rotors(::Type{T}, Rθϕ) where {T}
-    Rθϕ isa NonRotorData && error(not_a_rotor(Rθϕ))
-    if !(Rθϕ isa AbstractVector{Rotor{T}})
-        error(
-            "This transform works in $T, so `Rθϕ` must be a vector of `Rotor{$T}`s, but it is a "
-            * "$(typeof(Rθϕ)).  Pass `T` to work in another type, or convert the rotors."
-        )
-    end
-    nothing
-end
-function check_sample_reals(::Type{T}, x, name) where {T}
-    # (`float(Real) === Float64`, so the concreteness check is needed for a `Vector{Real}`.)
-    if !(x isa AbstractVector{<:Real} && isconcretetype(eltype(x)) && float(eltype(x)) === T)
-        error(
-            "This transform works in $T, so `$name` must be a vector of $T, but it is a "
-            * "$(typeof(x)).  Pass `T` to work in another type, or convert `$name`."
-        )
-    end
-    nothing
-end
-
 function SSHT(s::IndexArgument, ℓₘₐₓ::IndexArgument; method="RS", kwargs...)
     s, ℓₘₐₓ = transform_indices(s, ℓₘₐₓ)
     if method == "RS"
@@ -229,7 +230,9 @@ const MapOrModes = Union{AbstractArray{<:Complex}, ModeWeights}
 
 # The labels are checked, not just the length: weights of spin -s (or 0) have the same length
 # as those of spin s, and would otherwise be synthesized as spin s — or, as the output of
-# `ldiv!`, be filled with spin-s weights while keeping the wrong label.
+# `ldiv!`, be filled with spin-s weights while keeping the wrong label.  The length of the
+# storage is then compared with the labels, because a `ModeWeights` wraps its vector without
+# copying it, and the vector may have been resized since the labels were checked against it.
 function check_modes(𝒯::SSHT, f̃::ModeWeights)
     if spin(f̃) != 𝒯.s
         error(
@@ -243,6 +246,7 @@ function check_modes(𝒯::SSHT, f̃::ModeWeights)
             * "ℓ ∈ $(abs(𝒯.s)):$(𝒯.ℓₘₐₓ)."
         )
     end
+    check_storage_length(f̃)
 end
 function check_pixels(𝒯::SSHT, f)
     n = npixels(𝒯)
@@ -251,6 +255,16 @@ function check_pixels(𝒯::SSHT, f)
             "The first dimension of the function values has length $(size(f, 1)), but the "
             * "transform has $n sample points."
         )
+    end
+end
+# Every three-argument `mul!` and `ldiv!` transforms each column of the trailing dimensions
+# separately, so its input and output must agree in them; broadcasting would otherwise copy
+# one input column into every column of the output.
+function check_trailing(f, f̃)
+    if size(f)[2:end] != size(f̃)[2:end]
+        throw(DimensionMismatch(
+            "Trailing dimensions of f $(size(f)[2:end]) and f̃ $(size(f̃)[2:end]) differ."
+        ))
     end
 end
 

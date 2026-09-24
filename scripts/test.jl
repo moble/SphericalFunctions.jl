@@ -11,10 +11,6 @@ using Pkg
 cd((@__DIR__) * "/..")
 Pkg.activate(".")
 
-using LinearAlgebra
-using Base.Threads
-LinearAlgebra.BLAS.set_num_threads(nthreads())
-
 # Check for the `--coverage` flag
 coverage = any(ARGS .== "--coverage")
 
@@ -35,9 +31,9 @@ catch e
 end
 
 if coverage
-    Pkg.activate()  # Activate Julia's base (home) directory
-    using Coverage
     cd((@__DIR__) * "/..")
+    Pkg.activate("test")  # The test environment, which lists `Coverage`
+    using Coverage
     coverage = Coverage.process_folder("src")
     Coverage.writefile("lcov.info", coverage)
     Coverage.clean_folder(".")

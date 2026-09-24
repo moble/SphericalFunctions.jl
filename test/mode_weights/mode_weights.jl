@@ -496,11 +496,13 @@ end
         @test !isempty(sprint(show, MIME("text/plain"), similar(w, Float32)))
     end
 
-    # A length-1 ModeWeights broadcast against a longer vector changes shape, so the result
-    # is a plain Vector
+    # A vector added to mode weights must hold one value per mode, so a length-1 ModeWeights
+    # is not extended against a longer vector; as a factor, the longer vector changes the
+    # shape, so the product is a plain Vector
     w1 = ModeWeights([3.0], 0)
-    @test w1 .+ [1.0, 2.0, 3.0] == [4.0, 5.0, 6.0]
-    @test w1 .+ [1.0, 2.0, 3.0] isa Vector{Float64}
+    @test_throws ArgumentError w1 .+ [1.0, 2.0, 3.0]
+    @test w1 .* [1.0, 2.0, 3.0] == [3.0, 6.0, 9.0]
+    @test w1 .* [1.0, 2.0, 3.0] isa Vector{Float64}
     @test 2 .* w1 isa ModeWeights{Float64}
 
     # The empty container reduces and prints like an empty vector
@@ -1458,4 +1460,92 @@ end
 
     # A length that no ℓₘₐₓ can produce is refused rather than silently rounded
     @test_throws Exception ModeWeights(randn(rng, ComplexF64, 7), 0; ℓₘᵢₙ=0)
+end
+
+
+@testitem "ModeWeights broadcasting: a constant is refused however it is written" begin
+    import SphericalFunctions: ModeWeights, spin, Ysize
+    import Random
+
+    rng = Random.Xoshiro(20260924)
+
+    # Adding the same number to every mode weight gives the weights of no function, whether
+    # the number is written as a literal, computed within the same broadcast, or given as a
+    # vector or tuple of one element that broadcasting extends to every mode
+    w = ModeWeights(randn(rng, ComplexF64, Ysize(0, 1)), 0)
+    a, b = 2.0, 3.0
+    @test_throws ArgumentError w .+ 1
+    @test_throws ArgumentError w .+ a .* b
+    @test_throws ArgumentError w .- sqrt.(4)
+    @test_throws ArgumentError (1 .* 1) .- w
+    @test_throws ArgumentError w .+ [1.0]
+    @test_throws ArgumentError w .+ (1,)
+    @test_throws ArgumentError w .+ fill(1.0)
+    @test_throws ArgumentError w .+ Ref(1.0)
+
+    # ... while sums of weights, and products and quotients with numbers or with a vector of
+    # one factor per mode, keep the labels
+    v = collect(1.0:4.0)
+    for x ∈ (w .+ 2 .* w, (a .* w) .- w ./ b, v .* w .+ w, 2 .* w)
+        @test x isa ModeWeights{ComplexF64}
+        @test spin(x) == 0
+    end
+end
+
+
+@testitem "ModeWeights broadcasting: complex.(a, b) compares the labels of both parts" begin
+    import SphericalFunctions: ModeWeights, spin, Ysize
+    import Random
+
+    rng = Random.Xoshiro(20260925)
+
+    # Real and imaginary parts combine into the weights of one function only if they are the
+    # weights of the same spin weight and range of ℓ
+    re = ModeWeights(randn(rng, Ysize(2, 4)), 2)
+    im₋ = ModeWeights(randn(rng, Ysize(2, 4)), -2)
+    @test_throws ArgumentError complex.(re, im₋)
+    @test_throws ArgumentError Complex.(re, im₋)
+    @test_throws ArgumentError ComplexF64.(re, im₋)
+    # (ℓ ∈ 10:10 has as many modes as ℓ ∈ 2:4, so only the labels tell them apart)
+    @test_throws ArgumentError complex.(re, ModeWeights(randn(rng, Ysize(10, 10)), 2, 10, 10))
+    # A number as one of the parts adds a constant to every weight, which `+` refuses too
+    @test_throws ArgumentError complex.(re, 1.0)
+    @test_throws ArgumentError complex.(1.0, re)
+
+    # Parts with the same labels combine, and the result has those labels
+    im₊ = ModeWeights(randn(rng, Ysize(2, 4)), 2)
+    for z ∈ (complex.(re, im₊), Complex.(re, im₊), ComplexF64.(re, im₊))
+        @test z isa ModeWeights{ComplexF64}
+        @test spin(z) == 2
+        @test parent(z) == complex.(parent(re), parent(im₊))
+    end
+    # ... while a one-argument conversion keeps the labels of its argument
+    @test complex.(re) isa ModeWeights{ComplexF64} && spin(complex.(re)) == 2
+    @test float.(ModeWeights(collect(1:9), 0)) isa ModeWeights{Float64}
+end
+
+
+@testitem "ModeWeights: a rotor is not a factor, and mode weights are not quaternions" begin
+    import SphericalFunctions: ModeWeights, D, spin, Ysize
+    using Quaternionic: Rotor, Quaternion
+    import Random
+
+    rng = Random.Xoshiro(20260926)
+
+    # A `Rotor` is a `Number`, but its product with mode weights is not the weights of any
+    # function of the same spin weight; rotating the function is `D(R, ℓₘₐₓ) * w`
+    R = Rotor(1.0, 2.0, 3.0, 4.0)
+    w = ModeWeights(randn(rng, ComplexF64, Ysize(0, 2)), 0)
+    @test_throws ArgumentError R * w
+    @test_throws ArgumentError w * R
+    @test_throws ArgumentError R .* w
+    @test_throws ArgumentError w .* R
+    @test_throws ArgumentError Quaternion(1.0, 2.0, 3.0, 4.0) * w
+    @test_throws ArgumentError ModeWeights(fill(Quaternion(1.0, 0.0, 0.0, 0.0), Ysize(0, 2)), 0)
+
+    # Numbers scale the weights, and the rotation acts on them
+    @test 2.0 * w isa ModeWeights{ComplexF64}
+    @test (1 + 2im) * w isa ModeWeights{ComplexF64}
+    @test w / 2 isa ModeWeights{ComplexF64}
+    @test D(R, 2) * w isa ModeWeights{ComplexF64}
 end

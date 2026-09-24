@@ -34,6 +34,28 @@ struct WignerCalculator{IT, RT<:Real, NT<:Union{RT, Complex{RT}}, ST, B}
     mₘₐₓ::IT
     mₘᵢₙ::IT
     ℓ::Base.RefValue{IT}  # ℓ of the block currently in Wˡ; ℓₘᵢₙ-1 if none
+    # `materialize!` writes `Wˡ` and reads the power tables under `@inbounds`, for every rotor
+    # of `H` and every (m′, m) within the limits, so the buffers must be large enough for
+    # those; as for `HCalculator`, this checks them once, as they are brought together.
+    function WignerCalculator{IT, RT, NT, ST, B}(
+        H, Wˡ, Z₊, Z₋, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, ℓ
+    ) where {IT, RT<:Real, NT<:Union{RT, Complex{RT}}, ST, B}
+        let n = Nᵣ(H), K = NT <: Complex ? 2ℓₘₐₓ(H) + 1 : 0
+            if !(
+                size(Wˡ, 1) ≥ n
+                && size(Wˡ, 2) ≥ Int(m′ₘₐₓ - m′ₘᵢₙ) + 1 && size(Wˡ, 3) ≥ Int(mₘₐₓ - mₘᵢₙ) + 1
+                && size(Z₊, 1) ≥ K && size(Z₊, 2) ≥ n && size(Z₋, 1) ≥ K && size(Z₋, 2) ≥ n
+            )
+                throw(DimensionMismatch(
+                    "The buffers of a WignerCalculator for Nᵣ=$n rotors, m′ ∈ $m′ₘᵢₙ:$m′ₘₐₓ "
+                    * "and m ∈ $mₘᵢₙ:$mₘₐₓ are too small: the block has size $(size(Wˡ)), "
+                    * "and the power tables $(size(Z₊)) and $(size(Z₋)), which need at least "
+                    * "$K rows."
+                ))
+            end
+        end
+        new{IT, RT, NT, ST, B}(H, Wˡ, Z₊, Z₋, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, ℓ)
+    end
 end
 
 # Allocate the buffers without touching them.  PRIVATE: see the note on `allocate_H`.  The
@@ -243,6 +265,10 @@ function set_rotors!(
     if length(R) != Nᵣ(c)
         error("Expected $(Nᵣ(c)) rotors (Nᵣ), but got $(length(R)).")
     end
+    # As in `set_rotors!(::HCalculator, …)`: every rotor is acceptable, and the results are
+    # marked invalid before the first one is replaced.
+    c.H.axes_valid[] = false
+    c.ℓ[] = ℓₘᵢₙ(IT) - 1
     @inbounds for i ∈ eachindex(R)
         eⁱᵝ, z₊, z₋, cβ½, sβ½ = spinor_phases(R[i], RT)
         c.H.eⁱᵝ[i] = eⁱᵝ
@@ -250,8 +276,6 @@ function set_rotors!(
         complex_powers!(view(c.Z₊, :, i), z₊)
         complex_powers!(view(c.Z₋, :, i), z₋)
     end
-    c.H.axes_valid[] = false
-    c.ℓ[] = ℓₘᵢₙ(IT) - 1
     c
 end
 function set_rotors!(c::WignerCalculator{IT, RT, Complex{RT}}, R::Rotor) where {IT, RT<:Real}
@@ -268,7 +292,9 @@ function set_rotors!(c::WignerCalculator{IT, RT, Complex{RT}}, R) where {IT, RT<
     )
 end
 
-# For d we need only eⁱᵝ, and accept anything the H calculator accepts.
+# For d we need only eⁱᵝ, and accept anything the H calculator accepts.  That calculator
+# validates everything before it replaces anything, so if it refuses the data this calculator
+# is left exactly as it was, and its own `ℓ` is reset only once the new data are in place.
 function set_rotors!(c::WignerCalculator{IT, RT, RT}, R) where {IT, RT<:Real}
     set_rotors!(c.H, R)
     c.ℓ[] = ℓₘᵢₙ(IT) - 1

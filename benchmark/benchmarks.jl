@@ -1,14 +1,19 @@
 ### These benchmarks can be run from the top-level directory of this repo with
 ###
-###     julia -e 'using PkgBenchmark; results=benchmarkpkg("SphericalFunctions"); export_markdown("benchmark/results.md", results)'
+###     julia --project=benchmark -e 'using PkgBenchmark; results=benchmarkpkg("SphericalFunctions"); export_markdown("benchmark/results.md", results)'
 ###
 ### This runs the benchmarks (possibly tuning them automatically first), and writes the
-### results to a nice markdown file.
+### results to a nice markdown file.  The `--project=benchmark` matters: PkgBenchmark runs
+### the benchmarks in a new process that uses whichever project is active, and the benchmark
+### project is the one that lists what they need.  The tuning is saved in `benchmark/tune.json`
+### and reused on later runs; pass `retune=true` to `benchmarkpkg` after adding or changing
+### benchmarks, since a benchmark missing from that file is never tuned.  The same suite can
+### be run on GitHub with the "benchmarks" workflow.
 ###
 ### These are regression benchmarks: they are meant to be small enough to run often, and to
-### cover each layer of the package once.  The separate script `per_ell_grid.jl` answers the
-### specific design question of section 9 of the v3 design memo (per-ℓ batched recursion
-### versus the v2 whole-array recursion) and is not part of this suite.
+### cover each layer of the package once.  The separate script `per_ell_grid.jl` measures
+### how the cost of the per-ℓ recursion depends on ℓₘₐₓ and on the number of rotors in a
+### batch, over a much larger grid, and is not part of this suite.
 
 using BenchmarkTools
 using Random
@@ -28,12 +33,23 @@ for T in [big, Float64, Float32, Float16]
 end
 
 ### The Wigner engine, one ℓ at a time, for a single rotor and for a batch.  `m′ₘₐₓ = 2` is
-### the spin-weighted case that the harmonics need; `m′ₘₐₓ = ℓₘₐₓ` is the full matrix.
+### the spin-weighted case that the harmonics need; `m′ₘₐₓ = ℓₘₐₓ` is the full matrix.  A
+### calculator built from a vector is batched even when the vector holds only one rotor, and
+### one built from a single `Rotor` is not, so the case of one rotor is timed both ways.
 SUITE["wigner"] = BenchmarkGroup(["recursions"])
 for ℓₘₐₓ in (8, 64), m′ₘₐₓ in unique((ℓₘₐₓ, 2)), Nᵣ in (1, 64)
     R⃗ = randn(rng, Rotor{Float64}, Nᵣ)
     calc = DCalculator(R⃗, ℓₘₐₓ; m′ₘₐₓ, m′ₘᵢₙ=-m′ₘₐₓ)
     SUITE["wigner"]["D sweep", ℓₘₐₓ, m′ₘₐₓ, Nᵣ] = @benchmarkable begin
+        for ℓ in 0:$ℓₘₐₓ
+            recurrence!($calc, ℓ)
+        end
+    end
+end
+for ℓₘₐₓ in (8, 64), m′ₘₐₓ in unique((ℓₘₐₓ, 2))
+    R = randn(rng, Rotor{Float64})
+    calc = DCalculator(R, ℓₘₐₓ; m′ₘₐₓ, m′ₘᵢₙ=-m′ₘₐₓ)
+    SUITE["wigner"]["D sweep (single Rotor)", ℓₘₐₓ, m′ₘₐₓ] = @benchmarkable begin
         for ℓ in 0:$ℓₘₐₓ
             recurrence!($calc, ℓ)
         end
@@ -56,6 +72,15 @@ for ℓₘₐₓ in (15//2, 127//2), Nᵣ in (1, 64)
     R⃗ = randn(rng, Rotor{Float64}, Nᵣ)
     calc = DCalculator(R⃗, ℓₘₐₓ)
     SUITE["wigner"]["D sweep (half-integer)", ℓₘₐₓ, Nᵣ] = @benchmarkable begin
+        for ℓ in (1//2):($ℓₘₐₓ)
+            recurrence!($calc, ℓ)
+        end
+    end
+end
+for ℓₘₐₓ in (15//2, 127//2)
+    R = randn(rng, Rotor{Float64})
+    calc = DCalculator(R, ℓₘₐₓ)
+    SUITE["wigner"]["D sweep (half-integer, single Rotor)", ℓₘₐₓ] = @benchmarkable begin
         for ℓ in (1//2):($ℓₘₐₓ)
             recurrence!($calc, ℓ)
         end

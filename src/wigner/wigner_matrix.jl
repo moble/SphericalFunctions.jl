@@ -307,6 +307,63 @@ function validate_index_ranges(ℓₘₐₓ::IT, m′ₘₐₓ::IT, m′ₘᵢ�
 end
 
 
+### Storage extents
+#
+# The natural-index accessors compare an index with a container's limits and then index the
+# storage under `@inbounds`, and iteration reads every element the same way, so the storage
+# must reach every element the limits describe.  That is checked in each inner constructor,
+# because the inner constructors are also what `copy`, `similar` and the views `w[iᵣ]`,
+# `b[s, :]`, `b[:, s, :]` and `b[iᵣ]` are built with.  Storage larger than the block is
+# legitimate: a calculator's blocks sit in storage sized for its largest ℓ.  The ordering of
+# the limits and their relation to ℓ are left to the outer constructors, with one exception:
+# an axis of negative extent is refused here, because two of them would multiply to a positive
+# `length`, which iteration would then read.  A `DegreeBlock` is checked again at each access,
+# because its storage may be a caller's `Vector`, which can be resized after construction; see
+# `check_storage` below.
+#
+# These run on every view that `w[iᵣ]` or `b[s, :]` builds, so the messages are formatted only
+# on the way to an error.
+
+@inline function check_extent(parent, d::Int, hi, lo, name::String)
+    (0 ≤ Int(hi - lo) + 1 ≤ size(parent, d)) || extent_error(parent, d, hi, lo, name)
+    nothing
+end
+@inline function check_extent(parent, Nᵣ::Int)
+    (0 ≤ Nᵣ ≤ size(parent, 1)) || extent_error(parent, Nᵣ)
+    nothing
+end
+
+@noinline function extent_error(parent, d::Int, hi, lo, name::String)
+    n = Int(hi - lo) + 1
+    if n < 0
+        throw(ArgumentError(
+            "$(name)ₘₐₓ=$hi is less than $(name)ₘᵢₙ=$lo by more than one, which would give "
+            * "the block an axis of extent $n."
+        ))
+    elseif parent isa AbstractVector
+        throw(DimensionMismatch(
+            "The input data must have length at least "
+            * "$(name)ₘₐₓ-$(name)ₘᵢₙ+1=$hi-$lo+1=$n; it is $(length(parent))."
+        ))
+    else
+        throw(DimensionMismatch(
+            "The extent of the $(("first", "second", "third")[d]) dimension in the input data "
+            * "must be at least $(name)ₘₐₓ-$(name)ₘᵢₙ+1=$hi-$lo+1=$n; it is $(size(parent, d))."
+        ))
+    end
+end
+@noinline function extent_error(parent, Nᵣ::Int)
+    if Nᵣ < 0
+        throw(ArgumentError("The number of rotors Nᵣ=$Nᵣ must not be negative."))
+    else
+        throw(DimensionMismatch(
+            "The extent of the first dimension in the input data must be at least the number "
+            * "of rotors Nᵣ=$Nᵣ; it is $(size(parent, 1))."
+        ))
+    end
+end
+
+
 @doc raw"""
     WignerMatrix{IT, NT, ST} <: AbstractWignerMatrix{IT, NT, ST}
 
@@ -340,9 +397,12 @@ struct WignerMatrix{IT, NT, ST} <: AbstractWignerMatrix{IT, NT, ST}
     mₘᵢₙ::IT
     # The parent is indexed as 1-based throughout, much of it under `@inbounds`, so an
     # offset array would be read and written outside its storage; `ModeWeights` and
-    # `HarmonicValues` refuse one in the same way.
+    # `HarmonicValues` refuse one in the same way.  For the same reason the parent must reach
+    # every element of the block (see "Storage extents" above).
     function WignerMatrix{IT, NT, ST}(parent, ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ) where {IT, NT, ST}
         Base.require_one_based_indexing(parent)
+        check_extent(parent, 1, m′ₘₐₓ, m′ₘᵢₙ, "m′")
+        check_extent(parent, 2, mₘₐₓ, mₘᵢₙ, "m")
         new{IT, NT, ST}(parent, ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
     end
 end
@@ -411,19 +471,6 @@ function WignerMatrix(
     m′ₘₐₓ::IT=mp_max, m′ₘᵢₙ::IT=mp_min, mₘₐₓ::IT=m_max, mₘᵢₙ::IT=m_min
 ) where {IT<:IntegerHalf, NT, ST<:AbstractMatrix{NT}}
     validate_index_ranges(ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
-    s₁, s₂ = size(parent)
-    if s₁ < Int(m′ₘₐₓ - m′ₘᵢₙ + 1)
-        error(
-            "The extent of the first dimension in the input data must be at least "
-            * "m′ₘₐₓ-m′ₘᵢₙ+1=$m′ₘₐₓ-$m′ₘᵢₙ+1=$(Int(m′ₘₐₓ - m′ₘᵢₙ + 1)); it is $s₁."
-        )
-    end
-    if s₂ < Int(mₘₐₓ - mₘᵢₙ + 1)
-        error(
-            "The extent of the second dimension in the input data must be at least "
-            * "mₘₐₓ-mₘᵢₙ+1=$mₘₐₓ-$mₘᵢₙ+1=$(Int(mₘₐₓ - mₘᵢₙ + 1)); it is $s₂."
-        )
-    end
     WignerMatrix{IT, NT, ST}(parent, ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
 end
 
@@ -468,9 +515,12 @@ struct WignerMatrixBatch{IT, NT, ST} <: AbstractWignerMatrix{IT, NT, ST}
     mₘₐₓ::IT
     mₘᵢₙ::IT
     Nᵣ::Int
-    # As for `WignerMatrix`: the parent must be 1-based.
+    # As for `WignerMatrix`: the parent must be 1-based, and must reach every element.
     function WignerMatrixBatch{IT, NT, ST}(parent, ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, Nᵣ) where {IT, NT, ST}
         Base.require_one_based_indexing(parent)
+        check_extent(parent, Nᵣ)
+        check_extent(parent, 2, m′ₘₐₓ, m′ₘᵢₙ, "m′")
+        check_extent(parent, 3, mₘₐₓ, mₘᵢₙ, "m")
         new{IT, NT, ST}(parent, ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, Nᵣ)
     end
 end
@@ -483,20 +533,7 @@ function WignerMatrixBatch(
     m′ₘₐₓ::IT=ℓ, m′ₘᵢₙ::IT=-ℓ, mₘₐₓ::IT=ℓ, mₘᵢₙ::IT=-ℓ
 ) where {IT<:IntegerHalf, NT, ST<:AbstractArray{NT, 3}}
     validate_index_ranges(ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
-    s₀, s₁, s₂ = size(parent)
-    if s₁ < Int(m′ₘₐₓ - m′ₘᵢₙ + 1)
-        error(
-            "The extent of the second dimension in the input data must be at least "
-            * "m′ₘₐₓ-m′ₘᵢₙ+1=$m′ₘₐₓ-$m′ₘᵢₙ+1=$(Int(m′ₘₐₓ - m′ₘᵢₙ + 1)); it is $s₁."
-        )
-    end
-    if s₂ < Int(mₘₐₓ - mₘᵢₙ + 1)
-        error(
-            "The extent of the third dimension in the input data must be at least "
-            * "mₘₐₓ-mₘᵢₙ+1=$mₘₐₓ-$mₘᵢₙ+1=$(Int(mₘₐₓ - mₘᵢₙ + 1)); it is $s₂."
-        )
-    end
-    WignerMatrixBatch{IT, NT, ST}(parent, ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, s₀)
+    WignerMatrixBatch{IT, NT, ST}(parent, ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, size(parent, 1))
 end
 
 Nᵣ(w::WignerMatrixBatch) = w.Nᵣ
@@ -617,9 +654,10 @@ struct DegreeBlock{IT, NT, ST<:AbstractVector{NT}} <: AbstractWignerMatrix{IT, N
     ℓ::IT
     mₘₐₓ::IT
     mₘᵢₙ::IT
-    # As for `WignerMatrix`: the parent must be 1-based.
+    # As for `WignerMatrix`: the parent must be 1-based, and must reach every element.
     function DegreeBlock{IT, NT, ST}(parent, ℓ, mₘₐₓ, mₘᵢₙ) where {IT, NT, ST}
         Base.require_one_based_indexing(parent)
+        check_extent(parent, 1, mₘₐₓ, mₘᵢₙ, "m")
         new{IT, NT, ST}(parent, ℓ, mₘₐₓ, mₘᵢₙ)
     end
 end
@@ -628,12 +666,6 @@ function DegreeBlock(parent::AbstractVector, ℓ::Rational; kwargs...)
     DegreeBlock(parent, half_integer(ℓ); half_integer_kwargs(kwargs)...)
 end
 function DegreeBlock(parent::ST, ℓ::IT; mₘₐₓ::IT=ℓ, mₘᵢₙ::IT=-ℓ) where {IT<:IntegerHalf, NT, ST<:AbstractVector{NT}}
-    if length(parent) < Int(mₘₐₓ - mₘᵢₙ) + 1
-        error(
-            "The input data must have length at least mₘₐₓ-mₘᵢₙ+1="
-            * "$mₘₐₓ-$mₘᵢₙ+1=$(Int(mₘₐₓ - mₘᵢₙ) + 1); it is $(length(parent))."
-        )
-    end
     DegreeBlock{IT, NT, ST}(parent, ℓ, mₘₐₓ, mₘᵢₙ)
 end
 
@@ -646,17 +678,41 @@ Base.firstindex(v::DegreeBlock) = v.mₘᵢₙ
 Base.lastindex(v::DegreeBlock) = v.mₘₐₓ
 Base.keys(v::DegreeBlock) = v.mₘᵢₙ:v.mₘₐₓ
 
+# Of all the blocks, only a `DegreeBlock` may have a caller's `Vector` as its storage — from
+# `DegreeBlock(v, ℓ)` or `relabel`, for example — which can be resized after the constructor
+# has compared its length with the limits.  So the accessors compare the position of the
+# element with the length of the storage as well as with the limits, and iteration compares
+# each position before it reads.
+@inline function check_storage(v::DegreeBlock, i)
+    if i > length(parent(v))
+        throw(storage_error(v, i))
+    end
+    nothing
+end
+@noinline function storage_error(v::DegreeBlock, i)
+    DimensionMismatch(
+        "The storage of this DegreeBlock for ℓ=$(v.ℓ), with m ∈ $(v.mₘᵢₙ):$(v.mₘₐₓ), has "
+        * "length $(length(parent(v))), but the limits need an entry at position $i.  A "
+        * "`DegreeBlock` uses its vector as storage without copying it, so the vector must not "
+        * "be resized."
+    )
+end
+
 @propagate_inbounds function Base.getindex(v::DegreeBlock{IT}, m::IT) where {IT}
+    i = Int(m - v.mₘᵢₙ) + 1
     @boundscheck if !inrange(IT, m, v.mₘᵢₙ, v.mₘₐₓ)
         throw(BoundsError(v, m))
     end
-    @inbounds parent(v)[Int(m - v.mₘᵢₙ) + 1]
+    @boundscheck check_storage(v, i)
+    @inbounds parent(v)[i]
 end
 @propagate_inbounds function Base.setindex!(v::DegreeBlock{IT}, x, m::IT) where {IT}
+    i = Int(m - v.mₘᵢₙ) + 1
     @boundscheck if !inrange(IT, m, v.mₘᵢₙ, v.mₘₐₓ)
         throw(BoundsError(v, m))
     end
-    @inbounds parent(v)[Int(m - v.mₘᵢₙ) + 1] = x
+    @boundscheck check_storage(v, i)
+    @inbounds parent(v)[i] = x
 end
 
 # See the note on `Rational` indexing above.
@@ -665,9 +721,11 @@ end
 @propagate_inbounds Base.setindex!(v::DegreeBlock{IT}, x, m::Rational) where
     {IT<:HalfOddInteger} = (v[HalfOddInteger(m)] = x)
 
+# Element `state` of the block is at position `state` of its storage.
 function Base.iterate(v::DegreeBlock, state=1)
     state > length(v) && return nothing
-    (@inbounds v[v.mₘᵢₙ + (state - 1)], state + 1)
+    check_storage(v, state)
+    (@inbounds parent(v)[state], state + 1)
 end
 Base.Vector(v::DegreeBlock) = [v[m] for m ∈ v.mₘᵢₙ:v.mₘₐₓ]
 Base.Array(v::DegreeBlock) = Vector(v)
@@ -719,9 +777,11 @@ struct DegreeBlockBatch{IT, NT, ST<:AbstractMatrix{NT}} <: AbstractWignerMatrix{
     mₘₐₓ::IT
     mₘᵢₙ::IT
     Nᵣ::Int
-    # As for `WignerMatrix`: the parent must be 1-based.
+    # As for `WignerMatrix`: the parent must be 1-based, and must reach every element.
     function DegreeBlockBatch{IT, NT, ST}(parent, ℓ, mₘₐₓ, mₘᵢₙ, Nᵣ) where {IT, NT, ST}
         Base.require_one_based_indexing(parent)
+        check_extent(parent, Nᵣ)
+        check_extent(parent, 2, mₘₐₓ, mₘᵢₙ, "m")
         new{IT, NT, ST}(parent, ℓ, mₘₐₓ, mₘᵢₙ, Nᵣ)
     end
 end
@@ -732,14 +792,7 @@ end
 function DegreeBlockBatch(
     parent::ST, ℓ::IT; mₘₐₓ::IT=ℓ, mₘᵢₙ::IT=-ℓ
 ) where {IT<:IntegerHalf, NT, ST<:AbstractMatrix{NT}}
-    s₀, s₁ = size(parent)
-    if s₁ < Int(mₘₐₓ - mₘᵢₙ) + 1
-        error(
-            "The extent of the second dimension in the input data must be at least "
-            * "mₘₐₓ-mₘᵢₙ+1=$mₘₐₓ-$mₘᵢₙ+1=$(Int(mₘₐₓ - mₘᵢₙ) + 1); it is $s₁."
-        )
-    end
-    DegreeBlockBatch{IT, NT, ST}(parent, ℓ, mₘₐₓ, mₘᵢₙ, s₀)
+    DegreeBlockBatch{IT, NT, ST}(parent, ℓ, mₘₐₓ, mₘᵢₙ, size(parent, 1))
 end
 
 Base.parent(v::DegreeBlockBatch) = v.parent
@@ -837,10 +890,10 @@ weights yields for each ``ℓ``.
 
 The storage `parent(b)` is 1-based and 2-dimensional, ordered `[s, m]`.
 
-The spin axis is under none of the restrictions a [`WignerMatrix`](@ref) places on its ``m′``:
-it is whatever range of spin weights was asked for, so it may lie wholly on one side of zero,
-and it may reach beyond ``ℓ`` — the harmonics with ``|s| > ℓ`` simply vanish, and a calculator
-stores them as zeros.
+The spin axis, [`spins`](@ref)`(b)`, is under none of the restrictions a
+[`WignerMatrix`](@ref) places on its ``m′``: it is whatever range of spin weights was asked
+for, so it may lie wholly on one side of zero, and it may reach beyond ``ℓ`` — the harmonics
+with ``|s| > ℓ`` simply vanish, and a calculator stores them as zeros.
 
 See also [`SpinMatrixBatch`](@ref) and [`DegreeBlock`](@ref).
 """
@@ -851,9 +904,11 @@ struct SpinMatrix{IT, NT, ST<:AbstractMatrix{NT}} <: AbstractWignerMatrix{IT, NT
     sₘᵢₙ::IT
     mₘₐₓ::IT
     mₘᵢₙ::IT
-    # As for `WignerMatrix`: the parent must be 1-based.
+    # As for `WignerMatrix`: the parent must be 1-based, and must reach every element.
     function SpinMatrix{IT, NT, ST}(parent, ℓ, sₘₐₓ, sₘᵢₙ, mₘₐₓ, mₘᵢₙ) where {IT, NT, ST}
         Base.require_one_based_indexing(parent)
+        check_extent(parent, 1, sₘₐₓ, sₘᵢₙ, "s")
+        check_extent(parent, 2, mₘₐₓ, mₘᵢₙ, "m")
         new{IT, NT, ST}(parent, ℓ, sₘₐₓ, sₘᵢₙ, mₘₐₓ, mₘᵢₙ)
     end
 end
@@ -864,19 +919,6 @@ end
 function SpinMatrix(
     parent::ST, ℓ::IT; sₘₐₓ::IT, sₘᵢₙ::IT, mₘₐₓ::IT=ℓ, mₘᵢₙ::IT=-ℓ
 ) where {IT<:IntegerHalf, NT, ST<:AbstractMatrix{NT}}
-    s₁, s₂ = size(parent)
-    if s₁ < Int(sₘₐₓ - sₘᵢₙ) + 1
-        error(
-            "The extent of the first dimension in the input data must be at least "
-            * "sₘₐₓ-sₘᵢₙ+1=$sₘₐₓ-$sₘᵢₙ+1=$(Int(sₘₐₓ - sₘᵢₙ) + 1); it is $s₁."
-        )
-    end
-    if s₂ < Int(mₘₐₓ - mₘᵢₙ) + 1
-        error(
-            "The extent of the second dimension in the input data must be at least "
-            * "mₘₐₓ-mₘᵢₙ+1=$mₘₐₓ-$mₘᵢₙ+1=$(Int(mₘₐₓ - mₘᵢₙ) + 1); it is $s₂."
-        )
-    end
     SpinMatrix{IT, NT, ST}(parent, ℓ, sₘₐₓ, sₘᵢₙ, mₘₐₓ, mₘᵢₙ)
 end
 
@@ -889,7 +931,13 @@ mₘₐₓ(b::SpinMatrix) = b.mₘₐₓ
 mₘᵢₙ(b::SpinMatrix) = b.mₘᵢₙ
 ishalfinteger(::SpinMatrix{IT}) where {IT<:Integer} = false
 ishalfinteger(::SpinMatrix{IT}) where {IT<:HalfOddInteger} = true
-Base.keys(b::SpinMatrix) = b.sₘᵢₙ:b.sₘₐₓ
+# The spin axis is `spins(b)`, as it is for the calculator that produced the block.  It is
+# deliberately not `keys(b)`: iteration visits every (s, m) element, and `Base` builds `pairs`,
+# and with it `findmax`, `argmax`, `findall` and `findfirst`, by zipping `keys` with the
+# iteration, so a `keys` that named only the spin weights would pair each of them with an
+# element and report it as that element's position.  Without `keys` those functions are a
+# `MethodError`, as they are for a `WignerMatrix`.
+spins(b::SpinMatrix) = b.sₘᵢₙ:b.sₘₐₓ
 
 @propagate_inbounds function Base.getindex(b::SpinMatrix{IT}, s::IT, m::IT) where {IT}
     @boundscheck if !(inrange(IT, s, b.sₘᵢₙ, b.sₘₐₓ) && inrange(IT, m, b.mₘᵢₙ, b.mₘₐₓ))
@@ -995,9 +1043,12 @@ struct SpinMatrixBatch{IT, NT, ST<:AbstractArray{NT, 3}} <: AbstractWignerMatrix
     mₘₐₓ::IT
     mₘᵢₙ::IT
     Nᵣ::Int
-    # As for `WignerMatrix`: the parent must be 1-based.
+    # As for `WignerMatrix`: the parent must be 1-based, and must reach every element.
     function SpinMatrixBatch{IT, NT, ST}(parent, ℓ, sₘₐₓ, sₘᵢₙ, mₘₐₓ, mₘᵢₙ, Nᵣ) where {IT, NT, ST}
         Base.require_one_based_indexing(parent)
+        check_extent(parent, Nᵣ)
+        check_extent(parent, 2, sₘₐₓ, sₘᵢₙ, "s")
+        check_extent(parent, 3, mₘₐₓ, mₘᵢₙ, "m")
         new{IT, NT, ST}(parent, ℓ, sₘₐₓ, sₘᵢₙ, mₘₐₓ, mₘᵢₙ, Nᵣ)
     end
 end
@@ -1008,20 +1059,7 @@ end
 function SpinMatrixBatch(
     parent::ST, ℓ::IT; sₘₐₓ::IT, sₘᵢₙ::IT, mₘₐₓ::IT=ℓ, mₘᵢₙ::IT=-ℓ
 ) where {IT<:IntegerHalf, NT, ST<:AbstractArray{NT, 3}}
-    s₀, s₁, s₂ = size(parent)
-    if s₁ < Int(sₘₐₓ - sₘᵢₙ) + 1
-        error(
-            "The extent of the second dimension in the input data must be at least "
-            * "sₘₐₓ-sₘᵢₙ+1=$sₘₐₓ-$sₘᵢₙ+1=$(Int(sₘₐₓ - sₘᵢₙ) + 1); it is $s₁."
-        )
-    end
-    if s₂ < Int(mₘₐₓ - mₘᵢₙ) + 1
-        error(
-            "The extent of the third dimension in the input data must be at least "
-            * "mₘₐₓ-mₘᵢₙ+1=$mₘₐₓ-$mₘᵢₙ+1=$(Int(mₘₐₓ - mₘᵢₙ) + 1); it is $s₂."
-        )
-    end
-    SpinMatrixBatch{IT, NT, ST}(parent, ℓ, sₘₐₓ, sₘᵢₙ, mₘₐₓ, mₘᵢₙ, s₀)
+    SpinMatrixBatch{IT, NT, ST}(parent, ℓ, sₘₐₓ, sₘᵢₙ, mₘₐₓ, mₘᵢₙ, size(parent, 1))
 end
 
 Base.parent(b::SpinMatrixBatch) = b.parent
@@ -1034,6 +1072,7 @@ mₘᵢₙ(b::SpinMatrixBatch) = b.mₘᵢₙ
 Nᵣ(b::SpinMatrixBatch) = b.Nᵣ
 ishalfinteger(::SpinMatrixBatch{IT}) where {IT<:Integer} = false
 ishalfinteger(::SpinMatrixBatch{IT}) where {IT<:HalfOddInteger} = true
+spins(b::SpinMatrixBatch) = b.sₘᵢₙ:b.sₘₐₓ
 
 @propagate_inbounds function Base.getindex(
     b::SpinMatrixBatch{IT}, iᵣ::Integer, s::IT, m::IT
@@ -1201,6 +1240,7 @@ Base.lastindex(s::WignerSeries) = s.ℓₘₐₓ
 # block while its `length` still counted them all — so that a comprehension over it returned
 # uninitialized memory.  Indexing, `first` and `last` give blocks, as `s[ℓ]` does.
 function Base.iterate(s::WignerSeries, i::Int=1)
+    i == 1 && check_blocks(s)
     i > length(s.blocks) && return nothing
     ((s.ℓₘᵢₙ + (i - 1)) => s.blocks[i], i + 1)
 end
@@ -1222,11 +1262,31 @@ Base.last(s::WignerSeries) = s[s.ℓₘₐₓ]
         ))
     end
     let ℓ = convert(IT, ℓ)
-        @boundscheck if ℓ < s.ℓₘᵢₙ || ℓ > s.ℓₘₐₓ
-            throw(BoundsError(s, ℓ))
+        @boundscheck begin
+            if ℓ < s.ℓₘᵢₙ || ℓ > s.ℓₘₐₓ
+                throw(BoundsError(s, ℓ))
+            end
+            check_blocks(s)
         end
         @inbounds s.blocks[Int(ℓ - s.ℓₘᵢₙ) + 1]
     end
+end
+
+# `values(s)` and `parent(s)` hand out the series' own vector of blocks, which can be resized,
+# while indexing and iteration find the block of each ℓ at the position its label gives; a
+# vector of any other length would put the wrong block, or none, at that position.
+@inline function check_blocks(s::WignerSeries)
+    if length(s.blocks) != Int(s.ℓₘₐₓ - s.ℓₘᵢₙ) + 1
+        throw(blocks_error(s))
+    end
+    nothing
+end
+@noinline function blocks_error(s::WignerSeries)
+    DimensionMismatch(
+        "A series for ℓ ∈ $(s.ℓₘᵢₙ):$(s.ℓₘₐₓ) needs $(Int(s.ℓₘₐₓ - s.ℓₘᵢₙ) + 1) blocks, but "
+        * "its vector of blocks has length $(length(s.blocks)); it was resized after the "
+        * "series was built."
+    )
 end
 
 Base.copy(s::WignerSeries) = WignerSeries(map(copy, s.blocks), s.ℓₘᵢₙ, s.ℓₘₐₓ)

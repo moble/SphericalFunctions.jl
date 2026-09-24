@@ -97,6 +97,10 @@ The spin weights an [`sYlmCalculator`](@ref) serves, as a range.  A calculator b
 single spin weight reports the one-element range containing it, so that this accessor answers
 in the same currency whichever way the calculator was built; [`spin`](@ref) gives the value
 itself, and has no method for a calculator built for several.
+
+For a [`SpinMatrix`](@ref) or a [`SpinMatrixBatch`](@ref), which is what such a calculator
+yields when it serves several spin weights, this is the range of spin weights the block holds,
+`sₘᵢₙ(b):sₘₐₓ(b)`.
 """
 function spins end
 

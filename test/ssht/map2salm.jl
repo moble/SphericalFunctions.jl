@@ -19,9 +19,9 @@
 # the same reason).
 #
 # The item names use a "Transforms: " prefix so that they are distinguishable — to a human
-# reading a results list, and to `runtests.jl`'s `occursin` filters — from the v2 items,
-# which were also named `map2salm`.  Those items are gone with the `Deprecated` module, but
-# the prefix is kept: the names are what people filter on.
+# reading a results list, and to the name filters of `juliati` and the MCP runner — from the
+# v2 items, which were also named `map2salm`.  Those items are gone with the `Deprecated`
+# module, but the prefix is kept: the names are what people filter on.
 
 @testitem "Transforms: map2salm" setup=[Utilities] begin
     import SphericalFunctions: map2salm, SSHTRS, ModeWeights, Yindex, Yrange, Ysize,
@@ -178,8 +178,11 @@ end
         @test size(f) == (only(unique(fejér.Nϕ)), length(fejér.θ))
         @test_throws cc map2salm(f, fejér)
         @test_throws cc salm2map(map2salm(f, plan), fejér)
+        # (Its constructor warns that one rule's weights on another's rings are inexact.)
         θcc = clenshaw_curtis_rings(Nθ, T)
-        wrong_weights = SSHTRS(s, ℓmax; T, Nϕ, θ=θcc, quadrature_weights=fejer1(Nθ, T))
+        wrong_weights = @test_logs (:warn, r"exact") SSHTRS(
+            s, ℓmax; T, Nϕ, θ=θcc, quadrature_weights=fejer1(Nθ, T)
+        )
         @test_throws cc map2salm(f, wrong_weights)
         @test_throws cc salm2map(map2salm(f, plan), wrong_weights)
     end

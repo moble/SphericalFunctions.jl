@@ -13,3 +13,8 @@
 #                             generated from them at build time and
 #                             would otherwise be scanned twice
 include = ["src/**", "test/**", "docs/literate_input/**"]
+
+# `test/.CondaPkg` is the Conda environment that the `:python` test items
+# build on first use.  It is git-ignored and holds thousands of files that
+# are not part of the suite, none of which should be searched.
+exclude = ["test/.CondaPkg/**"]

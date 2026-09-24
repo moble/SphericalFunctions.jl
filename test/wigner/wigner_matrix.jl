@@ -354,7 +354,7 @@ end
 
 @testitem "SpinMatrix and SpinMatrixBatch: the container interface" begin
     import SphericalFunctions: SpinMatrix, SpinMatrixBatch, DegreeBlock
-    import SphericalFunctions: ℓ, Nᵣ, sₘᵢₙ, sₘₐₓ, mₘᵢₙ, mₘₐₓ, half_integer
+    import SphericalFunctions: ℓ, Nᵣ, sₘᵢₙ, sₘₐₓ, mₘᵢₙ, mₘₐₓ, spins, half_integer
 
     for L ∈ (2, half_integer(3//2))
         n = Int(2L + 1)
@@ -365,7 +365,7 @@ end
 
         @test ℓ(b) == L
         @test sₘᵢₙ(b) == smin && sₘₐₓ(b) == smax
-        @test collect(keys(b)) == collect(smin:smax)
+        @test collect(spins(b)) == collect(smin:smax)
         for (j, m) ∈ enumerate(mₘᵢₙ(b):mₘₐₓ(b)), (i, s) ∈ enumerate(smin:smax)
             @test b[s, m] == A[i, j]
         end
@@ -610,4 +610,54 @@ end
     # just `Exception`, which the `InexactError` would satisfy too.)
     @test_throws "must have denominator 2" WignerDMatrix(ComplexF64, 5//3)
     @test_throws "must have denominator 2" WignerdMatrix(Float64, 5//3)
+end
+
+@testitem "SpinMatrix: the generic search functions agree with the dense matrix, or refuse" begin
+    import SphericalFunctions: SpinMatrix, SpinMatrixBatch, sYlm, sYlmCalculator, recurrence!
+    import SphericalFunctions: spins, sₘᵢₙ, sₘₐₓ, half_integer
+    using Quaternionic: Rotor
+
+    # A `SpinMatrix` iterates over every element, (s, m) in column-major order, so `pairs`,
+    # and everything built on it — `findmax`, `argmax`, `findall`, `findfirst` — must cover
+    # every element as well, or not be defined at all.  A `MethodError` is an acceptable
+    # answer; one that looks at some of the elements, or reports a spin weight as the
+    # position of an element, is not.
+    function agrees_or_refuses(agrees, f)
+        result = try
+            f()
+        catch e
+            e isa MethodError && return true
+            rethrow()
+        end
+        agrees(result)
+    end
+    R = Rotor(1.0, 2.0, 3.0, 4.0)
+    for b ∈ (
+        SpinMatrix(reshape(collect(1.0:15.0), 3, 5), 2; sₘₐₓ=1, sₘᵢₙ=-1),
+        sYlm(R, 3, -1:1)[2],
+    )
+        M = Matrix(b)
+        @test agrees_or_refuses(r -> r == findmax(abs, M), () -> findmax(abs, b))
+        @test agrees_or_refuses(r -> r == findmin(abs, M), () -> findmin(abs, b))
+        @test agrees_or_refuses(r -> r == argmax(abs, M), () -> argmax(abs, b))
+        @test agrees_or_refuses(r -> r == argmax(M), () -> argmax(b))
+        large(x) = abs(x) > 0.1
+        @test agrees_or_refuses(r -> r == findall(large, M), () -> findall(large, b))
+        @test agrees_or_refuses(r -> r == findfirst(>(5) ∘ abs, M), () -> findfirst(>(5) ∘ abs, b))
+        @test agrees_or_refuses(r -> length(r) == length(M), () -> collect(pairs(b)))
+        # The reductions over the elements themselves are unaffected
+        @test maximum(abs, b) == maximum(abs, M)
+        @test sum(b) == sum(M)
+    end
+
+    # The spin axis is `spins(b)`, as it is for the calculator that produced the block
+    b = SpinMatrix(zeros(3, 5), 2; sₘₐₓ=1, sₘᵢₙ=-1)
+    @test collect(spins(b)) == [-1, 0, 1]
+    @test collect(spins(SpinMatrixBatch(zeros(4, 3, 5), 2; sₘₐₓ=1, sₘᵢₙ=-1))) == [-1, 0, 1]
+    @test collect(spins(SpinMatrix(zeros(2, 5), 2; sₘₐₓ=3, sₘᵢₙ=2))) == [2, 3]
+    bₕ = SpinMatrix(zeros(2, 4), 3//2; sₘₐₓ=1//2, sₘᵢₙ=-1//2)
+    @test collect(spins(bₕ)) == [half_integer(-1//2), half_integer(1//2)]
+    @test first(spins(bₕ)) == sₘᵢₙ(bₕ) && last(spins(bₕ)) == sₘₐₓ(bₕ)
+    calc = sYlmCalculator(R, 3, -1:1)
+    @test collect(spins(recurrence!(calc, 2))) == collect(spins(calc))
 end

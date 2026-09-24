@@ -587,5 +587,5 @@ Each row below links to that source's own comparison page.
 | [Whittaker (1904)](@ref "Whittaker (1904)") | Right-handed axes, Euler angles equal to ours with the symbols permuted, spherical coordinates and quaternion basis as ours, rotation by ``q v q⁻¹``. |
 | [Wigner (1959)](@ref "Wigner (1959)") | Representation matrices are ``(-1)^{μ'-μ}`` times the complex conjugate of ours (equivalently ours with both indices negated); spherical harmonics agree. |
 | [Wikipedia (2026)](@ref "Wikipedia (2026)") | ``D``, ``d``, ``Y_ℓ^m``, and ``{}_sY_{ℓm}`` agree with ours; its body-fixed operators are ``\mathcal{P} = -R``. |
-| [Wilson (1929)](@ref "Wilson (1929)") | Right-handed ``(𝐢, 𝐣, 𝐤)`` basis, as ours. |
+| [Wilson (1901)](@ref "Wilson (1901)") | Right-handed ``(𝐢, 𝐣, 𝐤)`` basis, as ours. |
 | [Zettili (2009)](@ref "Zettili (2009)") | Spherical harmonics, ``d``, ``D``, and the rotation law agree with ours. |

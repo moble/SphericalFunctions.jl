@@ -183,16 +183,18 @@ version 2 already started at ``ℓ = |s|``.)
   change that breaks agreement with any of these sources is caught.
 * **Half-integer indices.**  `D`, `d`, the calculators, `sYlm`,
   `sYlm!`, `sYlm_matrix`, `Ysize`, `Yindex`, `Yrange`, `ModeWeights`,
-  the differential operators, the pixelizations, and the `"RS"` and
-  `"Matrix"` transforms (with `map2salm` and `salm2map`) all accept
-  half-integer ``ℓ``, ``m`` and ``s``, passed as `Rational`s with
-  denominator 2 — as in `D(R, 7//2)` or `SSHT(1//2, 7//2)`.  The
-  results are indexed exactly as in the integer case.  They have been
-  verified against two independent references to ``10^{-16}`` for ``ℓ
-  ≤ 31/2``, and by identities that need no reference to ``ℓ = 101/2``.
-  `Ylm` and the `"Minimal"` transform remain integer-only, and say so;
-  a call that mixes integer and half-integer indices is refused.
-  (Issue #29.)
+  the differential operators, the golden-ratio, Leja and sorted-ring
+  pixelizations, and the `"RS"` and `"Matrix"` transforms (with
+  `map2salm` and `salm2map`) all accept half-integer ``ℓ``, ``m`` and
+  ``s``, passed as `Rational`s with denominator 2 — as in `D(R, 7//2)`
+  or `SSHT(1//2, 7//2)`.  The results are indexed exactly as in the
+  integer case.  They have been verified against two independent
+  references to ``10^{-16}`` for ``ℓ ≤ 31/2``, and by identities that
+  need no reference to ``ℓ = 101/2``.  `Ylm`, the two equiangular
+  grids (`driscoll_healy_pixels` and `mcewen_wiaux_pixels`, with their
+  `_rotors` counterparts), and the `"Minimal"` transform remain
+  integer-only, and say so; a call that mixes integer and half-integer
+  indices is refused.  (Issue #29.)
 * **`ModeWeights`**, which holds the mode weights of a spin-weighted
   function in the canonical ordering, together with its spin weight
   and range of ``ℓ``.  It is indexed as `w[ℓ, m]` or `w[ℓ, :]`, and

@@ -423,3 +423,69 @@ end
     end
     @test occursin("nothing computed yet", sprint(show, HCalculator(0.3, 4)))
 end
+
+@testitem "Rotor-data setters: a refused angle leaves the calculator as it was" begin
+    import SphericalFunctions
+    import SphericalFunctions: HCalculator, dCalculator, sYlmCalculator, recurrence!
+    import SphericalFunctions: set_β!, set_θ!
+
+    # Every value is validated before anything is stored, so a setter that refuses its input
+    # leaves the rotor data, and whatever the calculator had computed from them, exactly as
+    # they were, and the next step continues from them.  The infinite angle is that of the
+    # second rotor, so that the first would already have been stored if the angles were not
+    # all checked first.
+    β = [0.3, 0.5]
+    bad = [0.9, Inf]
+    for (ℓₘₐₓ, ℓ) ∈ ((6, 3), (13//2, 5//2))
+        c = HCalculator(β, ℓₘₐₓ)
+        recurrence!(c, ℓ)
+        @test_throws DomainError set_β!(c, bad)
+        @test recurrence!(c, ℓ + 1) == recurrence!(HCalculator(β, ℓₘₐₓ), ℓ + 1)
+    end
+
+    # ... and the same through the calculators built on it
+    c = dCalculator(β, 6)
+    recurrence!(c, 3)
+    @test_throws DomainError set_β!(c, bad)
+    @test copy(recurrence!(c, 4)) == copy(recurrence!(dCalculator(β, 6), 4))
+    for Calculator ∈ (SphericalFunctions.sλlmCalculator, sYlmCalculator)
+        c = Calculator(β, 6, 1)
+        recurrence!(c, 3)
+        @test_throws DomainError set_θ!(c, bad)
+        @test copy(recurrence!(c, 4)) == copy(recurrence!(Calculator(β, 6, 1), 4))
+    end
+end
+
+@testitem "HCalculator: axes labelled out of step are rebuilt rather than trusted" begin
+    import SphericalFunctions as SF
+    import SphericalFunctions: HCalculator, SSHT, recurrence!, array_view
+    import SphericalFunctions: nmodes  # unexported
+    using Random
+
+    rng = Random.Xoshiro(1848)
+
+    # The two axis buffers hold consecutive orders whenever the calculator's data are valid.
+    # A transform used from several tasks at once, which the documentation of `SSHT` warns
+    # against, can leave them labelled otherwise; the recurrence then starts again from the
+    # beginning rather than stepping on from them, so that the misuse does not outlast itself.
+    for (ℓₘₐₓ, ℓ) ∈ ((6, 5), (13//2, 9//2))
+        c = HCalculator([0.3, 0.5], ℓₘₐₓ)
+        recurrence!(c, ℓ)
+        SF.h⃗ˡ⁺¹(c).ℓ = 1
+        @test recurrence!(c, ℓ) == recurrence!(HCalculator([0.3, 0.5], ℓₘₐₓ), ℓ)
+        @test recurrence!(c, ℓ + 1) == recurrence!(HCalculator([0.3, 0.5], ℓₘₐₓ), ℓ + 1)
+    end
+
+    # Each transform starts at ℓ = |s|, that is at the axis of order ⌊|s|⌋
+    for (s, ℓₘₐₓ) ∈ ((2, 12), (1//2, 13//2))
+        𝒯 = SSHT(s, ℓₘₐₓ)
+        f̃ = randn(rng, ComplexF64, nmodes(𝒯))
+        ϵ = 500 * eps()
+        @test array_view(𝒯 \ (𝒯 * f̃)) ≈ f̃ atol=ϵ rtol=ϵ
+        H = 𝒯.λ.H
+        SF.h⃗ˡ(H).ℓ = SF.axis_ℓ(H, abs(𝒯.s))
+        SF.h⃗ˡ⁺¹(H).ℓ = 5
+        @test array_view(𝒯 \ (𝒯 * f̃)) ≈ f̃ atol=ϵ rtol=ϵ
+        @test array_view(𝒯 \ (𝒯 * f̃)) ≈ f̃ atol=ϵ rtol=ϵ
+    end
+end

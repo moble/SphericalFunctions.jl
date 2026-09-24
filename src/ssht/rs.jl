@@ -1,17 +1,22 @@
 """
-    SSHTRS(s, ℓₘₐₓ; T=Float64, θ=fejer1_rings(2ℓₘₐₓ+1, T), quadrature_weights=fejer1(length(θ), T), Nϕ=2ℓₘₐₓ+1, plan_fft_flags=FFTW.ESTIMATE, plan_fft_timelimit=Inf)
+    SSHTRS(s, ℓₘₐₓ; T=Float64, [θ, quadrature_weights], Nϕ=2ℓₘₐₓ+1, plan_fft_flags=FFTW.ESTIMATE, plan_fft_timelimit=Inf)
 
 Construct an ``s``-SHT object that uses the ring-based algorithm described by [Reinecke and
 Seljebotn](@cite Reinecke_2013).  This may also be achieved by calling the main [`SSHT`](@ref)
 function with the same keywords, along with `method="RS"` (the default).
 
 The spin-weighted spherical harmonics are evaluated on a series of "rings" at constant
-colatitude, whose locations are given by the `θ` keyword argument — by default the Fejér
-first-rule nodes `fejer1_rings(2ℓₘₐₓ+1, T)`.  If this is changed, the corresponding
-`quadrature_weights` must also be provided (the default is `fejer1(length(θ), T)`); the
-analysis is exact for band-limited functions only when the quadrature rule integrates
+colatitude, whose locations are given by the `θ` keyword argument, and the analysis
+integrates over ``θ`` with the `quadrature_weights` of the rule that placed those rings.  When
+both are omitted they are the nodes and weights of Fejér's first rule,
+`fejer1_rings(2ℓₘₐₓ+1, T)` and `fejer1(2ℓₘₐₓ+1, T)`.  Only the caller knows which rule
+placed a given set of rings, so the two must be given together — for example
+`θ=clenshaw_curtis_rings(N, T)` with `quadrature_weights=clenshaw_curtis(N, T)` — and either
+one without the other is refused.
+The analysis is exact for band-limited functions when the quadrature rule integrates
 polynomials of degree ``2ℓₘₐₓ`` in ``\\cos θ`` exactly, as the Fejér and Clenshaw–Curtis
-rules with at least ``2ℓₘₐₓ+1`` nodes do.
+rules with at least ``2ℓₘₐₓ+1`` nodes do.  The constructor checks this, and warns when the
+rule falls short; synthesis does not use the weights, and is exact on any rings.
 
 On each ring, an FFT is performed.  To reach the band limit of ``m = ±ℓₘₐₓ``, the number of
 points along each ring must be *at least* ``2ℓₘₐₓ+1``, but may be greater.  For example, if
@@ -56,19 +61,41 @@ struct SSHTRS{T<:Real, ST, P, BP, B, IT<:IntegerHalf} <: SSHT{T}
 end
 
 # The public constructor is the boundary: it normalizes the two indices and re-dispatches
-# to the worker, whose keyword defaults are then computed from indices of one kind.
+# to the worker, whose keyword defaults are then computed from indices of one kind.  It also
+# checks the quadrature rule.  `map2salm_plan` and `salm2map` call the worker directly: they
+# build the Clenshaw–Curtis rule themselves, and the first states the number of rings that
+# rule needs more plainly than the general check could, while the second only synthesizes.
 function SSHTRS(s::IndexArgument, ℓₘₐₓ::IndexArgument; T::Type{TT}=Float64, kwargs...) where {TT}
-    SSHTRS(transform_indices(s, ℓₘₐₓ)..., TT; kwargs...)
+    𝒯 = SSHTRS(transform_indices(s, ℓₘₐₓ)..., TT; kwargs...)
+    warn_if_inexact(𝒯)
+    𝒯
 end
 function SSHTRS(
     s::IT, ℓₘₐₓ::IT, ::Type{TT};
-    θ=fejer1_rings(2ℓₘₐₓ+1, TT),
-    quadrature_weights=fejer1(length(θ), TT),
+    θ=nothing,
+    quadrature_weights=nothing,
     Nϕ=2ℓₘₐₓ+1,
     plan_fft_flags=FFTW.ESTIMATE, plan_fft_timelimit=Inf
 ) where {IT<:IntegerHalf, TT}
     if abs(s) > ℓₘₐₓ
         error("|s|=$(abs(s)) exceeds ℓₘₐₓ=$ℓₘₐₓ; there are no such modes.")
+    end
+    # The weights belong to the rule that placed the rings, and only the caller knows which
+    # rule that was; a default for one of the two would silently pair it with another rule.
+    if θ === nothing && quadrature_weights === nothing
+        θ = fejer1_rings(2ℓₘₐₓ+1, TT)
+        quadrature_weights = fejer1(2ℓₘₐₓ+1, TT)
+    elseif quadrature_weights === nothing
+        throw(ArgumentError(
+            "The rings `θ` were given without their `quadrature_weights`.  The weights belong "
+            * "to the rule that placed the rings — for example `clenshaw_curtis(length(θ), T)` "
+            * "for `clenshaw_curtis_rings` — and must be given with them."
+        ))
+    elseif θ === nothing
+        throw(ArgumentError(
+            "The `quadrature_weights` were given without the rings `θ` of their rule; the two "
+            * "must be given together."
+        ))
     end
     check_sample_reals(TT, θ, "θ")
     check_sample_reals(TT, quadrature_weights, "quadrature_weights")
@@ -110,6 +137,40 @@ function SSHTRS(
     )
 end
 
+# The analysis integrates, ring by ring, products ₛλₗₘ ₛλₗ′ₘ of harmonics with the same m,
+# and each such product is a polynomial in cos θ of degree ℓ+ℓ′ ≤ 2ℓₘₐₓ, for half-odd indices
+# as for integers.  The analysis is therefore exact when the quadrature rule integrates every
+# polynomial of that degree exactly, which is checked here with the Legendre moments: the sum
+# Σ_y w_y P_k(cos θ_y) must be 2δ_{k0} for each k ∈ 0:2ℓₘₐₓ.  Unlike the monomials, the P_k
+# are bounded by 1 on the whole interval, so the moments are well conditioned, and a fixed
+# multiple of the rounding error of the sums serves as the tolerance.  The degree is 2ℓₘₐₓ
+# itself rather than 2⌊ℓₘₐₓ⌋, so that a rule without the reflection symmetry of the standard
+# ones is checked in every degree the analysis needs; a symmetric rule integrates the odd
+# degrees exactly in any case, which is why 2ℓₘₐₓ of its rings suffice for a half-odd ℓₘₐₓ.
+function warn_if_inexact(𝒯::SSHTRS{T}) where {T}
+    degree = 2𝒯.ℓₘₐₓ
+    moments = zeros(T, degree + 1)  # moments[k+1] = Σ_y w_y P_k(cos θ_y)
+    for (θ, w) ∈ zip(𝒯.θ, 𝒯.quadrature_weights)
+        x = cos(θ)
+        P₋, P = zero(T), one(T)
+        for k ∈ 0:degree
+            moments[k+1] += w * P
+            P₋, P = P, ((2k + 1) * x * P - k * P₋) / (k + 1)
+        end
+    end
+    moments[1] -= 2
+    residual, i = findmax(abs, moments)
+    if !(residual ≤ 100 * length(𝒯.θ) * eps(T))  # also catches NaN
+        @warn (
+            "The quadrature rule given by `θ` and `quadrature_weights` does not integrate "
+            * "polynomials of degree 2ℓₘₐₓ=$degree in cos θ exactly: its Legendre moment of "
+            * "degree $(i-1) is off by $(round(Float64(residual), sigdigits=2)).  Analysis "
+            * "with this transform will therefore not be exact; synthesis is unaffected."
+        )
+    end
+    nothing
+end
+
 function pixels(𝒯::SSHTRS{T}) where {T}
     let π = T(π)
         [
@@ -131,9 +192,7 @@ end
 function LinearAlgebra.mul!(f, 𝒯::SSHTRS{T}, f̃) where {T}
     check_modes(𝒯, f̃)
     check_pixels(𝒯, f)
-    if size(f)[2:end] != size(f̃)[2:end]
-        error("Trailing dimensions of f $(size(f)[2:end]) and f̃ $(size(f̃)[2:end]) differ.")
-    end
+    check_trailing(f, f̃)
     s, ℓₘₐₓ, Nθ = 𝒯.s, 𝒯.ℓₘₐₓ, length(𝒯.θ)
     λ, F, G = 𝒯.λ, 𝒯.F, 𝒯.G
     f̃′ = reshape(array_view(f̃), size(f̃, 1), :)
@@ -180,9 +239,7 @@ function LinearAlgebra.ldiv!(f̃, 𝒯::SSHTRS{T}, f) where {T}
     f̃ = analysis_output(𝒯, f̃, f)
     check_modes(𝒯, f̃)
     check_pixels(𝒯, f)
-    if size(f)[2:end] != size(f̃)[2:end]
-        error("Trailing dimensions of f $(size(f)[2:end]) and f̃ $(size(f̃)[2:end]) differ.")
-    end
+    check_trailing(f, f̃)
     s, ℓₘₐₓ, Nθ = 𝒯.s, 𝒯.ℓₘₐₓ, length(𝒯.θ)
     λ, F, G = 𝒯.λ, 𝒯.F, 𝒯.G
     f̃′ = reshape(array_view(f̃), size(f̃, 1), :)
@@ -294,14 +351,15 @@ for maps of the shape of `map` (``N_ϕ × N_θ × …``) on the Clenshaw–Curti
 function map2salm_plan(map::AbstractArray{Complex{T}}, s::IndexArgument, ℓₘₐₓ::IndexArgument) where {T<:Real}
     Nϕ, Nθ = size(map, 1), size(map, 2)
     𝒯 = SSHTRS(
-        s, ℓₘₐₓ; T,
+        transform_indices(s, ℓₘₐₓ)..., T;
         θ=clenshaw_curtis_rings(Nθ, T), quadrature_weights=clenshaw_curtis(Nθ, T), Nϕ
     )
-    # `SSHTRS` warns about too few points on a ring, but cannot know how many rings its
-    # quadrature needs; on this fixed grid it is 2⌊ℓₘₐₓ⌋+1 — 2ℓₘₐₓ+1 for an integer ℓₘₐₓ,
-    # one fewer for a half-odd one (measured: exact there, and wrong by O(1) a few rings
-    # below).  Too few rings make the analysis silently wrong, while synthesis is exact on
-    # any number, so the warning is here rather than in `salm2map`.
+    # The worker warns about too few points on a ring.  The general check of the quadrature
+    # rule, which the public `SSHTRS` constructor makes, is replaced here by the condition it
+    # amounts to on this fixed grid, stated as a number of rings: 2⌊ℓₘₐₓ⌋+1 — 2ℓₘₐₓ+1 for an
+    # integer ℓₘₐₓ, one fewer for a half-odd one (measured: exact there, and wrong by O(1) a
+    # few rings below).  Too few rings make the analysis silently wrong, while synthesis is
+    # exact on any number, so the warning is here rather than in `salm2map`.
     let needed = 2floor(Int, 𝒯.ℓₘₐₓ) + 1
         if Nθ < needed
             @warn (
@@ -327,8 +385,10 @@ function salm2map end
 
 function salm2map(salm::MapOrModes, s::IndexArgument, ℓₘₐₓ::IndexArgument, Nϕ::Integer, Nθ::Integer)
     T = real(eltype(salm))
+    # Synthesis is exact on any number of rings, so the worker is called directly, without
+    # the check of the quadrature rule that the public constructor makes for the analysis.
     𝒯 = SSHTRS(
-        s, ℓₘₐₓ; T,
+        transform_indices(s, ℓₘₐₓ)..., T;
         θ=clenshaw_curtis_rings(Nθ, T), quadrature_weights=clenshaw_curtis(Nθ, T), Nϕ
     )
     salm2map(salm, 𝒯)

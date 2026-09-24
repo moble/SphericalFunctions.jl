@@ -1,3 +1,7 @@
+# Each rule below fills a buffer whose length is set by the number of nodes `n`, starting with
+# its first element and under `@inbounds`, so `n` is checked at the top of every method, before
+# anything is allocated.
+
 @doc raw"""
     fejer1(n, [T])
 
@@ -11,9 +15,13 @@ as given by [`fejer1_rings`](@ref).
 
 This function uses [Waldvogel's method](@cite Waldvogel_2006).
 
-The type `T` may be any `AbstractFloat`, but defaults to `Float64`.
+The number of nodes `n` must be at least 1.  The type `T` may be any `AbstractFloat`, but
+defaults to `Float64`.
 """
 function fejer1(n, ::Type{T}=Float64) where {T<:AbstractFloat}
+    if n < 1
+        throw(ArgumentError("`fejer1` needs at least one node; got n=$n."))
+    end
     v = Vector{complex(T)}(undef, n)
     complex_powers!(@view(v[1:(n-1)÷2+1]), cis(π/T(n)))
     @inbounds begin
@@ -48,11 +56,15 @@ This function uses [Waldvogel's method](@cite Waldvogel_2006).  However,
 contrary to Waldvogel's notation, this routine *does not* include the weight
 corresponding to the ϑ=0 or π nodes, which both have weight 0.
 
-The type `T` may be any `AbstractFloat`, but defaults to `Float64`.
+The number of nodes `n` must be at least 1.  The type `T` may be any `AbstractFloat`, but
+defaults to `Float64`.
 
 """
 function fejer2(n, ::Type{T}) where {T<:AbstractFloat}
     # General function for any type of float
+    if n < 1
+        throw(ArgumentError("`fejer2` needs at least one node; got n=$n."))
+    end
     v = Vector{complex(T)}(undef, n+1)
     @inbounds begin
         v[1] = 2
@@ -72,6 +84,9 @@ end
 
 function fejer2(n, ::Type{T}=Float64) where {T<:IEEEFloat}
     # Specialized to "machine" floats; significant reduction in memory and increase in speed
+    if n < 1
+        throw(ArgumentError("`fejer2` needs at least one node; got n=$n."))
+    end
     v = Vector{T}(undef, (n+1)÷2 + 1)
     @inbounds begin
         v[1] = 2
@@ -99,11 +114,17 @@ spaced nodes from 0 to π inclusive.  That is, the nodes are located at
 
 This function uses [Waldvogel's method](@cite Waldvogel_2006).
 
-The type `T` may be any `AbstractFloat`, but defaults to `Float64`.
+The number of nodes `n` must be at least 2, since the nodes include both poles.  The type
+`T` may be any `AbstractFloat`, but defaults to `Float64`.
 
 """
 function clenshaw_curtis(n, ::Type{T}) where {T<:AbstractFloat}
     # General function for any type of float
+    if n < 2
+        throw(ArgumentError(
+            "`clenshaw_curtis` needs at least two nodes, one at each pole; got n=$n."
+        ))
+    end
     nmod2 = (n-1) % 2
     w₀ᶜᶜ = inv(T((n-1)^2 - 1 + nmod2))
     v = Vector{complex(T)}(undef, n-1)
@@ -126,6 +147,11 @@ end
 
 function clenshaw_curtis(n, ::Type{T}=Float64) where {T<:IEEEFloat}
     # Specialized to "machine" floats; significant reduction in memory and increase in speed
+    if n < 2
+        throw(ArgumentError(
+            "`clenshaw_curtis` needs at least two nodes, one at each pole; got n=$n."
+        ))
+    end
     nmod2 = mod(n-1, 2)
     w₀ᶜᶜ = inv(T((n-1)^2 - 1 + nmod2))
     v = Vector{T}(undef, (n-1)÷2 + 1)

@@ -922,3 +922,23 @@ end
     @test_throws "at least" mul!(zeros(ComplexF64, Ysize(0, 3) - 1), ð, w)
     @test_throws "aliases the input" mul!(parent(w), Lz, w)
 end
+
+@testitem "Operators: every band structure refuses an invalid range of ℓ" begin
+    import SphericalFunctions: L², Lz, L₊, L₋, Lx, Ly, R², Rz, R₊, R₋, ð, ð̄
+
+    # Each operator acts on the ordering that `Ysize` counts, so each refuses what `Ysize`
+    # refuses — a negative ℓₘᵢₙ, or an ℓₘₐₓ below ℓₘᵢₙ-1 — whatever the shape of its matrix
+    for op ∈ (L², Lz, L₊, L₋, Lx, Ly, R², Rz, R₊, R₋, ð, ð̄)
+        @test_throws ArgumentError op(0, -2, 3)
+        @test_throws ArgumentError op(0, -1, 2)
+        @test_throws ArgumentError op(0, 5, 2)
+        @test_throws ArgumentError op(0, 3, 1)
+        @test_throws ArgumentError op(5, 3)  # ℓₘᵢₙ is |s| = 5 by default
+        @test_throws ArgumentError op(-1//2, -3//2, 5//2)
+        @test_throws ArgumentError op(1//2, -1//2, 5//2)
+        @test_throws ArgumentError op(1//2, 9//2, 5//2)
+        # The empty range ℓₘₐₓ = ℓₘᵢₙ-1 is legal, and gives an empty matrix
+        @test size(op(5, 5, 4)) == (0, 0)
+        @test size(op(1//2, 7//2, 5//2)) == (0, 0)
+    end
+end

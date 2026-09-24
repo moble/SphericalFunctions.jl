@@ -16,6 +16,10 @@ on:
 env:
   JULIA_NUM_THREADS: auto
 
+permissions:
+  actions: write  # needed by julia-actions/cache to delete old caches it has created
+  contents: read
+
 jobs:
 
   tests:
@@ -32,7 +36,7 @@ jobs:
           - macOS-latest
           - windows-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
@@ -53,7 +57,7 @@ jobs:
     name: Documentation build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: julia-actions/setup-julia@v2
         with:
           version: '1'
@@ -61,8 +65,8 @@ jobs:
       - uses: julia-actions/cache@v3
       - uses: julia-actions/julia-buildpkg@v1
       - name: Build docs (no deploy)
-        # `deploydocs` does nothing for a scheduled or manual run, so this only checks that
-        # the documentation builds.
+        # No deploy credentials are passed, so `deploydocs` cannot push; this step only checks
+        # that the documentation builds.
         run: |
           julia --project=docs -e 'using Pkg; Pkg.instantiate()'
           julia --project=docs --color=yes docs/make.jl

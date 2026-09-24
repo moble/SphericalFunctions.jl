@@ -15,8 +15,9 @@
 # ulps `±ceil(abs(s))` — is an `Int` for either kind, so the workers need no branch on the
 # kind and the integer path is exactly what it was.  A spin weight with |s| > ℓₘₐₓ describes
 # no modes at all, and all of these functions refuse it with the same message before any
-# point is placed.  The Driscoll–Healy and McEwen–Wiaux grids further down take integer indices
-# only: they do not depend on `s` at all, and no transform defaults to them.
+# point is placed.  The Driscoll–Healy and McEwen–Wiaux grids further down are defined for an
+# integer band limit only (see `check_equiangular_band_limit`), and no transform defaults to
+# them.
 
 @doc raw"""
     golden_ratio_spiral_pixels(s, ℓₘₐₓ, [T=Float64])
@@ -265,8 +266,12 @@ rule, using weights provided by [`fejer1`](@ref).
 
 Note that the first argument to this function is `N`, rather than the `ℓₘₐₓ` used in some
 other functions.  For spin-weighted spherical harmonics, you may want to use `N=2ℓₘₐₓ+1`.
+The number of rings `N` must be at least 1.
 """
 function fejer1_rings(N, ::Type{T}=Float64) where T
+    if N < 1
+        throw(ArgumentError("`fejer1_rings` needs at least one ring; got N=$N."))
+    end
     # Eq. (12) of Reinecke and Seljebotn
     let π = T(π)
         [(2n+1)*π/2N for n ∈ 0:N-1]
@@ -281,8 +286,12 @@ rule, using weights provided by [`fejer2`](@ref).
 
 Note that the first argument to this function is `N`, rather than the `ℓₘₐₓ` used in some
 other functions.  For spin-weighted spherical harmonics, you may want to use `N=2ℓₘₐₓ+1`.
+The number of rings `N` must be at least 1.
 """
 function fejer2_rings(N, ::Type{T}=Float64) where T
+    if N < 1
+        throw(ArgumentError("`fejer2_rings` needs at least one ring; got N=$N."))
+    end
     # Eq. (13) of Reinecke and Seljebotn, with N adjusted to reflect actual number of elements
     let π = T(π)
         [n*π/(N+1) for n ∈ 1:N]
@@ -297,12 +306,45 @@ Clenshaw-Curtis rule, using weights provided by [`clenshaw_curtis`](@ref).
 
 Note that the first argument to this function is `N`, rather than the `ℓₘₐₓ` used in some
 other functions.  For spin-weighted spherical harmonics, you may want to use `N=2ℓₘₐₓ+1`.
+The number of rings `N` must be at least 2, since the rings include both poles.
 """
 function clenshaw_curtis_rings(N, ::Type{T}=Float64) where T
+    if N < 2
+        throw(ArgumentError(
+            "`clenshaw_curtis_rings` needs at least two rings, one at each pole; got N=$N."
+        ))
+    end
     # Eq. (14) of Reinecke and Seljebotn, with N adjusted to reflect actual number of elements
     let π = T(π)
         [n*π/(N-1) for n ∈ 0:N-1]
     end
+end
+
+# The two equiangular grids below are defined for an integer band limit only.  The band limit
+# is checked at run time rather than through the signature, so that a `Rational`, a
+# `HalfOddInteger` or a float is answered with an explanation rather than a bare
+# `MethodError`, and the half-integer case, which every other pixelization accepts, names the
+# ones to use instead.  The spin weight is not used by either grid, and is not checked.
+function check_equiangular_band_limit(grid, ℓₘₐₓ)
+    if ℓₘₐₓ isa Union{Rational, HalfOddInteger}
+        throw(ArgumentError(
+            "The $grid grid is defined only for an integer band limit, passed as an `Integer`; "
+            * "got ℓₘₐₓ=$ℓₘₐₓ.  Functions of half-integer spin may be sampled with "
+            * "`golden_ratio_spiral_pixels`, `leja_pixels` or `sorted_ring_pixels`."
+        ))
+    end
+    if !(ℓₘₐₓ isa Integer)
+        throw(ArgumentError(
+            "The $grid grid needs a band limit ℓₘₐₓ that is a non-negative `Integer`; got "
+            * "ℓₘₐₓ=$ℓₘₐₓ of type $(typeof(ℓₘₐₓ))."
+        ))
+    end
+    if ℓₘₐₓ < 0
+        throw(ArgumentError(
+            "The $grid grid needs a non-negative band limit; got ℓₘₐₓ=$ℓₘₐₓ."
+        ))
+    end
+    nothing
 end
 
 @doc raw"""
@@ -315,6 +357,11 @@ Cover the sphere 𝕊² with pixels given by the [DriscollHealy_1994](@citet) eq
 > ``i = 0, \ldots, 2b-1``, ``j = 0, \ldots, 2b-1``, where ``θ_i = π i/2b`` and
 > ``ϕ_j = π j/b``.
 
+The band limit here is ``b = ℓₘₐₓ + 1``, and `ℓₘₐₓ` must be a non-negative `Integer`.  The
+grid is defined for integer indices only; functions of half-integer spin are sampled with
+[`golden_ratio_spiral_pixels`](@ref), [`leja_pixels`](@ref) or [`sorted_ring_pixels`](@ref)
+instead.
+
 The returned quantity is a vector of 2-SVectors providing the spherical coordinates of each
 pixel.  See also [`driscoll_healy_rotors`](@ref) for the corresponding `Rotor`s.
 
@@ -323,6 +370,7 @@ pixel.  See also [`driscoll_healy_rotors`](@ref) for the corresponding `Rotor`s.
     other pixelization functions.
 """
 function driscoll_healy_pixels(s, ℓₘₐₓ, ::Type{T}=Float64) where T
+    check_equiangular_band_limit("Driscoll–Healy", ℓₘₐₓ)
     let π = T(π)
         b = ℓₘₐₓ + 1
         [
@@ -363,6 +411,11 @@ They consider "signals on the sphere bandlimited at ``L``, that is signals such 
 > \frac{π(2t+1)}{2L-1}``, where ``t ∈ \{0, 1, …, L-1\}`` […] and ``ϕ_p = \frac{2πp}{2L-1}``,
 > where ``p ∈ \{0, 1, …, 2L-2\}``.
 
+The band limit `ℓₘₐₓ` must be a non-negative `Integer`.  The grid is defined for integer
+indices only; functions of half-integer spin are sampled with
+[`golden_ratio_spiral_pixels`](@ref), [`leja_pixels`](@ref) or [`sorted_ring_pixels`](@ref)
+instead.
+
 These are the ``L(2L-1)`` points returned, ordered with ``ϕ`` varying fastest.  The last ring,
 ``t = L-1``, lies at the south pole ``θ = π``, and all ``2L-1`` of its points are included, as
 distinct rotors that differ by a rotation about the pole; McEwen and Wiaux count the pole once,
@@ -375,6 +428,7 @@ further sample positions on the sphere, and are not returned.
     other pixelization functions.
 """
 function mcewen_wiaux_pixels(s, ℓₘₐₓ, ::Type{T}=Float64) where T
+    check_equiangular_band_limit("McEwen–Wiaux", ℓₘₐₓ)
     let π = T(π), L = ℓₘₐₓ + 1
         # The ratio is formed first, so that it is exactly 1 on the last ring, which is then
         # exactly at the south pole rather than an ulp to either side of it.

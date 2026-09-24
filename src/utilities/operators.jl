@@ -205,6 +205,10 @@ function (op::DifferentialOperator)(s::IndexArgument, ℓₘₐₓ::IndexArgumen
     op(s, abs(s), ℓₘₐₓ, T)
 end
 function (op::DifferentialOperator)(s::IT, ℓₘᵢₙ::IT, ℓₘₐₓ::IT, ::Type{T}) where {IT<:IntegerHalf, T}
+    # The range of ℓ is validated here, for every band structure alike: the diagonal builder
+    # never calls `Ysize`, and would otherwise read a negative ℓₘᵢₙ as 0 and an inverted
+    # range as an empty one.
+    Ysize(ℓₘᵢₙ, ℓₘₐₓ)
     operator_matrix(op, bandstructure(op), s, ℓₘᵢₙ, ℓₘₐₓ, T)
 end
 

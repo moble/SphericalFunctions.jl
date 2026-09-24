@@ -4,6 +4,10 @@ on:
     types:
       - created
   workflow_dispatch:
+# There is deliberately no `permissions:` block here.  TagBot's documentation asks for the
+# repository's default token permissions instead, which must allow workflows to write to the
+# repository (Settings → Actions → General → Workflow permissions) so that TagBot can push
+# tags and create releases.
 jobs:
   TagBot:
     if: github.event_name == 'workflow_dispatch' || github.actor == 'JuliaTagBot'

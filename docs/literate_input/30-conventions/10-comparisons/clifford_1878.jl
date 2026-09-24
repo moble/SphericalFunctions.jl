@@ -40,6 +40,8 @@ space.)
 
 Clifford — like Hamilton and Tait — failed to recognize the vital importance of conjugation
 (or "sandwiching") when using quaternions to represent rotations; presumably by analogy with
-complex numbers, he only considered left-multiplication by a quaternion as the operation 
+complex numbers, he only considered left-multiplication by a single quaternion as the
+operation of interest.  As we now understand it, that operation maps a vector into a more
+general odd-grade multivector, and so cannot be a rotation.
 
 """

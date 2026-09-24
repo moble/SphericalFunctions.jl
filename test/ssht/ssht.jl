@@ -1308,3 +1308,83 @@ end
         @test X ≈ hcat(f, 2f) atol=2ϵ
     end
 end
+
+
+@testitem "SSHTRS: rings without their weights are refused, and an inexact rule warns" begin
+    import SphericalFunctions: SSHT, SSHTRS
+    import SphericalFunctions: fejer1_rings, fejer2_rings, clenshaw_curtis_rings
+    import SphericalFunctions: fejer1, fejer2, clenshaw_curtis
+    using DoubleFloats: Double64
+
+    # The weights belong to the rule that placed the rings, and only the caller knows which
+    # rule that was
+    @test_throws ArgumentError SSHTRS(1, 4; θ=clenshaw_curtis_rings(9))
+    @test_throws ArgumentError SSHTRS(1, 4; θ=fejer1_rings(11))
+    @test_throws ArgumentError SSHT(1, 4; θ=clenshaw_curtis_rings(9))
+    @test_throws ArgumentError SSHTRS(1//2, 7//2; θ=fejer2_rings(8))
+    @test_throws "quadrature_weights" SSHTRS(1, 4; θ=clenshaw_curtis_rings(9))
+
+    # The analysis is exact only when the rule integrates polynomials of degree 2ℓₘₐₓ in cos θ,
+    # which too few rings cannot do, and which one rule's weights on another's rings do not
+    @test_logs (:warn, r"exact") SSHTRS(1, 4; θ=fejer1_rings(5), quadrature_weights=fejer1(5))
+    @test_logs (:warn, r"exact") SSHTRS(
+        1, 4; θ=clenshaw_curtis_rings(9), quadrature_weights=fejer1(9)
+    )
+    @test_logs (:warn, r"exact") SSHTRS(
+        1//2, 7//2; θ=fejer1_rings(6), quadrature_weights=fejer1(6)
+    )
+    # For a half-odd ℓₘₐₓ the degree 2ℓₘₐₓ is odd, and a rule symmetric about the equator
+    # integrates odd degrees exactly, so 2ℓₘₐₓ of its rings suffice (measured: a round trip at
+    # ℓₘₐₓ = 7/2 on 7 Fejér rings is exact to 1e-15, and wrong by 4e-2 on 6)
+    @test_logs SSHTRS(1//2, 7//2; θ=fejer1_rings(7), quadrature_weights=fejer1(7))
+    @test_logs SSHTRS(1//2, 7//2; θ=fejer2_rings(7), quadrature_weights=fejer2(7))
+
+    # Exact rules raise no warning, at any size and in any of the types the transforms are
+    # tested in
+    for T ∈ (Float64, Float32, Double64), (s, ℓₘₐₓ) ∈ ((0, 0), (1, 4), (-2, 12), (1//2, 7//2))
+        N = Int(2ℓₘₐₓ + 1)
+        @test_logs SSHTRS(s, ℓₘₐₓ; T)
+        @test_logs SSHTRS(s, ℓₘₐₓ; T, θ=fejer1_rings(N, T), quadrature_weights=fejer1(N, T))
+        @test_logs SSHTRS(s, ℓₘₐₓ; T, θ=fejer2_rings(N, T), quadrature_weights=fejer2(N, T))
+        @test_logs SSHTRS(
+            s, ℓₘₐₓ; T, θ=fejer1_rings(N + 3, T), quadrature_weights=fejer1(N + 3, T)
+        )
+        if N ≥ 2
+            @test_logs SSHTRS(
+                s, ℓₘₐₓ; T, θ=clenshaw_curtis_rings(N, T), quadrature_weights=clenshaw_curtis(N, T)
+            )
+        end
+    end
+end
+
+
+@testitem "SSHT: three-argument mul! and ldiv! refuse mismatched trailing dimensions" begin
+    import SphericalFunctions: SSHT
+    import SphericalFunctions: nmodes, npixels  # unexported
+    using LinearAlgebra: mul!, ldiv!
+    using Random
+
+    rng = Random.Xoshiro(2718)
+
+    # Every method transforms each column of the trailing dimensions separately, so the input
+    # and the output must agree in them; broadcasting would otherwise copy one input column
+    # into every column of the output, or fail with a message that says nothing of the
+    # transform.
+    for method ∈ ("RS", "Minimal", "Matrix"), (s, ℓₘₐₓ) ∈ ((1, 4), (-2, 3))
+        kw = method == "RS" ? (;) : (; inplace=false)
+        𝒯 = SSHT(s, ℓₘₐₓ; method, kw...)
+        n, N = nmodes(𝒯), npixels(𝒯)
+        calls = (
+            () -> mul!(zeros(ComplexF64, N, 3), 𝒯, randn(rng, ComplexF64, n)),
+            () -> mul!(zeros(ComplexF64, N), 𝒯, randn(rng, ComplexF64, n, 3)),
+            () -> mul!(zeros(ComplexF64, N, 2), 𝒯, randn(rng, ComplexF64, n, 3)),
+            () -> ldiv!(zeros(ComplexF64, n, 3), 𝒯, randn(rng, ComplexF64, N)),
+            () -> ldiv!(zeros(ComplexF64, n), 𝒯, randn(rng, ComplexF64, N, 3)),
+            () -> ldiv!(zeros(ComplexF64, n, 2), 𝒯, randn(rng, ComplexF64, N, 3)),
+        )
+        for call ∈ calls
+            @test_throws DimensionMismatch call()
+            @test_throws "Trailing dimensions" call()
+        end
+    end
+end

@@ -6,7 +6,6 @@ on:
     tags: ['*']
   pull_request:
   workflow_dispatch:
-  release:
 
 env:
   JULIA_NUM_THREADS: auto
@@ -19,6 +18,9 @@ jobs:
         !contains(github.ref, 'refs/tags/')
         && !contains(github.event.head_commit.message, '[skip ci]')
         && !contains(github.event.head_commit.message, '[skip tests]')
+    permissions:
+      actions: write  # needed by julia-actions/cache to delete old caches it has created
+      contents: read
     strategy:
       matrix:
         version:
@@ -27,20 +29,22 @@ jobs:
         os:
           - ubuntu-latest
         include:
+          - os: ubuntu-latest
+            version: 'lts'
           - os: windows-latest
             version: '1'
           - os: macOS-latest
             version: '1'
     steps:
       - uses: actions/checkout@v7
-      - uses: julia-actions/setup-julia@v1
+      - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
           show-versioninfo: true
       - uses: julia-actions/cache@v3
       - uses: julia-actions/julia-buildpkg@v1
-      - uses: julia-actions/julia-runtest@latest
-      - uses: julia-actions/julia-processcoverage@latest
+      - uses: julia-actions/julia-runtest@v1
+      - uses: julia-actions/julia-processcoverage@v1
       - uses: codecov/codecov-action@v7
         if: "matrix.version == '1' && matrix.os == 'ubuntu-latest'"
         with:

@@ -137,15 +137,18 @@ Note the two differences from [our definition](@ref summary_wigner_D): the argum
 *inverse* rotation, and the phases are ``e^{+im'γ}`` and ``e^{+imα}`` rather than
 ``e^{-im'α}`` and ``e^{-imγ}``.  Finally, they derive [Eq. (3.9)]
 ```math
+\begin{aligned}
 D^{j}_{m', m}(α, β, γ)
-=
+&=
 \left[\frac{(j+m)!(j-m)!}{(j+m')!(j-m')!}\right]^{1/2}
 (\sin \tfrac{1}{2}β)^{2j}
+\\ &\times
 \sum_r \binom{j+m'}{r} \binom{j-m'}{r-m-m'}
 (-1)^{j+m'-r}
 e^{imα}
 (\cot \tfrac{1}{2}β)^{2r-m-m'}
 e^{im'γ}.
+\end{aligned}
 ```
 Comparing to our ``𝔇``, we find (and test below) that
 ```math

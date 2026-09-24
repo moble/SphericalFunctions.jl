@@ -377,6 +377,15 @@ mutable struct HAxis{IT, RT} <: AbstractWignerMatrix{IT, RT, FixedSizeVectorDefa
     const maxℓ::IT
     ℓ::IT
     function HAxis(::Type{RT}, Nᵣ::Int, ℓₘₐₓ::IT) where {IT, RT<:Real}
+        # An axis starts at ℓₘᵢₙ, and the natural-index accessors check an index only against
+        # the current ℓ before reading the storage under `@inbounds`, so the storage must hold
+        # at least that one order, for at least one rotor.
+        if Nᵣ < 1
+            throw(ArgumentError("Number of rotors Nᵣ=$Nᵣ must be at least 1."))
+        end
+        if ℓₘₐₓ < ℓₘᵢₙ(IT)
+            throw(ArgumentError("ℓₘₐₓ=$ℓₘₐₓ must be at least ℓₘᵢₙ=$(ℓₘᵢₙ(IT))."))
+        end
         H = FixedSizeVector{RT}(undef, Nᵣ * (Int(ℓₘₐₓ - ℓₘᵢₙ(IT)) + 1))
         new{IT, RT}(H, Nᵣ, ℓₘₐₓ, ℓₘᵢₙ(IT))
     end

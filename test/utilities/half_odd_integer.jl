@@ -292,3 +292,34 @@ end
     end
     @test_throws MethodError Double64(h(1//2))  # the ambiguity `index_value` exists to avoid
 end
+
+@testitem "HalfOddInteger: hashing agrees with Rational" begin
+    using SphericalFunctions: HalfOddInteger, Yrange, Ysize, Yindex
+
+    h = HalfOddInteger
+
+    # A half-odd-integer is `isequal` to the `Rational` of the same value, so the two must
+    # hash alike, and so must the `Float64`, which is `isequal` to the `Rational`
+    for x ∈ (1//2, -1//2, 7//2, -7//2, 101//2, -2001//2)
+        @test isequal(h(x), x)
+        @test hash(h(x)) == hash(x) == hash(float(x))
+        @test hash(h(x), UInt(1729)) == hash(x, UInt(1729))
+    end
+    @test hash(h(1//2)) != hash(h(3//2))
+    @test hash(h(1//2)) != hash(h(-1//2))
+
+    # The index values the package hands back can therefore be collected, deduplicated and
+    # used as keys, as integer indices can
+    r = Yrange(1//2, 25//2)
+    @test allunique(r)
+    @test length(Set(r)) == length(r) == Ysize(1//2, 25//2)
+    @test length(unique(vcat(r, r))) == length(r)
+    @test Rational.(unique(first.(r))) == [(2k + 1)//2 for k ∈ 0:12]
+    @test unique([h(1//2), h(1//2), h(3//2)]) == [h(1//2), h(3//2)]
+    positions = Dict(zip(r, eachindex(r)))
+    @test positions[(h(3//2), h(-1//2))] == Yindex(3//2, -1//2)
+    # ... and a key finds the equal value of the other type
+    @test positions[(3//2, -1//2)] == Yindex(3//2, -1//2)
+    @test Dict(7//2 => 1)[h(7//2)] == 1
+    @test h(7//2) ∈ Set([7//2])
+end

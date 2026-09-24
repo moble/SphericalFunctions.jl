@@ -384,6 +384,7 @@ end
 function LinearAlgebra.mul!(f, 𝒯::SSHTMinimal, f̃)
     check_modes(𝒯, f̃)
     check_pixels(𝒯, f)
+    check_trailing(f, f̃)
     f .= array_view(f̃)
     mul!(𝒯, f)
 end
@@ -425,6 +426,7 @@ function LinearAlgebra.ldiv!(f̃, 𝒯::SSHTMinimal, f)
     f̃ = analysis_output(𝒯, f̃, f)
     check_modes(𝒯, f̃)
     check_pixels(𝒯, f)
+    check_trailing(f, f̃)
     array_view(f̃) .= f
     ldiv!(𝒯, array_view(f̃))
     f̃

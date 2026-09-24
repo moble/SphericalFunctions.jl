@@ -152,6 +152,12 @@ end
 @inline Base.:(==)(a::HalfOddInteger, x::Rational) = denominator(x) == 2 && a.numerator == numerator(x)
 @inline Base.:(==)(x::Rational, a::HalfOddInteger) = a == x
 
+# `isequal` follows `==`, so a half-odd-integer that is `isequal` to a `Rational` must hash as
+# that `Rational` does, or a `Dict` or `Set` keyed by one would not find the other.  Hashing
+# the `Rational` itself makes the two agree by construction, and agree with the hash of the
+# equal `Float64` too, because `Base` makes the hashes of `Rational`s and floats agree.
+Base.hash(a::HalfOddInteger, h::UInt) = hash(Rational(a), h)
+
 # `ε(m) = (-1)^⌊m⌋` needs the floor, and this is the one expression that serves both index
 # types, so that the recurrences need no `IT`-dependent branch for it.
 @inline Base.floor(::Type{T}, a::HalfOddInteger) where {T<:Integer} = T((a.numerator - 1) >> 1)

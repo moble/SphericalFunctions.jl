@@ -29,6 +29,28 @@ struct HarmonicCalculator{IT, RT<:Real, NT<:Union{RT, Complex{RT}}, ST, S, B}
     s::S
     ℓ::Base.RefValue{IT}  # ℓ of the block currently in Yˡ; ℓₘᵢₙ-1 if none
     phases::Base.RefValue{Bool}  # false when the rotor data are angles θ (ϕ = γ = 0)
+    # `materialize!` writes `Yˡ` and reads the power tables under `@inbounds`, for every rotor
+    # of `H`, every spin weight served and every m up to ℓₘₐₓ, so the buffers must be large
+    # enough for those; as for `HCalculator`, this checks them once, as they are brought
+    # together.
+    function HarmonicCalculator{IT, RT, NT, ST, S, B}(
+        H, Yˡ, Z₊, Z₋, s, ℓ, phases
+    ) where {IT, RT<:Real, NT<:Union{RT, Complex{RT}}, ST, S, B}
+        let n = Nᵣ(H), M = 2ℓₘₐₓ(H) + 1, K = NT <: Complex ? 2ℓₘₐₓ(H) + 1 : 0
+            if !(
+                size(Yˡ, 1) ≥ n && size(Yˡ, 2) ≥ nspins(s) && size(Yˡ, 3) ≥ M
+                && size(Z₊, 1) ≥ K && size(Z₊, 2) ≥ n && size(Z₋, 1) ≥ K && size(Z₋, 2) ≥ n
+            )
+                throw(DimensionMismatch(
+                    "The buffers of a $(flavor_name(NT)) for Nᵣ=$n rotors, the spin weights "
+                    * "$s and ℓₘₐₓ=$(ℓₘₐₓ(H)) are too small: the block has size $(size(Yˡ)), "
+                    * "and the power tables $(size(Z₊)) and $(size(Z₋)), which need at least "
+                    * "$K rows."
+                ))
+            end
+        end
+        new{IT, RT, NT, ST, S, B}(H, Yˡ, Z₊, Z₋, s, ℓ, phases)
+    end
 end
 
 """
@@ -295,6 +317,9 @@ end
 
 ### Rotor data: full rotors (as for 𝔇), or angles θ meaning (θ, ϕ=0)
 
+# The `HCalculator` validates everything before it replaces anything, so if it refuses the
+# angles this calculator is left exactly as it was, and its own state is reset only once the
+# new data are in place.
 function set_rotors!(c::HarmonicCalculator{IT, RT}, θ::AbstractVector{<:Real}) where {IT, RT<:Real}
     set_rotors!(c.H, θ)
     c.phases[] = false
@@ -314,6 +339,10 @@ function set_rotors!(c::sYlmCalculator{IT, RT}, R::AbstractVector{<:Rotor}) wher
     if length(R) != Nᵣ(c)
         error("Expected $(Nᵣ(c)) rotors (Nᵣ), but got $(length(R)).")
     end
+    # As in `set_rotors!(::HCalculator, …)`: every rotor is acceptable, and the results are
+    # marked invalid before the first one is replaced.
+    c.H.axes_valid[] = false
+    c.ℓ[] = ℓₘᵢₙ(IT) - 1
     @inbounds for i ∈ eachindex(R)
         eⁱᵝ, z₊, z₋, cβ½, sβ½ = spinor_phases(R[i], RT)
         c.H.eⁱᵝ[i] = eⁱᵝ
@@ -321,9 +350,7 @@ function set_rotors!(c::sYlmCalculator{IT, RT}, R::AbstractVector{<:Rotor}) wher
         complex_powers!(view(c.Z₊, :, i), z₊)
         complex_powers!(view(c.Z₋, :, i), z₋)
     end
-    c.H.axes_valid[] = false
     c.phases[] = true
-    c.ℓ[] = ℓₘᵢₙ(IT) - 1
     c
 end
 function set_rotors!(c::sYlmCalculator{IT, RT}, R::Rotor) where {IT, RT<:Real}

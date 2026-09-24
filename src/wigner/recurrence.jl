@@ -1,5 +1,22 @@
 # `sgn`, `ϵ` and `δ²` are defined in `wigner_H.jl`.
 
+# The functions in this file loop over every m of a block's ℓ, and take m′ₘᵢₙ to be -m′ₘₐₓ,
+# under `@inbounds`, and the `WignerMatrix` accessors are `@propagate_inbounds`, so the
+# container's own bounds check is elided along with the storage's.  Each function therefore
+# refuses, before it writes anything, a block that does not have the full range of m and a
+# symmetric range of m′.  (The batched engine in `wigner_H_calculator.jl`, which is what the
+# package itself runs, has no such restriction.)
+function check_dense_block(Hˡ::WignerMatrix, name::Symbol)
+    if !(mₘᵢₙ(Hˡ) == -ℓ(Hˡ) && mₘₐₓ(Hˡ) == ℓ(Hˡ) && m′ₘᵢₙ(Hˡ) == -m′ₘₐₓ(Hˡ))
+        throw(ArgumentError(
+            "`$name` needs a block with the full range m ∈ -ℓ:ℓ and a symmetric range of "
+            * "m′; this one has ℓ=$(ℓ(Hˡ)), m′ ∈ $(m′ₘᵢₙ(Hˡ)):$(m′ₘₐₓ(Hˡ)) and "
+            * "m ∈ $(mₘᵢₙ(Hˡ)):$(mₘₐₓ(Hˡ))."
+        ))
+    end
+    nothing
+end
+
 
 @doc raw"""
     recurrence_step1!(H⁰)
@@ -8,9 +25,13 @@ Initialize the Wigner matrix `H⁰` for the recurrence relations.  This only set
 `H⁰[0,0]=1`.
 
 Note that `H⁰` can be any `WignerMatrix` with integer indices — the only container indexed
-by `(m′, m)`.  In particular, it can be a `D` matrix or a `d` matrix.
+by `(m′, m)`.  In particular, it can be a `D` matrix or a `d` matrix.  As for the other dense
+reference functions (`recurrence_step2!` to `recurrence_step6!`, `convert_H_to_d!` and
+`convert_H_to_D!`), the block must have the full range of ``m`` and a symmetric range of
+``m′``.
 """
 function recurrence_step1!(H⁰::WignerMatrix{IT, NT}) where {IT<:Signed, NT}
+    check_dense_block(H⁰, :recurrence_step1!)
     @inbounds let ℓ=ℓ(H⁰)
         if ℓ == 0
             H⁰[0, 0] = 1
@@ -31,6 +52,8 @@ Compute the values of ``H^{ℓ}_{0,m}``, from the values of ``H^{ℓ-1}_{0,m}`` 
 function recurrence_step2!(
     Hˡ::WignerMatrix{IT, NT}, Hˡ⁻¹::WignerMatrix{IT, NT2}, sinβ::T, cosβ::T
 ) where {IT<:Signed, NT, NT2, T}
+    check_dense_block(Hˡ, :recurrence_step2!)
+    check_dense_block(Hˡ⁻¹, :recurrence_step2!)
     @assert ℓ(Hˡ⁻¹) == ℓ(Hˡ) - 1
     # Note that in this step only, we use notation derived from Xing et al., denoting the
     # coefficients as b̄ₗ, c̄ₗₘ, d̄ₗₘ, ēₗₘ.  In the following steps, we will use notation
@@ -86,6 +109,8 @@ Compute the values of ``H^{ℓ}_{1,m}``, from the values of ``H^{ℓ+1}_{0,m}`` 
 function recurrence_step3!(
     Hˡ::WignerMatrix{IT, NT}, Hˡ⁺¹::WignerMatrix{IT, NT2}, sinβ::T, cosβ::T
 ) where {IT<:Signed, NT, NT2, T}
+    check_dense_block(Hˡ, :recurrence_step3!)
+    check_dense_block(Hˡ⁺¹, :recurrence_step3!)
     @assert ℓ(Hˡ⁺¹) == ℓ(Hˡ) + 1
     @inbounds let √=sqrt∘T, ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
         if ℓ > 0 && m′ₘₐₓ ≥ 1
@@ -115,6 +140,7 @@ Compute the values of ``H^{ℓ}_{m'+1,m}``, from the values of ``H^{ℓ}_{m',m-1
 function recurrence_step4!(
     Hˡ::WignerMatrix{IT, NT}, sinβ::T, cosβ::T
 ) where {IT<:Signed, NT, T}
+    check_dense_block(Hˡ, :recurrence_step4!)
     @inbounds let √=sqrt∘T, ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
         for m′ ∈ 1:min(ℓ, m′ₘₐₓ)-1
             # Note that the signs of m′ and m are always +1 for *integer* indices, so we
@@ -155,6 +181,7 @@ Compute the values of ``H^{ℓ}_{m'-1,m}``, from the values of ``H^{ℓ}_{m',m-1
 function recurrence_step5!(
     Hˡ::WignerMatrix{IT, NT}, sinβ::T, cosβ::T
 ) where {IT<:Signed, NT, T}
+    check_dense_block(Hˡ, :recurrence_step5!)
     @inbounds let √=sqrt∘T, ℓ=ℓ(Hˡ), m′ₘᵢₙ=m′ₘᵢₙ(Hˡ)
         for m′ ∈ 0:-1:max(-ℓ, m′ₘᵢₙ)+1
             d̄ₗᵐ′ = sgn(m′) * √((ℓ-m′)*(ℓ+m′+1))
@@ -209,6 +236,7 @@ H^ℓ_{m′, m} &= H^ℓ_{-m′, -m}.
 
 """
 function recurrence_step6!(Hˡ::WignerMatrix{IT, NT}) where {IT<:Signed, NT}
+    check_dense_block(Hˡ, :recurrence_step6!)
     @inbounds let ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
         # The idea here is to impose
         #   Hˡ[m, m′] = Hˡ[-m, -m′] = Hˡ[-m′, -m] = Hˡ[m′, m]
@@ -241,6 +269,7 @@ signs related to the `m′` and `m` indices.
 
 """
 function convert_H_to_d!(Hˡ::WignerMatrix{IT, NT}) where {IT<:Signed, NT<:Real}
+    check_dense_block(Hˡ, :convert_H_to_d!)
     @inbounds let ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
         for m ∈ -ℓ:ℓ
             for m′ ∈ -m′ₘₐₓ:m′ₘₐₓ
@@ -265,6 +294,7 @@ function convert_H_to_D!(Hˡ::WignerMatrix{IT, NT}, eⁱᵅ::NT, eⁱᵞ::NT) wh
     # m′ ± m *are* integers, so e^{i(m′α+mγ)} = z₊^{m′+m} z₋^{m′-m} with
     # z₊ = e^{i(α+γ)/2}, z₋ = e^{i(α-γ)/2} (the v3 design memo, §5.4).  That is what the
     # batched `materialize!` implements, for both index types at once.
+    check_dense_block(Hˡ, :convert_H_to_D!)
     @inbounds let ℓ=ℓ(Hˡ), ℓₘᵢₙ=ℓₘᵢₙ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
         ϕᵞ = ComplexPowers(eⁱᵞ)
         ϕᵅ = ComplexPowers(eⁱᵅ)

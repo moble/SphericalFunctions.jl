@@ -182,14 +182,16 @@ except where otherwise noted.  Three things do not accept them.
 [`Ylm`](@ref) is integer-only, because the ordinary spherical
 harmonics are the spin-weight-zero members of the family, and no
 half-integer series contains ``s = 0``.  The two equiangular grids,
-`driscoll_healy_pixels` and `mcewen_wiaux_pixels`, take an integer
-band limit, since they ignore the spin weight and no transform uses
-them by default.  And the `"Minimal"` transform method is
-integer-only, because its bookkeeping of rings and aliased modes is
-written for integer indices and has not *yet* been extended;
-`SSHT(1//2, 7//2; method="Minimal")` is refused with a message naming
-the `"RS"` and `"Matrix"` methods, which do accept half-integer
-indices.
+`driscoll_healy_pixels` and `mcewen_wiaux_pixels` (with their
+`_rotors` counterparts), take only an integer band limit, since they
+ignore the spin weight and no transform uses them by default; a
+half-integer band limit is refused with a message pointing to the
+golden-ratio, Leja, and sorted-ring pixelizations, which *do* accept
+one.  And the `"Minimal"` transform method is integer-only, because
+its bookkeeping of rings and aliased modes is written for integer
+indices and has not *yet* been extended; `SSHT(1//2, 7//2;
+method="Minimal")` is refused with a message naming the `"RS"` and
+`"Matrix"` methods, which do accept half-integer indices.
 
 
 ## Docstrings
