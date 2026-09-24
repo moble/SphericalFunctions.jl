@@ -18,6 +18,14 @@ using DocumenterCodeBlocks
 docs_src_dir = joinpath(@__DIR__, "src")
 package_root = dirname(@__DIR__)
 
+# The pages in a directory of `docs/src`, as paths relative to `docs/src`, sorted.  Only
+# Markdown files are pages: a directory can also hold files such as `.DS_Store`, which
+# Documenter would refuse.
+function markdown_pages(dir...; skip=())
+    files = readdir(joinpath(docs_src_dir, dir...))
+    [joinpath(dir..., f) for f ∈ sort(files) if endswith(f, ".md") && f ∉ skip]
+end
+
 # Documenter treats a broken doctest, a dead cross-reference or a missing docstring as an
 # error, by default.  That is what we want from a normal build and from CI, so the default
 # here is to fail.  While drafting, though, the `LiveServer` loop in `scripts/docs.jl` has
@@ -87,28 +95,16 @@ makedocs(
         "Conventions" => [
             "30-conventions/01-summary.md",
             "30-conventions/02-details.md",
-            "Comparisons" => map(
-                s -> joinpath("30-conventions", "10-comparisons", s),
-                sort(
-                    filter(
-                        s -> s != "lalsuite_SphericalHarmonics.md",
-                        readdir(joinpath(docs_src_dir, "30-conventions", "10-comparisons"))
-                    )
-                )
+            "Comparisons" => markdown_pages(
+                "30-conventions", "10-comparisons"; skip=("lalsuite_SphericalHarmonics.md",)
             ),
-            "Calculations" => map(
-                s -> joinpath("30-conventions", "20-calculations", s),
-                sort(readdir(joinpath(docs_src_dir, "30-conventions", "20-calculations")))
-            ),
+            "Calculations" => markdown_pages("30-conventions", "20-calculations"),
         ],
         "API" => [
             "40-api/01-internal.md",
             "40-api/02-functions.md",
         ],
-        "Notes" => map(
-            s -> joinpath("50-notes", s),
-            sort(readdir(joinpath(docs_src_dir, "50-notes")))
-        ),
+        "Notes" => markdown_pages("50-notes"),
         "Development" => [
             "60-development/01-index.md",
             "60-development/02-literate_testitems.md",

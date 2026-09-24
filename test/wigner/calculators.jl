@@ -494,11 +494,12 @@ end
         end
     end
 
-    # A DCalculator needs the full rotor, not just β
+    # A DCalculator needs the full rotor, not just β, and says what to use instead.  (Matching
+    # "Rotor" alone would not do: a bare `MethodError` lists candidates that mention it.)
     calcD = DCalculator(R, ℓₘₐₓ)
-    @test_throws "Rotor" recurrence!(calcD, 0.3, 0)
-    @test_throws "Rotor" recurrence!(calcD, cis(0.3), 0)
-    @test_throws "Rotor" recurrence!(calcD, [0.3], 0)
+    @test_throws "use a dCalculator if only β is available" recurrence!(calcD, 0.3, 0)
+    @test_throws "use a dCalculator if only β is available" recurrence!(calcD, cis(0.3), 0)
+    @test_throws "use a dCalculator if only β is available" recurrence!(calcD, [0.3], 0)
     # ... whereas a dCalculator accepts any of the three forms
     calcd = dCalculator(R, ℓₘₐₓ)
     for input in (0.3, cis(0.3), R)
@@ -742,4 +743,39 @@ end
             @test recurrence!(calc, IT(2)) == recurrence!(Ctor(R, 3), 2)
         end
     end
+end
+
+@testitem "Calculators: a vector of rotor data is a batch, however short" begin
+    import SphericalFunctions: DCalculator, dCalculator, sYlmCalculator, sλlmCalculator,
+        recurrence!, isbatched, sYlm, WignerMatrix, WignerMatrixBatch, DegreeBlock,
+        DegreeBlockBatch
+    using Quaternionic: from_euler_angles
+    using Test: @inferred
+
+    # Whether the blocks carry a rotor index is decided by whether the data is a vector, not by
+    # its length.  A one-element vector was once unbatched, so that a loop written for a batch
+    # failed only for batches of one, and `isbatched` of an `sYlm` result disagreed with the
+    # type of its blocks.
+    R = from_euler_angles(0.3, 0.7, 1.1)
+    @test !isbatched(DCalculator(R, 2)) && isbatched(DCalculator([R], 2))
+    @test recurrence!(DCalculator(R, 2), 2) isa WignerMatrix
+    𝔇ˡ = recurrence!(DCalculator([R], 2), 2)
+    @test 𝔇ˡ isa WignerMatrixBatch
+    @test 𝔇ˡ[1, 0, 0] == recurrence!(DCalculator(R, 2), 2)[0, 0]
+    @test isbatched(dCalculator([0.7], 2)) && !isbatched(dCalculator(0.7, 2))
+    @test isbatched(sYlmCalculator([R], 2, 0)) && !isbatched(sYlmCalculator(R, 2, 0))
+    @test recurrence!(sYlmCalculator([R], 2, 0), 2) isa DegreeBlockBatch
+    @test isbatched(sλlmCalculator([0.7], 2, 0))
+
+    # ... and the values `sYlm` returns say the same as their blocks
+    Y = sYlm([R], 2, 0)
+    @test isbatched(Y) && Y[2] isa DegreeBlockBatch
+    @test !isbatched(sYlm(R, 2, 0)) && sYlm(R, 2, 0)[2] isa DegreeBlock
+    @test isbatched(sYlm([R], 2, -1:1)) && !isbatched(sYlm(R, 2, -1:1))
+
+    # The batchedness is now known from the type of the argument, so construction is
+    # inferrable, and so is the block
+    @inferred DCalculator([R], 2)
+    @inferred DCalculator(R, 2)
+    @inferred recurrence!(DCalculator([R], 2), 2)
 end

@@ -289,15 +289,18 @@ end  #module Whittaker
 
 # ### Basis vectors and handedness
 #
-# We'll test that the angles the line makes with the axes are what Whittaker intended.
-# First, we need a sampling of "direction angles", which should be in the range ``[0, π]``.
-# This range is supplied by the `θrange` function:
-import Quaternionic: ⋅
-for (α,β,γ) ∈ Iterators.product(θrange(), θrange(), θrange())
-    l = Whittaker.line(α, β, γ)
-    @test acos(l ⋅ Whittaker.Ox) ≈ α atol=ϵₐ rtol=ϵᵣ
-    @test acos(l ⋅ Whittaker.Oy) ≈ β atol=ϵₐ rtol=ϵᵣ
-    @test acos(l ⋅ Whittaker.Oz) ≈ γ atol=ϵₐ rtol=ϵᵣ
+# We'll test that the angles the line makes with the axes are what Whittaker intended.  The
+# three direction angles of a line are not independent — their cosines are the components of
+# a unit vector, so the squares of the cosines sum to 1 — and for arbitrary angles `line` is
+# not a unit vector, and `acos(l ⋅ Ox)` is just `acos(cos(α))`.  So we start from a sampling
+# of unit vectors — the axes and their negatives, and random directions — measure the angle
+# each makes with the three axes, and check that `line` rebuilds the vector from those
+# angles.  (The `Utilities` function `v̂range` supplies the vectors, and needs the names
+# imported here.)
+import Quaternionic: Quaternionic, QuatVec, 𝐢, 𝐣, 𝐤, ⋅
+for v̂ ∈ v̂range(Float64)
+    α, β, γ = acos(v̂ ⋅ Whittaker.Ox), acos(v̂ ⋅ Whittaker.Oy), acos(v̂ ⋅ Whittaker.Oz)
+    @test Whittaker.line(α, β, γ) ≈ v̂ atol=ϵₐ rtol=ϵᵣ
 end
 #+
 

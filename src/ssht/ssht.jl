@@ -42,9 +42,23 @@ The available `method`s are
 The remaining keyword arguments are passed to the constructor of the chosen type.  Two of
 the types — `"Minimal"` and `"Matrix"` — also have an option to *always* act in place —
 meaning that they simply re-use the input storage, even in an expression like `𝒯 \ f`; this
-is the `inplace` keyword argument, and is part of the type of the resulting object.
+is the `inplace` keyword argument, and is part of the type of the resulting object.  Even
+then, the analysis of one-dimensional data returns a `ModeWeights`, as for every other
+method, but one that wraps the input's own storage, now holding the mode weights; and
+synthesis returns the storage itself, now holding the function values, as a plain array —
+not the `ModeWeights` that may have held the input, whose labels no longer describe it.
 Regardless of that option, `LinearAlgebra.mul!` and `LinearAlgebra.ldiv!` force operation in
-place for every type.
+place for every type.  The destination of `ldiv!(f̃, 𝒯, f)` for one-dimensional data may be a
+bare vector at least `nmodes(𝒯)` long, and the mode weights then come back as a `ModeWeights`
+over its first entries, rather than as the vector; `ldiv!(𝒯, x)` likewise returns a
+`ModeWeights` wrapping `x`.
+
+Sample data given as keyword arguments — the rotors `Rθϕ` of `"Matrix"`, and the
+colatitudes `θ` and `quadrature_weights` of `"RS"` and `"Minimal"` — must already be in the
+type `T` that the transform works in: rotors as `Rotor{T}`, and real numbers whose floating
+point type is `T`.  Anything else is refused rather than converted.  In particular a general
+`Quaternion` or a `QuatVec` is not taken for a rotor, and `BigFloat` data is not rounded to the
+default `T=Float64`; pass `T=BigFloat` to work in that type.
 
 An `SSHT` object holds preallocated workspace, so it must not be used from several threads
 at the same time; construct one object per thread.
@@ -65,6 +79,32 @@ rotor, and changes the sign.  The sampling requirements are otherwise unchanged 
 ``N_ϕ ≥ 2ℓₘₐₓ+1`` and ``N_θ ≥ 2ℓₘₐₓ+1``, both of which are even numbers when ``ℓₘₐₓ`` is a
 half-odd-integer.
 """
+# Sample data given to a transform must already be in the type `T` it works in.  Converting it
+# silently is how a `QuatVec` becomes a rotation by π about its own direction, an unnormalized
+# `Quaternion` scales every harmonic by a power of its norm, and `BigFloat` data is rounded to
+# `Float64`; so, as for the calculators (see `check_rotor_type`), anything else is refused and
+# the caller converts.  Integer colatitudes or weights convert exactly, and are accepted.
+function check_sample_rotors(::Type{T}, Rθϕ) where {T}
+    Rθϕ isa NonRotorData && error(not_a_rotor(Rθϕ))
+    if !(Rθϕ isa AbstractVector{Rotor{T}})
+        error(
+            "This transform works in $T, so `Rθϕ` must be a vector of `Rotor{$T}`s, but it is a "
+            * "$(typeof(Rθϕ)).  Pass `T` to work in another type, or convert the rotors."
+        )
+    end
+    nothing
+end
+function check_sample_reals(::Type{T}, x, name) where {T}
+    # (`float(Real) === Float64`, so the concreteness check is needed for a `Vector{Real}`.)
+    if !(x isa AbstractVector{<:Real} && isconcretetype(eltype(x)) && float(eltype(x)) === T)
+        error(
+            "This transform works in $T, so `$name` must be a vector of $T, but it is a "
+            * "$(typeof(x)).  Pass `T` to work in another type, or convert `$name`."
+        )
+    end
+    nothing
+end
+
 function SSHT(s::IndexArgument, ℓₘₐₓ::IndexArgument; method="RS", kwargs...)
     s, ℓₘₐₓ = transform_indices(s, ℓₘₐₓ)
     if method == "RS"
@@ -223,6 +263,41 @@ function mode_output(𝒯::SSHT{T}, f) where {T}
     end
 end
 pixel_output(𝒯::SSHT{T}, f̃) where {T} = Array{Complex{T}}(undef, npixels(𝒯), size(f̃)[2:end]...)
+
+# What the in-place `\` and `*` return, once they have overwritten their input's storage.
+# Analysis of one-dimensional data returns its mode weights as a `ModeWeights`, as every
+# other analysis does, but wrapping that same storage, so that nothing is copied and they are
+# still indexed by (ℓ, m); returned as the bare vector, `(𝒯 \ f)[ℓ, m]` would silently read
+# a linear index.  Synthesis returns the storage itself, as a plain array, and never a
+# `ModeWeights` that held the input, whose labels would no longer describe its contents.
+#
+# A least-squares `SSHTMatrix` has more points than modes, and its two-argument `ldiv!`
+# leaves the solution in the first `nmodes(𝒯)` entries of the longer input; only those are
+# labelled, or returned, rather than the whole array with its residual components.
+function in_place_modes(𝒯::SSHT, ff̃)
+    d = array_view(ff̃)
+    n = nmodes(𝒯)
+    if ndims(d) == 1
+        s, ℓₘᵢₙ, ℓₘₐₓ = 𝒯.s, abs(𝒯.s), 𝒯.ℓₘₐₓ
+        length(d) == n ? ModeWeights(d, s, ℓₘᵢₙ, ℓₘₐₓ) : mode_weights_view(d, s, ℓₘᵢₙ, ℓₘₐₓ)
+    else
+        size(d, 1) == n ? d : view(d, 1:n, ntuple(_ -> Colon(), ndims(d) - 1)...)
+    end
+end
+in_place_values(ff̃) = array_view(ff̃)
+
+# The output of a three-argument analysis, `ldiv!(f̃, 𝒯, f)`.  A `ModeWeights` is used as
+# given, and its labels are checked.  For one-dimensional data a bare vector may be longer
+# than needed, and is wrapped as a `ModeWeights` over its first `nmodes(𝒯)` entries — which
+# is then what comes back, labelled, rather than the vector.  Anything else must have
+# exactly the right shape, and comes back as it is.
+function analysis_output(𝒯::SSHT, f̃, f)
+    if f̃ isa AbstractVector && ndims(array_view(f)) == 1
+        mode_weights_view(f̃, 𝒯.s, abs(𝒯.s), 𝒯.ℓₘₐₓ)
+    else
+        f̃
+    end
+end
 
 
 include("matrix.jl")

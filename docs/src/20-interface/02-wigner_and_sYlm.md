@@ -239,6 +239,30 @@ these constructors — so computing in a wider type means building the
 rotor in that type, as in `sYlmCalculator(Rotor{BigFloat}(R), ℓₘₐₓ,
 s)`.
 
+!!! warning "Derivatives at β = 0 and β = π"
+    Derivatives taken with `ForwardDiff` come out as `NaN` exactly at
+    rotors with ``β = 0`` or ``β = π`` — the identity, rotations about
+    the ``z`` axis, and the harmonics at the poles — although ``𝔇``
+    is a smooth function of the rotor there.  For example,
+    `ForwardDiff.derivative(α -> imag(D(from_euler_angles(α, 0.0,
+    0.0), 2)[2][1, 1]), 0.3)` is `NaN`, where the true value is about
+    ``-0.955``.  The recurrence works with the half-angles
+    ``\cos(β/2)`` and ``\sin(β/2)`` and the phases of ``α ± γ``, which
+    are computed from the rotor's components with square roots; at
+    those points one of the square roots is taken of an exact zero,
+    whose derivative is infinite, and the resulting `NaN` spreads to
+    every element.  The decomposition is singular there even though
+    its products are not, so the derivative cannot be recovered
+    locally: ForwardDiff's "NaN-safe" mode replaces the `NaN` with a
+    *wrong* number (for example, 0 for the derivative of
+    ``𝔇^{(1)}_{1,0}`` at the identity along ``x``, where the true
+    value is ``-i/\sqrt{2}``), and should not be used to hide it.
+    Differentiate at a nearby point instead, or use the analytic
+    operators of [Differential operators](@ref
+    interface_differential_operators) where they apply.  Version 2 had
+    the same limitation; see [issue
+    #67](https://github.com/moble/SphericalFunctions.jl/issues/67).
+
 !!! danger
     Each `𝔇ˡ` block is a *view* into the storage kept in the
     calculator.  The next step of the loop overwrites it, so you
@@ -328,9 +352,9 @@ same blocks, the same iteration, the same half-integer types, and
 the same containers, which are generic in the number type.
 
 The two flavors share one struct, [`HarmonicCalculator`](@ref),
-exactly as [`DCalculator`](@ref) and [`dCalculator`](@ref)
-do — and for the same reason.  The underlying ``H`` recursion is real
-either way; it is only the factor ``e^{-i(mα - sγ)}`` that ever makes a
+exactly as [`DCalculator`](@ref) and [`dCalculator`](@ref) do — and
+for the same reason.  The underlying ``H`` recursion is real either
+way; it is only the factor ``e^{-i(mα - sγ)}`` that ever makes a
 result complex, and an angle sets ``α = γ = 0``.  So the real flavor
 runs precisely the same recursion, allocates no phase tables at all,
 and writes half as many numbers.
@@ -338,16 +362,21 @@ and writes half as many numbers.
 The definition is
 
 ```math
-{}_sλ_{ℓ,m}(θ) = {}_sY_{ℓ,m}(θ, 0) \big/ i^{2s},
+{}_sλ_{ℓ,m}(θ) = \begin{cases}
+    {}_sY_{ℓ,m}(θ, 0), & s ∈ ℤ, \\
+    {}_sY_{ℓ,m}(θ, 0) \big/ i^{2s}, & s ∈ ℤ + \tfrac{1}{2},
+\end{cases}
 ```
 
 which is real for both kinds of index.  For an integer spin weight the
-factor ``i^{2s} = (-1)^s`` is already part of the definition of
-``{}_sY_{ℓ,m}`` itself, so ``{}_sλ_{ℓ,m}`` is simply the harmonic at
-``ϕ = 0``, as the literature writes it.  For a half-odd spin weight
-``i^{2s}`` is ``\pm i``, so ``{}_sY_{ℓ,m}(θ, 0)`` is imaginary rather
-than real, and dividing that constant phase out is what leaves a real
-function behind.
+prefactor ``(-1)^s`` in the definition of ``{}_sY_{ℓ,m}`` is ``\pm
+1``, so ``{}_sY_{ℓ,m}(θ, 0)`` is already real, and ``{}_sλ_{ℓ,m}`` is
+simply the harmonic at ``ϕ = 0``, as the literature writes it.  For a
+half-odd spin weight that prefactor is ``i^{2s} = \pm i``, so
+``{}_sY_{ℓ,m}(θ, 0)`` is imaginary rather than real, and dividing that
+constant phase out is what leaves a real function behind.  (Dividing
+by ``i^{2s}`` in both cases would give the wrong sign for odd integer
+``s``, where ``i^{2s} = -1``.)
 
 A `Rotor` is refused, by the constructor and by [`set_R!`](@ref)
 alike: it specifies the angles ``α`` and ``γ``, whose phases a real

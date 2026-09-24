@@ -7,10 +7,10 @@
 Initialize the Wigner matrix `H⁰` for the recurrence relations.  This only sets the values
 `H⁰[0,0]=1`.
 
-Note that `H⁰` can be any `AbstractWignerMatrix` with integer indices.  In particular, it
-can be a `D` matrix or a `d` matrix.
+Note that `H⁰` can be any `WignerMatrix` with integer indices — the only container indexed
+by `(m′, m)`.  In particular, it can be a `D` matrix or a `d` matrix.
 """
-function recurrence_step1!(H⁰::AbstractWignerMatrix{IT, NT}) where {IT<:Signed, NT}
+function recurrence_step1!(H⁰::WignerMatrix{IT, NT}) where {IT<:Signed, NT}
     @inbounds let ℓ=ℓ(H⁰)
         if ℓ == 0
             H⁰[0, 0] = 1
@@ -29,7 +29,7 @@ Compute the values of ``H^{ℓ}_{0,m}``, from the values of ``H^{ℓ-1}_{0,m}`` 
 
 """
 function recurrence_step2!(
-    Hˡ::AbstractWignerMatrix{IT, NT}, Hˡ⁻¹::AbstractWignerMatrix{IT, NT2}, sinβ::T, cosβ::T
+    Hˡ::WignerMatrix{IT, NT}, Hˡ⁻¹::WignerMatrix{IT, NT2}, sinβ::T, cosβ::T
 ) where {IT<:Signed, NT, NT2, T}
     @assert ℓ(Hˡ⁻¹) == ℓ(Hˡ) - 1
     # Note that in this step only, we use notation derived from Xing et al., denoting the
@@ -84,7 +84,7 @@ Compute the values of ``H^{ℓ}_{1,m}``, from the values of ``H^{ℓ+1}_{0,m}`` 
 
 """
 function recurrence_step3!(
-    Hˡ::AbstractWignerMatrix{IT, NT}, Hˡ⁺¹::AbstractWignerMatrix{IT, NT2}, sinβ::T, cosβ::T
+    Hˡ::WignerMatrix{IT, NT}, Hˡ⁺¹::WignerMatrix{IT, NT2}, sinβ::T, cosβ::T
 ) where {IT<:Signed, NT, NT2, T}
     @assert ℓ(Hˡ⁺¹) == ℓ(Hˡ) + 1
     @inbounds let √=sqrt∘T, ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
@@ -113,7 +113,7 @@ Compute the values of ``H^{ℓ}_{m'+1,m}``, from the values of ``H^{ℓ}_{m',m-1
 
 """
 function recurrence_step4!(
-    Hˡ::AbstractWignerMatrix{IT, NT}, sinβ::T, cosβ::T
+    Hˡ::WignerMatrix{IT, NT}, sinβ::T, cosβ::T
 ) where {IT<:Signed, NT, T}
     @inbounds let √=sqrt∘T, ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
         for m′ ∈ 1:min(ℓ, m′ₘₐₓ)-1
@@ -153,7 +153,7 @@ Compute the values of ``H^{ℓ}_{m'-1,m}``, from the values of ``H^{ℓ}_{m',m-1
 
 """
 function recurrence_step5!(
-    Hˡ::AbstractWignerMatrix{IT, NT}, sinβ::T, cosβ::T
+    Hˡ::WignerMatrix{IT, NT}, sinβ::T, cosβ::T
 ) where {IT<:Signed, NT, T}
     @inbounds let √=sqrt∘T, ℓ=ℓ(Hˡ), m′ₘᵢₙ=m′ₘᵢₙ(Hˡ)
         for m′ ∈ 0:-1:max(-ℓ, m′ₘᵢₙ)+1
@@ -208,7 +208,7 @@ H^ℓ_{m′, m} &= H^ℓ_{-m′, -m}.
     [`wedge_source`](@ref), which already accounts for ``σ``.
 
 """
-function recurrence_step6!(Hˡ::AbstractWignerMatrix{IT, NT}) where {IT<:Signed, NT}
+function recurrence_step6!(Hˡ::WignerMatrix{IT, NT}) where {IT<:Signed, NT}
     @inbounds let ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
         # The idea here is to impose
         #   Hˡ[m, m′] = Hˡ[-m, -m′] = Hˡ[-m′, -m] = Hˡ[m′, m]
@@ -240,7 +240,7 @@ Convert the Wigner matrix `Hˡ` to the d matrix `dˡ`, which just involves multi
 signs related to the `m′` and `m` indices.
 
 """
-function convert_H_to_d!(Hˡ::AbstractWignerMatrix{IT, NT}) where {IT<:Signed, NT<:Real}
+function convert_H_to_d!(Hˡ::WignerMatrix{IT, NT}) where {IT<:Signed, NT<:Real}
     @inbounds let ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
         for m ∈ -ℓ:ℓ
             for m′ ∈ -m′ₘₐₓ:m′ₘₐₓ
@@ -259,7 +259,7 @@ Convert the Wigner matrix `Hˡ` to the D matrix `Dˡ`, which just involves multi
 complex phases related to the `m′` and `m` indices.
 
 """
-function convert_H_to_D!(Hˡ::AbstractWignerMatrix{IT, NT}, eⁱᵅ::NT, eⁱᵞ::NT) where {IT<:Signed, NT<:Complex}
+function convert_H_to_D!(Hˡ::WignerMatrix{IT, NT}, eⁱᵅ::NT, eⁱᵞ::NT) where {IT<:Signed, NT<:Complex}
     # For half-integer indices this form does not apply, because e^{-im′α} and e^{-imγ} are
     # not integer powers of eⁱᵅ and eⁱᵞ.  No square roots are needed to fix that, though:
     # m′ ± m *are* integers, so e^{i(m′α+mγ)} = z₊^{m′+m} z₋^{m′-m} with

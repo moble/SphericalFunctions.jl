@@ -157,10 +157,10 @@ end
 @inline Base.floor(::Type{T}, a::HalfOddInteger) where {T<:Integer} = T((a.numerator - 1) >> 1)
 @inline Base.floor(a::HalfOddInteger) = floor(Int, a)
 
-# `sorted_rings` uses the spin weight as a count of ulps to break the ties in its sort, and
-# `ceil(s)` is the one expression for that count which serves both index types, since for an
-# `Integer` it is the identity.  Like `floor`, this returns an `Int` rather than a
-# `HalfOddInteger`: the ceiling of a half-odd-integer is a whole number, and the type has no
+# `sorted_rings` uses the spin weight, rounded away from zero, as a count of ulps to break the
+# ties in its sort, and `ceil(abs(s))` is the one expression for its magnitude that serves
+# both index types, since for an `Integer` it is the identity.  Like `floor`, this returns an
+# `Int` rather than a `HalfOddInteger`: the ceiling of a half-odd-integer is a whole number, and the type has no
 # way to hold one.  For an odd numerator `a`, the ceiling of `a/2` is exactly `(a+1)/2` at
 # either sign — ⌈1/2⌉ = 1 = (1+1)/2 and ⌈-1/2⌉ = 0 = (-1+1)/2 — and because `a+1` is even
 # the shift halves it exactly, so no rounding direction enters and the one expression is
@@ -203,6 +203,19 @@ Base.Int(a::HalfOddInteger) = throw(InexactError(:Int, Int, a))
 Base.length(r::UnitRange{HalfOddInteger}) = max(0, (last(r) - first(r)) + 1)
 Base.step(::UnitRange{HalfOddInteger}) = 1
 Base.step(::Type{UnitRange{HalfOddInteger}}) = 1
+
+# Membership means `==` to some element, as it does for `Base`'s ranges: `3//2 ∈ 1//2:5//2`
+# is true however the `3//2` is spelled.  `Base`'s `in(::Real, ::AbstractRange)` would
+# promote the value to the range's type, which `HalfOddInteger` deliberately cannot do, so
+# the test is written out: a value is a member when twice it is an odd integer between the
+# numerators of the endpoints.  (A whole number never is, nor anything that is not a
+# multiple of 1/2.)
+@inline Base.in(x::HalfOddInteger, r::UnitRange{HalfOddInteger}) = first(r) ≤ x ≤ last(r)
+@inline Base.in(x::Real, r::UnitRange{HalfOddInteger}) = in_half_odd_range(x, first(r), last(r))
+@inline function in_half_odd_range(x::Real, lo::HalfOddInteger, hi::HalfOddInteger)
+    t = 2x
+    isinteger(t) && !isinteger(x) && numerator(lo) ≤ t ≤ numerator(hi)
+end
 
 
 ### Conversion and display.

@@ -294,15 +294,21 @@ end
         # that each successive ring lies at least as close to the equator as its predecessor.
         # Measured: the set matches the grid exactly, and the ordering is violated by at most
         # 1.5 eps(T), among rings that are equally far from the equator up to rounding and
-        # whose order is settled by the ulp shift `ceil(s)`.  That shift is one ulp for
-        # s = 1/2, which the rounding of the grid can match, so which side of the equator the
-        # second ring falls on is not asserted here; the integer item does not assert it
-        # either.
+        # whose order is settled by the ulp shift, s rounded away from zero.
         @test sort(θs) == collect(LinRange{T}(0, T(π), n + 2))[begin+1:end-1]
         let d = abs.(θs .- T(π) / 2)
             @test all(d[j+1] ≤ d[j] + 4eps(T) for j in 1:length(d)-1)
         end
+        # The order for -s mirrors that for s, ring by ring, as it does for integer s: the
+        # shift keeps the sign of s, where rounding up would send -1/2 to 0 and so give the
+        # order of s = 0.  A shift of one ulp — s = ±1/2, like s = ±1 in the integer case —
+        # can be matched by the rounding of the grid, and measured in Double64 it is, at
+        # ℓₘₐₓ = 11/2 and 15/2 (and at 6 and 8 for s = 1), so there the side is not asserted.
+        if s > 0 && !(T === Double64 && s == 1//2)
+            @test sign.(sorted_rings(-s, ℓₘₐₓ, T) .- T(π) / 2) == -sign.(θs .- T(π) / 2)
+        end
     end
+    @test sorted_rings(-1//2, 5//2) == Float64(π) .- sorted_rings(1//2, 5//2)
 
     # A spin weight larger than ℓₘₐₓ describes no modes and is refused, with the message the
     # golden-ratio spiral uses; the smallest admissible ℓₘₐₓ is |s|, which gives one ring.
@@ -651,7 +657,13 @@ end
         @test_throws ErrorException 𝒯 * ModeWeights(zeros(ComplexF64, Ysize(1, ℓₘₐₓ - 1)), s)
         @test_throws ErrorException mul!(zeros(ComplexF64, N + 1), 𝒯, zeros(ComplexF64, n))
         @test_throws ErrorException mul!(zeros(ComplexF64, N), 𝒯, zeros(ComplexF64, n + 1))
-        @test_throws ErrorException ldiv!(zeros(ComplexF64, n + 1), 𝒯, zeros(ComplexF64, N))
+        # (An output vector *longer* than the modes is accepted, and labelled over its first n
+        # entries; a shorter one is not.)
+        let out = zeros(ComplexF64, n + 1)
+            w = ldiv!(out, 𝒯, zeros(ComplexF64, N))
+            @test w isa ModeWeights && parent(array_view(w)) === out && length(array_view(w)) == n
+        end
+        @test_throws "at least" ldiv!(zeros(ComplexF64, n - 1), 𝒯, zeros(ComplexF64, N))
         @test_throws ErrorException ldiv!(zeros(ComplexF64, n), 𝒯, zeros(ComplexF64, N + 1))
         @test_throws ErrorException ldiv!(ModeWeights(zeros(ComplexF64, Ysize(0, ℓₘₐₓ)), s; ℓₘᵢₙ=0), 𝒯, zeros(ComplexF64, N))
         # ModeWeights of the wrong spin weight but the right length: -s, or 0 with ℓₘᵢₙ = |s|.
@@ -721,19 +733,27 @@ end
                 @test f == fref
             end
 
-            # In-place analysis: the input array is overwritten with the mode weights and
-            # returned as is — a plain Vector, not a ModeWeights
+            # In-place analysis: the input array is overwritten with the mode weights, which
+            # come back as a ModeWeights wrapping that same storage — so that they are indexed
+            # by (ℓ, m), as from every other analysis.  (Returned as the bare Vector, as they
+            # once were, `(𝒯 \ f)[ℓ, m]` silently read the linear index instead.)
             g = copy(fref)
             g̃ = 𝒯 \ g
-            @test g̃ === g
-            @test g̃ isa Vector{Complex{T}}
+            @test g̃ isa ModeWeights{Complex{T}}
+            @test parent(g̃) === g
+            @test spin(g̃) == s
             @test g == parent(f̃ref)
+            @test all(g̃[ℓ, m] == f̃ref[ℓ, m] for ℓ in abs(s):ℓₘₐₓ for m in -ℓ:ℓ)
 
-            # A ModeWeights input is overwritten and returned the same way
+            # A ModeWeights input is overwritten the same way.  What comes back from synthesis
+            # is its storage, holding function values, as a plain Vector — not the ModeWeights,
+            # whose labels no longer describe it — and from analysis a ModeWeights wrapping
+            # the storage.
             w = ModeWeights(copy(f̃0), s)
             fw = 𝒯 * w
             if method == "Minimal"
-                @test fw === w
+                @test fw === parent(w)
+                @test fw isa Vector{Complex{T}}
                 @test parent(w) == fref
             else
                 @test fw == fref
@@ -741,13 +761,16 @@ end
             end
             wf = ModeWeights(copy(fref), s)  # function values can be stored in one, as N == n
             w̃ = 𝒯 \ wf
-            @test w̃ === wf
+            @test w̃ isa ModeWeights{Complex{T}}
+            @test parent(w̃) === parent(wf)
             @test parent(wf) == parent(f̃ref)
 
             # Two-argument `ldiv!(𝒯, x)` (and `mul!(𝒯, x)` for Minimal) act in place on the
             # non-in-place type as well
+            # — and return the mode weights as a ModeWeights over the argument's storage
             g = copy(fref)
-            @test ldiv!(𝒯n, g) === g
+            g̃ = ldiv!(𝒯n, g)
+            @test g̃ isa ModeWeights{Complex{T}} && parent(g̃) === g && spin(g̃) == s
             @test g == parent(f̃ref)
             if method == "Minimal"
                 g̃ = copy(f̃0)
@@ -779,7 +802,9 @@ end
                 @test f == fref
                 g = copy(fref)
                 g̃ = zeros(Complex{T}, n)
-                @test ldiv!(g̃, 𝒯, g) === g̃
+                w̃g = ldiv!(g̃, 𝒯, g)  # a bare output comes back labelled, over its storage
+                @test w̃g isa ModeWeights{Complex{T}} && parent(array_view(w̃g)) === g̃
+                @test spin(w̃g) == s
                 @test g == fref
                 @test g̃ ≈ f̃0 atol=ϵ rtol=ϵ
                 # ... including into a ModeWeights output
@@ -927,11 +952,24 @@ end
         end
     end
 
-    # Rings and weights given in Float64 are converted to T
-    𝒯 = SSHTRS(1, 5; T=Float32, θ=fejer1_rings(11), quadrature_weights=fejer1(11))
+    # Rings and weights must be given in T; Float64 ones are refused for T=Float32 rather
+    # than rounded, and integer ones, which convert exactly, are accepted
+    @test_throws "must be a vector of Float32" SSHTRS(
+        1, 5; T=Float32, θ=fejer1_rings(11), quadrature_weights=fejer1(11, Float32)
+    )
+    @test_throws "`quadrature_weights` must be a vector of Float32" SSHTRS(
+        1, 5; T=Float32, θ=fejer1_rings(11, Float32), quadrature_weights=fejer1(11)
+    )
+    𝒯 = SSHTRS(1, 5; T=Float32, θ=fejer1_rings(11, Float32), quadrature_weights=fejer1(11, Float32))
     @test 𝒯 isa SSHTRS{Float32}
     @test eltype(pixels(𝒯)) === SVector{2, Float32}
-    @test 𝒯.θ == Float32.(fejer1_rings(11))
+    @test 𝒯.θ == fejer1_rings(11, Float32)
+    @test SSHTRS(0, 0; θ=[1], quadrature_weights=[2]).θ == [1.0]
+
+    # A single ring is still a batch of rings, as any vector of rotor data is
+    𝒯 = SSHTRS(0, 0)
+    @test length(𝒯.θ) == 1
+    @test 𝒯 \ (𝒯 * [0.3 + 0.4im]) ≈ [0.3 + 0.4im]
 
     # FFTW planner options are accepted and do not change the results
     𝒯 = SSHTRS(1, 5)
@@ -969,9 +1007,10 @@ end
 @testitem "SSHTMatrix options" begin
     import SphericalFunctions: SSHT, SSHTMatrix, pixels, rotors, Ysize, ModeWeights
     import SphericalFunctions: nmodes, npixels  # unexported
-    import SphericalFunctions: golden_ratio_spiral_rotors, sorted_ring_rotors
+    import SphericalFunctions: golden_ratio_spiral_rotors, sorted_ring_rotors, array_view
+    import SphericalFunctions: sYlm_matrix
     using DoubleFloats: Double64
-    using LinearAlgebra: LinearAlgebra, lu, qr
+    using LinearAlgebra: LinearAlgebra, lu, qr, ldiv!, norm
     using Random
 
     rng = Random.Xoshiro(8128)
@@ -1008,6 +1047,25 @@ end
         f̃′ = 𝒯ls \ fls
         @test f̃′ isa ModeWeights{Complex{T}}
         @test f̃′ ≈ f̃ atol=ϵ rtol=ϵ
+        # The two-argument `ldiv!` solves in place, leaving the solution in the first n entries,
+        # and labels just those — rather than returning the whole array, residual and all
+        g = copy(fls)
+        wg = ldiv!(𝒯ls, g)
+        @test wg isa ModeWeights{Complex{T}}
+        @test parent(array_view(wg)) === g && length(array_view(wg)) == n
+        @test wg ≈ f̃ atol=ϵ rtol=ϵ
+        # Data that no set of modes fits exactly exercises the least-squares property itself:
+        # the residual is orthogonal to every column of the harmonic matrix (the normal
+        # equations), which an interpolation through any n of the points would not achieve
+        Y = sYlm_matrix(rotors(𝒯ls), ℓₘₐₓ, s)
+        fnoisy = fls + randn(rng, Complex{T}, length(fls))
+        f̃ls = array_view(𝒯ls \ fnoisy)
+        r = fnoisy - Y * f̃ls
+        @test norm(r) > norm(fnoisy) / 100  # the data really do not fit
+        @test norm(Y' * r) ≤ ϵ * norm(Y) * norm(fnoisy)
+        f̃interp = Y[1:n, :] \ fnoisy[1:n]
+        @test norm(Y' * (fnoisy - Y * f̃interp)) > 100ϵ * norm(Y) * norm(fnoisy)
+        @test array_view(ldiv!(𝒯ls, copy(fnoisy))) ≈ f̃ls atol=ϵ rtol=ϵ
         # ... which is the use case of the docstring: sample on the grid appropriate to the
         # *lowest* |s| (the most modes, here s = 0) and reuse those points for this spin
         if s != 0
@@ -1024,6 +1082,38 @@ end
     end
 end
 
+
+@testitem "SSHT sample data must be in the transform's type" begin
+    import SphericalFunctions: SSHT, SSHTMatrix, SSHTRS, SSHTMinimal, rotors, leja_rotors,
+        fejer1_rings, fejer1, minimal_rings
+    using Quaternionic: Rotor, Quaternion, QuatVec
+
+    # A `QuatVec` is not the rotor of its direction, and an unnormalized `Quaternion` is not a
+    # rotor at all; both used to be converted, the first into the rotor 𝐢 (whose pixel is the
+    # south pole) and the second into a rotor of the wrong norm
+    @test_throws "Rotations are taken as" SSHTMatrix(0, 0; Rθϕ=[QuatVec(0.0, 1.0, 0.0, 0.0)])
+    @test_throws "Rotations are taken as" SSHTMatrix(0, 0; Rθϕ=[2.0 * Quaternion(1.0, 0, 0, 0)])
+    @test_throws "Rotations are taken as" SSHT(0, 0; method="Matrix", Rθϕ=[QuatVec(0.0, 1.0, 0.0, 0.0)])
+
+    # Data of another precision is refused rather than rounded or widened, for each method
+    # and through the `SSHT` front end; asking for its type works
+    R = leja_rotors(0, 2, BigFloat)
+    @test_throws "must be a vector of `Rotor{Float64}`s" SSHTMatrix(0, 2; Rθϕ=R)
+    @test_throws "must be a vector of `Rotor{Float64}`s" SSHT(0, 2; method="Matrix", Rθϕ=R)
+    @test_throws "must be a vector of `Rotor{BigFloat}`s" SSHTMatrix(0, 2; T=BigFloat, Rθϕ=leja_rotors(0, 2))
+    @test rotors(SSHTMatrix(0, 2; T=BigFloat, Rθϕ=R)) == R
+    @test_throws "`θ` must be a vector of Float64" SSHTRS(
+        0, 2; θ=fejer1_rings(5, BigFloat), quadrature_weights=fejer1(5)
+    )
+    @test_throws "`θ` must be a vector of Float64" SSHTMinimal(1, 3; θ=minimal_rings(1, 3, BigFloat).θ)
+    @test_throws "`θ` must be a vector of Float64" SSHT(1, 3; method="Minimal", θ=minimal_rings(1, 3, BigFloat).θ)
+    @test_throws "`θ` must be a vector of BigFloat" SSHTMinimal(1, 3; T=BigFloat, θ=minimal_rings(1, 3).θ)
+    @test SSHTMinimal(1, 3; T=BigFloat, θ=minimal_rings(1, 3, BigFloat).θ).θ == minimal_rings(1, 3, BigFloat).θ
+
+    # A vector whose element type does not fix a precision is refused too
+    @test_throws "must be a vector of `Rotor{Float64}`s" SSHTMatrix(0, 0; Rθϕ=Rotor[Rotor(1.0, 0, 0, 0)])
+    @test_throws "`θ` must be a vector of Float64" SSHTMinimal(0, 0; θ=Real[0.5])
+end
 
 @testitem "SSHT thread safety via separate objects" begin
     import SphericalFunctions: SSHT, ModeWeights
@@ -1176,4 +1266,45 @@ end
     R₊ = [from_spherical_coordinates(θ, ϕ + 2π) for (θ, ϕ) ∈ pixels(𝒯)]
     @test sYlm_matrix(R₊, ℓₘₐₓ, s) * parent(f̃) ≈ -f rtol=1e-12
     @test sYlm_matrix(rotors(𝒯), ℓₘₐₓ, s) * parent(f̃) ≈ f rtol=1e-12
+end
+
+@testitem "SSHTMatrix mul! and ldiv! with aliased arguments" begin
+    import SphericalFunctions: SSHTMatrix, ModeWeights, Ysize
+    using LinearAlgebra: mul!, ldiv!, qr
+    using Random
+
+    # With as many points as modes the input and output of the three-argument forms can be
+    # the same array, which is the obvious way to act in place with them.  A BLAS product
+    # cannot write over its own input, and `mul!(x, 𝒯, x)` once returned zeros; the input is
+    # now copied whenever it shares memory with the output.
+    rng = Random.Xoshiro(20260923)
+    for (s, ℓₘₐₓ) ∈ ((0, 4), (2, 5)), inplace ∈ (true, false), decomposition ∈ (nothing, qr)
+        kw = decomposition === nothing ? (; inplace) : (; inplace, decomposition)
+        𝒯 = SSHTMatrix(s, ℓₘₐₓ; kw...)
+        n = Ysize(abs(s), ℓₘₐₓ)
+        f̃ = randn(rng, ComplexF64, n)
+        f = 𝒯.Y * f̃
+        ϵ = 1e-12
+
+        x = copy(f̃)
+        @test mul!(x, 𝒯, x) === x
+        @test x ≈ f atol=ϵ
+        y = copy(f)
+        @test parent(array_view(ldiv!(y, 𝒯, y))) === y
+        @test y ≈ f̃ atol=ϵ
+
+        # ... and when the aliasing is through a ModeWeights wrapping the output's storage
+        x = copy(f̃)
+        @test mul!(x, 𝒯, ModeWeights(x, s)) === x
+        @test x ≈ f atol=ϵ
+        y = copy(f)
+        w = ModeWeights(y, s)
+        @test ldiv!(w, 𝒯, y) === w
+        @test parent(w) ≈ f̃ atol=ϵ
+
+        # Several columns
+        X = hcat(f̃, 2f̃)
+        @test mul!(X, 𝒯, X) === X
+        @test X ≈ hcat(f, 2f) atol=2ϵ
+    end
 end

@@ -1,0 +1,29 @@
+name: keepalive
+
+# GitHub disables a public repository's scheduled workflows after 60 days
+# without activity in the repository, and this package can go untouched for
+# longer than that.  Enabling a workflow through the API restarts that count
+# even when the workflow is already enabled, so this workflow does that once a
+# month for every scheduled workflow here, itself included.  It makes no
+# commits.
+
+on:
+  schedule:
+    - cron: '0 5 15 * *'  # 05:00 UTC on the fifteenth of every month
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Re-enable the scheduled workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for workflow in keepalive.yml scheduled.yml CompatHelper.yml; do
+            gh api --method PUT \
+              "repos/${{ github.repository }}/actions/workflows/${workflow}/enable"
+          done

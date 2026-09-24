@@ -59,26 +59,27 @@ end
 @testitem "Pixelizations: McEwen–Wiaux grid" begin
     using StaticArrays: SVector
     using Quaternionic: Rotor
-    import SphericalFunctions: mcewen_wiaux_pixels, mcewen_wiaux_rotors
+    using LinearAlgebra: rank
+    import SphericalFunctions: mcewen_wiaux_pixels, mcewen_wiaux_rotors, sYlm_matrix, Ysize
 
-    # Eq. quoted in the docstring: θₜ = π(2t+1)/(2ℓₘₐₓ-1) for t ∈ 0:ℓₘₐₓ-1, extended to
-    # t ∈ 0:2ℓₘₐₓ-1 so that θ covers [0, 2π), and ϕₚ = 2πp/(2ℓₘₐₓ-1) for p ∈ 0:2ℓₘₐₓ-2.
-    for T ∈ (Float64, Float32), ℓₘₐₓ ∈ (1, 2, 5)
+    # Eqs. (17) and (18) of McEwen & Wiaux (2011), with their band limit L defined by
+    # ₛf_ℓm = 0 for ℓ ≥ L, so L = ℓₘₐₓ + 1: θₜ = π(2t+1)/(2L-1) for t ∈ 0:L-1, and
+    # ϕₚ = 2πp/(2L-1) for p ∈ 0:2L-2.  Transcribed from the paper, not from the code.
+    for T ∈ (Float64, Float32), ℓₘₐₓ ∈ (0, 1, 2, 5)
+        L = ℓₘₐₓ + 1
         p = mcewen_wiaux_pixels(0, ℓₘₐₓ, T)
 
         @test p isa Vector{<:SVector{2, T}}
-        @test length(p) == 2ℓₘₐₓ * (2ℓₘₐₓ - 1)
-        @test p == [
-            SVector{2, T}(T(π) * (2t + 1) / (2ℓₘₐₓ - 1), 2T(π) * q / (2ℓₘₐₓ - 1))
-            for t ∈ 0:(2ℓₘₐₓ - 1) for q ∈ 0:(2ℓₘₐₓ - 2)
-        ]
+        @test length(p) == L * (2L - 1)
+        @test p ≈ [
+            SVector{2, T}(T(π) * (2t + 1) / (2L - 1), 2T(π) * q / (2L - 1))
+            for t ∈ 0:(L - 1) for q ∈ 0:(2L - 2)
+        ] rtol=2eps(T)
 
-        # The θ extension is what distinguishes this grid: no sample sits at θ=0, and θ runs
-        # past π into the second half of its period.
-        @test minimum(q[1] for q ∈ p) > 0
-        if ℓₘₐₓ > 1
-            @test maximum(q[1] for q ∈ p) > T(π)
-        end
+        # Every point is on the sphere: θ ∈ (0, π], with no sample at the north pole, and the
+        # last ring — 2L-1 points — exactly at the south pole
+        @test all(0 < q[1] ≤ T(π) for q ∈ p)
+        @test count(q -> q[1] == T(π), p) == 2L - 1
 
         @test mcewen_wiaux_pixels(2, ℓₘₐₓ, T) == p
         @test mcewen_wiaux_pixels(ℓₘₐₓ, T) == p
@@ -87,6 +88,13 @@ end
         @test R isa Vector{<:Rotor{T}}
         @test length(R) == length(p)
         @test mcewen_wiaux_rotors(ℓₘₐₓ, T) == R
+    end
+
+    # The grid determines every mode of the band limit it was built for.  (With L = ℓₘₐₓ,
+    # as the grid was once built, the harmonic matrix at ℓₘₐₓ = 2 had rank 6 for 9 modes.)
+    for ℓₘₐₓ ∈ (1, 2, 5, 8), s ∈ (0, 1, -2)
+        abs(s) ≤ ℓₘₐₓ || continue
+        @test rank(sYlm_matrix(mcewen_wiaux_rotors(ℓₘₐₓ), ℓₘₐₓ, s)) == Ysize(abs(s), ℓₘₐₓ)
     end
 
     @test mcewen_wiaux_pixels(0, 4) == mcewen_wiaux_pixels(0, 4, Float64)

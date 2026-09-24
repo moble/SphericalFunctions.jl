@@ -22,11 +22,15 @@ end
 
 αrange(::Type{T}, n=15) where T = T[
     0; nextfloat(T(0)); rand(T(0):eps(T(π)):T(π), n÷2); prevfloat(T(π)); T(π);
-    nextfloat(T(π)); rand(T(π):eps(2T(π)):2T(π), n÷2); prevfloat(T(π)); 2T(π)
+    nextfloat(T(π)); rand(T(π):eps(2T(π)):2T(π), n÷2); prevfloat(2T(π)); 2T(π)
 ]
+# `avoid_poles` keeps every sample, random ones included, at least that far from either pole;
+# the formulas of several reference pages are singular there.  With the default of 0 the
+# random samples are drawn from the same range as they always were, so seeded draws do not
+# change.
 βrange(::Type{T}=Float64, n=15; avoid_poles=0) where T = T[
     avoid_poles; nextfloat(T(avoid_poles));
-    rand(T(0):eps(T(π)):T(π), n);
+    rand(T(avoid_poles):eps(T(π)):T(π)-T(avoid_poles), n);
     prevfloat(T(π)-avoid_poles); T(π)-avoid_poles
 ]
 γrange(::Type{T}, n=15) where T = αrange(T, n)
@@ -80,7 +84,7 @@ function array_equal(a1::T1, a2::T2, equal_nan=false) where {T1, T2}
     if T1 !== T2 || size(a1) != size(a2)
         return false
     end
-    all(e->e[1]==e[2] || (equal_nan && isnan(e1) && isnan(e2)), zip(a1, a2))
+    all(e->e[1]==e[2] || (equal_nan && isnan(e[1]) && isnan(e[2])), zip(a1, a2))
 end
 
 function sYlm(s::Int, ell::Int, m::Int, theta::T, phi::T) where {T<:Real}
@@ -145,3 +149,37 @@ end
 )
 
 end  # Utilities snippet
+
+@testitem "Utilities: the sampling helpers and array_equal" setup=[Utilities] begin
+    using Random
+
+    # `avoid_poles` excludes a band around each pole from the random samples as well as from
+    # the fixed endpoints; before, only the endpoints moved, and about one call in 300 put a
+    # sample inside the band (with `Random.seed!(3)`, 6.4e-5 from π).
+    Random.seed!(3)
+    for T ∈ (Float64, Float32), _ ∈ 1:300
+        β = βrange(T, 7; avoid_poles=1e-3)
+        @test all(T(1e-3) ≤ b ≤ T(π) - T(1e-3) for b ∈ β)
+    end
+    # With the default, the random samples come from the same range as before, so seeded
+    # draws, on which some pages rely, are unchanged
+    Random.seed!(3); a = βrange(Float64, 7)
+    π₆₄ = Float64(π)
+    Random.seed!(3); b = Float64[0; nextfloat(0.0); rand(0.0:eps(π₆₄):π₆₄, 7); prevfloat(π₆₄); π₆₄]
+    @test a == b
+
+    # Both edges below π and 2π are sampled, once each
+    for T ∈ (Float64, Float32)
+        α = αrange(T, 4)
+        @test count(==(prevfloat(T(π))), α) == 1
+        @test count(==(prevfloat(2T(π))), α) == 1
+        @test extrema(α) == (0, 2T(π))
+    end
+
+    # `array_equal` compares type, shape and elements, with NaNs equal only on request
+    @test array_equal([1.0, NaN], [1.0, NaN], true)
+    @test !array_equal([1.0, NaN], [1.0, NaN])
+    @test !array_equal([1.0, NaN], [2.0, NaN], true)
+    @test !array_equal([1.0], [1.0f0])
+    @test !array_equal([1.0], [1.0, 1.0])
+end

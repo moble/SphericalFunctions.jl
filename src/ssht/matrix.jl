@@ -61,6 +61,7 @@ function SSHTMatrix(
     if abs(s) > ℓₘₐₓ
         error("|s|=$(abs(s)) exceeds ℓₘₐₓ=$ℓₘₐₓ; there are no such modes.")
     end
+    check_sample_rotors(TT, Rθϕ)
     if Ysize(abs(s), ℓₘₐₓ)^2 > 65^4
         @warn """
         The "Matrix" method for s-SHT is only recommended for fairly small ℓ values (or comparably large s values).
@@ -77,7 +78,7 @@ function SSHTMatrix(
     if inplace && !inplaceable(s, ℓₘₐₓ, Rθϕ)
         error("In-place operation requires exactly as many sample points as modes.")
     end
-    Rs = Vector{Rotor{TT}}(Rθϕ)
+    Rs = Vector{Rotor{TT}}(Rθϕ)  # a copy, never a conversion: `check_sample_rotors` saw to that
     Y = sYlm_matrix(Rs, ℓₘₐₓ, s)
     Ydecomp = decomposition(Y)
     SSHTMatrix{TT, inplace, typeof(Ydecomp), IT}(s, ℓₘₐₓ, Rs, Y, Ydecomp)
@@ -105,11 +106,15 @@ function Base.:*(𝒯::SSHTMatrix, f̃)
     d = array_view(f̃)
     unflatten_trailing(𝒯.Y * flatten_trailing(d), size(d))
 end
+# A matrix product cannot write its output over its own input — BLAS reads the input while
+# writing the output, and `mul!(x, 𝒯, x)` once returned zeros — so an input that shares
+# memory with the output is copied first.  The same holds for the solve below.
 function LinearAlgebra.mul!(f, 𝒯::SSHTMatrix, f̃)
     check_modes(𝒯, f̃)
     check_pixels(𝒯, f)
     check_trailing(f, f̃)
-    mul!(flatten_trailing(f), 𝒯.Y, flatten_trailing(array_view(f̃)))
+    d = array_view(f̃)
+    mul!(flatten_trailing(f), 𝒯.Y, flatten_trailing(Base.mightalias(f, d) ? copy(d) : d))
     f
 end
 
@@ -121,17 +126,19 @@ end
 function Base.:\(𝒯::SSHTMatrix{T, true}, ff̃) where {T}
     check_pixels(𝒯, ff̃)
     ldiv!(𝒯.Ydecomposition, flatten_trailing(array_view(ff̃)))
-    ff̃
+    in_place_modes(𝒯, ff̃)
 end
 function LinearAlgebra.ldiv!(f̃, 𝒯::SSHTMatrix, f)
+    f̃ = analysis_output(𝒯, f̃, f)
     check_modes(𝒯, f̃)
     check_pixels(𝒯, f)
     check_trailing(f, f̃)
-    ldiv!(flatten_trailing(array_view(f̃)), 𝒯.Ydecomposition, flatten_trailing(f))
+    d = array_view(f̃)
+    ldiv!(flatten_trailing(d), 𝒯.Ydecomposition, flatten_trailing(Base.mightalias(d, f) ? copy(f) : f))
     f̃
 end
 function LinearAlgebra.ldiv!(𝒯::SSHTMatrix, ff̃)
     check_pixels(𝒯, ff̃)
     ldiv!(𝒯.Ydecomposition, flatten_trailing(array_view(ff̃)))
-    ff̃
+    in_place_modes(𝒯, ff̃)
 end

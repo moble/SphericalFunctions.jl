@@ -12,10 +12,10 @@
 # `MethodError`; the three `_rotors` functions pass their indices along to be normalized
 # there.  Every quantity the workers form from the indices — the pixel count `Ysize(abs(s),
 # ℓₘₐₓ)`, the number of rings ℓₘₐₓ - |s| + 1, the 2j+1 points on ring j, and the count of
-# ulps `ceil(s)` — is an `Int` for either kind, so the workers need no branch on the kind
-# and the integer path is exactly what it was.  A spin weight with |s| > ℓₘₐₓ describes no
-# modes at all, and all of these functions refuse it with the same message before any point
-# is placed.  The Driscoll–Healy and McEwen–Wiaux grids further down take integer indices
+# ulps `±ceil(abs(s))` — is an `Int` for either kind, so the workers need no branch on the
+# kind and the integer path is exactly what it was.  A spin weight with |s| > ℓₘₐₓ describes
+# no modes at all, and all of these functions refuse it with the same message before any
+# point is placed.  The Driscoll–Healy and McEwen–Wiaux grids further down take integer indices
 # only: they do not depend on `s` at all, and no transform defaults to them.
 
 @doc raw"""
@@ -201,9 +201,11 @@ function sorted_rings(s::IT, ℓₘₐₓ::IT, ::Type{T}) where {IT<:IntegerHalf
     # The spin weight is used here as a count of ulps by which the comparison point is moved
     # off the equator, which is what breaks the ties in the sort below and places the second
     # ring above or below the equator according to the sign of `s`.  A count must be a whole
-    # number, so a half-odd spin weight is rounded up: for an `Integer` `ceil` is the
-    # identity, and for a `HalfOddInteger` it is the `Int` just above.
-    let πo2 = prevfloat(T(π)/2, ceil(s))
+    # number, so a half-odd spin weight is rounded away from zero, which keeps its sign and
+    # so makes the order for -s the mirror image of that for s: for an `Integer` this is the
+    # identity, and for a `HalfOddInteger` it is the `Int` just beyond.  (Rounding up instead
+    # would send s = -1/2 to 0, which gives the order of s = 0.)
+    let πo2 = prevfloat(T(π)/2, s < 0 ? -ceil(abs(s)) : ceil(abs(s)))
         sort(
             collect(LinRange{T}(0, π, 2+ℓₘₐₓ-abs(s)+1))[begin+1:end-1],
             lt=(x,y)->(abs(x-πo2)<abs(y-πo2)),
@@ -353,25 +355,33 @@ driscoll_healy_rotors(ℓₘₐₓ, ::Type{T}=Float64) where T = driscoll_healy_
 @doc raw"""
     mcewen_wiaux_pixels([s], ℓₘₐₓ, [T=Float64])
 
-Cover the sphere 𝕊² with pixels given by the [McEwenWiaux_2011](@citet) equiangular grid:
+Cover the sphere 𝕊² with pixels given by the [McEwenWiaux_2011](@citet) equiangular grid.
+They consider "signals on the sphere bandlimited at ``L``, that is signals such that ``{}_sf_{ℓm}
+= 0, ∀ℓ ≥ L``", so that ``L = ℓₘₐₓ + 1`` here, and write:
 
 > We adopt an equiangular sampling of the sphere with sample positions given by ``θ_t =
-> \frac{π(2t+1)}{2ℓ_{\max}-1}``, where ``t ∈ \{0, 1, \dotsc, ℓ_\mathrm{max}-1\}``
-> and ``ϕ_p = \frac{2 π p}{2ℓ_\mathrm{max}-1}``, where ``p ∈ \{0, 1, \dotsc,
-> 2ℓ_\mathrm{max}-2\}``.  In order to extend the ``θ`` domain to ``[0, 2π)`` we
-> simply extend the domain of the ``θ`` index to include ``\{ℓ_\mathrm{max},
-> ℓ_\mathrm{max}+1, \dotsc, 2ℓ_\mathrm{max}-1\}``.
+> \frac{π(2t+1)}{2L-1}``, where ``t ∈ \{0, 1, …, L-1\}`` […] and ``ϕ_p = \frac{2πp}{2L-1}``,
+> where ``p ∈ \{0, 1, …, 2L-2\}``.
+
+These are the ``L(2L-1)`` points returned, ordered with ``ϕ`` varying fastest.  The last ring,
+``t = L-1``, lies at the south pole ``θ = π``, and all ``2L-1`` of its points are included, as
+distinct rotors that differ by a rotation about the pole; McEwen and Wiaux count the pole once,
+for ``(L-1)(2L-1)+1`` samples.  Their algorithm also extends the ``θ`` domain to ``[0, 2π)``,
+reflecting the samples through the south pole to ``t ∈ \{L, …, 2L-2\}``, but those are not
+further sample positions on the sphere, and are not returned.
 
 !!! note
     The `s` argument is not used in this function, but is included for consistency with
     other pixelization functions.
 """
 function mcewen_wiaux_pixels(s, ℓₘₐₓ, ::Type{T}=Float64) where T
-    let π = T(π)
+    let π = T(π), L = ℓₘₐₓ + 1
+        # The ratio is formed first, so that it is exactly 1 on the last ring, which is then
+        # exactly at the south pole rather than an ulp to either side of it.
         [
-            @SVector [π*(2t+1) / (2ℓₘₐₓ - 1), 2π*p / (2ℓₘₐₓ - 1)]
-            for t ∈ 0:(2ℓₘₐₓ - 1)
-            for p ∈ 0:(2ℓₘₐₓ - 2)
+            @SVector [π * (T(2t+1) / T(2L - 1)), 2π*p / (2L - 1)]
+            for t ∈ 0:(L - 1)
+            for p ∈ 0:(2L - 2)
         ]
     end
 end

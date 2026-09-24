@@ -599,7 +599,9 @@ end
     @test SphericalFunctions.Nᵣ(sYlmCalculator(rotors, 3, -1:1)) == 4
     @test SphericalFunctions.Nᵣ(DCalculator(rotors[1:1], 3)) == 1
     @test SphericalFunctions.Nᵣ(DCalculator(R64, 3)) == 1
-    @test SphericalFunctions.isbatched(DCalculator(rotors[1:1], 3)) == false
+    # A vector of one rotor is still a batch: batchedness follows the type of the data
+    @test SphericalFunctions.isbatched(DCalculator(rotors[1:1], 3)) == true
+    @test SphericalFunctions.isbatched(DCalculator(R64, 3)) == false
 
     # An empty vector describes no rotors at all, which is not a calculator
     @test_throws "at least one rotor" DCalculator(Rotor{Float64}[], 3)
@@ -689,6 +691,24 @@ end
     @test_throws "works in Float64" set_β!(HCalculator(0.25, 3), rotors32[1])
     @test_throws "works in Float64" set_θ!(sYlmCalculator(0.25, 3, -1:1), 0.5f0)
     @test_throws "works in Float32" set_θ!(sYlmCalculator(0.25f0, 3, -1:1), 0.5)
+    # `recurrence!(calc, data, ℓ)` replaces the data too, and follows the same rule rather than
+    # silently converting (a BigFloat rotor once came back as a ComplexF64 block).  The check
+    # comes before anything is written, so a refused call leaves the calculator as it was.
+    import SphericalFunctions: recurrence!
+    rotorsb1 = Rotor{BigFloat}(rotors[1])
+    @test_throws "works in Float64" recurrence!(DCalculator(rotors[1], 3), rotorsb1, 2)
+    @test_throws "works in Float64" recurrence!(DCalculator(rotors[1], 3), rotors32[1], 2)
+    @test_throws "works in Float64" recurrence!(dCalculator(0.25, 3), 0.5f0, 2)
+    @test_throws "works in Float64" recurrence!(dCalculator(0.25, 3), rotorsb1, 2)
+    @test_throws "works in Float64" recurrence!(HCalculator(0.25, 3), 0.5f0, 2)
+    @test_throws "works in Float64" recurrence!(sYlmCalculator(rotors[1], 3, 1), rotorsb1, 2)
+    @test_throws "works in Float64" recurrence!(sYlmCalculator(0.25, 3, 1), 0.5f0, 2)
+    let c = DCalculator(rotors[1], 3)
+        before = copy(recurrence!(c, 2))
+        @test_throws "works in Float64" recurrence!(c, rotorsb1, 2)
+        @test recurrence!(c, 2) == before
+        @test recurrence!(c, rotors[2], 2) == D(rotors[2], 3)[2]  # the matching type works
+    end
     # `similar(calc, data)` builds a second workspace of exactly the calculator's type, so it
     # is just as strict; the Nᵣ check it has always had is tested with the rest of `similar`
     @test_throws "works in Float64" similar(DCalculator(rotors[1], 3), rotors32[1])
@@ -714,9 +734,9 @@ end
     # A calculator of one type cannot be pointed at a rotor of another, either
     @test_throws "works in Float32" sYlm!(Y32, sYlmCalculator(rotors32[1], 4, -1:1), rotors[1], 1)
     # Agreement all round is what the function is for
-    @test sYlm!(Y64, rotors[1], 4, 1) == array_view(sYlm(rotors[1], 4, 1))
-    @test sYlm!(Y32, rotors32[1], 4, 1) == array_view(sYlm(rotors32[1], 4, 1))
-    @test sYlm!(Y64, sYlmCalculator(rotors[1], 4, -1:1), rotors[1], 1) == array_view(sYlm(rotors[1], 4, 1))
+    @test array_view(sYlm!(Y64, rotors[1], 4, 1)) == array_view(sYlm(rotors[1], 4, 1))
+    @test array_view(sYlm!(Y32, rotors32[1], 4, 1)) == array_view(sYlm(rotors32[1], 4, 1))
+    @test array_view(sYlm!(Y64, sYlmCalculator(rotors[1], 4, -1:1), rotors[1], 1)) == array_view(sYlm(rotors[1], 4, 1))
 
     # A vector of rotor data must say what it holds.  The path that used to re-box such a
     # vector into a `Vector{AbstractQuaternion}` — and fall back on Float64 — is gone, so an
@@ -741,18 +761,24 @@ end
 
     # Rotations are taken as `Rotor`s, which is the type that says a quaternion denotes one.
     # A `Quaternion` has a magnitude that would be divided out, and a `QuatVec` is a
-    # vector rather than a rotation at all; neither is silently reinterpreted.  The
-    # convenience functions refuse by dispatch, while the calculators and setters — which
-    # take their data untyped, so as to accept angles and phases too — refuse with a message
-    # that names `rotor(q)` and `exp(v/2)`.
+    # vector rather than a rotation at all; neither is silently reinterpreted.  Every entry
+    # point — the convenience functions, `w(R)`, the transforms, the calculators and the
+    # setters — refuses with a message that names `rotor(q)` and `exp(v/2)`.
     q = Quaternion(0.3, 0.5, 0.7, 0.11)
     qv = QuatVec(0.0, 0.0, 1.0)
+    w = SphericalFunctions.ModeWeights(zeros(ComplexF64, 9), 0)
     for bad ∈ (q, qv)
-        @test_throws MethodError D(bad, 2)
-        @test_throws MethodError d(bad, 2)
-        @test_throws MethodError sYlm(bad, 2, 0)
-        @test_throws MethodError Ylm(bad, 2)
-        @test_throws MethodError sYlm_matrix([bad, bad], 2, 0)
+        @test_throws "Rotations are taken as" D(bad, 2)
+        @test_throws "Rotations are taken as" D(bad, 3//2)
+        @test_throws "Rotations are taken as" d(bad, 2)
+        @test_throws "Rotations are taken as" sYlm(bad, 2, 0)
+        @test_throws "Rotations are taken as" sYlm([bad, bad], 2, 0)
+        @test_throws "Rotations are taken as" Ylm(bad, 2)
+        @test_throws "Rotations are taken as" Ylm([bad], 2)
+        @test_throws "Rotations are taken as" sYlm_matrix([bad, bad], 2, 0)
+        @test_throws "Rotations are taken as" w(bad)
+        @test_throws "Rotations are taken as" w([bad])
+        @test_throws "Rotations are taken as" SphericalFunctions.SSHTMatrix(0, 0; Rθϕ=[bad])
         @test_throws "Rotations are taken as" DCalculator(bad, 2)
         @test_throws "Rotations are taken as" dCalculator(bad, 2)
         @test_throws "Rotations are taken as" HCalculator(bad, 2)

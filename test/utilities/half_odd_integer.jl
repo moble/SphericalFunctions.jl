@@ -138,13 +138,21 @@ end
     @test Base.infer_return_type(ϵ, (HalfOddInteger,)) === Int
     @test Base.infer_return_type(sgn, (HalfOddInteger,)) === Int
 
-    # ... and no `Rational` survives anywhere in the hot loops themselves.
-    for step! in (SphericalFunctions.recurrence_step4!, SphericalFunctions.recurrence_step5!,
-                  SphericalFunctions.recurrence_seed!)
-        ir = string(Base.code_typed(
-            step!, (HCalculator{HalfOddInteger, Float64},); optimize=true
-        )[1][1])
-        @test !occursin("Rational", ir)
+    # ... and no `Rational` survives anywhere in the hot loops themselves.  The types inspected
+    # are those of real calculators, single and batched: `HCalculator{HalfOddInteger, Float64}`
+    # is missing its storage parameter, and code typed for that `UnionAll` reads the storage
+    # as `Any` and dispatches dynamically, which would hide a `Rational` that appears only in
+    # the specialization that runs.  (The absence of dynamic calls shows that the whole loop
+    # was inferred, so that the absence of `Rational` means something.)
+    for H ∈ (HCalculator(0.3, 7//2), HCalculator([0.3, 0.4], 7//2))
+        @test isconcretetype(typeof(H))
+        @test typeof(H) <: HCalculator{HalfOddInteger, Float64}
+        for step! in (SphericalFunctions.recurrence_step4!, SphericalFunctions.recurrence_step5!,
+                      SphericalFunctions.recurrence_seed!)
+            ir = string(Base.code_typed(step!, (typeof(H),); optimize=true)[1][1])
+            @test !occursin("Rational", ir)
+            @test !occursin("dynamic", ir)
+        end
     end
 
     # `ϵ` agrees with the closed form for both index types, from the one definition.

@@ -2,7 +2,7 @@
 
 # Run the whole test suite with coverage, and write `lcov.info`.  This
 # is a thin wrapper around `scripts/test.jl`, which does the actual
-# work; see docs/src/development/index.md for the faster ways to run
+# work; see docs/src/60-development/01-index.md for the faster ways to run
 # tests while developing.
 
 exec julia -t auto --project=. scripts/test.jl --coverage "$@"

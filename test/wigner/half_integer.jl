@@ -482,9 +482,10 @@ end
         @test size(𝔇) == (3,) && size(𝔇, 1) == 3 && size(𝔇, 2) == 1
         @test axes(𝔇) == (1//2:J,)
         @test keys(𝔇) == 1//2:1:J
+        @test 3//2 ∈ keys(𝔇) && 2 ∉ keys(𝔇)  # membership by value, however ℓ is spelled
         @test firstindex(𝔇) == 1//2 && lastindex(𝔇) == J
-        @test collect(𝔇) == [𝔇[ℓ] for ℓ ∈ 1//2:1:J]   # iteration
-        @test eltype(𝔇) <: WignerDMatrix
+        @test collect(𝔇) == [ℓ => 𝔇[ℓ] for ℓ ∈ 1//2:1:J]   # iteration, as ℓ => block
+        @test eltype(values(𝔇)) <: WignerDMatrix && eltype(𝔇) <: Pair
 
         # copy is deep: mutating the copy must not touch the original
         𝔇c = copy(𝔇)
@@ -503,7 +504,7 @@ end
         # d gives the real sibling
         𝔡 = d(1.1, J)
         @test 𝔡 isa WignerSeries
-        @test eltype(𝔡) <: WignerdMatrix
+        @test eltype(values(𝔡)) <: WignerdMatrix
         @test occursin("WignerSeries", sprint(show, 𝔇))
         @test occursin("ℓ ∈ 1//2:5//2", sprint(show, 𝔇))
         @test occursin("ℓ = 5//2", sprint(show, MIME("text/plain"), 𝔇))

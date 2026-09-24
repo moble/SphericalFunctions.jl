@@ -97,14 +97,26 @@ end  # module Thorne
 # normalization differences, which are the most likely source of error.
 
 # First, we check that Thorne's conjugation relation (2.9b) is consistent with the explicit
-# formula applied directly to negative ``m`` — that is, that the ``(-1)^m`` in ``C^{ℓ m}``
-# and the ``e^{imϕ}`` factor really do reproduce the relation.  (The formula for negative
-# ``m`` is only meaningful when ``(ℓ - |m| - 2j)!`` is defined, so we compare with the
-# ``m>0`` form via the relation itself.)
-for (θ, ϕ) ∈ θϕrange()
+# formula — that is, that the ``(-1)^m`` in ``C^{ℓ m}`` and the ``e^{imϕ}`` factor really do
+# reproduce the relation.  `Thorne.Y` defines negative ``m`` *through* that relation, so
+# comparing the two would compare the relation with itself.  Instead, we apply Eq. (2.7)
+# directly to negative ``m``, which Thorne does not do but which is valid: the sum is
+# Rodrigues' formula for the associated Legendre function, which holds for ``-ℓ ≤ m ≤ ℓ``,
+# and every factorial in it has a non-negative argument.  For negative ``m`` the sum cancels
+# down to a multiple of ``\sin^{2|m|} θ``, so it is evaluated in `BigFloat`, where that
+# cancellation costs nothing that matters, even beside the poles.
+function Y₂₇(ℓ, m, θ::T, ϕ::T) where {T<:Real}
+    sinθ, cosθ = sincos(θ)
+    Thorne.C(ℓ, m, T) * (exp(ConventionsUtilities.𝒾 * ϕ) * sinθ)^m * sum(
+        Thorne.a(ℓ, m, j, T) * cosθ^(ℓ-m-2j)
+        for j ∈ 0:(ℓ-m)÷2;
+        init=zero(T)
+    )
+end
+for (θ, ϕ) ∈ θϕrange(Float64, 15; avoid_poles=1e-3)
     for ℓ ∈ 0:ℓₘₐₓ
         for m ∈ 1:ℓ
-            @test Thorne.Y(ℓ, -m, θ, ϕ) ≈ (-1)^m * conj(Thorne.Y(ℓ, m, θ, ϕ)) atol=ϵₐ rtol=ϵᵣ
+            @test Y₂₇(ℓ, -m, big(θ), big(ϕ)) ≈ (-1)^m * conj(Thorne.Y(ℓ, m, θ, ϕ)) atol=ϵₐ rtol=ϵᵣ
         end
     end
 end

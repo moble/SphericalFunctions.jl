@@ -60,6 +60,18 @@
     @test half_integer(1//2) ∈ h && half_integer(-3//2) ∈ h
     @test half_integer(7//2) ∉ h
     @test 1 ∉ h
+    # Any other value is a member exactly when it is `==` to one, as for `Base`'s ranges.  (This
+    # once answered `false` for every `Rational` and float, so that `1//2 ∈ h` was false while
+    # `1//2 ∈ collect(h)` was true.)
+    @test 1//2 ∈ h && -3//2 ∈ h && 5//2 ∈ h && 1.5 ∈ h && Int8(3)//Int8(2) ∈ h
+    @test 7//2 ∉ h && -5//2 ∉ h && 1//3 ∉ h && 1.0 ∉ h && 0.25 ∉ h && π ∉ h && 2//1 ∉ h
+    @test all((x ∈ h) == (x ∈ collect(h)) for x ∈ (-5//2, -3//2, 1//2, 1, 5//2, 7//2))
+    @test 1.0 ∈ r && 2//1 ∈ r && -2.0 ∈ r && Int8(3) ∈ r && big(0) ∈ r
+    @test 4.0 ∉ r && 1//2 ∉ r && π ∉ r && half_integer(1//2) ∉ r
+    # ... and the plain `UnitRange{HalfOddInteger}` that `keys` of a half-integer container is
+    k = half_integer(1//2):half_integer(7//2)
+    @test 3//2 ∈ k && 7//2 ∈ k && 3.5 ∈ k && half_integer(5//2) ∈ k
+    @test 2 ∉ k && 9//2 ∉ k && 1//4 ∉ k
 end
 
 @testitem "Wigner containers: `validate_index_ranges` refuses every bad range" begin
@@ -239,6 +251,12 @@ end
     w[1, 1//2, -1//2] = 4.0
     @test w[1, 1//2, -1//2] == 4.0
     @test w[1, half_integer(1//2), half_integer(-1//2)] == 4.0
+
+    # A `Rational` ℓ and `Rational` keyword bounds are converted, as for `WignerMatrix`
+    wr = WignerMatrixBatch(zeros(2, 4, 4), 3//2; mₘₐₓ=1//2)
+    @test wr isa WignerMatrixBatch{typeof(half_integer(1//2))}
+    @test ℓ(wr) == half_integer(3//2) && mₘₐₓ(wr) == half_integer(1//2)
+    @test_throws "must have denominator 2" WignerMatrixBatch(zeros(2, 3, 3), 1//1)
 end
 
 @testitem "DegreeBlock and DegreeBlockBatch: the container interface" begin
@@ -327,6 +345,11 @@ end
     v[1//2] = 6.0
     @test v[1//2] == 6.0
     @test v[half_integer(1//2)] == 6.0
+    vb = DegreeBlockBatch(zeros(2, 4), 3//2; mₘᵢₙ=-1//2)
+    @test ℓ(vb) == half_integer(3//2) && mₘᵢₙ(vb) == half_integer(-1//2)
+    vb[2, 1//2] = 7.0
+    @test vb[2, 1//2] == 7.0
+    @test_throws "must have denominator 2" DegreeBlockBatch(zeros(2, 3), 1//1)
 end
 
 @testitem "SpinMatrix and SpinMatrixBatch: the container interface" begin
@@ -449,6 +472,37 @@ end
     @test bb[1, 1//2, -1//2] == 8.0
 end
 
+@testitem "Wigner containers: uninitialized BigFloat storage shows as #undef" begin
+    import SphericalFunctions: WignerDMatrix, WignerMatrix, WignerMatrixBatch, DegreeBlock,
+        DegreeBlockBatch, SpinMatrix, SpinMatrixBatch, HCalculator, half_integer
+
+    # Storage of a non-bits type starts out unassigned, and reading such an element throws
+    # an `UndefRefError`; displaying a container must not read it.
+    for L ∈ (2, half_integer(3//2))
+        n = Int(2L + 1)
+        for x ∈ (
+            WignerDMatrix(Complex{BigFloat}, L),
+            WignerMatrix(Matrix{BigFloat}(undef, n, n), L),
+            WignerMatrixBatch(Array{BigFloat}(undef, 2, n, n), L),
+            DegreeBlock(Vector{BigFloat}(undef, n), L),
+            DegreeBlockBatch(Matrix{BigFloat}(undef, 2, n), L),
+            SpinMatrix(Matrix{BigFloat}(undef, n, n), L; sₘₐₓ=L, sₘᵢₙ=-L),
+            SpinMatrixBatch(Array{BigFloat}(undef, 2, n, n), L; sₘₐₓ=L, sₘᵢₙ=-L),
+        )
+            @test occursin("#undef", sprint(show, MIME("text/plain"), x))
+        end
+    end
+    @test occursin("#undef", sprint(show, MIME("text/plain"), HCalculator(big(0.3), 3).Hˡ))
+
+    # Assigned elements print as usual, in the order of `Array(w)`
+    w = WignerDMatrix(Complex{BigFloat}, 1)
+    w[0, 1] = 7
+    shown = sprint(show, MIME("text/plain"), w)
+    @test occursin("#undef", shown) && occursin("7.0", shown)
+    lines = split(shown, '\n')
+    @test occursin("7.0", lines[3]) && endswith(rstrip(lines[3]), "im")
+end
+
 @testitem "WignerSeries: the blocks of every ℓ" begin
     import SphericalFunctions: WignerSeries, WignerMatrix, ℓ, half_integer
 
@@ -464,8 +518,8 @@ end
     @test ndims(s) == 1 && ndims(typeof(s)) == 1
     @test size(s) == (4,)
     @test size(s, 1) == 4 && size(s, 2) == 1
-    @test eltype(s) == eltype(blocks)
-    @test parent(s) === blocks
+    @test eltype(s) == Pair{Int, eltype(blocks)}  # it iterates as ℓ => block, as a calculator does
+    @test parent(s) === blocks && values(s) === blocks
 
     for ℓᵢ ∈ 0:3
         @test ℓ(s[ℓᵢ]) == ℓᵢ
@@ -473,8 +527,19 @@ end
     @test_throws BoundsError s[4]
     @test_throws BoundsError s[-1]
 
-    # Iteration gives the blocks in order
-    @test [ℓ(b) for b ∈ s] == collect(0:3)
+    # Iteration gives ℓ => block pairs in order, as for a calculator; `first` and `last` are
+    # blocks, as indexing is
+    @test [(ℓᵢ, ℓ(b)) for (ℓᵢ, b) ∈ s] == [(ℓᵢ, ℓᵢ) for ℓᵢ ∈ 0:3]
+    @test all(b === blocks[ℓᵢ + 1] for (ℓᵢ, b) ∈ s)
+    @test collect(s) isa Vector{eltype(s)} && length(collect(s)) == 4
+    @test first(s) === blocks[1] && last(s) === blocks[end]
+    # ... including over storage other than a `Vector`.  A series on a view once stopped after
+    # its first block, while `length` still counted four, so that a comprehension over it
+    # returned uninitialized memory.
+    sv = WignerSeries(view(blocks, 1:4), 0, 3)
+    @test length(collect(sv)) == 4
+    @test [ℓᵢ for (ℓᵢ, _) ∈ sv] == collect(0:3)
+    @test all(b === blocks[ℓᵢ + 1] for (ℓᵢ, b) ∈ sv)
 
     c = copy(s)
     @test c == s
@@ -541,7 +606,8 @@ end
     @test_throws "Perhaps you meant to use WignerDMatrix" WignerdMatrix(zeros(ComplexF64, 5, 5), 2)
 
     # An ℓ that is neither integer nor half-odd-integer is refused with the denominator rule
-    # rather than a bare `InexactError` from sizing the storage
-    @test_throws Exception WignerDMatrix(ComplexF64, 5//3)
-    @test_throws Exception WignerdMatrix(Float64, 5//3)
+    # rather than a bare `InexactError` from sizing the storage.  (The message is matched, not
+    # just `Exception`, which the `InexactError` would satisfy too.)
+    @test_throws "must have denominator 2" WignerDMatrix(ComplexF64, 5//3)
+    @test_throws "must have denominator 2" WignerdMatrix(Float64, 5//3)
 end

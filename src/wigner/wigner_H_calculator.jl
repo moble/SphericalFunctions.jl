@@ -129,7 +129,12 @@ function Base.similar(w::HCalculator{IT, RT}, β) where {IT, RT}
     set_rotors!(allocate_H(IT, RT, w.ℓₘₐₓ, w.m′ₘₐₓ, Nᵣ(w)), β)
 end
 
-ℓ(w::HCalculator) = Hˡ(w).ℓ
+# The wedge's own `ℓ` field says which order its storage was last laid out for, which is not
+# the same thing: it starts at ℓₘᵢₙ before anything is computed, and it keeps its value when
+# `set_β!` or `fill!` leaves the stored numbers stale.  `axes_valid` is what records whether the
+# current rotor data have been carried through the recurrence at all (it is also what `show`
+# consults), so it decides, as the other calculators' `ℓ` fields do.
+ℓ(w::HCalculator) = w.axes_valid[] ? Hˡ(w).ℓ : ℓₘᵢₙ(w) - 1
 ℓₘᵢₙ(w::HCalculator{IT}) where {IT} = ℓₘᵢₙ(IT)
 ℓₘₐₓ(w::HCalculator) = w.ℓₘₐₓ
 m′ₘₐₓ(w::HCalculator) = w.m′ₘₐₓ
@@ -233,6 +238,14 @@ Callers that need only the first few outputs may drop the rest:
 `eⁱᵝ, z₊, z₋ = spinor_phases(R, F)`.
 
 `R` need not be normalized.
+
+These phases are not differentiable at ``β = 0`` or ``β = π``, where `√b` or `√a` is taken
+of an exact zero: an automatic-differentiation derivative through them is then `NaN`, and
+so is every derivative of ``d``, ``𝔇`` or ``{}_sY_{ℓ,m}`` computed from them, although those
+are smooth there.  No local rule can repair this — `sβ½ * z₋` is smooth in the rotor, but
+`sβ½` and `z₋` separately are not, so treating the zero as exact would silently drop the
+first-order term.  The `NaN` is therefore left in place; see the warning in the documentation
+of the calculators.
 
 The optional second argument is the real type the phases are computed in; it defaults to
 `float(eltype(R))`.  Pass the *calculator's* type whenever that is more precise than the
@@ -415,9 +428,11 @@ ranges rather than from 1:
 | [`DCalculator`](@ref), [`dCalculator`](@ref) | [`WignerMatrix`](@ref), `[m′, m]` |
 | [`sYlmCalculator`](@ref) for one spin weight | [`DegreeBlock`](@ref), `[m]` |
 | [`sYlmCalculator`](@ref) for a range of them | [`SpinMatrix`](@ref), `[s, m]` |
-| [`HCalculator`](@ref) | [`HWedge`](@ref), `[m′, m]` for ``m ≥ \\|m′\\|`` |
+| [`HCalculator`](@ref) | [`HWedge`](@ref), `[iᵣ, m′, m]` for ``m ≥ \\|m′\\|`` |
 
-With `Nᵣ > 1` each gains a leading rotor index, so that the first is `[iᵣ, m′, m]`.  One spin
+For a calculator built from a vector of rotor data — of any length, even one — each of the
+others gains a leading rotor index, so that the first is `[iᵣ, m′, m]`; an `HWedge` has that
+index even for a single rotor, where it is `1`.  One spin
 weight of a block that holds several is `ₛYₗ[s, :]`.
 
 !!! warning
@@ -428,13 +443,16 @@ weight of a block that holds several is `ₛYₗ[s, :]`.
     so even a `copy` of the wedge shares the numbers it wraps — use `copy(parent(Hˡ))` or read
     the values out before stepping on.
 
-A phase given as a `Complex` number must have unit modulus (to within rounding), and is used
-as given; an angle given as a `Real` is converted to the calculator's number type.
+The rotor data given this way must be of the calculator's own floating-point type, exactly as
+for [`set_R!`](@ref), [`set_β!`](@ref) and [`set_θ!`](@ref), and anything else is refused
+rather than converted.  A phase given as a `Complex` number must have unit modulus (to within
+rounding), and is used as given.
 """
 function recurrence! end
 
 function recurrence!(w::HCalculator, R, ℓ)
     check_ℓ(w, ℓ)
+    check_rotor_type(w, R)  # as `set_β!` does, rather than silently converting
     set_rotors!(w, R)
     recurrence!(w, ℓ)
 end

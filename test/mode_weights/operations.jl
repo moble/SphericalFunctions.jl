@@ -61,6 +61,7 @@ end
 end
 
 @testitem "Rotating mode weights: refusals and the calculator" begin
+    import SphericalFunctions: spin
     using Quaternionic: Rotor, RotorF64
     using LinearAlgebra: mul!
     using Random
@@ -92,6 +93,18 @@ end
     @test_throws "changes neither" mul!(ModeWeights(zeros(ComplexF64, Ysize(2, ℓₘₐₓ)), 1, 2, ℓₘₐₓ),
                                         D(R, ℓₘₐₓ), w)
     @test_throws "aliases the input" mul!(w, D(R, ℓₘₐₓ), w)
+    # A bare vector, at least as long as the result, is accepted too, and the result comes back
+    # labelled, as a ModeWeights over its first entries; a shorter one is refused
+    for calc ∈ (D(R, ℓₘₐₓ), DCalculator(R, ℓₘₐₓ))
+        out = zeros(ComplexF64, length(array_view(w)) + 2)
+        w′ = mul!(out, calc, w)
+        @test w′ isa ModeWeights && parent(array_view(w′)) === out
+        @test (spin(w′), SphericalFunctions.ℓₘᵢₙ(w′), SphericalFunctions.ℓₘₐₓ(w′)) ==
+            (spin(w), SphericalFunctions.ℓₘᵢₙ(w), SphericalFunctions.ℓₘₐₓ(w))
+        @test array_view(w′) == array_view(D(R, ℓₘₐₓ) * w) && all(iszero, out[end-1:end])
+        @test_throws "at least" mul!(zeros(ComplexF64, length(array_view(w)) - 1), calc, w)
+    end
+    @test_throws "aliases the input" mul!(parent(w), D(R, ℓₘₐₓ), w)
 end
 
 @testitem "Evaluating mode weights: the four shapes" begin
@@ -225,4 +238,13 @@ end
     @test_throws "must be of one kind" sYlmCalculator(R, ℓₘₐₓ, s) * wh
     @test_throws "integers" sYlmCalculator(R, ℓₘₐₓ, s) * wh
     @test_throws "half-odd-integers" sYlmCalculator(R, half_integer(7//2), half_integer(1//2)) * w
+
+    # The real harmonics are refused, whether flat or as a calculator, and for either kind of
+    # index: they omit the phase i^{2s}, and depend on θ alone.  (For a half-odd spin weight
+    # they once returned f(θ, 0) times a constant ±i.)
+    import SphericalFunctions: sλlm, sλlmCalculator
+    @test_throws "real harmonics" sλlm(0.9, ℓₘₐₓ, s; ℓₘᵢₙ) * w
+    @test_throws "real harmonics" sλlmCalculator(0.9, ℓₘₐₓ, s) * w
+    @test_throws "real harmonics" sλlm(0.9, 7//2, 1//2) * wh
+    @test_throws "real harmonics" sλlmCalculator(0.9, 7//2, 1//2) * wh
 end

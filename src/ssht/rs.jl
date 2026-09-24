@@ -70,6 +70,8 @@ function SSHTRS(
     if abs(s) > ℓₘₐₓ
         error("|s|=$(abs(s)) exceeds ℓₘₐₓ=$ℓₘₐₓ; there are no such modes.")
     end
+    check_sample_reals(TT, θ, "θ")
+    check_sample_reals(TT, quadrature_weights, "quadrature_weights")
     θ = Vector{TT}(θ)
     quadrature_weights = Vector{TT}(quadrature_weights)
     if length(θ) != length(quadrature_weights)
@@ -103,7 +105,7 @@ function SSHTRS(
     else
         ([plan_fft!(g) for g ∈ G], [plan_bfft!(g) for g ∈ G])
     end
-    SSHTRS{TT, typeof(parent(λ.H.Hˡ)), eltype(plans), eltype(bplans), Nθ > 1, IT}(
+    SSHTRS{TT, typeof(parent(λ.H.Hˡ)), eltype(plans), eltype(bplans), isbatched(λ), IT}(
         s, ℓₘₐₓ, θ, quadrature_weights, Nϕ, iθ, λ, F, G, plans, bplans
     )
 end
@@ -175,6 +177,7 @@ end
 
 # Analysis: f̃ = 𝒯 \ f
 function LinearAlgebra.ldiv!(f̃, 𝒯::SSHTRS{T}, f) where {T}
+    f̃ = analysis_output(𝒯, f̃, f)
     check_modes(𝒯, f̃)
     check_pixels(𝒯, f)
     if size(f)[2:end] != size(f̃)[2:end]
@@ -234,7 +237,8 @@ second, with any number of dimensions following, sampled at the Clenshaw–Curti
 [`clenshaw_curtis_rings`](@ref)`(Nθ)` in ``θ`` (which include both poles) and at
 ``ϕ_k = 2πk/N_ϕ``; [`pixels`](@ref) returns that grid for a constructed
 [`SSHTRS`](@ref).  For the analysis to be exact for a band-limited function, one needs
-``N_ϕ ≥ 2ℓₘₐₓ+1`` and ``N_θ ≥ 2ℓₘₐₓ+1``.
+``N_ϕ ≥ 2ℓₘₐₓ+1`` and ``N_θ ≥ 2ℓₘₐₓ+1`` (or ``N_θ ≥ 2ℓₘₐₓ`` for a half-odd ``ℓₘₐₓ``); with
+fewer, the result is not exact, and a warning is issued.
 
 The result is a [`ModeWeights`](@ref) for a one-dimensional map (``N_ϕ × N_θ``), or an
 array whose first dimension indexes the modes in the canonical ordering `ℓ ∈ abs(s):ℓₘₐₓ,
@@ -289,10 +293,24 @@ for maps of the shape of `map` (``N_ϕ × N_θ × …``) on the Clenshaw–Curti
 """
 function map2salm_plan(map::AbstractArray{Complex{T}}, s::IndexArgument, ℓₘₐₓ::IndexArgument) where {T<:Real}
     Nϕ, Nθ = size(map, 1), size(map, 2)
-    SSHTRS(
+    𝒯 = SSHTRS(
         s, ℓₘₐₓ; T,
         θ=clenshaw_curtis_rings(Nθ, T), quadrature_weights=clenshaw_curtis(Nθ, T), Nϕ
     )
+    # `SSHTRS` warns about too few points on a ring, but cannot know how many rings its
+    # quadrature needs; on this fixed grid it is 2⌊ℓₘₐₓ⌋+1 — 2ℓₘₐₓ+1 for an integer ℓₘₐₓ,
+    # one fewer for a half-odd one (measured: exact there, and wrong by O(1) a few rings
+    # below).  Too few rings make the analysis silently wrong, while synthesis is exact on
+    # any number, so the warning is here rather than in `salm2map`.
+    let needed = 2floor(Int, 𝒯.ℓₘₐₓ) + 1
+        if Nθ < needed
+            @warn (
+                "The map has Nθ=$Nθ rings, but the Clenshaw–Curtis analysis needs at least "
+                * "$needed for ℓₘₐₓ=$(𝒯.ℓₘₐₓ); the mode weights will not be exact."
+            )
+        end
+    end
+    𝒯
 end
 
 @doc raw"""

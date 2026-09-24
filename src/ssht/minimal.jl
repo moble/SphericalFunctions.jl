@@ -47,10 +47,11 @@ Whenever `T` is either `Float64` or `Float32`, the keyword arguments `plan_fft_f
 [`AbstractFFTs.plan_fft!`](https://juliamath.github.io/AbstractFFTs.jl/stable/api/#AbstractFFTs.plan_fft).
 
 Because this algorithm achieves optimal dimensionality, the transformation is performed in
-place by default: `𝒯 * f̃` overwrites `f̃` with the function values (and returns it), and
-`𝒯 \\ f` overwrites `f`.  If this is not desired, pass the keyword argument
-`inplace=false`, which makes those operations work on a copy of the input.  See
-[`SSHT`](@ref).
+place by default: `𝒯 * f̃` overwrites the storage of `f̃` with the function values (and
+returns that storage), and `𝒯 \\ f` overwrites `f` with the mode weights (and returns them,
+for one-dimensional `f`, as a `ModeWeights` wrapping that storage).  If this is not desired,
+pass the keyword argument `inplace=false`, which makes those operations work on a copy of
+the input.  See [`SSHT`](@ref).
 
 The values ``{}_sλ_{ℓ,m}(θ_r)`` of every mode on every ring are precomputed at construction
 (with one batched [`sλlmCalculator`](@ref)) and stored, which takes ``O(ℓₘₐₓ^3)`` memory, as
@@ -266,6 +267,7 @@ function SSHTMinimal(
     elseif length(θ) != nrings
         error("Length of θ ($(length(θ))) must equal ℓₘₐₓ-abs(s)+1 ($nrings).")
     end
+    check_sample_reals(TT, θ, "θ")
     θ = Vector{TT}(θ)
     Nϕ, centers = rings.Nϕ, rings.centers
 
@@ -377,7 +379,7 @@ end
 function Base.:*(𝒯::SSHTMinimal{T, true}, f̃) where {T}
     check_modes(𝒯, f̃)
     mul!(𝒯, array_view(f̃))
-    f̃
+    in_place_values(f̃)
 end
 function LinearAlgebra.mul!(f, 𝒯::SSHTMinimal, f̃)
     check_modes(𝒯, f̃)
@@ -412,15 +414,15 @@ end
 
 function Base.:\(𝒯::SSHTMinimal, f)
     check_pixels(𝒯, f)
-    f̃ = ldiv!(𝒯, copy(f))
-    ndims(f) == 1 ? ModeWeights(f̃, 𝒯.s, abs(𝒯.s), 𝒯.ℓₘₐₓ) : f̃
+    ldiv!(𝒯, copy(array_view(f)))  # a `ModeWeights` for one-dimensional data
 end
 function Base.:\(𝒯::SSHTMinimal{T, true}, ff̃) where {T}
     check_pixels(𝒯, ff̃)
     ldiv!(𝒯, array_view(ff̃))
-    ff̃
+    in_place_modes(𝒯, ff̃)
 end
 function LinearAlgebra.ldiv!(f̃, 𝒯::SSHTMinimal, f)
+    f̃ = analysis_output(𝒯, f̃, f)
     check_modes(𝒯, f̃)
     check_pixels(𝒯, f)
     array_view(f̃) .= f
@@ -464,5 +466,5 @@ function LinearAlgebra.ldiv!(𝒯::SSHTMinimal{T}, ff̃) where {T}
             end
         end
     end
-    ff̃
+    in_place_modes(𝒯, ff̃)
 end

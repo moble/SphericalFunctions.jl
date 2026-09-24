@@ -1,10 +1,12 @@
-# The last parameter, `B`, is `Nᵣ > 1`.  It is redundant — `Nᵣ` is a field of the wedge
-# inside `H`, and `isbatched(c)` could simply compare it to 1 — but it is the difference
-# between the block having one type and having a union of the batched and unbatched
-# ones, because the branch in `block` below is then resolved at compile time.  Only the
-# *predicate* is lifted into the type, not `Nᵣ` itself: `SSHTRS` sets `Nᵣ = Nθ`, which grows
-# with ℓₘₐₓ, and parameterizing on the count would recompile the recurrence for every
-# resolution.
+# The last parameter, `B`, records whether the calculator was built from a *vector* of rotor
+# data — batched, with blocks indexed `[iᵣ, m′, m]` — or from a single rotor.  It is decided by
+# the type of that data rather than by its length, so that a one-element vector gives batched
+# blocks like any other vector, and so that `B` is known at compile time: the block then has
+# one type rather than a union of the batched and unbatched ones, because the branch in `block`
+# below is resolved at compile time.  (It used to be `Nᵣ > 1`, which made a one-element vector
+# unbatched, and was not inferrable.)  Only the predicate is lifted into the type, not `Nᵣ`
+# itself: `SSHTRS` sets `Nᵣ = Nθ`, which grows with ℓₘₐₓ, and parameterizing on the count would
+# recompile the recurrence for every resolution.
 
 """
     WignerCalculator{IT, RT, NT}
@@ -16,7 +18,7 @@ Calculator producing Wigner's ``𝔇`` matrices (when `NT` is `Complex{RT}`) or 
 Internally this wraps a [`HCalculator`](@ref), which does the actual recurrence, plus a
 buffer into which the requested block of the matrix is written for the current ``ℓ``; that
 block is what [`recurrence!`](@ref) returns, as an array indexed naturally by `[m′, m]` (or
-`[iᵣ, m′, m]` when `Nᵣ > 1`).
+`[iᵣ, m′, m]` when it was built from a vector of rotor data).
 
 Which of those two shapes comes back is recorded in the type, as the `Bool` parameter
 read by [`isbatched`](@ref), so that the return type is inferrable; see the comment on the
@@ -39,8 +41,8 @@ end
 # and `Z₋`, so a caller that copies rather than sets must copy all of them.
 function allocate_W(
     ::Type{IT}, ::Type{RT}, ::Type{NT}, ℓₘₐₓ::IT,
-    m′ₘₐₓ::IT, m′ₘᵢₙ::IT, mₘₐₓ::IT, mₘᵢₙ::IT, Nᵣ::Int
-) where {IT<:IntegerHalf, RT<:Real, NT<:Union{RT, Complex{RT}}}
+    m′ₘₐₓ::IT, m′ₘᵢₙ::IT, mₘₐₓ::IT, mₘᵢₙ::IT, Nᵣ::Int, ::Val{B}
+) where {IT<:IntegerHalf, RT<:Real, NT<:Union{RT, Complex{RT}}, B}
     validate_index_ranges(ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
     # The recurrence needs the wedge for |m′| up to the larger of the two m′ limits (and all
     # m); the four limits only select the block that is materialized.
@@ -51,7 +53,7 @@ function allocate_W(
     Z₋ = Matrix{Complex{RT}}(undef, K, Nᵣ)
     # The reference is typed explicitly for the same reason as in `allocate_Y`: for a narrower
     # integer `IT`, `ℓₘᵢₙ(IT) - 1` is an `Int`, and the field is a `RefValue{IT}`.
-    WignerCalculator{IT, RT, NT, typeof(parent(H.Hˡ)), Nᵣ > 1}(
+    WignerCalculator{IT, RT, NT, typeof(parent(H.Hˡ)), B}(
         H, Wˡ, Z₊, Z₋, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, Ref{IT}(ℓₘᵢₙ(IT) - 1)
     )
 end
@@ -61,7 +63,7 @@ function WignerCalculator{IT, RT, NT}(
     m′ₘₐₓ::IT=ℓₘₐₓ, m′ₘᵢₙ::IT=-m′ₘₐₓ, mₘₐₓ::IT=ℓₘₐₓ, mₘᵢₙ::IT=-mₘₐₓ
 ) where {IT<:IntegerHalf, RT<:Real, NT<:Union{RT, Complex{RT}}}
     set_rotors!(
-        allocate_W(IT, RT, NT, ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, nrotors(R)), R
+        allocate_W(IT, RT, NT, ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, nrotors(R), batched_data(R)), R
     )
 end
 
@@ -91,7 +93,8 @@ for (ℓ, 𝔇ˡ) ∈ calc
 end
 ```
 
-With `Nᵣ > 1` each block is indexed as `[iᵣ, m′, m]` instead.  The block is a view into the
+For a calculator built from a vector of rotors — of any length, even one — each block is
+indexed as `[iᵣ, m′, m]` instead.  The block is a view into the
 calculator's storage and is overwritten by the next step, so `copy` it if it must survive
 (the copy keeps the natural indices), or `collect` it to get an ordinary 1-based `Matrix`.
 `collect(calc)` copies every block, so it is safe.  To sweep part of the range, or to take
@@ -105,7 +108,7 @@ see the "Conventions" section of the documentation.
 `DCalculator(R, 7//2)` — a `Rational` `ℓₘₐₓ` with denominator 2 — gives a
 calculator for half-integer ``ℓ, m′, m``.  All four keyword limits must then be
 half-integers too, `recurrence!` accepts only half-integer `ℓ` and returns a
-[`WignerMatrix`](@ref) (or a [`WignerMatrixBatch`](@ref) when `Nᵣ > 1`) whose indices are
+[`WignerMatrix`](@ref) (or a [`WignerMatrixBatch`](@ref) when built from a vector) whose indices are
 half-odd-integers; it is indexed the same way.  The double cover is respected exactly: ``𝔇(-R) = -𝔇(R)``.
 
 See also [`D`](@ref) for a simpler interface when the matrices for only one rotor are needed,
@@ -163,7 +166,7 @@ end
 # `similar(::HCalculator)` for why it cannot be re-derived at all.
 function Base.similar(c::WignerCalculator{IT, RT, NT, ST, B}) where {IT, RT, NT, ST, B}
     c′ = allocate_W(
-        IT, RT, NT, ℓₘₐₓ(c), c.m′ₘₐₓ, c.m′ₘᵢₙ, c.mₘₐₓ, c.mₘᵢₙ, Nᵣ(c)
+        IT, RT, NT, ℓₘₐₓ(c), c.m′ₘₐₓ, c.m′ₘᵢₙ, c.mₘₐₓ, c.mₘᵢₙ, Nᵣ(c), Val(B)
     )::WignerCalculator{IT, RT, NT, ST, B}
     copyto!(c′.H.eⁱᵝ, c.H.eⁱᵝ)
     copyto!(c′.H.cβ½, c.H.cβ½)
@@ -179,7 +182,7 @@ function Base.similar(c::WignerCalculator{IT, RT, NT, ST, B}, R) where {IT, RT, 
     check_rotor_type(c, R)
     set_rotors!(
         allocate_W(
-            IT, RT, NT, ℓₘₐₓ(c), c.m′ₘₐₓ, c.m′ₘᵢₙ, c.mₘₐₓ, c.mₘᵢₙ, Nᵣ(c)
+            IT, RT, NT, ℓₘₐₓ(c), c.m′ₘₐₓ, c.m′ₘᵢₙ, c.mₘₐₓ, c.mₘᵢₙ, Nᵣ(c), Val(B)
         )::WignerCalculator{IT, RT, NT, ST, B},
         R
     )
@@ -277,6 +280,7 @@ end
 
 function recurrence!(c::WignerCalculator, R, ℓ)
     check_ℓ(c.H, ℓ)
+    check_rotor_type(c, R)  # as `set_R!` and `set_β!` do, rather than silently converting
     set_rotors!(c, R)
     recurrence!(c, ℓ)
 end
@@ -440,3 +444,5 @@ end
 function d(β::Union{Real, Complex, Rotor}, ℓₘₐₓ::Rational; kwargs...)
     d(β, half_integer(ℓₘₐₓ); half_integer_kwargs(kwargs)...)
 end
+D(R::NonRotorData, ℓₘₐₓ; kwargs...) = error(not_a_rotor(R))
+d(R::NonRotorData, ℓₘₐₓ; kwargs...) = error(not_a_rotor(R))

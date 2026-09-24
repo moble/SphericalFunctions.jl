@@ -117,9 +117,11 @@ Replace the rotor data of the [`sYlmCalculator`](@ref) `calc` with the angle `θ
 point ``(θ, ϕ = 0)``, and return `calc`.  Any results the calculator was holding are
 discarded.
 
-This is what gives the real functions ``{}_sλ_{ℓ,m}(θ) = {}_sY_{ℓ,m}(θ, 0)`` that the
-ring-based transforms are built on; the values are still stored as complex numbers, with zero
-imaginary part for integer spin weight.  For a calculator built for `Nᵣ > 1`, pass an
+The values are then ``{}_sY_{ℓ,m}(θ, 0)``, stored as complex numbers.  For an integer spin
+weight these are the real functions ``{}_sλ_{ℓ,m}(θ)`` that the ring-based transforms are
+built on, with zero imaginary part; for a half-odd one they are ``i^{2s}`` times
+``{}_sλ_{ℓ,m}(θ)``, and so imaginary.  An [`sλlmCalculator`](@ref) gives ``{}_sλ_{ℓ,m}(θ)``
+directly, as real numbers.  For a calculator built for `Nᵣ > 1`, pass an
 `AbstractVector` of exactly that many angles.
 
 As for [`set_R!`](@ref), the angle's floating-point type must match the calculator's.

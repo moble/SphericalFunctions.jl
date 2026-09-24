@@ -202,7 +202,7 @@ end
 
 
 @testitem "ModeWeights indexing" begin
-    import SphericalFunctions: ModeWeights, modes, spin, Ysize, Yindex, Yrange
+    import SphericalFunctions: ModeWeights, modes, spin, Ysize, Yindex, Yrange, DegreeBlock
     import Random
 
     rng = Random.Xoshiro(20260911)
@@ -328,6 +328,18 @@ end
     end
     @test_throws BoundsError w[2, :]
     @test_throws BoundsError w[1]
+
+    # `w[ℓ, :]` accepts an integer of any type, as `w[ℓ, m]` does, and labels the block in the
+    # container's own index type.  (For any integer type but the container's own it once
+    # recursed until the stack overflowed.)
+    w = ModeWeights(collect(ComplexF64, 1:9), 0)
+    @test w[Int32(2), :] == w[2, :]
+    @test w[Int32(2), :] isa DegreeBlock{Int}
+    @test_throws BoundsError w[Int32(3), :]
+    w8 = ModeWeights(collect(ComplexF64, 1:15), Int8(1), Int8(1), Int8(3))
+    @test w8[2, :] == w8[Int8(2), :]
+    @test w8[2, :] isa DegreeBlock{Int8}
+    @test_throws BoundsError w8[300, :]  # a BoundsError, not an InexactError from Int8(300)
 end
 
 
@@ -350,21 +362,19 @@ end
         w = ModeWeights(data, s, ℓₘᵢₙ, ℓₘₐₓ)
         ϵ = 100eps()
 
-        # Shape-preserving broadcasts return a new ModeWeights with the same s and ℓ range,
-        # holding what the same broadcast on the storage gives — including broadcasts that
-        # change the element type or mix in a plain vector of the same length
+        # The broadcasts that are the arithmetic of mode weights — sums and differences of
+        # weights with the same labels, products and quotients with numbers or with a plain
+        # vector of factors, and a change of number type — return a new ModeWeights with the
+        # same s and ℓ range, holding what the same broadcast on the storage gives
         for (result, expected) in (
             (2 .* w, 2 .* data),
+            (w ./ 2, data ./ 2),
             (w .+ w, data .+ data),
-            (w .* conj.(w), data .* conj.(data)),
-            (w .+ 1, data .+ 1),
             (w .- data, zeros(ComplexF64, n)),
             (data .* w, data .* data),
             (-w, -data),
-            (conj.(w), conj.(data)),
-            (abs.(w), abs.(data)),
-            (real.(w), real.(data)),
-            (w .== w, trues(n)),
+            (ComplexF32.(w), ComplexF32.(data)),
+            (2w, 2data), (w / 2, data / 2), (w + w, 2data), (w - w, zeros(ComplexF64, n)),
         )
             @test result isa ModeWeights
             @test same_range(result, w)
@@ -372,14 +382,26 @@ end
             @test eltype(result) == eltype(expected)
             @test parent(result) !== data
         end
+        # Broadcasts that would label numbers which are not the mode weights of any function
+        # are refused: the product of two sets of weights, a constant added to every weight,
+        # and functions such as `conj`, `abs`, `real` and `==` applied elementwise
+        for bad ∈ (() -> w .* conj.(w), () -> w .+ 1, () -> conj.(w), () -> abs.(w),
+                   () -> real.(w), () -> w .== w, () -> w ./ w, () -> 1 ./ w)
+            @test_throws ArgumentError bad()
+        end
+        if s != 0  # (for s = 0 the opposite spin weight is the same one)
+            @test_throws "labels agree" w .+ ModeWeights(data, -s, ℓₘᵢₙ, ℓₘₐₓ)
+            @test_throws "different labels" w + ModeWeights(data, -s, ℓₘᵢₙ, ℓₘₐₓ)
+        end
         @test parent(w) === data
         @test parent(w) == data
-        # In-place broadcast into a similar container
+        # In-place broadcast into a similar container, whose labels must match what is computed
         w2 = similar(w)
-        w2 .= 2 .* w .+ 1
+        w2 .= 2 .* w .+ w
         @test w2 isa ModeWeights
         @test same_range(w2, w)
-        @test parent(w2) == 2 .* data .+ 1
+        @test parent(w2) == 2 .* data .+ data
+        s != 0 && @test_throws "destination holds" ModeWeights(similar(data), -s, ℓₘᵢₙ, ℓₘₐₓ) .= w
         @test parent(w) == data
         w2 .= w
         @test w2 == w
@@ -421,9 +443,9 @@ end
         @test parent(w) == data
         @test w[1] == data[1]
         @test c != w
-        # `map` keeps the wrapper, too
-        @test map(abs, w) isa ModeWeights{Float64}
-        @test parent(map(abs, w)) == abs.(data)
+        # `map` applies an arbitrary function, so it returns plain numbers
+        @test map(abs, w) isa Vector{Float64}
+        @test map(abs, w) == abs.(data)
 
         # Reductions and equality agree with the storage
         @test sum(w) ≈ sum(data) atol=ϵ rtol=ϵ
@@ -1092,32 +1114,35 @@ end
         w = ModeWeights(data, s, ℓₘᵢₙ, ℓₘₐₓ)
         ϵ = 100eps()
 
-        # Shape-preserving broadcasts keep the wrapper, with the same `HalfOddInteger`
+        # The arithmetic of mode weights keeps the wrapper, with the same `HalfOddInteger`
         # parameters
         for (result, expected) in (
             (2 .* w, 2 .* data),
             (w .+ w, data .+ data),
-            (w .* conj.(w), data .* conj.(data)),
-            (w .+ 1, data .+ 1),
             (w .- data, zeros(ComplexF64, n)),
             (data .* w, data .* data),
             (-w, -data),
-            (conj.(w), conj.(data)),
-            (abs.(w), abs.(data)),
-            (real.(w), real.(data)),
-            (w .== w, trues(n)),
+            (2w, 2data), (w + w, 2data),
         )
             @test result isa ModeWeights{eltype(expected), HalfOddInteger}
             @test same_range(result, w)
             @test parent(result) == expected
             @test parent(result) !== data
         end
+        # Broadcasts that would label numbers which are not the mode weights of any function
+        # are refused: the product of two sets of weights, a constant added to every weight,
+        # and functions such as `conj`, `abs`, `real` and `==` applied elementwise
+        for bad ∈ (() -> w .* conj.(w), () -> w .+ 1, () -> conj.(w), () -> abs.(w),
+                   () -> real.(w), () -> w .== w, () -> w ./ w, () -> 1 ./ w)
+            @test_throws ArgumentError bad()
+        end
+        @test_throws "labels agree" w .+ ModeWeights(data, -s, ℓₘᵢₙ, ℓₘₐₓ)
         @test parent(w) === data
         w2 = similar(w)
-        w2 .= 2 .* w .+ 1
+        w2 .= 2 .* w .+ w
         @test w2 isa ModeWeights{ComplexF64, HalfOddInteger}
         @test same_range(w2, w)
-        @test parent(w2) == 2 .* data .+ 1
+        @test parent(w2) == 2 .* data .+ data
 
         # `similar`, `copy` and `map` keep the wrapper and its parameters
         @test similar(w) isa ModeWeights{ComplexF64, HalfOddInteger}
@@ -1135,8 +1160,8 @@ end
         c[ℓₘₐₓ, 1//2] = 0
         @test parent(w) == data
         @test c != w
-        @test map(abs, w) isa ModeWeights{Float64, HalfOddInteger}
-        @test parent(map(abs, w)) == abs.(data)
+        @test map(abs, w) isa Vector{Float64}
+        @test map(abs, w) == abs.(data)
 
         # Reductions, equality and conversion agree with the storage
         @test sum(w) ≈ sum(data) atol=ϵ rtol=ϵ
@@ -1367,6 +1392,12 @@ end
     @test v == w && w == v
     @test dot(v, w) == dot(v, v)
     @test dot(w, v) == dot(v, v)
+    # Between two ModeWeights the labels count, for `≈` and `dot` as for `==`: the same numbers
+    # under the opposite spin weight are the weights of a different function
+    wflip = ModeWeights(copy(v), -s, lo, hi)
+    @test !(w ≈ wflip) && w != wflip
+    @test_throws "different labels" dot(w, wflip)
+    @test w ≈ copy(w) && dot(w, copy(w)) ≈ dot(v, v)
 
     # Unary plus is the identity, and unary minus negates
     @test +w === w
@@ -1383,11 +1414,11 @@ end
     # ... and multiplying on the other side is the outer product
     @test w * reshape(v, 1, n) == v * reshape(v, 1, n)
 
-    # Broadcasting keeps the wrapper when the shape is unchanged, and the labels with it
-    b = w .+ 1
+    # The arithmetic of mode weights keeps the wrapper, and the labels with it
+    b = w .+ v
     @test b isa ModeWeights
     @test spin(b) == s && ℓₘᵢₙ(b) == lo && ℓₘₐₓ(b) == hi
-    @test collect(b) == v .+ 1
+    @test collect(b) == 2v
     @test (2 .* w) isa ModeWeights
     @test (w .+ w) isa ModeWeights
     @test collect(w .* 2) == v .* 2

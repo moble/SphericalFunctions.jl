@@ -93,11 +93,17 @@ end
 function rotor_basetype(R::AbstractVector{<:Rotor})
     error("Cannot build a calculator from rotor data of type $(typeof(R)); $_rotor_input_forms.")
 end
-# A quaternion that is not a `Rotor` is refused here, which is where every entry point
-# catches it: the constructors call this directly, the setters through `check_rotor_type`, and
-# `D`, `d`, `sYlm`, `Ylm` and `sYlm_matrix` because each of them builds a calculator.  Adding
-# per-function refusals would only introduce dispatch ambiguities.
+# A quaternion that is not a `Rotor` is refused here, which is where the calculators catch it:
+# the constructors call this directly, and the setters through `check_rotor_type`.
 rotor_basetype(R::Union{AbstractQuaternion, AbstractVector{<:AbstractQuaternion}}) = error(not_a_rotor(R))
+
+# Quaternions that are not `Rotor`s, singly or in a vector.  The functions that take only
+# `Rotor`s — `D`, `d`, `sYlm`, `Ylm`, `sYlm_matrix`, `w(R)` and the transforms — never reach
+# `rotor_basetype` with these, so each has a method on this type that refuses them with the
+# message of `not_a_rotor` rather than a bare `MethodError`.
+const NonRotorData = Union{
+    Quaternionic.Quaternion, QuatVec, AbstractVector{<:Union{Quaternionic.Quaternion, QuatVec}}
+}
 
 """
     not_a_rotor(R)
@@ -138,6 +144,12 @@ end
 function nrotors(R)
     error("Cannot build a calculator from rotor data of type $(typeof(R)); $_rotor_input_forms.")
 end
+
+# Whether a calculator built from the rotor data `R` is batched, with blocks that carry a
+# leading rotor index: exactly when `R` is a vector, however long.  A `Val`, so that the
+# calculator's type — and with it the type of its blocks — is known at compile time.
+batched_data(::AbstractVector) = Val(true)
+batched_data(::Any) = Val(false)
 
 
 """

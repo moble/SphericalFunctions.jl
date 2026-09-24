@@ -59,10 +59,11 @@ end
 
 ### Rotation.
 
-# `eltype` of a `WignerSeries` is the *block* type — a series is a vector of blocks, not of
-# numbers — so the number type is two `eltype`s deep.  Getting this wrong would quietly ask
-# `similar` for a `Vector{WignerMatrix{…}}`.
-number_type(𝔇::WignerSeries) = eltype(eltype(𝔇))
+# The blocks of a `WignerSeries` hold the numbers, so the number type is the `eltype` of the
+# block type — which is the `eltype` of `values(𝔇)`, not of `𝔇`, whose `eltype` is the
+# `ℓ => block` pair it iterates as.  Getting this wrong would quietly ask `similar` for a
+# vector of blocks or of pairs.
+number_type(𝔇::WignerSeries) = eltype(eltype(values(𝔇)))
 number_type(::WignerCalculator{IT, RT, NT}) where {IT, RT, NT} = NT
 
 # A rotation mixes every m into every m′, so a block built with any of the m′/m restrictions
@@ -158,8 +159,10 @@ Real matrices from [`d`](@ref) are accepted, and are exactly the rotation by
 `from_euler_angles(0, β, 0)`, for which ``𝔇 = d``.
 
 The calculator form holds one ``ℓ`` at a time instead of materializing every block, so it
-allocates only the result; `mul!` into an existing container allocates nothing at all.  A
-calculator holds workspace, so it must not be used from two threads at once.
+allocates only the result; `mul!` into an existing container allocates nothing at all.  (The
+destination may also be a bare vector at least as long as the result, which then comes back
+as a `ModeWeights` over it.)  A calculator holds workspace, so it must not be used from two
+threads at once.
 
 ```julia
 w′ = D(R, ℓₘₐₓ(w)) * w
@@ -195,6 +198,12 @@ function LinearAlgebra.mul!(w′::ModeWeights, calc::WignerCalculator, w::ModeWe
     rotate_modes!(array_view(w′), calc, w)
     w′
 end
+# Bare storage, at least as long as the result, is accepted as the output too, and the result
+# comes back labelled as `w` is, as a `ModeWeights` over it (see `mode_weights_view`).
+LinearAlgebra.mul!(w′::AbstractVector, 𝔇::WignerSeries, w::ModeWeights) =
+    mul!(mode_weights_view(w′, w.s, w.ℓₘᵢₙ, w.ℓₘₐₓ), 𝔇, w)
+LinearAlgebra.mul!(w′::AbstractVector, calc::WignerCalculator, w::ModeWeights) =
+    mul!(mode_weights_view(w′, w.s, w.ℓₘᵢₙ, w.ℓₘₐₓ), calc, w)
 
 # The workers, against the flat storage of both containers: one `mul!` per ℓ, on the
 # contiguous run of modes that ℓ occupies.  Both ends of the loop come from `w`, because a
@@ -253,7 +262,23 @@ function check_spin_available(sr, w::ModeWeights, what)
     nothing
 end
 
+# The real harmonics ₛλₗₘ(θ) are functions of θ alone — ₛYₗₘ(θ, 0) for integer s, and for a
+# half-odd s that divided by the constant phase i^{2s} — so pairing mode weights with them
+# evaluates the function at no rotor at all, and for a half-odd spin weight the result is off
+# by that phase, ±i.  They
+# are for the transforms' ring-by-ring work, not for evaluation, and are refused here.
+function check_complex_harmonics(::Type{T}, what) where {T}
+    if T <: Real
+        throw(ArgumentError(
+            "Mode weights cannot be evaluated with $what, which are the real harmonics ₛλₗₘ(θ): "
+            * "they omit the phase i^{2s} of ₛYₗₘ and depend on θ alone.  Use the complex "
+            * "harmonics — `sYlm(R, …)` or an `sYlmCalculator` — or evaluate directly, as `w(R)`."
+        ))
+    end
+end
+
 function check_evaluation(Y::HarmonicValues{T, IT}, w::ModeWeights) where {T, IT}
+    check_complex_harmonics(T, "these harmonic values")
     check_same_kind(IT, w, "these harmonic values")
     check_ℓ_covers(
         ℓₘᵢₙ(Y), ℓₘₐₓ(Y), w, "these harmonic values",
@@ -263,6 +288,7 @@ function check_evaluation(Y::HarmonicValues{T, IT}, w::ModeWeights) where {T, IT
 end
 
 function check_evaluation(calc::HarmonicCalculator{IT}, w::ModeWeights) where {IT}
+    check_complex_harmonics(number_type(calc), "this calculator")
     check_same_kind(IT, w, "this calculator")
     check_ℓ_covers(
         ℓₘᵢₙ(calc), ℓₘₐₓ(calc), w, "this calculator", () -> "Build it with ℓₘₐₓ=$(ℓₘₐₓ(w))."
@@ -277,7 +303,9 @@ end
 
 Evaluate the function with mode weights `w` at the rotor (or rotors) whose harmonics `Y`
 holds, ``f(𝐑) = \\sum_{ℓ,m} f_{ℓ,m}\\, {}_sY_{ℓ,m}(𝐑)``.  `Y` is a [`HarmonicValues`](@ref)
-from [`sYlm`](@ref), or an [`sYlmCalculator`](@ref).
+from [`sYlm`](@ref), or an [`sYlmCalculator`](@ref).  The real harmonics of
+[`sλlm`](@ref) and [`sλlmCalculator`](@ref) are refused: they are functions of ``θ`` alone,
+without the phase ``i^{2s}`` of ``{}_sY_{ℓ,m}``, so they evaluate the function at no rotor.
 
 The result is a scalar when the harmonics were computed for a single rotor, and a `Vector` of
 one value per rotor otherwise.  Where `Y` holds a *range* of spin weights, the row of `w`'s own
@@ -375,6 +403,7 @@ This computes the harmonics afresh on every call.  For repeated evaluation build
 """
 (w::ModeWeights)(R::Rotor) = sYlm(R, ℓₘₐₓ(w), spin(w); ℓₘᵢₙ=ℓₘᵢₙ(w)) * w
 (w::ModeWeights)(R⃗::AbstractVector{<:Rotor}) = sYlm(R⃗, ℓₘₐₓ(w), spin(w); ℓₘᵢₙ=ℓₘᵢₙ(w)) * w
+(w::ModeWeights)(R::NonRotorData) = error(not_a_rotor(R))
 
 
 ### `dot` is *not* evaluation.

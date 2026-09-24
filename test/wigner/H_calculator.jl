@@ -397,3 +397,29 @@ end
         end
     end
 end
+
+@testitem "HCalculator: ℓ is ℓₘᵢₙ-1 until something is computed for the current data" begin
+    import SphericalFunctions: HCalculator, dCalculator, recurrence!, set_β!, ℓ, ℓₘᵢₙ
+
+    # As documented for every calculator, and as `dCalculator` does: `ℓ` is the order of the
+    # block most recently computed, and `ℓₘᵢₙ - 1` when nothing has been computed since the
+    # calculator was built or its data were last replaced.  The `HCalculator` once reported
+    # its wedge's own layout — ℓₘᵢₙ when fresh, and the old ℓ after `set_β!` or `fill!`, while
+    # `show` said nothing was computed and the wedge held stale numbers.
+    for (β, ℓₘₐₓ, ℓ₂) ∈ ((0.3, 4, 2), (0.3, 9//2, 5//2))
+        for calc ∈ (HCalculator(β, ℓₘₐₓ), dCalculator(β, ℓₘₐₓ))
+            @test ℓ(calc) == ℓₘᵢₙ(calc) - 1
+            recurrence!(calc, ℓ₂)
+            @test ℓ(calc) == ℓ₂
+            set_β!(calc, 0.4)
+            @test ℓ(calc) == ℓₘᵢₙ(calc) - 1
+            recurrence!(calc, ℓ₂)
+            @test ℓ(calc) == ℓ₂
+            fill!(calc, 0)
+            @test ℓ(calc) == ℓₘᵢₙ(calc) - 1
+            recurrence!(calc, 0.5, ℓ₂)
+            @test ℓ(calc) == ℓ₂
+        end
+    end
+    @test occursin("nothing computed yet", sprint(show, HCalculator(0.3, 4)))
+end

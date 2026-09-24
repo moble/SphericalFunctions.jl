@@ -11,8 +11,9 @@
 
 The value of ``ℓ`` that `x` currently holds: the order of a block ([`WignerMatrix`](@ref),
 [`DegreeBlock`](@ref), [`HWedge`](@ref), …), or of the block most recently computed by a
-calculator.  For a calculator on which [`recurrence!`](@ref) has not yet been called, this
-is `ℓₘᵢₙ(x) - 1`.
+calculator.  For a calculator on which [`recurrence!`](@ref) has not been called since it was
+built, or since its data were last replaced (by [`set_R!`](@ref), [`set_β!`](@ref),
+[`set_θ!`](@ref) or `fill!`), this is `ℓₘᵢₙ(x) - 1`.
 """
 function ℓ end
 
@@ -122,10 +123,12 @@ function ishalfinteger end
 """
     isbatched(c)
 
-Whether the calculator `c` was built for a batch of rotors (`true`, when `Nᵣ > 1`) or for a
-single one (`false`).  Like [`ishalfinteger`](@ref), this is a property of the type rather
-than of the data, so it is known at compile time — which is what lets the block that
-[`recurrence!`](@ref) returns have a single, inferrable type rather than a union of the
-batched and unbatched ones.
+Whether the calculator `c` was built for a batch of rotors (`true`, when it was built from a
+vector of rotor data, of any length) or for a single one (`false`).  Like
+[`ishalfinteger`](@ref), this is a property of the type rather than of the data, so it is
+known at compile time — which is what lets the block that [`recurrence!`](@ref) returns have a
+single, inferrable type rather than a union of the batched and unbatched ones.  For a
+[`HarmonicValues`](@ref) it says whether the storage has a rotor axis, which again it has
+exactly when the values were computed for a vector of rotors.
 """
 function isbatched end

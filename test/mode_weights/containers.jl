@@ -190,6 +190,7 @@ end
     using Quaternionic: Rotor
     import SphericalFunctions: HarmonicValues, AbstractModeContainer
     import SphericalFunctions: ishalfinteger, ℓₘᵢₙ, ℓₘₐₓ, Nᵣ, isbatched, spins, half_integer
+    import SphericalFunctions: array_view, relabel
     using Random
 
     rng = Random.Xoshiro(2026)
@@ -198,8 +199,10 @@ end
     Y = sYlm(R, 4, -2)
 
     @test Y isa AbstractModeContainer
-    @test eltype(Y) == ComplexF64
-    @test eltype(typeof(Y)) == ComplexF64        # the type-level method, used by generic code
+    # The element type is that of the iteration, `ℓ => block`, as for a calculator, so that
+    # `collect` works; the number type is that of the storage
+    @test eltype(Y) === eltype(typeof(Y)) === typeof(first(Y))
+    @test eltype(array_view(Y)) === ComplexF64
     @test ℓₘᵢₙ(Y) == 2 && ℓₘₐₓ(Y) == 4
     @test !ishalfinteger(Y)
     @test Nᵣ(Y) == 1 && !isbatched(Y)
@@ -225,6 +228,46 @@ end
     @test sYlm(R, 3, -2) != Y                    # a different ℓₘₐₓ
     @test sYlm(R, 4, -1) != Y                    # a different spin
     @test sYlm(Rs, 4, -2) != Y                   # a different rotor count
+
+    # Against a plain array, `==`, `isequal` and `≈` compare the numbers of `array_view`, in
+    # either order; between two containers they compare the labels as well, as for
+    # `ModeWeights`, so the same numbers labelled with the opposite spin are neither equal nor
+    # approximately equal
+    @test Y == array_view(Y) && array_view(Y) == Y
+    @test isequal(Y, array_view(Y)) && isequal(array_view(Y), Y)
+    @test Y ≈ array_view(Y) && array_view(Y) ≈ Y
+    @test Y ≈ array_view(Y) .+ 1e-14 && !(Y ≈ array_view(Y) .+ 1e-3)
+    @test Y ≈ copy(Y) && isequal(Y, copy(Y))
+    relabelled = HarmonicValues(copy(array_view(Y)), 2, 2, 4, 1)
+    @test relabelled == array_view(Y)
+    @test relabelled != Y && !(relabelled ≈ Y) && !isequal(relabelled, Y)
+
+    # `similar` keeps the labels and the shape, optionally with another number type, and `.=`
+    # writes into the storage, for every shape
+    Ys = (
+        Y, sYlm(Rs, 4, -2), sYlm(R, half_integer(7//2), half_integer(1//2)),
+        HarmonicValues(randn(rng, ComplexF64, 3, 24), -1:1, 1, 4, 1),
+        HarmonicValues(randn(rng, ComplexF64, 2, 3, 24), -1:1, 1, 4, 2),
+    )
+    for X ∈ Ys
+        Z = similar(X)
+        @test Z isa typeof(X) && size(array_view(Z)) == size(array_view(X))
+        @test (spins(Z), ℓₘᵢₙ(Z), ℓₘₐₓ(Z), Nᵣ(Z)) == (spins(X), ℓₘᵢₙ(X), ℓₘₐₓ(X), Nᵣ(X))
+        @test array_view(Z) !== array_view(X)
+        Z32 = similar(X, ComplexF32)
+        @test eltype(array_view(Z32)) === ComplexF32 && ℓₘₐₓ(Z32) == ℓₘₐₓ(X)
+        @test (Z .= 2 .* array_view(X)) === Z
+        @test Z == 2 .* array_view(X)
+        # `relabel` wraps an array of the same shape without copying it, and refuses another
+        A = 3 .* array_view(X)
+        W = relabel(X, A)
+        @test array_view(W) === A && W ≈ 3 .* array_view(X)
+        @test (spins(W), ℓₘᵢₙ(W), ℓₘₐₓ(W), Nᵣ(W)) == (spins(X), ℓₘᵢₙ(X), ℓₘₐₓ(X), Nᵣ(X))
+        @test_throws DimensionMismatch relabel(X, zeros(ComplexF64, 2, size(array_view(X))...))
+        # `collect` gives the pairs, as a comprehension over the container does
+        @test collect(X) == [ℓ => X[ℓ] for ℓ ∈ keys(X)]
+        @test eltype(collect(X)) === eltype(X)
+    end
 
     # Iteration is by `ℓ => block` pairs, and the container is its own `pairs`
     @test Base.IteratorSize(typeof(Y)) == Base.HasLength()

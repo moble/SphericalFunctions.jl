@@ -82,7 +82,13 @@ rotors and spin weights.  That is the form a product with mode weights takes, an
 
 `spins(Y)` is the range of spin weights served, `spin(Y)` the single value when there is only
 one, `Nᵣ(Y)` the number of rotors, and `ℓₘᵢₙ(Y)`/`ℓₘₐₓ(Y)` the range of ``ℓ``.  Iterating gives
-`ℓ => block` pairs, as a calculator does.
+`ℓ => block` pairs, as a calculator does, so `eltype(Y)` is that pair type; the number type is
+`eltype(array_view(Y))`.
+
+`copy`, `similar` and [`relabel`](@ref) keep the labels.  As for a `ModeWeights`, two
+`HarmonicValues` are equal, or approximately equal, only when their labels agree as well as
+their numbers, while `==` and `≈` against a plain array compare the numbers of `array_view(Y)`.
+`Y .= x` writes into the storage.
 
 See also [`ModeWeights`](@ref), which shares this layout but holds the weights of a function
 rather than the values of the harmonics.
@@ -110,7 +116,10 @@ end
 
 Base.parent(Y::HarmonicValues) = Y.data
 Nᵣ(Y::HarmonicValues) = Y.Nᵣ
-isbatched(Y::HarmonicValues) = Y.Nᵣ > 1
+# Batched when the storage has a rotor axis — one more dimension than the modes (and the spin
+# weights, if there are several) need — however many rotors it holds, so that this agrees with
+# the blocks, whose type is decided by the same dimensions.
+isbatched(Y::HarmonicValues) = ndims(Y.data) == (Y.s isa AbstractUnitRange ? 3 : 2)
 spins(Y::HarmonicValues{T, IT, S}) where {T, IT, S<:IntegerHalf} = Y.s:Y.s
 spins(Y::HarmonicValues{T, IT, S}) where {T, IT, S<:AbstractUnitRange} = Y.s
 spin(Y::HarmonicValues{T, IT, S}) where {T, IT, S<:IntegerHalf} = Y.s
@@ -167,11 +176,37 @@ end
 end
 Base.IteratorSize(::Type{<:HarmonicValues}) = Base.HasLength()
 Base.pairs(Y::HarmonicValues) = Y
+# So the element type is that of the iteration, as it is for a calculator and a `WignerSeries`,
+# rather than the number type that `AbstractModeContainer` reports for a `ModeWeights`, which
+# iterates over its numbers; a disagreement makes `collect` throw.  The number type is
+# `eltype(array_view(Y))`.
+Base.eltype(::Type{H}) where {T, IT, H<:HarmonicValues{T, IT}} =
+    Pair{IT, Base.promote_op(getindex, H, IT)}
+Base.eltype(Y::HarmonicValues) = eltype(typeof(Y))
+Base.IteratorEltype(::Type{<:HarmonicValues}) = Base.HasEltype()
 
 Base.copy(Y::HarmonicValues) = HarmonicValues(copy(Y.data), Y.s, Y.ℓₘᵢₙ, Y.ℓₘₐₓ, Y.Nᵣ)
-function Base.:(==)(a::HarmonicValues, b::HarmonicValues)
-    a.s == b.s && a.ℓₘᵢₙ == b.ℓₘᵢₙ && a.ℓₘₐₓ == b.ℓₘₐₓ && a.Nᵣ == b.Nᵣ && a.data == b.data
+Base.similar(Y::HarmonicValues) = HarmonicValues(similar(Y.data), Y.s, Y.ℓₘᵢₙ, Y.ℓₘₐₓ, Y.Nᵣ)
+Base.similar(Y::HarmonicValues, ::Type{S}) where {S} =
+    HarmonicValues(similar(Y.data, S), Y.s, Y.ℓₘᵢₙ, Y.ℓₘₐₓ, Y.Nᵣ)
+
+# The labels say what the numbers are the values of — which spin weights, which ℓ, how many
+# rotors — so, as for `ModeWeights`, the same numbers under different labels are not equal,
+# and not approximately equal either.  Against a plain array only the numbers can be compared,
+# and they are compared with `array_view(Y)`, whatever its shape.
+function same_labels(a::HarmonicValues, b::HarmonicValues)
+    a.s == b.s && a.ℓₘᵢₙ == b.ℓₘᵢₙ && a.ℓₘₐₓ == b.ℓₘₐₓ && a.Nᵣ == b.Nᵣ
 end
+Base.:(==)(a::HarmonicValues, b::HarmonicValues) = same_labels(a, b) && a.data == b.data
+Base.:(==)(Y::HarmonicValues, A::AbstractArray) = Y.data == A
+Base.:(==)(A::AbstractArray, Y::HarmonicValues) = A == Y.data
+Base.isequal(a::HarmonicValues, b::HarmonicValues) = same_labels(a, b) && isequal(a.data, b.data)
+Base.isequal(Y::HarmonicValues, A::AbstractArray) = isequal(Y.data, A)
+Base.isequal(A::AbstractArray, Y::HarmonicValues) = isequal(A, Y.data)
+Base.isapprox(a::HarmonicValues, b::HarmonicValues; kwargs...) =
+    same_labels(a, b) && isapprox(a.data, b.data; kwargs...)
+Base.isapprox(Y::HarmonicValues, A::AbstractArray; kwargs...) = isapprox(Y.data, A; kwargs...)
+Base.isapprox(A::AbstractArray, Y::HarmonicValues; kwargs...) = isapprox(A, Y.data; kwargs...)
 
 function Base.show(io::IO, Y::HarmonicValues{T, IT, S}) where {T, IT, S}
     spin_text = S <: AbstractUnitRange ? "s ∈ $(Y.s)" : "s = $(Y.s)"

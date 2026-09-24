@@ -120,6 +120,17 @@ function relabel(w::SpinMatrixBatch, A::AbstractArray{<:Any, 3})
     SpinMatrixBatch(A, ℓ(w); sₘₐₓ=sₘₐₓ(w), sₘᵢₙ=sₘᵢₙ(w), mₘₐₓ=mₘₐₓ(w), mₘᵢₙ=mₘᵢₙ(w))
 end
 relabel(w::ModeWeights, A::AbstractVector) = ModeWeights(A, spin(w), ℓₘᵢₙ(w), ℓₘₐₓ(w))
+# The constructor checks only the mode axis; the leading axes, which say how many rotors and
+# spin weights there are, must match too, or the blocks would be of another shape.
+function relabel(Y::HarmonicValues, A::AbstractArray)
+    if size(A) != size(Y.data)
+        throw(DimensionMismatch(
+            "The array has size $(size(A)), but these harmonic values have size "
+            * "$(size(Y.data))."
+        ))
+    end
+    HarmonicValues(A, Y.s, Y.ℓₘᵢₙ, Y.ℓₘₐₓ, Y.Nᵣ)
+end
 
 
 ### Broadcast assignment into a container.
@@ -130,7 +141,7 @@ relabel(w::ModeWeights, A::AbstractVector) = ModeWeights(A, spin(w), ℓₘᵢ�
 # x))`, and without a method here that reaches `copyto!` on a type that has no `copyto!`.
 const NaturalContainer = Union{
     WignerMatrix, WignerMatrixBatch, DegreeBlock, DegreeBlockBatch, SpinMatrix, SpinMatrixBatch,
-    ModeWeights,
+    ModeWeights, HarmonicValues,
 }
 
 # Two signatures, because `Base` defines both `materialize!(dest, bc)` and the more specific

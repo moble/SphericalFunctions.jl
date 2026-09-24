@@ -460,18 +460,41 @@ end
     ℓₘₐₓ = 20
     Rs = randn(rng, Rotor{Float64}, 8)
 
+    # Whether two objects share no mutable part: each mutable field must be a different
+    # object, and each immutable wrapper of mutable storage (an `HWedge`, a `FixedSizeArray`)
+    # is searched in turn.  Empty arrays are exempt, because Julia makes every empty `Memory`
+    # of a type one shared object, and there is nothing in them to share; the half-angle
+    # buffers of an integer-index calculator are empty.
+    function unshared(a, b)
+        all(fieldnames(typeof(a))) do f
+            x, y = getfield(a, f), getfield(b, f)
+            if ismutable(x)
+                x !== y || (x isa AbstractArray && isempty(x))
+            else
+                isbitstype(typeof(x)) || unshared(x, y)
+            end
+        end
+    end
+
     # `similar` gives an independent calculator with the same sizes and types, holding a copy
     # of the same rotor data with nothing computed.  The d and H calculators keep only β, so
     # the rotors handed to them here serve only to fix Nᵣ = 3 and 4 — and, for the Float32 d
     # calculator, the element type it works in.
+    # The half-integer calculators are included because only they use the half-angle
+    # buffers `cβ½` and `sβ½`.
     for calc in (
         DCalculator(Rs[1:2], 5; m′ₘₐₓ=3, m′ₘᵢₙ=-2, mₘₐₓ=5, mₘᵢₙ=-4),
         dCalculator(Rotor{Float32}.(Rs[1:3]), 5; m′ₘₐₓ=1),
         HCalculator(Rs[1:4], 5; m′ₘₐₓ=2),
+        DCalculator(Rs[1:2], 7//2; m′ₘₐₓ=3//2),
+        HCalculator(Rs[1:4], 7//2),
     )
         c = similar(calc)
         @test typeof(c) === typeof(calc)
         @test c !== calc
+        # Nothing that can change is shared — not the buffers, nor the `Ref`s such as `ℓ` and
+        # `axes_valid` that record what has been computed — at any depth
+        @test unshared(c, calc)
         for f in (
             SphericalFunctions.ℓₘₐₓ, SphericalFunctions.m′ₘₐₓ, SphericalFunctions.m′ₘᵢₙ,
             SphericalFunctions.Nᵣ,
@@ -502,6 +525,16 @@ end
     calc = DCalculator(Rs[1], ℓₘₐₓ)
     serial = [[copy(recurrence!(calc, R, ℓ)) for ℓ in 0:ℓₘₐₓ] for R in Rs]
     recurrence!(calc, Rs[1], ℓₘₐₓ)  # leave the template holding data while the tasks run
+
+    # Two calculators stepped alternately on one task interleave as thoroughly as threads
+    # could, and deterministically.  The spawned tasks below prove nothing when
+    # `Threads.nthreads() == 1`, since they then run one after another; this does.
+    c₁, c₂ = similar(calc), similar(calc)
+    @test all(
+        recurrence!(c₁, Rs[2], ℓ) == serial[2][ℓ+1] && recurrence!(c₂, Rs[3], ℓ) == serial[3][ℓ+1]
+        for ℓ in 0:ℓₘₐₓ
+    )
+    @test recurrence!(calc, ℓₘₐₓ) == serial[1][end]
     tasks = map(Rs) do R
         Threads.@spawn begin
             c = similar(calc)
@@ -603,5 +636,5 @@ end
     @test WignerSeries(blocks, 0, 2)[2] === blocks[3]
 
     # The ordinary 1-based forms are unaffected
-    @test sYlm!(zeros(ComplexF64, 8), R[1], 2, 1) == array_view(sYlm(R[1], 2, 1))
+    @test array_view(sYlm!(zeros(ComplexF64, 8), R[1], 2, 1)) == array_view(sYlm(R[1], 2, 1))
 end

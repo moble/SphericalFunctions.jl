@@ -279,6 +279,21 @@ end
     @test_logs (:warn, r"fewer than 2ℓₘₐₓ\+1") map2salm(
         zeros(Complex{Float64}, 2ℓmax, Nθ), 0, ℓmax
     )
+
+    # Too few rings make the analysis inexact, and are warned about too, exactly below the
+    # number at which it becomes exact: 2⌊ℓₘₐₓ⌋+1 rings.  Measured at ℓₘₐₓ = 7 (for s = 0, ±1
+    # and ±2 alike): exact at Nθ = 15, wrong by 4e-3 at 14 and by 1.7 at 8, where this was
+    # once silent.  Synthesis is exact on any number of rings, and stays quiet.
+    let L = 7
+        @test_logs (:warn, r"Nθ=14 rings, but the Clenshaw–Curtis analysis needs at least 15") map2salm(
+            zeros(ComplexF64, 2L + 1, 2L), 0, L
+        )
+        @test_logs map2salm(zeros(ComplexF64, 2L + 1, 2L + 1), 2, L)
+        @test_logs salm2map(zeros(ComplexF64, Ysize(L)), 0, L, 2L + 1, 8)
+    end
+    # For a half-odd ℓₘₐₓ one ring fewer suffices (measured: exact at 2ℓₘₐₓ rings)
+    @test_logs map2salm(zeros(ComplexF64, 8, 7), 1//2, 7//2)
+    @test_logs (:warn, r"needs at least 7 for ℓₘₐₓ=7//2") map2salm(zeros(ComplexF64, 8, 6), 1//2, 7//2)
 end
 
 @testitem "Transforms: map2salm and salm2map with half-integer spin weight" begin

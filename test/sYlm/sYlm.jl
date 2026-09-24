@@ -70,6 +70,7 @@ end
     using Quaternionic
     using Random
     rng = Random.Xoshiro(42)
+    Random.seed!(42)  # `θϕrange` draws from the default RNG; seeded so a failure can be rerun
     ℓₘₐₓ = 5
     for (θ, ϕ) ∈ θϕrange(Float64, 6)
         R = Rotor(from_spherical_coordinates(θ, ϕ))
@@ -280,16 +281,22 @@ end
     calc = sYlmCalculator(Rs[1], ℓₘₐₓ, -2:2)
     Y = Vector{ComplexF64}(undef, Ysize(0, ℓₘₐₓ))
     for R ∈ Rs, s ∈ -2:2
-        @test sYlm!(Y, calc, R, s; ℓₘᵢₙ=0) === Y
+        # The values come back labelled, as a `HarmonicValues` over (a view of) `Y` itself
+        @test parent(array_view(sYlm!(Y, calc, R, s; ℓₘᵢₙ=0))) === Y
         @test Y == array_view(sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ=0))
         n = Ysize(abs(s), ℓₘₐₓ)
         sYlm!(Y, calc, R, s)
         @test Y[1:n] == array_view(sYlm(R, ℓₘₐₓ, s))
     end
-    # Allocation-free after warm-up
+    # Allocation-free after warm-up, whether or not the labelled result is used.  This is
+    # measured inside a function, as a loop reusing the calculator runs: a call from global
+    # scope must box the `HarmonicValues` it returns, which in compiled code is never built.
     R = randn(rng, Rotor{Float64})
-    sYlm!(Y, calc, R, 1; ℓₘᵢₙ=0)
-    @test @allocated(sYlm!(Y, calc, R, 1; ℓₘᵢₙ=0)) == 0
+    ignore_result!(Y, calc, R) = (sYlm!(Y, calc, R, 1; ℓₘᵢₙ=0); nothing)
+    use_result!(Y, calc, R) = sum(abs2, array_view(sYlm!(Y, calc, R, 1; ℓₘᵢₙ=0)))
+    ignore_result!(Y, calc, R); use_result!(Y, calc, R)
+    @test @allocated(ignore_result!(Y, calc, R)) == 0
+    @test @allocated(use_result!(Y, calc, R)) == 0
 end
 
 @testitem "sYlm generic types" begin
@@ -353,8 +360,9 @@ end
                 # `@fastmath` has no effect on a wrapper type, so the two round differently.
                 err = 0.0
                 for i ∈ 1:Nᵣ, m ∈ -ℓ:ℓ
-                    z = Nᵣ == 1 ? blk[s, m] : blk[i, s, m]
-                    zref = Nᵣ == 1 ? refblk[s, m] : refblk[i, s, m]
+                    # A vector of rotors, even of one, gives batched blocks
+                    z = blk[i, s, m]
+                    zref = refblk[i, s, m]
                     err = max(err, abs(unchecked(real(z)) - real(zref)), abs(unchecked(imag(z)) - imag(zref)))
                 end
                 @test err < 1e-13
@@ -368,8 +376,8 @@ end
         for s ∈ -sₘₐₓ:sₘₐₓ
             err = 0.0
             for i ∈ 1:Nᵣ, m ∈ -ℓₘₐₓ:ℓₘₐₓ
-                z = Nᵣ == 1 ? blk[s, m] : blk[i, s, m]
-                zref = Nᵣ == 1 ? refblk[s, m] : refblk[i, s, m]
+                z = blk[i, s, m]
+                zref = refblk[i, s, m]
                 err = max(err, abs(unchecked(real(z)) - real(zref)), abs(unchecked(imag(z)) - imag(zref)))
             end
             @test err < 1e-13
@@ -380,12 +388,51 @@ end
 
 ### Half-integer indices in the flat functions.
 #
-# The oracle throughout is `sYlmCalculator`, whose half-integer values are verified against
-# the Wigner 𝔇 oracle in `test/wigner/half_integer.jl`; these items check that the flat
-# functions lay those values out in the canonical ordering, accept the `Rational` spelling,
-# refuse a mixture of the two kinds of index, and keep the two properties the transforms rest
-# on — orthonormality on the sphere and antiperiodicity in ϕ.  Angles are fixed wherever a
-# value is asserted exactly, so that a failure is reproducible.
+# The first item checks the half-integer values themselves, against their definition
+# evaluated with the independent Wigner 𝔇 oracle of `test/wigner/half_integer_oracle.jl`.
+# The rest take `sYlmCalculator` as their reference, and check that the flat functions lay
+# its values out in the canonical ordering, accept the `Rational` spelling, refuse a mixture
+# of the two kinds of index, and keep the two properties the transforms rest on —
+# orthonormality on the sphere and antiperiodicity in ϕ.  Angles are fixed wherever a value
+# is asserted exactly, so that a failure is reproducible.
+
+@testitem "sYlm half-integer against the Wigner 𝔇 oracle" setup=[HalfIntegerOracle] begin
+    import SphericalFunctions: sYlm, sYlmCalculator, sλlm, recurrence!
+    using Quaternionic: to_spherical_coordinates, from_spherical_coordinates
+
+    # The documented definition, ₛYₗₘ(R) = i^{2s} √((2ℓ+1)/4π) conj(𝔇ˡ_{m,-s}(R)), evaluated
+    # with the oracle's 𝔇 — a verbatim copy of Boyle (2016), cross-checked against
+    # Varshalovich et al. — rather than with this package's `D`.  Nothing else in the suite
+    # compares half-integer harmonics with an independent reference: orthonormality,
+    # antiperiodicity, round trips and comparisons between the package's own functions are
+    # all blind to a sign or phase error, and a flipped sign for s = ±3/2 once passed them
+    # all.  Measured worst case 9.8e-16; 1e-13 is asserted.
+    # i^{2s} is the principal branch e^{iπs} the documentation settles on
+    oracle(R, ℓ, m, s) = cispi(Float64(s)) * √((2ℓ + 1) / 4π) * conj(HalfIntegerOracle.D_oracle(R, ℓ, m, -s))
+    ℓₘₐₓ = 9//2
+    for R ∈ HalfIntegerOracle.rotors(), s ∈ (-5//2, -3//2, -1//2, 1//2, 3//2, 5//2)
+        Y = sYlm(R, ℓₘₐₓ, s)
+        calc = sYlmCalculator(R, ℓₘₐₓ, s)
+        for ℓ ∈ abs(s):ℓₘₐₓ
+            block = recurrence!(calc, ℓ)
+            for m ∈ -ℓ:ℓ
+                expected = oracle(R, ℓ, m, s)
+                @test Y[ℓ][m] ≈ expected atol=1e-13
+                @test block[m] ≈ expected atol=1e-13
+            end
+        end
+    end
+
+    # The real flavor at θ is ₛY(θ, 0) / i^{2s}, so the same oracle checks it at the rotor
+    # of (θ, 0)
+    for θ ∈ (0.3, 1.1, 2.9), s ∈ (-3//2, 1//2, 5//2)
+        R = from_spherical_coordinates(θ, 0.0)
+        Λ = sλlm(θ, ℓₘₐₓ, s)
+        for ℓ ∈ abs(s):ℓₘₐₓ, m ∈ -ℓ:ℓ
+            @test Λ[ℓ][m] ≈ oracle(R, ℓ, m, s) / cispi(Float64(s)) atol=1e-13
+        end
+    end
+end
 
 @testitem "sYlm half-integer vs sYlmCalculator blocks" begin
     import SphericalFunctions: sYlm, sYlmCalculator, recurrence!, Ysize, Yindex, HalfOddInteger
@@ -459,20 +506,22 @@ end
     calc = sYlmCalculator(Rs[1], ℓₘₐₓ, -3//2:3//2)
     Y = Vector{ComplexF64}(undef, Ysize(1//2, ℓₘₐₓ))
     for R ∈ Rs, s ∈ (-3//2, -1//2, 1//2, 3//2)
-        @test sYlm!(Y, calc, R, s; ℓₘᵢₙ=1//2) === Y
+        @test parent(array_view(sYlm!(Y, calc, R, s; ℓₘᵢₙ=1//2))) === Y
         @test Y == array_view(sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ=1//2))
         n = Ysize(abs(s), ℓₘₐₓ)
         sYlm!(Y, calc, R, s)
         @test Y[1:n] == array_view(sYlm(R, ℓₘₐₓ, s))
         # The allocating form, with the indices spelled as `Rational`s
         Y′ = Vector{ComplexF64}(undef, n)
-        @test sYlm!(Y′, R, ℓₘₐₓ, s) === Y′
+        @test parent(array_view(sYlm!(Y′, R, ℓₘₐₓ, s))) === Y′
         @test Y′ == array_view(sYlm(R, ℓₘₐₓ, s))
     end
-    # Allocation-free after warm-up, as for the integer kind
+    # Allocation-free after warm-up, as for the integer kind (and measured inside a function
+    # for the same reason)
     R = Rs[2]
-    sYlm!(Y, calc, R, 1//2; ℓₘᵢₙ=1//2)
-    @test @allocated(sYlm!(Y, calc, R, 1//2; ℓₘᵢₙ=1//2)) == 0
+    reuse!(Y, calc, R) = sum(abs2, array_view(sYlm!(Y, calc, R, 1//2; ℓₘᵢₙ=1//2)))
+    reuse!(Y, calc, R)
+    @test @allocated(reuse!(Y, calc, R)) == 0
     # Errors: a spin weight the calculator does not serve, the output length, and a spin
     # weight or ℓₘᵢₙ of the wrong
     # kind for the calculator, which is refused with a message naming the calculator's kind
@@ -517,11 +566,12 @@ end
     @test array_view(sYlm(R, 7//2, HalfOddInteger(1//2))) == array_view(sYlm(R, ℓₘₐₓ, s))
     @test sYlm_matrix(Rs, 7//2, 1//2) == sYlm_matrix(Rs, ℓₘₐₓ, s)
     @test sYlm_matrix(Rs, 7//2, 1//2; ℓₘᵢₙ=1//2) == sYlm_matrix(Rs, ℓₘₐₓ, s; ℓₘᵢₙ)
-    Yr = sYlm!(Vector{ComplexF64}(undef, Ysize(1//2, 7//2)), R, 7//2, 1//2)
-    Yh = sYlm!(Vector{ComplexF64}(undef, Ysize(1//2, 7//2)), R, ℓₘₐₓ, s)
+    Yr = array_view(sYlm!(Vector{ComplexF64}(undef, Ysize(1//2, 7//2)), R, 7//2, 1//2))
+    Yh = array_view(sYlm!(Vector{ComplexF64}(undef, Ysize(1//2, 7//2)), R, ℓₘₐₓ, s))
     @test Yr == Yh
     calc = sYlmCalculator(R, 7//2, 1//2)
-    @test sYlm!(similar(Yr), calc, R, 1//2; ℓₘᵢₙ=1//2) == sYlm!(similar(Yr), calc, R, s; ℓₘᵢₙ)
+    @test array_view(sYlm!(similar(Yr), calc, R, 1//2; ℓₘᵢₙ=1//2)) ==
+        array_view(sYlm!(similar(Yr), calc, R, s; ℓₘᵢₙ))
     # A mixture of the two kinds of index is refused with a message naming both spellings.
     msg = "must all be integers, like 3, or all be half-odd-integers, like 7//2"
     @test_throws msg array_view(sYlm(R, 7//2, 1))
@@ -545,12 +595,12 @@ end
     for IT in (Int8, Int16, Int32)
         @test array_view(sYlm(R, IT(4), IT(1))) == array_view(sYlm(R, 4, 1))
         @test array_view(sYlm(R, IT(4), IT(-1); ℓₘᵢₙ=IT(2))) == array_view(sYlm(R, 4, -1; ℓₘᵢₙ=2))
-        @test sYlm!(Vector{ComplexF64}(undef, Ysize(1, 4)), R, IT(4), IT(1)) == array_view(sYlm(R, 4, 1))
+        @test array_view(sYlm!(Vector{ComplexF64}(undef, Ysize(1, 4)), R, IT(4), IT(1))) == array_view(sYlm(R, 4, 1))
         @test sYlm_matrix(Rs, IT(4), IT(1)) == sYlm_matrix(Rs, 4, 1)
         narrowcalc = sYlmCalculator(R, IT(4), IT(1))
         @test narrowcalc isa sYlmCalculator{IT}
         @test narrowcalc.ℓ isa Base.RefValue{IT}
-        @test sYlm!(Vector{ComplexF64}(undef, Ysize(1, 4)), narrowcalc, R, IT(1)) ==
+        @test array_view(sYlm!(Vector{ComplexF64}(undef, Ysize(1, 4)), narrowcalc, R, IT(1))) ==
             array_view(sYlm(R, 4, 1))
     end
     # A half-odd-integer spelled as a `Rational` of another integer type is the same index.
@@ -758,16 +808,16 @@ end
 
         # `sYlm!` fills the same thing, and returns it
         Y′ = similar(Y)
-        @test sYlm!(Y′, R, ℓₘₐₓ, srange) === Y′
+        @test parent(array_view(sYlm!(Y′, R, ℓₘₐₓ, srange))) === Y′
         @test Y′ == Y
         # ... as does the calculator form, which needs no spin weight of its own
         calc = sYlmCalculator(R, ℓₘₐₓ, srange)
         fill!(Y′, 0)
-        @test sYlm!(Y′, calc, rotors[2]) === Y′
+        @test parent(array_view(sYlm!(Y′, calc, rotors[2]))) === Y′
         @test Y′ == array_view(sYlm(rotors[2], ℓₘₐₓ, srange))
         # ... and one spin weight of that same calculator still fills a vector
         v = Vector{ComplexF64}(undef, nmodes)
-        @test sYlm!(v, calc, rotors[2], first(sr); ℓₘᵢₙ) == array_view(sYlm(rotors[2], ℓₘₐₓ, first(sr); ℓₘᵢₙ))
+        @test array_view(sYlm!(v, calc, rotors[2], first(sr); ℓₘᵢₙ)) == array_view(sYlm(rotors[2], ℓₘₐₓ, first(sr); ℓₘᵢₙ))
 
         # `sYlm_matrix` gives a stack of synthesis matrices, indexed [rotor, spin, mode]
         M = sYlm_matrix(rotors, ℓₘₐₓ, srange)
@@ -870,12 +920,17 @@ end
     @test spins(crange) == -2:2
     # a spin weight inside the range is served, and agrees with computing it afresh
     Y1 = sYlm!(zeros(ComplexF64, Ysize(1, ℓₘₐₓ)), crange, R, 1)
-    @test Y1 ≈ array_view(sYlm(R, ℓₘₐₓ, 1))
+    @test array_view(Y1) ≈ array_view(sYlm(R, ℓₘₐₓ, 1))
     @test_throws "not among them" sYlm!(zeros(ComplexF64, Ysize(3, ℓₘₐₓ)), crange, R, 3)
 
-    # An output vector shorter than the modes it must hold is refused rather than truncated
+    # An output vector shorter than the modes it must hold is refused rather than truncated,
+    # and one that is longer is labelled over just the modes written
     needed = Ysize(0, ℓₘₐₓ)
-    @test length(sYlm!(zeros(ComplexF64, needed), c1, R, 0)) == needed
+    @test length(array_view(sYlm!(zeros(ComplexF64, needed), c1, R, 0))) == needed
+    longer = zeros(ComplexF64, needed + 3)
+    Y0 = sYlm!(longer, c1, R, 0)
+    @test length(array_view(Y0)) == needed && parent(array_view(Y0)) === longer
+    @test array_view(Y0) == array_view(sYlm(R, ℓₘₐₓ, 0)) && all(iszero, longer[needed+1:end])
     @test_throws "is needed" sYlm!(zeros(ComplexF64, needed - 1), c1, R, 0)
     @test_throws "Output vector has length" sYlm!(zeros(ComplexF64, 3), c1, R, 0)
 end

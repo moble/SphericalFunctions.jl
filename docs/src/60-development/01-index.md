@@ -25,6 +25,11 @@ julia -t auto scripts/test.jl            # the whole suite
 julia -t auto scripts/test.jl --coverage # ... and write lcov.info
 ```
 
+It runs `Pkg.test`, so it skips the `:python` items described below
+unless `:python` is passed as an argument, and it exits with a nonzero
+status when any test fails — after writing `lcov.info`, if coverage
+was requested.
+
 Finally, `Pkg.test` works, because `test/runtests.jl` is a thin shim
 over `@run_package_tests`:
 
@@ -36,10 +41,12 @@ Pkg.test("SphericalFunctions"; test_args=[":python"])  # only the `:python` item
 
 That shim supports filtering by tag only, written as `:sometag`;
 richer filtering belongs to `juliati` rather than to a hand-written
-argument parser.  Items tagged `:skipci` are skipped automatically
-when the environment variable `CI` is `"true"`, unless that tag is
-what was asked for — they need something continuous integration does
-not have, such as a Python environment.
+argument parser.  Items tagged `:python` run only when that tag is
+asked for, because they build a Conda environment on first use; the
+scheduled workflow asks for them.  Items tagged `:skipci` are skipped
+automatically when the environment variable `CI` is `"true"`, unless
+that tag is what was asked for — they need something continuous
+integration does not have.
 
 Which files are searched for test items is set by
 `JuliaTestItems.toml` in the package root: `src/`, `test/`, and the

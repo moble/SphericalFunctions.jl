@@ -18,15 +18,20 @@ LinearAlgebra.BLAS.set_num_threads(nthreads())
 # Check for the `--coverage` flag
 coverage = any(ARGS .== "--coverage")
 
-try
+# A failure is remembered rather than rethrown, so that coverage is still written; the exit
+# status at the end reports it, so that `./runtests` and anything else calling this script
+# can tell that the tests failed.
+tests_passed = try
     Δt = @elapsed Pkg.test("SphericalFunctions"; coverage, test_args=ARGS)
     println("Running tests took $Δt seconds.")
+    true
 catch e
     if coverage
         println("Tests failed; proceeding to coverage")
     else
         println("Tests failed.")
     end
+    false
 end
 
 if coverage
@@ -37,3 +42,5 @@ if coverage
     Coverage.writefile("lcov.info", coverage)
     Coverage.clean_folder(".")
 end
+
+tests_passed || exit(1)

@@ -130,10 +130,11 @@ end
         sYlm(s, ℓ, m, β, α) * cis(-s * γ)
     end
     # γ = 0 for the first three, so the closed form applies to them with no phase at all.
-    # The angles are kept away from θ ∈ {0, π} and ϕ ∈ πℤ: at those points the rotor's
-    # α ± γ phases are exactly real or imaginary, and the package's `complex_powers!` (hence
-    # `D`) is not differentiable there — its `√(-dc*(2+dc))` is evaluated at dc = 0, whose
-    # derivative is infinite — so the ForwardDiff-based operators below would return NaN.
+    # The angles are kept away from θ ∈ {0, π}: there β is 0 or π, and `spinor_phases`, which
+    # splits the rotor into the half-angles of β and the phases of α ± γ, takes the square
+    # root of an exact zero, whose derivative is infinite, so the ForwardDiff-based operators
+    # below would return NaN.  (See the warning on derivatives in the documentation of the
+    # calculators; ϕ ∈ πℤ used to be avoided as well, for a `complex_powers!` bug since fixed.)
     Qs = [
         [from_spherical_coordinates(T(θ), T(ϕ)) for (θ, ϕ) ∈ ((0.4, 0.9), (1.0, 2.0), (2.5, -1.5))];
         randn(rng, Rotor{T}, 3)
@@ -897,7 +898,7 @@ end
 end
 
 @testitem "DifferentialOperator: mul! refuses a bad destination" begin
-    import SphericalFunctions: Δspin
+    import SphericalFunctions: Δspin, spin
     using LinearAlgebra: mul!
     using Random
 
@@ -912,4 +913,12 @@ end
     # A correctly labelled, separate destination works
     dst = ModeWeights(similar(parent(w)), 1, 0, 3)
     @test parent(mul!(dst, ð, w)) == parent(ð * w)
+    # ... and so does a bare vector at least as long as the result, which comes back labelled
+    # with what the operator produces (here s = 1), as a ModeWeights over its first entries
+    out = zeros(ComplexF64, Ysize(0, 3) + 1)
+    w′ = mul!(out, ð, w)
+    @test w′ isa ModeWeights && spin(w′) == 1 && parent(array_view(w′)) === out
+    @test array_view(w′) == parent(ð * w) && iszero(out[end])
+    @test_throws "at least" mul!(zeros(ComplexF64, Ysize(0, 3) - 1), ð, w)
+    @test_throws "aliases the input" mul!(parent(w), Lz, w)
 end

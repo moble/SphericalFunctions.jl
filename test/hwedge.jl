@@ -261,3 +261,44 @@ end
     @test_throws "both |m′| and |m| exceed m′ₘₐₓ" wedge_source_error(3, 4, 2)
     @test_throws "H[3, 4]" wedge_source_error(3, 4, 2)
 end
+
+@testitem "HWedge, HAxis and WignerMatrixBatch refuse two indices, and compare element by element" begin
+    import SphericalFunctions: HWedge, HAxis, HCalculator, DCalculator, recurrence!, Nᵣ
+    using Quaternionic: from_euler_angles
+
+    # Two indices mean `(m′, m)` only for a `WignerMatrix`.  These containers are indexed by
+    # three (`[iᵣ, m′, m]`), and a two-index call once fell through to the `WignerMatrix`
+    # method and silently read the wrong element: `H[0, 0]` gave 0.0066 where `H[1, 0, 0]`
+    # is 0.869, and a batch's `wb[0, 0]` gave rotor 3's element `[0, -2]`.  It is now an error.
+    H = recurrence!(HCalculator(0.3, 3), 3)
+    @test H isa HWedge
+    @test_throws MethodError H[0, 0]
+    @test_throws MethodError H[0, 0] = 1.0
+    @test_throws MethodError Matrix(H)
+    R = [from_euler_angles(0.1i, 0.2i, 0.3i) for i ∈ 1:3]
+    wb = recurrence!(DCalculator(R, 2), 2)
+    @test Nᵣ(wb) == 3
+    @test_throws MethodError wb[0, 0]
+    @test_throws MethodError wb[0, 0] = 1.0
+    @test wb[3, 0, -2] == wb[3][0, -2]  # the three-index form is untouched
+
+    # `==` compares every element a wedge holds, rather than a `Matrix` view that ignored m
+    # (and so stayed true after stored elements had changed)
+    H₁ = recurrence!(HCalculator(0.3, 3), 3)
+    H₂ = recurrence!(HCalculator(0.3, 3), 3)
+    @test H₁ == H₂
+    H₂[1, 1, 2] += 1
+    @test H₁ != H₂
+    @test recurrence!(HCalculator(0.3, 3), 2) != H₁  # a different ℓ
+    @test recurrence!(HCalculator([0.3, 0.4], 3), 3) != H₁  # a different number of rotors
+
+    # ... and so does `==` for the m′ = 0 axis
+    a₁, a₂ = HAxis(Float64, 2, 4), HAxis(Float64, 2, 4)
+    a₁.ℓ = a₂.ℓ = 3
+    for m ∈ 0:3, iᵣ ∈ 1:2
+        a₁[iᵣ, m] = a₂[iᵣ, m] = 10iᵣ + m
+    end
+    @test a₁ == a₂
+    a₂[2, 3] = 0.0
+    @test a₁ != a₂
+end

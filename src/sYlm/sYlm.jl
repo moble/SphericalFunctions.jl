@@ -16,7 +16,8 @@ inferrable — `S`, which records whether the calculator serves one spin weight 
 a `Bool` read by [`isbatched`](@ref); see the comment on the struct.
 """
 struct HarmonicCalculator{IT, RT<:Real, NT<:Union{RT, Complex{RT}}, ST, S, B}
-    # As for [`WignerCalculator`](@ref), the last parameter is `Nᵣ > 1`, lifted into the type so
+    # As for [`WignerCalculator`](@ref), the last parameter says whether the calculator was
+    # built from a vector of rotor data (of any length), lifted into the type so
     # that the branch in `spin_row` and `spin_block` — and hence the type of the block that
     # `recurrence!` returns — is settled at compile time.  `S` does the same job for the spin weights: it is the index
     # type when the calculator was built for one of them and a `UnitRange` of it when it was
@@ -59,8 +60,8 @@ for (ℓ, ₛYₗ) ∈ calc
 end
 ```
 
-With `Nᵣ > 1` each block gains a leading rotor index, so it is read as `ₛYₗ[iᵣ, m]` or
-`ₛYₗ[iᵣ, s, m]`.  The same block is what [`recurrence!`](@ref) returns when the calculator is
+For a calculator built from a vector of rotors or angles — of any length, even one — each
+block gains a leading rotor index, so it is read as `ₛYₗ[iᵣ, m]` or `ₛYₗ[iᵣ, s, m]`.  The same block is what [`recurrence!`](@ref) returns when the calculator is
 stepped by hand, and `ₛYₗ[s, :]` picks out the row of one spin weight of a calculator built
 for several.  Each block is a view into the calculator's storage, overwritten by the next
 step; `copy` it if it must survive (keeping the natural indices), or `collect` it to get an
@@ -113,7 +114,10 @@ const sYlmCalculator{IT, RT, ST, S, B} =
 Calculator for the real functions
 
 ```math
-{}_sλ_{ℓ,m}(θ) = {}_sY_{ℓ,m}(θ, 0) \\big/ i^{2s},
+{}_sλ_{ℓ,m}(θ) = \\begin{cases}
+    {}_sY_{ℓ,m}(θ, 0), & s ∈ ℤ, \\\\
+    {}_sY_{ℓ,m}(θ, 0) \\big/ i^{2s}, & s ∈ ℤ + \\tfrac{1}{2},
+\\end{cases}
 ```
 
 for all ``ℓ ≤ ℓₘₐₓ``, with elements of the angle's own real type.  The first argument is the
@@ -122,12 +126,13 @@ angle ``θ``, or an `AbstractVector` of `Nᵣ` of them; later values are supplie
 blocks, the same iteration, the same half-integer types — but stores real numbers rather
 than complex ones, and allocates no phase tables at all.
 
-The division by ``i^{2s}`` is what makes the definition uniform in the kind of the indices.
-For an integer spin weight ``i^{2s} = (-1)^s`` is already included in ``{}_sY_{ℓ,m}`` itself,
-so ``{}_sλ_{ℓ,m}`` is just the harmonic evaluated at ``ϕ = 0``, exactly as the literature
-writes it.  For a half-odd spin weight ``i^{2s}`` is ``\\pm i``, so ``{}_sY_{ℓ,m}(θ, 0)`` is
+Both are real.  For an integer spin weight the prefactor ``(-1)^s`` in the definition of
+``{}_sY_{ℓ,m}`` is ``\\pm 1``, so ``{}_sY_{ℓ,m}(θ, 0)`` is already real, and ``{}_sλ_{ℓ,m}`` is
+just the harmonic evaluated at ``ϕ = 0``, exactly as the literature writes it.  For a
+half-odd spin weight that prefactor is ``i^{2s} = \\pm i``, so ``{}_sY_{ℓ,m}(θ, 0)`` is
 imaginary rather than real, and dividing that constant phase out is what leaves a real
-function behind.  The result is bit-for-bit what the ring-based transforms used to extract
+function behind.  (Dividing by ``i^{2s}`` in both cases would give the wrong sign for odd
+integer ``s``, where ``i^{2s} = -1``.)  The result is bit-for-bit what the ring-based transforms used to extract
 from a complex calculator by hand.
 
 A `Rotor` is **not** accepted, here or through [`set_R!`](@ref): a rotor specifies the angles
@@ -153,7 +158,7 @@ function sYlmCalculator_helper(R, ℓₘₐₓ::IT, s) where {IT<:IntegerHalf}
     # See the note on `DCalculator`: the element type reaches `allocate_Y` as a type,
     # not as a value, so that the concrete result type is settled at compile time.
     RT = rotor_basetype(R)
-    set_rotors!(allocate_Y(IT, RT, Complex{RT}, ℓₘₐₓ, s, nrotors(R)), R)
+    set_rotors!(allocate_Y(IT, RT, Complex{RT}, ℓₘₐₓ, s, nrotors(R), batched_data(R)), R)
 end
 
 function sλlmCalculator(θ, ℓₘₐₓ::IndexArgument, s::SpinArgument)
@@ -161,7 +166,7 @@ function sλlmCalculator(θ, ℓₘₐₓ::IndexArgument, s::SpinArgument)
 end
 function sλlmCalculator_helper(θ, ℓₘₐₓ::IT, s) where {IT<:IntegerHalf}
     RT = rotor_basetype(θ)
-    set_rotors!(allocate_Y(IT, RT, RT, ℓₘₐₓ, s, nrotors(θ)), θ)
+    set_rotors!(allocate_Y(IT, RT, RT, ℓₘₐₓ, s, nrotors(θ), batched_data(θ)), θ)
 end
 
 # The largest and smallest ``|s|`` among the spin weights a calculator serves, and how many of
@@ -187,8 +192,8 @@ spin_representative(s::AbstractUnitRange) = first(s)
 # the uninitialized state includes the `phases` flag, which decides whether `Z₊` and `Z₋` are
 # ever read, so this must not escape without a `set_rotors!` or a full buffer copy.
 function allocate_Y(
-    ::Type{IT}, ::Type{RT}, ::Type{NT}, ℓₘₐₓ::IT, s::S, Nᵣ::Int
-) where {IT<:IntegerHalf, RT<:Real, NT<:Union{RT, Complex{RT}}, S}
+    ::Type{IT}, ::Type{RT}, ::Type{NT}, ℓₘₐₓ::IT, s::S, Nᵣ::Int, ::Val{B}
+) where {IT<:IntegerHalf, RT<:Real, NT<:Union{RT, Complex{RT}}, S, B}
     sₕ = max_abs_spin(s)
     if sₕ > ℓₘₐₓ
         error("The spin weights $s need |s| ≤ ℓₘₐₓ=$ℓₘₐₓ; the largest of them is $sₕ.")
@@ -209,7 +214,7 @@ function allocate_Y(
     Z₋ = Matrix{Complex{RT}}(undef, K, Nᵣ)
     # The reference is typed explicitly because `ℓₘᵢₙ(IT) - 1` is an `Int` whenever `IT` is a
     # narrower integer type, and a bare `Ref` of it would not fit the `RefValue{IT}` field.
-    HarmonicCalculator{IT, RT, NT, typeof(parent(H.Hˡ)), S, Nᵣ > 1}(
+    HarmonicCalculator{IT, RT, NT, typeof(parent(H.Hˡ)), S, B}(
         H, Yˡ, Z₊, Z₋, s, Ref{IT}(ℓₘᵢₙ(IT) - 1), Ref(NT <: Complex)
     )
 end
@@ -219,7 +224,7 @@ end
 # records whether the calculator was given rotors or bare angles, and hence whether `Z₊` and
 # `Z₋` hold anything at all.
 function Base.similar(c::HarmonicCalculator{IT, RT, NT, ST, S, B}) where {IT, RT, NT, ST, S, B}
-    c′ = allocate_Y(IT, RT, NT, ℓₘₐₓ(c), c.s, Nᵣ(c))::HarmonicCalculator{IT, RT, NT, ST, S, B}
+    c′ = allocate_Y(IT, RT, NT, ℓₘₐₓ(c), c.s, Nᵣ(c), Val(B))::HarmonicCalculator{IT, RT, NT, ST, S, B}
     copyto!(c′.H.eⁱᵝ, c.H.eⁱᵝ)
     copyto!(c′.H.cβ½, c.H.cβ½)
     copyto!(c′.H.sβ½, c.H.sβ½)
@@ -234,7 +239,7 @@ function Base.similar(c::HarmonicCalculator{IT, RT, NT, ST, S, B}, R) where {IT,
     end
     check_rotor_type(c, R)
     set_rotors!(
-        allocate_Y(IT, RT, NT, ℓₘₐₓ(c), c.s, Nᵣ(c))::HarmonicCalculator{IT, RT, NT, ST, S, B}, R
+        allocate_Y(IT, RT, NT, ℓₘₐₓ(c), c.s, Nᵣ(c), Val(B))::HarmonicCalculator{IT, RT, NT, ST, S, B}, R
     )
 end
 
@@ -361,6 +366,7 @@ end
 
 function recurrence!(c::HarmonicCalculator, R, ℓ)
     check_ℓ(c.H, ℓ)
+    check_rotor_type(c, R)  # as `set_R!` and `set_θ!` do, rather than silently converting
     set_rotors!(c, R)
     recurrence!(c, ℓ)
 end
@@ -679,6 +685,9 @@ end
 function Ylm(R⃗::AbstractVector{<:Rotor}, ℓₘₐₓ::Int; ℓₘᵢₙ::Int=0)
     sYlm(R⃗, ℓₘₐₓ, 0; ℓₘᵢₙ)
 end
+sYlm(R::NonRotorData, ℓₘₐₓ, s; kwargs...) = error(not_a_rotor(R))
+Ylm(R::NonRotorData, ℓₘₐₓ; kwargs...) = error(not_a_rotor(R))
+sYlm_matrix(R⃗::NonRotorData, ℓₘₐₓ, s; kwargs...) = error(not_a_rotor(R⃗))
 
 """
     YlmCalculator(R, ℓₘₐₓ)
@@ -701,9 +710,14 @@ YlmCalculator(R, ℓₘₐₓ::Int) = sYlmCalculator(R, ℓₘₐₓ, 0)
     sYlm!(Y, calc::sYlmCalculator, R, s; ℓₘᵢₙ=abs(s))
 
 In-place version of [`sYlm`](@ref): fills `Y` with ``{}_sY_{ℓ,m}(R)`` in the canonical
-ordering, and returns `Y`.  For a single spin weight `Y` is a vector, and its first
-`Ysize(ℓₘᵢₙ, ℓₘₐₓ)` elements are written; for a range of them `Y` is a matrix, and the first
-`length(s)` rows and `Ysize(ℓₘᵢₙ, ℓₘₐₓ)` columns are.
+ordering.  For a single spin weight `Y` is a vector, and its first `Ysize(ℓₘᵢₙ, ℓₘₐₓ)`
+elements are written; for a range of them `Y` is a matrix, and the first `length(s)` rows and
+`Ysize(ℓₘᵢₙ, ℓₘₐₓ)` columns are.  What is returned is a [`HarmonicValues`](@ref) over the part
+of `Y` that was written — a view, sharing `Y`'s storage — so that the values can be indexed as
+`Y[ℓ][m]`, as those of `sYlm` are, whatever the size of `Y`.
+Because a longer `Y` is accepted, the layout is fixed by `ℓₘᵢₙ`, which defaults to ``|s|``;
+version 2's `sYlm_prep` allocated storage starting at ``ℓ = 0``, and such a buffer needs
+`ℓₘᵢₙ=0` to be filled in the layout it was sized for.
 
 `Y` may also be a [`HarmonicValues`](@ref) built for one rotor, such as an earlier result of
 `sYlm`, which is then refilled in place.  Its labels do not change, so the arguments must agree
@@ -777,34 +791,36 @@ function check_harmonic_labels(Y::HarmonicValues, ℓₘₐₓ, s, ℓₘᵢₙ,
     end
     nothing
 end
-function sYlm!(
+@inline function sYlm!(
     Y::AbstractVecOrMat{<:Complex}, R::Rotor, ℓₘₐₓ::IndexArgument, s::SpinArgument;
     ℓₘᵢₙ=nothing
 )
     sYlm_flat_helper!(Y, R, flat_indices(ℓₘₐₓ, s, ℓₘᵢₙ)...)
 end
-function sYlm_flat_helper!(
+@inline function sYlm_flat_helper!(
     Y::AbstractVecOrMat{<:Complex}, R::Rotor, ℓₘₐₓ::IT, s, ℓₘᵢₙ::IT
 ) where {IT<:IntegerHalf}
     check_sYlm_args(ℓₘₐₓ, s, ℓₘᵢₙ)
-    sYlm_helper!(Y, sYlmCalculator_helper(R, ℓₘₐₓ, s), R, s, ℓₘᵢₙ)
+    harmonic_values_view(sYlm_helper!(Y, sYlmCalculator_helper(R, ℓₘₐₓ, s), R, s, ℓₘᵢₙ)...)
 end
 # In the calculator forms the calculator fixes the kind of index, so the arguments are
 # normalized one at a time and the worker checks each against it.
-function sYlm!(
+@inline function sYlm!(
     Y::AbstractVecOrMat{<:Complex}, calc::sYlmCalculator, R::Rotor; ℓₘᵢₙ=nothing
 )
-    sYlm_helper!(
+    harmonic_values_view(sYlm_helper!(
         Y, calc, R, calc.s,
         ℓₘᵢₙ === nothing ? min_abs_spin(calc.s) : half_integer(ℓₘᵢₙ)
-    )
+    )...)
 end
-function sYlm!(
+@inline function sYlm!(
     Y::AbstractVector{<:Complex}, calc::sYlmCalculator, R::Rotor, s::IndexArgument;
     ℓₘᵢₙ=nothing
 )
     let s = half_integer(s)
-        sYlm_helper!(Y, calc, R, s, ℓₘᵢₙ === nothing ? abs(s) : half_integer(ℓₘᵢₙ))
+        harmonic_values_view(
+            sYlm_helper!(Y, calc, R, s, ℓₘᵢₙ === nothing ? abs(s) : half_integer(ℓₘᵢₙ))...
+        )
     end
 end
 
@@ -837,7 +853,7 @@ function sYlm_helper!(
             Y[i₀ + j] = Yˡ[1, iₛ, j]
         end
     end
-    Y
+    (Y, s, ℓₘᵢₙ, ℓₘₐₓ)  # the storage and its normalized labels; see `harmonic_values_view`
 end
 function sYlm_helper!(
     Y::AbstractMatrix, calc::HarmonicCalculator{IT}, R, s::AbstractUnitRange,
@@ -873,8 +889,21 @@ function sYlm_helper!(
             end
         end
     end
-    Y
+    (Y, s, ℓₘᵢₙ, ℓₘₐₓ)
 end
+
+# The in-place forms fill storage the caller supplies, which may be larger than needed, and
+# return the values as a `HarmonicValues` over the part that was written.  It is always a
+# view, even when the storage is exactly the right size, so that the storage is shared rather
+# than copied and the type returned does not depend on the size.  (`sYlm` itself allocates
+# exactly what it needs, and labels that array directly.)  The workers return the storage and
+# its labels, and the wrapper is built in the small public methods, which are inlined: a
+# caller that ignores the result — as a loop reusing a calculator does — then never
+# allocates it, which it would if the wrapper were returned from the worker.
+harmonic_values_view(Y::AbstractVector, s, ℓₘᵢₙ, ℓₘₐₓ) =
+    HarmonicValues(view(Y, 1:Ysize(ℓₘᵢₙ, ℓₘₐₓ)), s, ℓₘᵢₙ, ℓₘₐₓ, 1)
+harmonic_values_view(Y::AbstractMatrix, s, ℓₘᵢₙ, ℓₘₐₓ) =
+    HarmonicValues(view(Y, 1:length(s), 1:Ysize(ℓₘᵢₙ, ℓₘₐₓ)), s, ℓₘᵢₙ, ℓₘₐₓ, 1)
 
 # `R` is untyped because the same check serves a rotor and a bare angle θ; `check_rotor_type`
 # is what decides whether the argument suits the calculator at all.
@@ -981,7 +1010,7 @@ function fill_sYlm_matrix!(Y::AbstractArray{<:Any, 3}, calc, s::AbstractUnitRang
 end
 
 
-### The real flavor: ₛλₗₘ(θ) = ₛYₗₘ(θ, 0) / i^{2s}
+### The real flavor: ₛλₗₘ(θ), defined in the `sλlmCalculator` docstring
 #
 # Every one of these is the corresponding ₛYₗₘ form with `sλlmCalculator_helper` in place of
 # `sYlmCalculator_helper`, and an angle in place of a rotor.  There is no separate machinery:
@@ -991,7 +1020,9 @@ end
 """
     sλlm(θ, ℓₘₐₓ, s; ℓₘᵢₙ=abs(s))
 
-The real functions ``{}_sλ_{ℓ,m}(θ) = {}_sY_{ℓ,m}(θ, 0) / i^{2s}`` for all ``ℓ ≤ ℓₘₐₓ``,
+The real functions ``{}_sλ_{ℓ,m}(θ)`` — ``{}_sY_{ℓ,m}(θ, 0)`` for integer ``s`` and
+``{}_sY_{ℓ,m}(θ, 0) / i^{2s}`` for half-odd ``s``; see [`sλlmCalculator`](@ref) — for all
+``ℓ ≤ ℓₘₐₓ``,
 returned in the same [`HarmonicValues`](@ref) container as [`sYlm`](@ref) and indexed exactly
 as described there — but holding real numbers rather than complex ones.  `θ` is one angle or
 an `AbstractVector` of them, and `s` one spin weight or an ascending range.
@@ -1044,24 +1075,26 @@ function sλlm!(
     sλlm!(array_view(Y), calc, θ, s; ℓₘᵢₙ=Y.ℓₘᵢₙ)
     Y
 end
-function sλlm!(
+@inline function sλlm!(
     Y::AbstractVecOrMat{<:Real}, θ::Real, ℓₘₐₓ::IndexArgument, s::SpinArgument; ℓₘᵢₙ=nothing
 )
     let (ℓₘₐₓ, s, ℓₘᵢₙ) = flat_indices(ℓₘₐₓ, s, ℓₘᵢₙ)
         check_sYlm_args(ℓₘₐₓ, s, ℓₘᵢₙ)
-        sYlm_helper!(Y, sλlmCalculator_helper(θ, ℓₘₐₓ, s), θ, s, ℓₘᵢₙ)
+        harmonic_values_view(sYlm_helper!(Y, sλlmCalculator_helper(θ, ℓₘₐₓ, s), θ, s, ℓₘᵢₙ)...)
     end
 end
-function sλlm!(Y::AbstractVecOrMat{<:Real}, calc::sλlmCalculator, θ::Real; ℓₘᵢₙ=nothing)
-    sYlm_helper!(
+@inline function sλlm!(Y::AbstractVecOrMat{<:Real}, calc::sλlmCalculator, θ::Real; ℓₘᵢₙ=nothing)
+    harmonic_values_view(sYlm_helper!(
         Y, calc, θ, calc.s, ℓₘᵢₙ === nothing ? min_abs_spin(calc.s) : half_integer(ℓₘᵢₙ)
-    )
+    )...)
 end
-function sλlm!(
+@inline function sλlm!(
     Y::AbstractVector{<:Real}, calc::sλlmCalculator, θ::Real, s::IndexArgument; ℓₘᵢₙ=nothing
 )
     let s = half_integer(s)
-        sYlm_helper!(Y, calc, θ, s, ℓₘᵢₙ === nothing ? abs(s) : half_integer(ℓₘᵢₙ))
+        harmonic_values_view(
+            sYlm_helper!(Y, calc, θ, s, ℓₘᵢₙ === nothing ? abs(s) : half_integer(ℓₘᵢₙ))...
+        )
     end
 end
 

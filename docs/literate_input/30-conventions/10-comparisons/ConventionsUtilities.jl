@@ -73,6 +73,8 @@ end
     # to cos(θ).  We can compare it to some actual derivatives of sin(θ)^(2k) to verify its
     # correctness.
     import .ConventionsUtilities: dʲsin²ᵏθdcosθʲ
+    using Random
+    Random.seed!(1234)  # `βrange` draws from the default RNG; seeded so a failure can be rerun
     for θ ∈ βrange(Float64, 15)
         @test dʲsin²ᵏθdcosθʲ(j=0, k=0, θ=θ) ≈ 1
         @test dʲsin²ᵏθdcosθʲ(j=0, k=1, θ=θ) ≈ sin(θ)^2

@@ -225,6 +225,18 @@ end
     @inbounds Base.parent(w)[i] = v
 end
 
+# A wedge is not a matrix, so the generic `==`, which compares `Matrix` views, does not apply:
+# two wedges are equal when they describe the same ℓ, range of m′ and rotors, and agree on
+# every element they hold.
+function Base.:(==)(w1::HWedge{IT}, w2::HWedge{IT}) where {IT}
+    ℓ(w1) == ℓ(w2) && Nᵣ(w1) == Nᵣ(w2) &&
+        m′ₘᵢₙ(w1) == m′ₘᵢₙ(w2) && m′ₘₐₓ(w1) == m′ₘₐₓ(w2) &&
+        all(
+            w1[iᵣ, m′, m] == w2[iᵣ, m′, m]
+            for m′ ∈ m′ₘᵢₙ(w1):m′ₘₐₓ(w1) for m ∈ abs(m′):ℓ(w1) for iᵣ ∈ 1:Nᵣ(w1)
+        )
+end
+
 function Base.summary(io::IO, H::HWedge{IT, RT}) where {IT, RT}
     print(
         io,
@@ -238,7 +250,8 @@ function Base.show(io::IO, ::MIME"text/plain", H::HWedge{IT, RT, ST}) where {IT,
     print(io, " stored in\n", summary(parent(H)), ", currently using\n")
     let ℓ = ℓ(H), m′ₘᵢₙ = m′ₘᵢₙ(H), m′ₘₐₓ = m′ₘₐₓ(H), Nᵣ = Nᵣ(H)
         i = row_index(H)[Int(m′ₘₐₓ - m′ₘᵢₙ) + 1] + Nᵣ * (Int(ℓ - abs(m′ₘₐₓ)) + 1) - 1
-        show(io, MIME("text/plain"), parent(H)[begin:i])
+        # A view, not a copy, so that uninitialized `BigFloat` storage prints as `#undef`
+        show(io, MIME("text/plain"), view(parent(H), firstindex(parent(H)):i))
     end
 end
 
@@ -445,6 +458,12 @@ end
     end
     i = iᵣ + Nᵣ(w) * Int(m - ℓₘᵢₙ(w))
     @inbounds Base.parent(w)[i] = v
+end
+
+# As for `HWedge`: equal when they describe the same ℓ and rotors, and agree on every element
+function Base.:(==)(w1::HAxis{IT}, w2::HAxis{IT}) where {IT}
+    ℓ(w1) == ℓ(w2) && Nᵣ(w1) == Nᵣ(w2) &&
+        all(w1[iᵣ, m] == w2[iᵣ, m] for m ∈ ℓₘᵢₙ(w1):ℓ(w1) for iᵣ ∈ 1:Nᵣ(w1))
 end
 
 function Base.summary(io::IO, H::HAxis{IT, RT}) where {IT, RT}

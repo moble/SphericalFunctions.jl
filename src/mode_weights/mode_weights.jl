@@ -11,8 +11,14 @@ Vector of mode weights ``f_{ℓ,m}`` of a spin-weighted function ``f = \\sum_{�
 A `ModeWeights` is an [`AbstractModeContainer`](@ref
 SphericalFunctions.AbstractModeContainer), not an `AbstractVector`; [`array_view`](@ref) gives
 the flat 1-based storage, which is what the transforms and the operator matrices take.  Linear
-indexing and broadcasting still work, and a shape-preserving broadcast keeps the wrapper.  In
-addition
+indexing works.  So does the arithmetic of mode weights as the weights of functions, which
+keeps the labels: `a + b` and `a - b` (and their broadcast forms) when the labels agree, and
+products and quotients with numbers, or elementwise with a plain vector of factors (a
+diagonal operator, such as a filter).  Anything else — the elementwise product of two sets of
+weights, `conj.(w)`, `abs2.(w)` — would label numbers that are not the mode weights of any
+function, and is an error; arithmetic on the raw numbers goes through `array_view(w)`.  `≈` and
+`dot` between two `ModeWeights` require their labels to agree, and `map` returns plain
+numbers.  In addition
 - `w[ℓ, m]` reads or writes the weight of mode ``(ℓ, m)``,
 - `w[ℓ, :]` is a [`DegreeBlock`](@ref) view of the weights for one ``ℓ``, indexed by
   `m ∈ -ℓ:ℓ`,
@@ -23,7 +29,8 @@ addition
   [`ð`](@ref), [`ð̄`](@ref) give a new `ModeWeights` with the spin weight adjusted where
   appropriate, written either `ð * w` or `ð(w)`.  These build no matrix: the operator is
   applied by a loop, so the only allocation is the result, and `mul!(w′, ð, w)` into a
-  correctly labelled destination allocates nothing at all,
+  correctly labelled destination allocates nothing at all (`w′` may also be a bare vector at
+  least as long as the result, which then comes back as a `ModeWeights` over it),
 - multiplying by an operator *matrix* instead — `ð(s, ℓₘᵢₙ, ℓₘₐₓ) * w` — gives a plain
   `Vector`, because a matrix of numbers cannot say what spin weight its result has; use the
   operators themselves when you want the answer labelled, and
@@ -224,14 +231,19 @@ Base.:*(A::Bidiagonal, w::ModeWeights) = A * parent(w)
 Base.:*(A::Tridiagonal, w::ModeWeights) = A * parent(w)
 Base.copy(w::ModeWeights) = ModeWeights(copy(w.data), w.s, w.ℓₘᵢₙ, w.ℓₘₐₓ)
 
-# Broadcasting preserves the `ModeWeights` wrapper when the shape is unchanged.  An
-# elementwise operation cannot change which modes are held, so the spin weight and the range of
-# ℓ that label them survive it; only a broadcast that changes the length drops back to a plain
-# `Vector`.  A `Broadcast.ArrayStyle` would be the usual way to do this, but it is available
-# only to an `AbstractArray`; a style of this type's own does the same job, given a `broadcastable` that
+# Broadcasting over mode weights is allowed only where the result is again the mode weights of
+# a function, with labels that can be stated: sums and differences of weights with the same
+# spin weight and range of ℓ, and products and quotients of weights with numbers — or with
+# plain vectors, one factor per mode, which is a diagonal operator such as a filter.  The
+# result then carries those labels.  Anything else that involves mode weights is refused,
+# because it would put a label on numbers it does not describe: the mode weights of a product
+# of two functions are not the product of their mode weights, those of the complex conjugate
+# are not the conjugates, and `abs2.(w)` is not the mode weights of anything.  Such arithmetic
+# on the raw numbers is still available through `array_view(w)`.  A `Broadcast.ArrayStyle`
+# would be the usual way to get a wrapped result, but it is available only to an
+# `AbstractArray`; a style of this type's own does the same job, given a `broadcastable` that
 # hands back the container rather than `collect`ing it, and the `axes` and linear `getindex`
-# defined above.  Writing *into* one with `.=` is handled with the other containers, in
-# `array_view.jl`.
+# defined above.
 struct ModeWeightsStyle <: Broadcast.AbstractArrayStyle{1} end
 ModeWeightsStyle(::Val{0}) = ModeWeightsStyle()
 ModeWeightsStyle(::Val{1}) = ModeWeightsStyle()
@@ -239,19 +251,92 @@ ModeWeightsStyle(::Val{N}) where {N} = Broadcast.DefaultArrayStyle{N}()
 Base.BroadcastStyle(::Type{<:ModeWeights}) = ModeWeightsStyle()
 Base.Broadcast.broadcastable(w::ModeWeights) = w
 function Base.similar(bc::Broadcast.Broadcasted{ModeWeightsStyle}, ::Type{S}) where {S}
-    w = find_modeweights(bc)
-    if axes(bc) == axes(w)
-        ModeWeights(similar(Vector{S}, axes(bc)), w.s, w.ℓₘᵢₙ, w.ℓₘₐₓ)
+    label = broadcast_label(bc)
+    if label !== nothing && length(axes(bc)) == 1 && length(bc) == Ysize(label[2], label[3])
+        ModeWeights(similar(Vector{S}, axes(bc)), label...)
     else
         similar(Vector{S}, axes(bc))
     end
 end
-find_modeweights(bc::Broadcast.Broadcasted) = find_modeweights(bc.args)
-find_modeweights(args::Tuple) = find_modeweights(find_modeweights(args[1]), Base.tail(args))
-find_modeweights(x) = x
-find_modeweights(::Tuple{}) = nothing
-find_modeweights(w::ModeWeights, rest) = w
-find_modeweights(::Any, rest) = find_modeweights(rest)
+
+# The labels `(s, ℓₘᵢₙ, ℓₘₐₓ)` of what a broadcast expression computes, or `nothing` if it
+# involves no mode weights; an expression that combines mode weights in a way that does not
+# give mode weights is an error.  See the comment above.
+broadcast_label(w::ModeWeights) = (w.s, w.ℓₘᵢₙ, w.ℓₘₐₓ)
+broadcast_label(x) = nothing
+function broadcast_label(bc::Broadcast.Broadcasted)
+    labels = map(broadcast_label, bc.args)
+    labelled = filter(!isnothing, labels)
+    isempty(labelled) && return nothing
+    label, f = first(labelled), bc.f
+    if f === (+) || f === (-)
+        if any(!=(label), labelled)
+            throw(ArgumentError(
+                "Mode weights can be added or subtracted only when their labels agree; got "
+                * join(("s=$(l[1]), ℓ ∈ $(l[2]):$(l[3])" for l ∈ labelled), " and ") * "."
+            ))
+        end
+        if any(is_broadcast_scalar, bc.args)
+            throw(ArgumentError(
+                "Adding a number to every mode weight does not give the mode weights of any "
+                * "function; use `array_view(w)` for arithmetic on the raw numbers."
+            ))
+        end
+    elseif f === (*)
+        if length(labelled) > 1
+            throw(ArgumentError(
+                "The mode weights of a product of functions are not the product of their mode "
+                * "weights.  Mode weights may be multiplied by numbers, or elementwise by a "
+                * "plain vector of factors; use `array_view(w)` for arithmetic on the raw numbers."
+            ))
+        end
+    elseif f === (/) || f === (\)
+        numerator_position = f === (/) ? 1 : 2
+        if length(bc.args) != 2 || labels[3 - numerator_position] !== nothing
+            throw(ArgumentError(
+                "Mode weights may be divided by numbers, or elementwise by a plain vector of "
+                * "factors, but nothing may be divided by mode weights; use `array_view(w)` for "
+                * "arithmetic on the raw numbers."
+            ))
+        end
+    elseif f === identity || f === float || f === complex || (f isa Type && f <: Number)
+        # a copy, or a change of number type, holds the same modes
+    else
+        throw(ArgumentError(
+            "Broadcasting `$f` over mode weights does not give the mode weights of any function "
+            * "with the same labels; only sums, differences, and products and quotients with "
+            * "numbers or plain vectors of factors do.  Use `array_view(w)` for arithmetic on "
+            * "the raw numbers."
+        ))
+    end
+    label
+end
+is_broadcast_scalar(x) = x isa Number || x isa Ref || (x isa AbstractArray && ndims(x) == 0)
+
+# Writing into mode weights with `.=` checks the labels in the same way: whatever the right-hand
+# side computes must be what the destination's labels say it holds.  (The other containers go
+# through the methods in `array_view.jl`.)
+function check_broadcast_destination(dest::ModeWeights, bc)
+    label = broadcast_label(bc)
+    if label !== nothing && label != broadcast_label(dest)
+        throw(ArgumentError(
+            "The destination holds s=$(dest.s), ℓ ∈ $(dest.ℓₘᵢₙ):$(dest.ℓₘₐₓ), but the "
+            * "right-hand side computes s=$(label[1]), ℓ ∈ $(label[2]):$(label[3])."
+        ))
+    end
+end
+@inline function Base.Broadcast.materialize!(dest::ModeWeights, bc)
+    check_broadcast_destination(dest, bc)
+    Base.Broadcast.materialize!(array_view(dest), bc)
+    dest
+end
+@inline function Base.Broadcast.materialize!(
+    dest::ModeWeights, bc::Base.Broadcast.Broadcasted{<:Any}
+)
+    check_broadcast_destination(dest, bc)
+    Base.Broadcast.materialize!(array_view(dest), bc)
+    dest
+end
 
 # The non-mutating `copy(bc)` builds its destination with the `similar` above and then fills
 # it, so a `ModeWeights` destination needs a `copyto!` of its own; `.=` into an existing one
@@ -261,14 +346,36 @@ function Base.copyto!(w::ModeWeights, bc::Broadcast.Broadcasted)
     w
 end
 
-# `map` keeps the wrapper for the same reason broadcasting does.
-Base.map(f, w::ModeWeights) = ModeWeights(map(f, w.data), w.s, w.ℓₘᵢₙ, w.ℓₘₐₓ)
+# `map` applies an arbitrary function, whose result there is no way to label, so it returns
+# plain numbers; broadcasting is the way to keep the labels, where they still apply.
+Base.map(f, w::ModeWeights) = map(f, w.data)
 
-# Arithmetic that cannot change which modes are held keeps the label; `similar` keeps it for
-# the same length and falls back to a plain array for any other shape.  An `AbstractVector`
-# would inherit these, so they are written out here.
+# The linear arithmetic of mode weights, which keeps the labels: sums and differences of
+# weights whose labels agree, and products and quotients with numbers.  `similar` keeps the
+# labels for the same length and falls back to a plain array for any other shape.
 Base.:-(w::ModeWeights) = ModeWeights(-w.data, w.s, w.ℓₘᵢₙ, w.ℓₘₐₓ)
 Base.:+(w::ModeWeights) = w
+same_labels(a::ModeWeights, b::ModeWeights) = broadcast_label(a) == broadcast_label(b)
+function check_same_labels(a::ModeWeights, b::ModeWeights, what)
+    if !same_labels(a, b)
+        throw(ArgumentError(
+            "Cannot $what mode weights with different labels: s=$(a.s), ℓ ∈ $(a.ℓₘᵢₙ):$(a.ℓₘₐₓ) "
+            * "and s=$(b.s), ℓ ∈ $(b.ℓₘᵢₙ):$(b.ℓₘₐₓ)."
+        ))
+    end
+end
+function Base.:+(a::ModeWeights, b::ModeWeights)
+    check_same_labels(a, b, "add")
+    ModeWeights(a.data + b.data, a.s, a.ℓₘᵢₙ, a.ℓₘₐₓ)
+end
+function Base.:-(a::ModeWeights, b::ModeWeights)
+    check_same_labels(a, b, "subtract")
+    ModeWeights(a.data - b.data, a.s, a.ℓₘᵢₙ, a.ℓₘₐₓ)
+end
+Base.:*(x::Number, w::ModeWeights) = ModeWeights(x * w.data, w.s, w.ℓₘᵢₙ, w.ℓₘₐₓ)
+Base.:*(w::ModeWeights, x::Number) = ModeWeights(w.data * x, w.s, w.ℓₘᵢₙ, w.ℓₘₐₓ)
+Base.:/(w::ModeWeights, x::Number) = ModeWeights(w.data / x, w.s, w.ℓₘᵢₙ, w.ℓₘₐₓ)
+Base.:\(x::Number, w::ModeWeights) = ModeWeights(x \ w.data, w.s, w.ℓₘᵢₙ, w.ℓₘₐₓ)
 Base.similar(w::ModeWeights, n::Integer) = similar(w, eltype(w), n)
 Base.similar(w::ModeWeights, ::Type{S}, n::Integer) where {S} =
     n == length(w) ? ModeWeights(similar(w.data, S), w.s, w.ℓₘᵢₙ, w.ℓₘₐₓ) : similar(w.data, S, n)
@@ -282,13 +389,21 @@ Base.:(==)(w::ModeWeights, v::AbstractVector) = w.data == v
 Base.:(==)(v::AbstractVector, w::ModeWeights) = v == w.data
 Base.isequal(w::ModeWeights, v::AbstractVector) = isequal(w.data, v)
 Base.isequal(v::AbstractVector, w::ModeWeights) = isequal(v, w.data)
-Base.isapprox(a::ModeWeights, b::ModeWeights; kwargs...) = isapprox(a.data, b.data; kwargs...)
+# Between two sets of mode weights the labels count too, as they do for `==`: the same numbers
+# under different labels are the weights of different functions.
+Base.isapprox(a::ModeWeights, b::ModeWeights; kwargs...) =
+    same_labels(a, b) && isapprox(a.data, b.data; kwargs...)
 Base.isapprox(a::ModeWeights, b::AbstractVector; kwargs...) = isapprox(a.data, b; kwargs...)
 Base.isapprox(a::AbstractVector, b::ModeWeights; kwargs...) = isapprox(a, b.data; kwargs...)
 Base.adjoint(w::ModeWeights) = adjoint(w.data)
 Base.transpose(w::ModeWeights) = transpose(w.data)
 LinearAlgebra.norm(w::ModeWeights, p::Real=2) = LinearAlgebra.norm(w.data, p)
-LinearAlgebra.dot(a::ModeWeights, b::ModeWeights) = LinearAlgebra.dot(a.data, b.data)
+# The inner product of the two functions, which is defined only between weights of one spin
+# weight; the ranges of ℓ are required to agree as well, rather than summed over their overlap.
+function LinearAlgebra.dot(a::ModeWeights, b::ModeWeights)
+    check_same_labels(a, b, "take the inner product of")
+    LinearAlgebra.dot(a.data, b.data)
+end
 LinearAlgebra.dot(a::ModeWeights, b::AbstractVector) = LinearAlgebra.dot(a.data, b)
 LinearAlgebra.dot(a::AbstractVector, b::ModeWeights) = LinearAlgebra.dot(a, b.data)
 
@@ -372,14 +487,23 @@ A view of the mode weights of the [`ModeWeights`](@ref) `w` for the given ``ℓ`
 half-odd-integers they may be passed either as `Rational`s or as [`HalfOddInteger`](@ref)s.
 Writing through the view writes into `w`.
 """
-function Base.getindex(w::ModeWeights{T, IT}, ℓ::IT, ::Colon) where {T, IT<:IntegerHalf}
+# As for `w[ℓ, m]`, a container with integer indices accepts an `Integer` of any type.  The
+# worker used to require the container's own type exactly, and since `natural_index` leaves
+# an integer's type alone, the boundary method below then called itself forever for, say, an
+# `Int32` ℓ.  The block is labelled in the container's own type, after the bounds check, so
+# that an out-of-range index is a `BoundsError` rather than an `InexactError`.
+Base.getindex(w::ModeWeights{T, <:Integer}, ℓ::Integer, ::Colon) where {T} = degree_block(w, ℓ)
+Base.getindex(w::ModeWeights{T, HalfOddInteger}, ℓ::HalfOddInteger, ::Colon) where {T} =
+    degree_block(w, ℓ)
+Base.getindex(w::ModeWeights, ℓ::IndexArgument, ::Colon) = w[natural_index(w, ℓ), :]
+function degree_block(w::ModeWeights{T, IT}, ℓ) where {T, IT}
     if !(w.ℓₘᵢₙ ≤ ℓ ≤ w.ℓₘₐₓ)
         throw(BoundsError(w, (ℓ, :)))
     end
+    ℓ = convert(IT, ℓ)
     i₀ = Yindex(ℓ, -ℓ, w.ℓₘᵢₙ)
     DegreeBlock(view(w.data, i₀:i₀+2ℓ), ℓ)
 end
-Base.getindex(w::ModeWeights, ℓ::IndexArgument, ::Colon) = w[natural_index(w, ℓ), :]
 
 function Base.show(io::IO, ::MIME"text/plain", w::ModeWeights{T}) where {T}
     println(io, "ModeWeights{$T} with s=$(w.s), ℓ ∈ $(w.ℓₘᵢₙ):$(w.ℓₘₐₓ):")
@@ -426,4 +550,24 @@ function LinearAlgebra.mul!(
         w′.data, op, bandstructure(op), w.data, w.s, w.ℓₘᵢₙ, w.ℓₘₐₓ, real(float(T))
     )
     w′
+end
+# Bare storage, at least as long as the result, is accepted as the output too, and the result
+# comes back labelled, as a `ModeWeights` over it (see `mode_weights_view`).
+function LinearAlgebra.mul!(w′::AbstractVector, op::DifferentialOperator, w::ModeWeights)
+    mul!(mode_weights_view(w′, w.s + Δspin(op), w.ℓₘᵢₙ, w.ℓₘₐₓ), op, w)
+end
+
+# The in-place operations that write mode weights accept, as their output, a bare vector at
+# least as long as the result, and return the result as a `ModeWeights` over its first entries
+# — always a view, even when the length is exact, so that the storage is shared rather than
+# copied and the type returned does not depend on the length.
+function mode_weights_view(v::AbstractVector, s, ℓₘᵢₙ, ℓₘₐₓ)
+    Base.require_one_based_indexing(v)
+    n = Ysize(ℓₘᵢₙ, ℓₘₐₓ)
+    if length(v) < n
+        error(
+            "The output has length $(length(v)); at least Ysize($ℓₘᵢₙ, $ℓₘₐₓ) = $n is needed."
+        )
+    end
+    ModeWeights(view(v, 1:n), s, ℓₘᵢₙ, ℓₘₐₓ)
 end

@@ -153,8 +153,17 @@ end
 # which is automatic here: `x - first(r)` is an `Integer` by construction for both index
 # types.)
 @inline Base.in(x::T, r::WignerRange{T}) where {T<:IntegerHalf} = first(r) ≤ x ≤ last(r)
-# A value of the *other* index type is never a member, and neither is anything else.
-@inline Base.in(::Real, ::WignerRange) = false
+# Any other value is a member when it is `==` to one, as for `Base`'s ranges: a `Rational` or
+# a float equal to a half-odd member — `3//2 ∈ axes(w, 1)` — or a float equal to an integer
+# member — `1.0 ∈ axes(w, 1)`.  A value of the other kind of index never is.  (This used to
+# answer `false` for every such value, which contradicted both `Base` and the package's own
+# `==` between `HalfOddInteger` and `Rational`.)
+@inline Base.in(x::Real, r::WignerRange{HalfOddInteger}) = in_half_odd_range(x, first(r), last(r))
+@inline Base.in(x::Real, r::WignerRange{<:Integer}) = isinteger(x) && first(r) ≤ x ≤ last(r)
+@inline Base.in(::HalfOddInteger, ::WignerRange{<:Integer}) = false
+# The general method just above ties with the `IntegerHalf` one when the value and the range
+# are both half-odd, and this settles it, as the last method below does for integers.
+@inline Base.in(x::HalfOddInteger, r::WignerRange{HalfOddInteger}) = first(r) ≤ x ≤ last(r)
 # `Base` has `in(::Integer, ::AbstractUnitRange{<:Integer})`, which is neither more nor less
 # specific than either method above, so without this one `1 ∈ axes(w, 1)` on an
 # integer-indexed container is an ambiguity error rather than an answer.  Aqua's ambiguity
@@ -196,16 +205,6 @@ Base.ndims(::AbstractWignerMatrix) = 2
 Base.ndims(::Type{<:AbstractWignerMatrix}) = 2
 
 
-"""
-    Matrix(w::AbstractWignerMatrix)
-
-Materialize the block of the Wigner matrix represented by `w` as an ordinary `Matrix`.  The
-rows and columns are in order of increasing `m′` and `m`, so that the element `w[m′, m]` is
-at `[Int(m′-m′ₘᵢₙ)+1, Int(m-mₘᵢₙ)+1]`.
-"""
-function Base.Matrix(w::AbstractWignerMatrix{IT, NT}) where {IT, NT}
-    [w[m′, m] for m′ ∈ m′ₘᵢₙ(w):m′ₘₐₓ(w), m ∈ mₘᵢₙ(w):mₘₐₓ(w)]
-end
 Base.Array(w::AbstractWignerMatrix) = Matrix(w)
 Base.collect(w::AbstractWignerMatrix) = Matrix(w)
 
@@ -220,39 +219,15 @@ Base.show(io::IO, w::AbstractWignerMatrix) = summary(io, w)
 function Base.show(io::IO, ::MIME"text/plain", w::AbstractWignerMatrix)
     summary(io, w)
     println(io, ":")
-    Base.print_array(io, Matrix(w))
+    Base.print_array(io, stored_elements(w))
 end
 
-@propagate_inbounds function Base.getindex(w::AbstractWignerMatrix{IT}, m′::IT, m::IT) where {IT}
-    @boundscheck if !(
-        inrange(IT, m′, m′ₘᵢₙ(w), m′ₘₐₓ(w)) && inrange(IT, m, mₘᵢₙ(w), mₘₐₓ(w))
-    )
-        throw(BoundsError(w, (m′, m)))
-    end
-    @inbounds Base.parent(w)[(m′-m′ₘᵢₙ(w))+1, (m-mₘᵢₙ(w))+1]
-end
+# Every container keeps its elements in the leading block of its 1-based storage, in the
+# order of `Array(w)`, so this view equals `Array(w)`.  The `show` methods print it instead
+# because it does not read the elements: uninitialized storage of a non-bits type such as
+# `BigFloat` then prints as `#undef`, where `Array(w)` would throw an `UndefRefError`.
+stored_elements(w) = view(parent(w), map(n -> 1:n, size(w))...)
 
-@propagate_inbounds function Base.setindex!(w::AbstractWignerMatrix{IT}, v, m′::IT, m::IT) where {IT}
-    @boundscheck if !(
-        inrange(IT, m′, m′ₘᵢₙ(w), m′ₘₐₓ(w)) && inrange(IT, m, mₘᵢₙ(w), mₘₐₓ(w))
-    )
-        throw(BoundsError(w, (m′, m)))
-    end
-    @inbounds Base.parent(w)[(m′-m′ₘᵢₙ(w))+1, (m-mₘᵢₙ(w))+1] = v
-end
-
-
-### Indexing with `Rational`s.
-#
-# A half-integer container is indexed by `HalfOddInteger`s, but `w[1//2, -3//2]` is what a
-# caller naturally writes (and is what earlier versions of this package required).  These
-# methods convert and re-dispatch.  There is no corresponding method for integer containers:
-# `w[1//1, 0//1]` was never accepted and still is not.
-
-@propagate_inbounds Base.getindex(w::AbstractWignerMatrix{IT}, m′::Rational, m::Rational) where
-    {IT<:HalfOddInteger} = w[HalfOddInteger(m′), HalfOddInteger(m)]
-@propagate_inbounds Base.setindex!(w::AbstractWignerMatrix{IT}, v, m′::Rational, m::Rational) where
-    {IT<:HalfOddInteger} = (w[HalfOddInteger(m′), HalfOddInteger(m)] = v)
 
 
 function validate_index_ranges(ℓₘₐₓ::IT, m′ₘₐₓ::IT, m′ₘᵢₙ::IT, mₘₐₓ::IT, mₘᵢₙ::IT) where
@@ -372,6 +347,53 @@ struct WignerMatrix{IT, NT, ST} <: AbstractWignerMatrix{IT, NT, ST}
     end
 end
 
+"""
+    Matrix(w::WignerMatrix)
+
+Materialize the block of the Wigner matrix represented by `w` as an ordinary `Matrix`.  The
+rows and columns are in order of increasing `m′` and `m`, so that the element `w[m′, m]` is
+at `[Int(m′-m′ₘᵢₙ)+1, Int(m-mₘᵢₙ)+1]`.
+"""
+function Base.Matrix(w::WignerMatrix{IT, NT}) where {IT, NT}
+    [w[m′, m] for m′ ∈ m′ₘᵢₙ(w):m′ₘₐₓ(w), m ∈ mₘᵢₙ(w):mₘₐₓ(w)]
+end
+
+# Indexing by `(m′, m)` is what a `WignerMatrix` means by two indices, and only that.  The
+# other containers index differently — `[iᵣ, m′, m]` for `WignerMatrixBatch` and `HWedge`,
+# `[s, m]` for `SpinMatrix`, `[iᵣ, m]` for `DegreeBlockBatch` and `HAxis` — and define their
+# own methods; were these methods on `AbstractWignerMatrix`, a two-index call on a
+# three-index container would silently read the wrong element instead of being an error.
+@propagate_inbounds function Base.getindex(w::WignerMatrix{IT}, m′::IT, m::IT) where {IT}
+    @boundscheck if !(
+        inrange(IT, m′, m′ₘᵢₙ(w), m′ₘₐₓ(w)) && inrange(IT, m, mₘᵢₙ(w), mₘₐₓ(w))
+    )
+        throw(BoundsError(w, (m′, m)))
+    end
+    @inbounds Base.parent(w)[(m′-m′ₘᵢₙ(w))+1, (m-mₘᵢₙ(w))+1]
+end
+
+@propagate_inbounds function Base.setindex!(w::WignerMatrix{IT}, v, m′::IT, m::IT) where {IT}
+    @boundscheck if !(
+        inrange(IT, m′, m′ₘᵢₙ(w), m′ₘₐₓ(w)) && inrange(IT, m, mₘᵢₙ(w), mₘₐₓ(w))
+    )
+        throw(BoundsError(w, (m′, m)))
+    end
+    @inbounds Base.parent(w)[(m′-m′ₘᵢₙ(w))+1, (m-mₘᵢₙ(w))+1] = v
+end
+
+
+### Indexing with `Rational`s.
+#
+# A half-integer container is indexed by `HalfOddInteger`s, but `w[1//2, -3//2]` is what a
+# caller naturally writes (and is what earlier versions of this package required).  These
+# methods convert and re-dispatch.  There is no corresponding method for integer containers:
+# `w[1//1, 0//1]` was never accepted and still is not.
+
+@propagate_inbounds Base.getindex(w::WignerMatrix{IT}, m′::Rational, m::Rational) where
+    {IT<:HalfOddInteger} = w[HalfOddInteger(m′), HalfOddInteger(m)]
+@propagate_inbounds Base.setindex!(w::WignerMatrix{IT}, v, m′::Rational, m::Rational) where
+    {IT<:HalfOddInteger} = (w[HalfOddInteger(m′), HalfOddInteger(m)] = v)
+
 # The size of the *block* represented (the parent storage may be larger)
 function Base.iterate(w::WignerMatrix, state=1)
     n₁, n₂ = size(w)
@@ -453,10 +475,13 @@ struct WignerMatrixBatch{IT, NT, ST} <: AbstractWignerMatrix{IT, NT, ST}
     end
 end
 
+function WignerMatrixBatch(parent::AbstractArray{<:Any, 3}, ℓ::Rational; kwargs...)
+    WignerMatrixBatch(parent, half_integer(ℓ); half_integer_kwargs(kwargs)...)
+end
 function WignerMatrixBatch(
     parent::ST, ℓ::IT;
     m′ₘₐₓ::IT=ℓ, m′ₘᵢₙ::IT=-ℓ, mₘₐₓ::IT=ℓ, mₘᵢₙ::IT=-ℓ
-) where {IT, NT, ST<:AbstractArray{NT, 3}}
+) where {IT<:IntegerHalf, NT, ST<:AbstractArray{NT, 3}}
     validate_index_ranges(ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
     s₀, s₁, s₂ = size(parent)
     if s₁ < Int(m′ₘₐₓ - m′ₘᵢₙ + 1)
@@ -567,7 +592,7 @@ end
 function Base.show(io::IO, ::MIME"text/plain", w::WignerMatrixBatch)
     summary(io, w)
     println(io, ":")
-    Base.print_array(io, Array(w))
+    Base.print_array(io, stored_elements(w))
 end
 
 
@@ -674,7 +699,7 @@ Base.show(io::IO, v::DegreeBlock) = summary(io, v)
 function Base.show(io::IO, ::MIME"text/plain", v::DegreeBlock)
     summary(io, v)
     println(io, ":")
-    Base.print_array(io, Vector(v))
+    Base.print_array(io, stored_elements(v))
 end
 
 
@@ -701,9 +726,12 @@ struct DegreeBlockBatch{IT, NT, ST<:AbstractMatrix{NT}} <: AbstractWignerMatrix{
     end
 end
 
+function DegreeBlockBatch(parent::AbstractMatrix, ℓ::Rational; kwargs...)
+    DegreeBlockBatch(parent, half_integer(ℓ); half_integer_kwargs(kwargs)...)
+end
 function DegreeBlockBatch(
     parent::ST, ℓ::IT; mₘₐₓ::IT=ℓ, mₘᵢₙ::IT=-ℓ
-) where {IT, NT, ST<:AbstractMatrix{NT}}
+) where {IT<:IntegerHalf, NT, ST<:AbstractMatrix{NT}}
     s₀, s₁ = size(parent)
     if s₁ < Int(mₘₐₓ - mₘᵢₙ) + 1
         error(
@@ -795,7 +823,7 @@ Base.show(io::IO, v::DegreeBlockBatch) = summary(io, v)
 function Base.show(io::IO, ::MIME"text/plain", v::DegreeBlockBatch)
     summary(io, v)
     println(io, ":")
-    Base.print_array(io, Matrix(v))
+    Base.print_array(io, stored_elements(v))
 end
 
 
@@ -942,7 +970,7 @@ Base.show(io::IO, b::SpinMatrix) = summary(io, b)
 function Base.show(io::IO, ::MIME"text/plain", b::SpinMatrix)
     summary(io, b)
     println(io, ":")
-    Base.print_array(io, Matrix(b))
+    Base.print_array(io, stored_elements(b))
 end
 
 
@@ -1117,7 +1145,7 @@ Base.show(io::IO, b::SpinMatrixBatch) = summary(io, b)
 function Base.show(io::IO, ::MIME"text/plain", b::SpinMatrixBatch)
     summary(io, b)
     println(io, ":")
-    Base.print_array(io, Array(b))
+    Base.print_array(io, stored_elements(b))
 end
 
 
@@ -1127,8 +1155,11 @@ end
 The blocks of a Wigner matrix for every ``ℓ`` from `ℓₘᵢₙ` to `ℓₘₐₓ`, indexed by ``ℓ``:
 `s[ℓ]` is the block of order `ℓ`, and `s[ℓ][m′, m]` an element of it.
 
-This is what [`D`](@ref) and [`d`](@ref) return, for either kind of index.  It is iterable
-and has `length`, `first`, and `last`.
+This is what [`D`](@ref) and [`d`](@ref) return, for either kind of index.  Like a calculator,
+it iterates as `ℓ => block` pairs, so that `for (ℓ, 𝔇ˡ) ∈ D(R, ℓₘₐₓ)` reads exactly as the
+same loop over a [`DCalculator`](@ref); `keys` is the range of ``ℓ``, `values` gives the blocks
+alone, and `length` counts them.  `first` and `last` give the first and last blocks, as
+indexing does.
 
 See also [`WignerMatrix`](@ref) and [`WignerMatrixBatch`](@ref).
 """
@@ -1152,8 +1183,6 @@ end
 ℓₘₐₓ(s::WignerSeries) = s.ℓₘₐₓ
 Base.parent(s::WignerSeries) = s.blocks
 Base.length(s::WignerSeries) = length(s.blocks)
-Base.eltype(s::WignerSeries) = eltype(s.blocks)
-Base.eltype(::Type{<:WignerSeries{IT, VT}}) where {IT, VT} = eltype(VT)
 Base.axes(s::WignerSeries) = (WignerRange(s.ℓₘᵢₙ:s.ℓₘₐₓ),)
 Base.axes(s::WignerSeries, d::Integer) = d ≤ 1 ? axes(s)[d] : Base.OneTo(1)
 Base.ndims(::WignerSeries) = 1
@@ -1161,9 +1190,26 @@ Base.ndims(::Type{<:WignerSeries}) = 1
 Base.size(s::WignerSeries) = (length(s),)
 Base.size(s::WignerSeries, d::Integer) = d ≤ 1 ? length(s) : 1
 Base.keys(s::WignerSeries) = s.ℓₘᵢₙ:s.ℓₘₐₓ
-Base.iterate(s::WignerSeries, state=1) = iterate(s.blocks, state)
 Base.firstindex(s::WignerSeries) = s.ℓₘᵢₙ
 Base.lastindex(s::WignerSeries) = s.ℓₘₐₓ
+
+# A series iterates as `ℓ => block` pairs, as a calculator and a `HarmonicValues` do, so that
+# a loop over `D(R, ℓₘₐₓ)` reads exactly as one over `DCalculator(R, ℓₘₐₓ)`; `values` gives the
+# blocks alone.  The iteration is over the series' own position, rather than handing an
+# integer state to the storage's own `iterate`: for storage other than a `Vector`, such as a
+# view, that state is not an integer, and a series on a view once stopped after its first
+# block while its `length` still counted them all — so that a comprehension over it returned
+# uninitialized memory.  Indexing, `first` and `last` give blocks, as `s[ℓ]` does.
+function Base.iterate(s::WignerSeries, i::Int=1)
+    i > length(s.blocks) && return nothing
+    ((s.ℓₘᵢₙ + (i - 1)) => s.blocks[i], i + 1)
+end
+Base.eltype(::Type{<:WignerSeries{IT, VT}}) where {IT, VT} = Pair{IT, eltype(VT)}
+Base.eltype(s::WignerSeries) = eltype(typeof(s))
+Base.values(s::WignerSeries) = s.blocks
+Base.pairs(s::WignerSeries) = s
+Base.first(s::WignerSeries) = s[s.ℓₘᵢₙ]
+Base.last(s::WignerSeries) = s[s.ℓₘₐₓ]
 
 @propagate_inbounds function Base.getindex(s::WignerSeries{IT}, ℓ) where {IT}
     # Deliberately *not* inside `@boundscheck`, and deliberately before the `convert`: a

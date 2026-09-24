@@ -9,8 +9,11 @@ skip_input_files = (  # Non-.jl files will be skipped anyway
 )
 literate_input = joinpath(@__DIR__, "literate_input")
 
-# Ensure a file is listed in the .gitignore file
-function ensure_in_gitignore(file_path)
+# Ensure a file is listed in the .gitignore file.  The argument is a full path; the entry is
+# written relative to the package root with `/` separators, which is what git expects on
+# every platform.
+function ensure_in_gitignore(full_path)
+    file_path = join(splitpath(relpath(full_path, package_root)), "/")
     gitignore_path = joinpath(package_root, ".gitignore")
     if isfile(gitignore_path)
         existing_entries = readlines(gitignore_path)
@@ -33,11 +36,12 @@ function generate_markdown(inputfile)
     # We *don't* want to execute the code in the literate script, because they are meant to
     # be used with TestItems.jl, and we don't want to run the tests here.
     execute=false
-    # Output will be generated here:
-    outputfile = replace(inputfile, "literate_input"=>"src")
-    outputdir = dirname(outputfile)
+    # Output will be generated here.  The path is built from the part below
+    # `literate_input`, so that the checkout's own path — often ending in
+    # `SphericalFunctions.jl` — is never rewritten.
+    outputdir = joinpath(docs_src_dir, dirname(relpath(inputfile, literate_input)))
     # Ensure the output path is in .gitignore
-    ensure_in_gitignore(relpath(replace(outputfile, ".jl"=>".md"), package_root))
+    ensure_in_gitignore(joinpath(outputdir, splitext(basename(inputfile))[1] * ".md"))
     # Generate the markdown file calling Literate
     Literate.markdown(inputfile, outputdir; documenter, mdstrings, execute)
 end
@@ -59,7 +63,7 @@ end
 let
     inputfile = joinpath(literate_input, "30-conventions", "10-comparisons", "lalsuite_SphericalHarmonics.c")
     outputfile = joinpath(docs_src_dir, "30-conventions", "10-comparisons", "lalsuite_SphericalHarmonics.c")
-    ensure_in_gitignore(relpath(replace(outputfile, ".c"=>".md"), package_root))
+    ensure_in_gitignore(joinpath(dirname(outputfile), "lalsuite_SphericalHarmonics.md"))
     lalsource = read(
         joinpath(literate_input, "30-conventions", "10-comparisons", "lalsuite_SphericalHarmonics.c"),
         String
