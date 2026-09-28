@@ -2,25 +2,26 @@
 # `sλlm_matrix` — which share their struct, their recurrence and their containers with the
 # complex `sYlmCalculator` and differ only in the number type they store.
 #
-# The load-bearing item is the first: ₛλₗₘ must be *bit-for-bit* what the ring-based
-# transforms used to extract from a complex calculator by hand, because that is the whole
-# claim.  The helper they used is gone, so it is reconstructed here from its old definition
-# rather than imported, which is what makes this a regression test rather than a tautology:
+# The load-bearing item is the first: ₛλₗₘ must be *bit-for-bit* the real part of the
+# complex harmonic at (θ, 0) for an integer spin weight, and ± its imaginary part for a
+# half-odd one, because that is the whole claim.  The relation is written out here rather
+# than taken from the package, which is what makes this a regression test rather than a
+# tautology:
 #
 #     λreal(x, ::Integer) = real(x)
 #     λreal(x, s::HalfOddInteger) = ifelse(mod(2s, 4) == 1, imag(x), -imag(x))
 #
-# The complex reference must be built in *angle* mode.  Against a rotor built from the same θ
-# the values agree only to about 5 ulps, because the rotor path multiplies by a unit phase
-# that the angle path never forms — a rounding difference, not a discrepancy, and asserted as
-# such at the end of the first item.
+# The complex reference must be built in *angle* mode.  Against a rotor built from the same
+# θ the values agree only to about 5 ulps, because the rotor path multiplies by a unit phase
+# that the angle path never forms — a rounding difference, not a discrepancy, and asserted
+# as such at the end of the first item.
 
-@testitem "sλlm is bit-for-bit the real part the transforms extracted" begin
+@testitem "sλlm is bit-for-bit the real part of the complex harmonics" begin
     import SphericalFunctions: sλlm, sλlmCalculator, ℓₘᵢₙ, ℓₘₐₓ
     using DoubleFloats: Double64
     using Quaternionic: from_spherical_coordinates
 
-    # The helper deleted from `src/ssht/ssht.jl`, restated.
+    # The relation of the header, written out
     λref(x, s) = isinteger(s) ? real(x) : (mod(Int(2s), 4) == 1 ? imag(x) : -imag(x))
 
     for T ∈ (Float64, Double64)
@@ -64,11 +65,13 @@ end
     for (ℓmax, s) ∈ ((6, -2), (11//2, 3//2))
         cλ = sλlmCalculator(0.3, ℓmax, s)
         cY = sYlmCalculator(0.3, ℓmax, s)
-        # The tables are empty rather than merely unread, which is the point of the `K` trick
-        # in `allocate_Y`: they cost nothing at all for the real flavor.
+        # The tables are empty rather than merely unread, which is the point of the `K`
+        # trick in `allocate_Y`: they cost nothing at all for the real flavor.
         @test isempty(cλ.Z₊) && isempty(cλ.Z₋)
         @test !isempty(cY.Z₊) && !isempty(cY.Z₋)
-        @test size(cλ.Z₊, 2) == size(cY.Z₊, 2)    # the rotor axis is still there
+        # The rotor axis, which comes first, is still there, and only the powers are missing
+        @test size(cλ.Z₊) == (size(cY.Z₊, 1), 0)
+        @test size(cY.Z₊) == (1, 2ℓmax + 1)
         @test number_type(cλ) === Float64
         @test number_type(cY) === ComplexF64
         @test eltype(cλ.Yˡ) === Float64
@@ -78,7 +81,7 @@ end
     end
 end
 
-@testitem "sλlmCalculator refuses rotors" begin
+@testitem "sλlmCalculator refuses rotors" setup=[RefusalChecks] begin
     import SphericalFunctions: sλlmCalculator, sλlm, sλlm_matrix
     using Quaternionic: Rotor, from_spherical_coordinates
     using Random
@@ -89,9 +92,13 @@ end
 
     # A rotor specifies α and γ, whose phases a real calculator has nowhere to put.  It says
     # so rather than silently dropping them.
-    @test_throws "nowhere to put the α and γ phases" set_R!(cλ, R)
-    @test_throws "nowhere to put the α and γ phases" set_R!(cλ, [R])
-    @test_throws "needs angles θ" SphericalFunctions.set_rotors!(cλ, "nonsense")
+    @test refuses(() -> set_R!(cλ, R), ArgumentError, "nowhere to put the α and γ phases")
+    @test refuses(() -> set_R!(cλ, [R]), ArgumentError, "nowhere to put the α and γ phases")
+    @test refuses(() -> set_θ!(cλ, R), ArgumentError, "nowhere to put the α and γ phases")
+    @test refuses(() -> sλlmCalculator(R, 4, -2), ArgumentError, "cannot take a rotor")
+    @test refuses(
+        () -> SphericalFunctions.set_rotors!(cλ, "nonsense"), ArgumentError, "needs angles θ"
+    )
     # ... and the flat forms take an angle, so a rotor is not even a method
     @test_throws MethodError sλlm(R, 4, -2)
     @test_throws MethodError sλlm_matrix([R], 4, -2)
@@ -107,8 +114,9 @@ end
     @test set_θ!(cY, 0.3) === cY
 end
 
-@testitem "sλlm: containers, batches, spin ranges and half-integers" begin
-    import SphericalFunctions: sλlm, sλlm!, sλlm_matrix, sλlmCalculator
+@testitem "sλlm: containers, batches, spin ranges and half-integers" setup=[RefusalChecks] begin
+    import SphericalFunctions: sλlm, sλlm!, sλlm_matrix, sλlmCalculator, slambdalm,
+        slambdalm!, slambdalm_matrix, slambdalmCalculator
     import SphericalFunctions: DegreeBlock, DegreeBlockBatch, SpinMatrix, SpinMatrixBatch
     import SphericalFunctions: ℓₘᵢₙ, ℓₘₐₓ, spins, spin, Nᵣ, isbatched, Yindex
 
@@ -158,24 +166,55 @@ end
     sλlm!(container, θ⃗[1], 4, -2)
     @test array_view(container) == array_view(one_one)
     # The element type must match the calculator's, and says so
-    @test_throws "element type must be Float64" sλlm!(zeros(Float32, length(Y)), θ⃗[1], 4, -2)
+    @test refuses(
+        () -> sλlm!(zeros(Float32, length(Y)), θ⃗[1], 4, -2), ArgumentError,
+        "element type must be Float64"
+    )
     @test_throws MethodError sλlm!(zeros(ComplexF64, length(Y)), θ⃗[1], 4, -2)
 
-    # A calculator can be reused across angles, which is the reason it exists
+    # A calculator can be reused across angles, which is the reason it exists, in each of
+    # its forms: for everything it serves, for one spin weight of a range, and into a
+    # container
     calc = sλlmCalculator(θ⃗[1], 4, -2)
     Y2 = similar(Y)
     sλlm!(Y2, calc, θ⃗[3])
     @test Y2 == array_view(sλlm(θ⃗[3], 4, -2))
+    cr = sλlmCalculator(θ⃗[1], 4, -1:1)
+    v = zeros(Ysize(1, 4))
+    @test array_view(sλlm!(v, cr, 0.7, 1)) == array_view(sλlm(0.7, 4, 1))
+    @test parent(array_view(sλlm!(v, cr, 0.7, 1))) === v
+    @test array_view(sλlm!(v, cr, 0.9, 1; ell_min=1)) == array_view(sλlm(0.9, 4, 1))
+    Λr = sλlm(0.1, 4, -1:1)
+    @test sλlm!(Λr, cr, 0.7) === Λr
+    @test array_view(Λr) == array_view(sλlm(0.7, 4, -1:1))
+    Λ1 = sλlm(0.1, 4, 1)
+    @test sλlm!(Λ1, cr, 0.9, 1) === Λ1
+    @test array_view(Λ1) == array_view(sλlm(0.9, 4, 1))
+    # ... and for half-odd indices, with ℓₘᵢₙ spelled as a `Rational`
+    crₕ = sλlmCalculator(θ⃗[1], 7//2, -3//2:3//2)
+    vₕ = zeros(Ysize(1//2, 7//2))
+    @test array_view(sλlm!(vₕ, crₕ, 0.7, 3//2; ℓₘᵢₙ=1//2)) ==
+        array_view(sλlm(0.7, 7//2, 3//2; ℓₘᵢₙ=1//2))
+    # A calculator built from a vector, even of one angle, cannot fill one angle's values
+    @test refuses(
+        () -> sλlm!(zeros(Ysize(1, 4)), sλlmCalculator([0.1], 4, 1), 0.7), ArgumentError,
+        "`sλlm!` needs a calculator built for a single rotor"
+    )
+
+    # The ASCII spellings are the same functions, and the keyword has one too
+    @test slambdalm === sλlm && slambdalm! === sλlm! && slambdalm_matrix === sλlm_matrix
+    @test slambdalmCalculator === sλlmCalculator
+    @test array_view(slambdalm(0.7, 4, 1; ell_min=2)) == array_view(sλlm(0.7, 4, 1; ℓₘᵢₙ=2))
 end
 
 @testitem "The ring transforms are unchanged by the real tables" begin
     import SphericalFunctions: SSHT, SSHTRS, SSHTMinimal, rotors, Ysize, sλlmCalculator
     using Random
 
-    # `SSHTRS` and `SSHTMinimal` now build their Λ tables with an `sλlmCalculator` instead of
-    # reading the real part out of a complex one at every access.  The precise claim is that
-    # the tables are unchanged, so it is asserted with `==` on the table itself; the round
-    # trips below are the looser end-to-end confirmation.
+    # `SSHTRS` and `SSHTMinimal` build their Λ tables with an `sλlmCalculator`.  The precise
+    # claim is that the tables are those of the complex harmonics at (θ, 0), read through
+    # the relation of the header, so it is asserted with `===` on the table itself; the
+    # round trips below are the looser end-to-end confirmation.
     λref(x, s) = isinteger(s) ? real(x) : (mod(Int(2s), 4) == 1 ? imag(x) : -imag(x))
 
     rng = Random.Xoshiro(20260920)
@@ -192,8 +231,8 @@ end
             end
         end
 
-        # End to end, against the closed-form synthesis matrix.  Measured worst case over the
-        # cases here was 11 eps, and 200 is asserted.
+        # End to end, against the closed-form synthesis matrix.  Measured worst case over
+        # the cases here was 11 eps, and 200 is asserted.
         f̃ = randn(rng, ComplexF64, Ysize(abs(s), ℓmax))
         f = 𝒯rs * copy(f̃)
         reference = sYlm_matrix(rotors(𝒯rs), ℓmax, s) * f̃
@@ -201,10 +240,10 @@ end
         # ... and the algorithm still inverts itself: worst case 3 eps, 200 asserted.
         @test 𝒯rs \ copy(f) ≈ f̃ atol=200eps(Float64) * maximum(abs, f̃)
 
-        # `SSHTMinimal` is defined only for integer spin weights.  Against the closed form its
-        # synthesis measured 12 eps at worst, and its round trip 11 eps; 200 is asserted for
-        # both.  (With the rings of `sorted_rings` the round trip at s = -2 measured 26_000
-        # eps, which was a property of those rings and not of these tables.)
+        # `SSHTMinimal` is defined only for integer spin weights.  Against the closed form
+        # its synthesis measured 12 eps at worst, and its round trip 11 eps; 200 is asserted
+        # for both.  (On the rings of `sorted_rings` the round trip at s = -2 would measure
+        # 26_000 eps, which is a property of those rings and not of these tables.)
         if isinteger(s)
             𝒯min = SSHTMinimal(s, ℓmax)
             g = 𝒯min * copy(f̃)

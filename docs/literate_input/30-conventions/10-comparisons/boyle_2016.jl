@@ -4,7 +4,7 @@ md"""
 !!! info "Summary"
     The Wigner ``𝔇`` matrices of [Boyle (2016)](@cite Boyle_2016) — which were the
     convention of this package before version 3.0 — are the complex conjugates of the ones
-    now used in the `SphericalFunctions` package, for integer *and* half-integer indices:
+    used in the `SphericalFunctions` package, for integer *and* half-integer indices:
     ``𝔇^{(ℓ)}_{m',m}(𝐑)|_{2016} = \overline{𝔇^{(ℓ)}_{m',m}(𝐑)}``.  Because that paper
     defines the spin-weighted spherical harmonics as ``(-1)^s \sqrt{(2ℓ+1)/4π}\,
     𝔇^{(ℓ)}_{m,-s}(𝐑)|_{2016}``, its ``{}_sY_{ℓ,m}`` agree with ours.
@@ -12,10 +12,10 @@ md"""
 [Boyle_2016](@citet) argued that spin-weighted spherical functions should be defined as
 functions on the spin group ``\mathrm{Spin}(3)``, represented by unit quaternions, rather
 than on coordinates of the 2-sphere.  That paper is the origin of most of the conventions in
-this package, with one important exception: in the interim, the convention for the ``𝔇``
-matrices themselves has been changed to the complex conjugate — so that they agree with
-LALSuite, Wikipedia, Sakurai, and the other sources in our priority list — as explained on
-the [conventions pages](@ref summary_wigner_D).
+this package, with one important exception: the convention for the ``𝔇`` matrices
+themselves is the complex conjugate of the paper's — so that they agree with LALSuite,
+Wikipedia, Sakurai, and the other sources in our priority list — as explained on the
+[conventions pages](@ref summary_wigner_D).
 
 The paper defines the spin-weighted spherical harmonics as functions of a unit quaternion
 ``𝐑`` by [Eq. (21)]
@@ -30,7 +30,7 @@ numbers ``R_s = r_s e^{iϕ_s}`` and ``R_a = r_a e^{iϕ_a}``, the expression is a
 (m-m')ϕ_a]}``, with an alternative form when ``r_a > r_s``; Appendix A of the paper
 describes how to evaluate the sum stably, and that algorithm is transcribed below as
 `WignerDElement`.  Since ``e^{iϕ_s}`` and ``e^{iϕ_a}`` are the half-angle phases
-``e^{i(α+γ)/2}`` and ``e^{i(α-γ)/2}``, the ``e^{+i(m'α + mγ)}`` dependence is the complex
+``e^{i(α+γ)/2}`` and ``e^{i(γ-α)/2}``, the ``e^{+i(m'α + mγ)}`` dependence is the complex
 conjugate of [ours](@ref summary_wigner_D).
 
 The same paper defines left and right operators ``L`` and ``K`` [Eqs. (42)–(43)] with
@@ -73,7 +73,7 @@ function WignerDElement(R::Rotor{T}, ℓ::I, m′::I, m::I) where {T, I}
         error(
             "The maximum supported ℓ for this function is 8; " *
             "larger numbers become numerically unstable.\n" *
-            "Consider using the `WignerD` function instead."
+            "Consider using `SphericalFunctions.D` instead."
         )
     end
 
@@ -184,6 +184,7 @@ package.
 
 @testitem "Boyle 2016 conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities, Boyle2016] begin  #hide
 using Quaternionic
+import .Utilities: θϕrange  #hide
 #+
 
 # We will need to test approximate floating-point equality, so we set absolute and relative
@@ -195,21 +196,27 @@ using Quaternionic
 # The algorithm is accurate up to
 ℓₘₐₓ = 8
 #+
+
 # so we test up to that point, on a set of rotors that includes the identity, the basis
-# rotations, rotors near the special cases of the algorithm, and random rotors:
+# rotations, rotors near the special cases of the algorithm, and random rotors.  The special
+# cases apply when ``r_a`` or ``r_s`` is below ``4ϵ``, so the rotors near them are offset by
+# ``3ϵ``, inside those thresholds, and by ``6ϵ``, which puts most of them just outside, in
+# the general branches:
 Rs = [
     Rotor{Float64}(1);
     [Rotor{Float64}(𝐯) for 𝐯 ∈ (imx, imy, imz)];
     [exp(3eps() * 𝐯) for 𝐯 ∈ (imx, imy, imz)];
     [Rotor{Float64}(𝐮) * exp(3eps() * 𝐯) for 𝐮 ∈ (imx, imy, imz) for 𝐯 ∈ (imx, imy, imz)];
-    randn(Rotor{Float64}, 20)
+    [exp(6eps() * 𝐯) for 𝐯 ∈ (imx, imy, imz)];
+    [Rotor{Float64}(𝐮) * exp(6eps() * 𝐯) for 𝐮 ∈ (imx, imy, imz) for 𝐯 ∈ (imx, imy, imz)];
+    randn(rng, Rotor{Float64}, 20)
 ]
 #+
 
 # For integer indices, the 2016 matrices are the complex conjugates of ours:
 for R ∈ Rs
-    for (ℓ, m′, m) ∈ ℓm′mrange(ℓₘₐₓ)
-        @test Boyle2016.WignerDElement(R, ℓ, m′, m) ≈ conj(ConventionsUtilities.D(ℓ, m′, m, R)) atol=ϵₐ rtol=ϵᵣ
+    for (ℓ, 𝔇ˡ) ∈ SphericalFunctions.DCalculator(R, ℓₘₐₓ), m′ ∈ -ℓ:ℓ, m ∈ -ℓ:ℓ
+        @test Boyle2016.WignerDElement(R, ℓ, m′, m) ≈ conj(𝔇ˡ[m′, m]) atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
@@ -217,19 +224,34 @@ end
 # Because Eq. (21) uses ``𝔇_{m,-s}`` without a conjugate — where [our definition](@ref
 # summary_swsh) uses ``\overline{𝔇_{m,-s}}`` — the spin-weighted spherical harmonics agree:
 import Quaternionic: from_spherical_coordinates
-for (θ, ϕ) ∈ θϕrange(Float64, 7)
+for (θ, ϕ) ∈ θϕrange(rng, Float64, 7)
     R = from_spherical_coordinates(θ, ϕ)
-    for (s, ℓ, m) ∈ sℓmrange(4, 2)
-        @test Boyle2016.ₛYₗₘ(s, ℓ, m, R) ≈ ConventionsUtilities.Y(s, ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+    for (ℓ, Yˡ) ∈ SphericalFunctions.sYlmCalculator(θ, ϕ, 4, -2:2)
+        for s ∈ -min(ℓ, 2):min(ℓ, 2), m ∈ -ℓ:ℓ
+            @test Boyle2016.ₛYₗₘ(s, ℓ, m, R) ≈ Yˡ[s, m] atol=ϵₐ rtol=ϵᵣ
+        end
     end
 end
 #+
 
-# For half-integer indices, the package itself does not (yet) provide a reference, so here
-# we check two properties that any representation of ``\mathrm{Spin}(3)`` must satisfy —
-# the representation property ``𝔇(𝐑_1 𝐑_2) = 𝔇(𝐑_1)\, 𝔇(𝐑_2)`` and the sign change
-# ``𝔇(-𝐑) = -𝔇(𝐑)`` for half-integer ``ℓ`` — and defer the comparison against an
-# independent closed form to the [Varshalovich page](@ref "Varshalovich et al. (1988)").
+# For half-integer indices, the 2016 matrices are also the complex conjugates of ours.  Our
+# calculator labels half-integer blocks with `HalfOddInteger`s, which serve as indices but
+# refuse arithmetic with other kinds of number; the 2016 formulas do that arithmetic, so the
+# label is converted to a `Rational` first.
+for R ∈ Rs
+    for (J, 𝔇ᴶ) ∈ SphericalFunctions.DCalculator(R, 15//2)
+        J = Rational(J)
+        for M′ ∈ -J:J, M ∈ -J:J
+            @test Boyle2016.WignerDElement(R, J, M′, M) ≈ conj(𝔇ᴶ[M′, M]) atol=ϵₐ rtol=ϵᵣ
+        end
+    end
+end
+#+
+
+# They also satisfy two properties that any representation of ``\mathrm{Spin}(3)`` must
+# satisfy — the representation property ``𝔇(𝐑_1 𝐑_2) = 𝔇(𝐑_1)\, 𝔇(𝐑_2)`` and the sign
+# change ``𝔇(-𝐑) = -𝔇(𝐑)`` for half-integer ``ℓ``.  The comparison against an
+# independent closed form is on the [Varshalovich page](@ref "Varshalovich et al. (1988)").
 for R₁ ∈ Rs[1:8], R₂ ∈ Rs[end-4:end]
     for J ∈ (1//2, 3//2, 5//2, 7//2)
         𝔇₁ = [Boyle2016.WignerDElement(R₁, J, M′, M) for M′ ∈ -J:J, M ∈ -J:J]
@@ -243,7 +265,7 @@ end
 #+
 
 # These successful tests show that the ``𝔇`` matrices of Boyle (2016) are the complex
-# conjugates of those defined by the `SphericalFunctions` package, and that the
-# spin-weighted spherical harmonics agree.
+# conjugates of those defined by the `SphericalFunctions` package, for integer and
+# half-integer indices, and that the spin-weighted spherical harmonics agree.
 
 end  #hide

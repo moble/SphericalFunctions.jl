@@ -1,10 +1,12 @@
-# Angular-momentum operators as matrices acting on mode weights.
+# Angular-momentum operators, as matrices acting on mode weights and as maps from one set of
+# mode weights to another.
 #
-# Every function here has the signature
+# Each operator is a value: one of twelve zero-size singletons, each of its own subtype of
+# `DifferentialOperator`.  Called with indices, in either of the shapes
 #
-#     f(s, ℓₘᵢₙ, ℓₘₐₓ, [T=Float64])   or   f(s, ℓₘₐₓ, [T=Float64])  (with ℓₘᵢₙ = abs(s))
+#     op(s, ℓₘᵢₙ, ℓₘₐₓ, [T=Float64])   or   op(s, ℓₘₐₓ, [T=Float64])  (with ℓₘᵢₙ = abs(s))
 #
-# and returns a (sparse) matrix that acts on a vector of mode weights ordered as
+# it returns a (sparse) matrix that acts on a vector of mode weights ordered as
 #
 #     [ f(ℓ, m) for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ for m ∈ -ℓ:ℓ ]
 #
@@ -16,52 +18,60 @@
 # with L_± = L_x ± i L_y and R_± = R_x ± i R_y, so that [L_z, L_±] = ±L_± and [R_z, R_±] =
 # ±R_±.  Spin-weighted functions satisfy R_z η = s η, and ð = R_+, ð̄ = -R_-.
 #
-# Each operator is one function with two kinds of method: a *boundary* method typed
-# `IndexArgument`, which normalizes the indices and re-dispatches, and a *worker* method typed
-# `where {IT<:IntegerHalf}`, which does the arithmetic.  The worker is reached by dispatch
-# rather than by a separate underscore-prefixed name: `IT<:IntegerHalf` with one `IT` for all
-# three indices is strictly more specific than three independent `IndexArgument`s, so the
-# worker always wins once the indices agree, and `unify_indices` guarantees that they do.
-# Being methods of the exported name, the workers are simply undocumented rather than hidden.
+# The two call shapes are written once, for all twelve operators, with `@index_methods`, so
+# that their bodies see three indices of one kind — `Int`s or `HalfOddInteger`s — and a call
+# that mixes the kinds, or passes an index of another type, is refused with a message naming
+# the operator as it prints (`L²`, `ð`).  The bodies are generic over the two kinds, because
+# every quantity they form — ℓ ± m, ℓ ± s, 2ℓ — is an `Int` for either; the two exceptions,
+# ℓ(ℓ+1) and the conversion of an index to the matrix element type, go through
+# `casimir_eigenvalue` below and `index_value` in `half_odd_integer.jl`.
 #
-# The indices `s`, `ℓₘᵢₙ` and `ℓₘₐₓ` may be integers or half-odd-integers, the latter passed
-# as `Rational`s with denominator 2 or as `HalfOddInteger`s.  Each public function is a
-# boundary method, typed `IndexArgument` on its indices, which does nothing but normalize the
-# three with `unify_indices` and re-dispatch to a private worker — `L²` for `L²`, and so on —
-# whose signature is `where {IT<:IntegerHalf, T}`.  The worker therefore sees three indices of
-# one concrete type and never a `Rational`, and a call that mixes the two kinds of index is
-# refused at the boundary.  The three-argument forms normalize first as well, so that the
-# default `ℓₘᵢₙ = abs(s)` is computed from the normalized spin weight.  The worker bodies are
-# generic over the two kinds, because every quantity they form — ℓ ± m, ℓ ± s, 2ℓ — is an
-# `Int` for either; the two exceptions, ℓ(ℓ+1) and the conversion of an index to the matrix
-# element type, go through `casimir_eigenvalue` below and `index_value` in
-# `half_odd_integer.jl`.  The operator methods on a `ModeWeights`, in `mode_weights.jl`, call
-# the workers directly, since the container already holds normalized indices.
+# What distinguishes one operator from another is a handful of traits — the change it makes
+# to the spin weight (`Δspin`), the band of the matrix it occupies (`bandstructure`), the
+# element type of that matrix (`coefftype`) and the ℓ below which it vanishes (`support_ℓ`)
+# — together with its matrix elements, the coefficient functions below.  The coefficients
+# are evaluated both by `operator_matrix`, which builds the matrix, and by
+# `apply_operator!`, which applies the operator to the storage of a `ModeWeights` without
+# building one; `op * w`, `op(w)` and `mul!(w′, op, w)`, in `mode_weights.jl`, are written
+# with the latter.
 
-const _operator_signature_note = """
+const operator_signature_note = """
 The argument `ℓₘᵢₙ` may be omitted, in which case it defaults to `abs(s)`.  The result acts
 on a vector of mode weights ordered as `[f(ℓ, m) for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ for m ∈ -ℓ:ℓ]`; any
 entries with ``ℓ < |s|`` are mapped to zero.  The indices `s`, `ℓₘᵢₙ` and `ℓₘₐₓ` may be
-integers or half-odd-integers, the latter passed as `Rational`s with denominator 2 — as in
-`L²(1//2, 7//2)` — in which case every ``ℓ`` and ``m`` of the ordering is a half-odd-integer.
-The indices in one call must all be of one kind; a call that mixes them, such as
-`L²(1//2, 0, 7//2)`, is an error.
+integers of type `Int` or half-odd-integers, the latter given as [`HalfOddInteger`](@ref)s
+or as `Rational{Int}`s with denominator 2 — as in `L²(1//2, 7//2)` — in which case every
+``ℓ`` and ``m`` of the ordering is a half-odd-integer.  The indices in one call must all be
+of one kind; a call that mixes them, such as `L²(1//2, 0, 7//2)`, is refused, as is an index
+of any other type (see [`IndexType`](@ref)).  The matrices of operators that change the spin
+weight can be multiplied together only when they share the range of ``ℓ``, so `ℓₘᵢₙ` must
+then be given explicitly, as in `ð̄(1, 0, ℓₘₐₓ) * ð(0, 0, ℓₘₐₓ)`.
+
+The argument `T` is the real floating-point type in which the entries are computed; it
+defaults to `Float64`.  The matrix is returned as a `Diagonal`, `Bidiagonal` or
+`Tridiagonal` matrix of element type `T`, except that the entries of [`Ly`](@ref) are of
+type `Complex{T}`.
+
+Applied to a [`ModeWeights`](@ref) `w` instead, as `op(w)` or `op * w`, the operator returns
+new mode weights over the same range of ``ℓ``, with the spin weight changed by
+[`Δspin`](@ref), and it does so without building the matrix; `mul!(w′, op, w)` writes the
+result into `w′`.  A product such as `ð̄ * ð * w` applies the operators from right to left.
+See [`DifferentialOperator`](@ref) for the details.
 """
 
 # The docstrings below are `raw` strings, because they are full of LaTeX backslashes, and a
-# `raw` string does not interpolate — so `$(_operator_signature_note)` written inside one
-# stays there as literal text rather than being replaced by the note.  (It used to, and the
-# note was never rendered.)  This splices it in explicitly; `@doc` accepts any expression
-# that evaluates to a string.
+# `raw` string does not interpolate, so `$(operator_signature_note)` written inside one is
+# literal text.  This replaces that text with the note; `@doc` accepts any expression that
+# evaluates to a string.
 splice_signature_note(s) =
-    replace(s, "\$(_operator_signature_note)" => _operator_signature_note)
+    replace(s, "\$(operator_signature_note)" => operator_signature_note)
 
-# The eigenvalue ℓ(ℓ+1) of L² and R², as the value the typed comprehension in those functions
-# converts to `T`.  For an integer ℓ it is the integer ℓ(ℓ+1), exactly as it always was.  For
-# a half-odd ℓ the product is a quarter-integer, which the index type cannot hold and which
-# must not be formed as a `Rational`; instead the `Int` (2ℓ)(2ℓ+2) is converted to `T` and
-# divided by 4.  Division by 4 is exact in every binary floating-point type, so this path is
-# as exact as the integer one.
+# The eigenvalue ℓ(ℓ+1) of L² and R², as the value the typed comprehension in those
+# functions converts to `T`.  For an integer ℓ it is the integer ℓ(ℓ+1).  For a half-odd ℓ
+# the product is a quarter-integer, which the index type cannot hold and which must not be
+# formed as a `Rational`; instead the `Int` (2ℓ)(2ℓ+2) is converted to `T` and divided by 4.
+# Division by 4 is exact in every binary floating-point type, so this path is as exact as
+# the integer one.
 @inline casimir_eigenvalue(::Type{T}, ℓ::Integer) where {T} = ℓ*(ℓ+1)
 @inline casimir_eigenvalue(::Type{T}, ℓ::HalfOddInteger) where {T} = T((2ℓ)*(2ℓ+2)) / 4
 
@@ -72,12 +82,52 @@ splice_signature_note(s) =
 # trait below folds away at compile time.  The twelve exported names are instances of these
 # types.
 #
-# The matrix elements are written *once*, here, and evaluated both by the comprehensions that
-# build the operator matrices below and by the loops that apply an operator to a `ModeWeights`
-# without building one.  That is what makes the two agree bit for bit — not a coincidence to
-# be tested for, but the same expression evaluated twice.  Note in particular that the
-# `ℓ < …` mask lives *inside* the coefficient, so that neither caller can forget it.
+# The matrix elements are written *once*, here, and evaluated both by the comprehensions
+# that build the operator matrices below and by the loops that apply an operator to a
+# `ModeWeights` without building one.  That is what makes the two agree: not a coincidence
+# to be tested for, but the same expression evaluated twice.  Note in particular that the `ℓ
+# < …` mask lives *inside* the coefficient, so that neither caller can forget it.
 
+"""
+    DifferentialOperator
+
+The abstract type of the twelve angular-momentum operators, each of which is a singleton
+instance of its own subtype.
+
+The operators are [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`Lx`](@ref) and
+[`Ly`](@ref), built from the left Lie derivative, and [`R²`](@ref), [`Rz`](@ref),
+[`R₊`](@ref), [`R₋`](@ref), [`ð`](@ref) and [`ð̄`](@ref), built from the right one.  Each of
+them `op` can be used in these ways:
+
+  * `op(s, ℓₘᵢₙ, ℓₘₐₓ, [T=Float64])` and `op(s, ℓₘₐₓ, [T=Float64])` return the matrix of the
+    operator acting on mode weights of spin weight `s`, as described in the docstring of
+    each operator.
+  * `op(w)` and `op * w`, for a [`ModeWeights`](@ref) `w`, return the mode weights of the
+    result, without building the matrix.  They are labelled with the spin weight `spin(w) +
+    Δspin(op)` (see [`Δspin`](@ref)) and with the range of ``ℓ`` of `w`; modes below the new
+    ``|s|`` are zero rather than dropped.  The element type is that of the product of the
+    matrix entries and the weights, so that [`Ly`](@ref) applied to real weights gives
+    complex ones.
+  * `mul!(w′, op, w)` writes the same result into `w′`, which must be labelled with that
+    spin weight and range of ``ℓ`` and must not share storage with `w`, since the banded
+    operators read neighboring modes.  `w′` may also be a bare vector at least as long as
+    the result, in which case the result is returned as a `ModeWeights` over its first
+    entries.
+  * `a * b * w` for operators `a` and `b` is `a * (b * w)`, so a product of operators is
+    applied from right to left, as the notation means.  No product of two operators on their
+    own is defined.
+  * In a broadcast, an operator is a scalar, so that `ð .* ws` applies `ð` to each element
+    of a collection `ws` of mode weights, as `ð.(ws)` does.
+
+For finite data, `op * w` agrees with the product of the matrix and the weights under `==`.
+Where the weights are not finite the two can differ, because the stored zero diagonal of a
+banded matrix turns an infinite weight into a `NaN` in the row of that mode, which `op * w`
+does not.
+
+This type is provided for dispatch.  It is not an extension point: the behavior of each
+operator is set by internal traits and coefficient functions, which are not part of the
+public interface, so a new subtype defined elsewhere would not work.
+"""
 abstract type DifferentialOperator end
 
 struct Casimir       <: DifferentialOperator end
@@ -93,14 +143,35 @@ struct RightLowering <: DifferentialOperator end
 struct SpinRaising   <: DifferentialOperator end
 struct SpinLowering  <: DifferentialOperator end
 
-# How each operator changes the spin weight of what it acts on.
+"""
+    Δspin(op)
+    Deltaspin(op)
+
+The change in spin weight produced by the operator `op`: `1` for [`ð`](@ref) and
+[`R₊`](@ref), `-1` for [`ð̄`](@ref) and [`R₋`](@ref), and `0` for the other operators.
+
+This is the amount by which the spin weight of `op * w` differs from that of the mode
+weights `w`, and so it is what a destination for `mul!` must be labelled with:
+
+```julia
+w′ = ModeWeights(
+    similar(parent(w)), spin(w) + Δspin(ð),
+    SphericalFunctions.ℓₘᵢₙ(w), SphericalFunctions.ℓₘₐₓ(w)
+)
+mul!(w′, ð, w)
+```
+
+The ASCII alias `Deltaspin` may be used in place of `Δspin`.  Neither name is exported.
+"""
+function Δspin end
 @inline Δspin(::DifferentialOperator) = 0
 @inline Δspin(::Union{RightRaising,  SpinRaising})  =  1
 @inline Δspin(::Union{RightLowering, SpinLowering}) = -1
+const Deltaspin = Δspin
 
 # Which band of the matrix the operator occupies, and hence which builder and which kernel
-# apply.  A sub-diagonal entry takes `f[ℓ, m-1]` into `out[ℓ, m]`; a super-diagonal one takes
-# `f[ℓ, m+1]`.
+# apply.  A sub-diagonal entry takes `f[ℓ, m-1]` into `out[ℓ, m]`; a super-diagonal one
+# takes `f[ℓ, m+1]`.
 abstract type BandStructure end
 struct DiagonalBand      <: BandStructure end
 struct SubdiagonalBand   <: BandStructure end
@@ -112,14 +183,15 @@ struct TridiagonalBand   <: BandStructure end
 @inline bandstructure(::LeftLowering) = SuperdiagonalBand()
 @inline bandstructure(::Union{LeftX, LeftY}) = TridiagonalBand()
 
-# The element type of the matrix, given the real type it was asked for.  `Ly` is the only one
-# whose entries are complex — they are ∓i/2 times those of `L₊` and `L₋`.
+# The element type of the matrix, given the real type it was asked for.  `Ly` is the only
+# one whose entries are complex — they are ∓i/2 times those of `L₊` and `L₋`.
 @inline coefftype(::DifferentialOperator, ::Type{T}) where {T} = T
 @inline coefftype(::LeftY, ::Type{T}) where {T} = Complex{T}
 
-# The operators are values now rather than functions, so they need to say their own names:
-# `nameof` because code (and tests) reach for it, and `show` so that one prints as `ð` rather
-# than as `SphericalFunctions.SpinRaising()`.
+# Each operator says its own name: `nameof` because code (and tests) reach for it, and
+# `show` so that an operator prints as `ð` rather than as
+# `SphericalFunctions.SpinRaising()`, in particular in the messages of the errors that name
+# it.
 Base.nameof(::Casimir)       = :L²
 Base.nameof(::RightCasimir)  = :R²
 Base.nameof(::LeftZ)         = :Lz
@@ -134,15 +206,26 @@ Base.nameof(::SpinRaising)   = :ð
 Base.nameof(::SpinLowering)  = :ð̄
 Base.show(io::IO, op::DifferentialOperator) = print(io, nameof(op))
 
-# The ℓ below which the result vanishes.  For the spin-changing operators the cutoff is set by
-# the *output* spin weight, which is the `s′` of the matrix builders.
+# An operator is a single value, so a broadcast such as `ð .* ws` treats it as a scalar
+# rather than trying to iterate over it.
+Base.broadcastable(op::DifferentialOperator) = Ref(op)
+
+# A product of operators applied to mode weights, `ð̄ * ð * w`, is parsed as `*(ð̄, ð, w)`,
+# which `Base` would fold from the left into `(ð̄ * ð) * w`.  No product of two operators is
+# defined, so the fold is taken from the right instead, as `ð̄ * (ð * w)`, which applies the
+# operators in the order the notation means.  Longer products recurse through this method,
+# as `L₊ * L₋ * Lz * w` is `L₊ * (L₋ * (Lz * w))`.
+Base.:*(a::DifferentialOperator, b::DifferentialOperator, c, xs...) = a * *(b, c, xs...)
+
+# The ℓ below which the result vanishes.  For the spin-changing operators the cutoff is set
+# by the *output* spin weight, which is the `s′` of the matrix builders.
 @inline support_ℓ(::DifferentialOperator, s) = abs(s)
 @inline support_ℓ(::Union{RightRaising,  SpinRaising},  s) = max(abs(s), abs(s + 1))
 @inline support_ℓ(::Union{RightLowering, SpinLowering}, s) = max(abs(s), abs(s - 1))
 
-# `casimir_eigenvalue` and `index_value` return an `Int` for an integer index; the typed
-# comprehensions used to do the conversion, so the coefficients must do it explicitly or the
-# loops that share them go type-unstable on the integer path.
+# `casimir_eigenvalue` and `index_value` return an `Int` for an integer index, so the
+# coefficients convert to `T` explicitly; without that, the loops that share them would be
+# type-unstable on the integer path.
 @inline function diagonal_coefficient(op::Casimir, ::Type{T}, s, ℓ, m) where {T}
     ℓ < support_ℓ(op, s) ? zero(T) : convert(T, casimir_eigenvalue(T, ℓ))
 end
@@ -162,14 +245,14 @@ end
 end
 @inline diagonal_coefficient(::SpinRaising, ::Type{T}, s, ℓ, m) where {T} =
     diagonal_coefficient(RightRaising(), T, s, ℓ, m)
-# The negation is applied to the *masked* value, as `-R₋` does, so that the vanishing entries
-# are `-0.0` here too and even `isequal` agrees with the matrix.
+# The negation is applied to the *masked* value, as `-R₋` does, so that the vanishing
+# entries are `-0.0` here too and even `isequal` agrees with the matrix.
 @inline diagonal_coefficient(::SpinLowering, ::Type{T}, s, ℓ, m) where {T} =
     -diagonal_coefficient(RightLowering(), T, s, ℓ, m)
 
-# The ladder coefficients, indexed by the *output* mode `(ℓ, m)`.  Both vanish exactly at the
-# edge of their ℓ block — `√0` at `m = -ℓ` for the raising one and at `m = +ℓ` for the lowering
-# one — which is what keeps an ℓ block from coupling to its neighbors.
+# The ladder coefficients, indexed by the *output* mode `(ℓ, m)`.  Both vanish exactly at
+# the edge of their ℓ block — `√0` at `m = -ℓ` for the raising one and at `m = +ℓ` for the
+# lowering one — which is what keeps an ℓ block from coupling to its neighbors.
 @inline function subdiagonal_coefficient(op::LeftRaising, ::Type{T}, s, ℓ, m) where {T}
     ℓ < support_ℓ(op, s) ? zero(T) : √T((ℓ+m)*(ℓ-m+1))
 end
@@ -180,41 +263,37 @@ end
     subdiagonal_coefficient(LeftRaising(), T, s, ℓ, m) / 2
 @inline superdiagonal_coefficient(::LeftX, ::Type{T}, s, ℓ, m) where {T} =
     superdiagonal_coefficient(LeftLowering(), T, s, ℓ, m) / 2
-# Built as a complex number with a zero real part rather than divided by `2im`, for the reason
-# given at `Ly` below.
+# The entries of `Ly` are built as complex numbers with a zero real part, rather than by
+# dividing those of `L₊` and `L₋` by `2im`: that is a complex division, which for some float
+# types does not give exactly `∓i x/2`, whereas this form does, so that `2im .* Ly` equals
+# `L₊ - L₋` exactly.
 @inline subdiagonal_coefficient(::LeftY, ::Type{T}, s, ℓ, m) where {T} =
     Complex{T}(zero(T), -subdiagonal_coefficient(LeftRaising(), T, s, ℓ, m) / 2)
 @inline superdiagonal_coefficient(::LeftY, ::Type{T}, s, ℓ, m) where {T} =
     Complex{T}(zero(T), superdiagonal_coefficient(LeftLowering(), T, s, ℓ, m) / 2)
 
 
-### The three call shapes, written once for every operator.
+### The two call shapes, written once for every operator.
 #
-# These replace the thirty-six methods — three per operator — that the twelve names used to
-# carry between them.  The first two are the `IndexArgument` boundaries, which normalize and
-# re-dispatch; the third is the worker, reached once the three indices agree in kind, and it
-# builds the matrix from the band structure and the coefficients above.
+# The first builds the matrix from the band structure and the coefficients above; the second
+# supplies the default ℓₘᵢₙ = |s|, computed from the spin weight after it has been
+# converted.
 
-function (op::DifferentialOperator)(
-    s::IndexArgument, ℓₘᵢₙ::IndexArgument, ℓₘₐₓ::IndexArgument, ::Type{T}=Float64
-) where T
-    op(unify_indices(s, ℓₘᵢₙ, ℓₘₐₓ)..., T)
-end
-function (op::DifferentialOperator)(s::IndexArgument, ℓₘₐₓ::IndexArgument, ::Type{T}=Float64) where T
-    s, ℓₘₐₓ = unify_indices(s, ℓₘₐₓ)
-    op(s, abs(s), ℓₘₐₓ, T)
-end
-function (op::DifferentialOperator)(s::IT, ℓₘᵢₙ::IT, ℓₘₐₓ::IT, ::Type{T}) where {IT<:IntegerHalf, T}
+@index_methods function (op::DifferentialOperator)(
+    s::IT, ℓₘᵢₙ::IT, ℓₘₐₓ::IT, ::Type{T}=Float64
+) where {IT<:IndexType, T}
     # The range of ℓ is validated here, for every band structure alike: the diagonal builder
     # never calls `Ysize`, and would otherwise read a negative ℓₘᵢₙ as 0 and an inverted
     # range as an empty one.
     Ysize(ℓₘᵢₙ, ℓₘₐₓ)
     operator_matrix(op, bandstructure(op), s, ℓₘᵢₙ, ℓₘₐₓ, T)
 end
+@index_methods (op::DifferentialOperator)(
+    s::IndexType, ℓₘₐₓ::IndexType, ::Type{T}=Float64
+) where {T} = op(s, abs(s), ℓₘₐₓ, T)
 
 # One builder per band structure.  The `ifelse` in the ladder ranges drops the one mode that
-# has no band entry — the very first for a sub-diagonal, the very last for a super-diagonal —
-# exactly as the hand-written builders did.
+# has no band entry: the very first for a sub-diagonal, the very last for a super-diagonal.
 function operator_matrix(op, ::DiagonalBand, s::IT, ℓₘᵢₙ::IT, ℓₘₐₓ::IT, ::Type{T}) where {IT<:IntegerHalf, T}
     Diagonal(
         coefftype(op, T)[
@@ -260,17 +339,21 @@ end
 
 ### Applying an operator without building its matrix.
 #
-# The matrix builders above and the loops below evaluate the *same* coefficient functions, so
-# the two agree bit for bit rather than merely to within rounding — which is what the existing
-# tests in `test/mode_weights/mode_weights.jl` assert, with `==` rather than `≈`.  Reproducing
-# that exactly is why these loops are written plainly: no `@simd`, no `@fastmath`, no `muladd`,
-# and the two terms of a tridiagonal row summed left to right, as `LinearAlgebra`'s own
-# `l[i-1]*b₋ + d[i]*b₀ + u[i]*b₊` does with `d` identically zero.
+# The matrix builders above and the loops below evaluate the *same* coefficient functions,
+# so for finite data the two agree under `==` rather than merely to within rounding, which
+# is what the tests of `op * w` assert.  Reproducing that exactly is why these loops are
+# written plainly: no `@simd`, no `@fastmath`, no `muladd`, and the two terms of a
+# tridiagonal row summed left to right, as `LinearAlgebra`'s own `l[i-1]*b₋ + d[i]*b₀ +
+# u[i]*b₊` does with `d` identically zero.  The two differ in what that zero diagonal does:
+# the matrix multiplies it by the weight, which can give `-0.0` where the loop gives `0.0`,
+# and `NaN` where the weight is infinite or `NaN`, whereas the loop never reads the diagonal
+# at all.
 #
-# The ladder coefficients vanish *exactly* at the edge of each ℓ block — √0 at `m = -ℓ` for the
-# raising one and at `m = +ℓ` for the lowering one — so no block ever couples to its neighbor
-# and the loops need no per-block special case.  Only the very first and very last position in
-# the whole vector need a branch, because there the matrix has no band entry at all.
+# The ladder coefficients vanish *exactly* at the edge of each ℓ block — √0 at `m = -ℓ` for
+# the raising one and at `m = +ℓ` for the lowering one — so no block ever couples to its
+# neighbor and the loops need no per-block special case.  Only the very first and very last
+# position in the whole vector need a branch, because there the matrix has no band entry at
+# all.
 
 function apply_operator!(
     out, op, ::DiagonalBand, in, s::IT, ℓ₀::IT, ℓ₁::IT, ::Type{T}
@@ -333,8 +416,9 @@ end
 
 
 @doc splice_signature_note(raw"""
-    L²(s, ℓₘᵢₙ, ℓₘₐₓ, [T])
-    L²(s, ℓₘₐₓ, [T])
+    L²(s, ℓₘᵢₙ, ℓₘₐₓ, [T=Float64])
+    L²(s, ℓₘₐₓ, [T=Float64])
+    L² * w
 
 Compute the total angular-momentum operator (the Casimir operator) for spin weight `s`.
 
@@ -343,16 +427,18 @@ SWSHs.  It is equal to
 ```math
 L^2 = L_x^2 + L_y^2 + L_z^2 = \frac{L_+L_- + L_-L_+ + 2L_zL_z}{2}.
 ```
-Note that these are the left Lie derivatives, but ``L^2 = R^2``, where ``R`` is the right Lie
-derivative.  See the [conventions summary](@ref summary_L_R_definitions) or [Boyle](@cite
-Boyle_2016) for more details.
+Note that these are the left Lie derivatives, but ``L^2 = R^2``, where ``R`` is the right
+Lie derivative.  See the [conventions summary](@ref summary_L_R_definitions) or
+[Boyle](@cite Boyle_2016) for more details.
 
 In terms of the SWSHs, we can write the action of ``L^2`` as
 ```math
 L^2 {}_{s}Y_{ℓ,m} = ℓ\,(ℓ+1) {}_{s}Y_{ℓ,m}.
 ```
 
-$(_operator_signature_note)
+$(operator_signature_note)
+
+The ASCII alias `L2` may be used in place of `L²`; it is public but not exported.
 
 See also [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`R²`](@ref), [`Rz`](@ref), [`R₊`](@ref),
 [`R₋`](@ref), [`ð`](@ref), [`ð̄`](@ref).
@@ -361,8 +447,9 @@ const L² = Casimir()
 
 
 @doc splice_signature_note(raw"""
-    Lz(s, ℓₘᵢₙ, ℓₘₐₓ, [T])
-    Lz(s, ℓₘₐₓ, [T])
+    Lz(s, ℓₘᵢₙ, ℓₘₐₓ, [T=Float64])
+    Lz(s, ℓₘₐₓ, [T=Float64])
+    Lz * w
 
 Compute the angular-momentum operator associated with the ``z`` direction.  This is the
 standard ``L_z`` operator, familiar from basic physics, extended to work with SWSHs.  Note
@@ -375,7 +462,7 @@ In terms of the SWSHs, we can write the action of ``L_z`` as
 L_z {}_{s}Y_{ℓ,m} = m\, {}_{s}Y_{ℓ,m}.
 ```
 
-$(_operator_signature_note)
+$(operator_signature_note)
 
 See also [`L²`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`R²`](@ref), [`Rz`](@ref), [`R₊`](@ref),
 [`R₋`](@ref), [`ð`](@ref), [`ð̄`](@ref).
@@ -384,8 +471,9 @@ const Lz = LeftZ()
 
 
 @doc splice_signature_note(raw"""
-    L₊(s, ℓₘᵢₙ, ℓₘₐₓ, [T])
-    L₊(s, ℓₘₐₓ, [T])
+    L₊(s, ℓₘᵢₙ, ℓₘₐₓ, [T=Float64])
+    L₊(s, ℓₘₐₓ, [T=Float64])
+    L₊ * w
 
 Compute the angular-momentum raising operator.  This is the standard ``L_+`` operator,
 familiar from basic physics, extended to work with SWSHs.  Note that this is the left Lie
@@ -405,7 +493,9 @@ Consequently, the *mode weights* of a function are affected as
 \left\{L_+(f)\right\}_{s,ℓ,m} = \sqrt{(ℓ+m)(ℓ-m+1)}\,\left\{f\right\}_{s,ℓ,m-1}.
 ```
 
-$(_operator_signature_note)
+$(operator_signature_note)
+
+The ASCII alias `Lplus` may be used in place of `L₊`; it is public but not exported.
 
 See also [`L²`](@ref), [`Lz`](@ref), [`L₋`](@ref), [`R²`](@ref), [`Rz`](@ref), [`R₊`](@ref),
 [`R₋`](@ref), [`ð`](@ref), [`ð̄`](@ref).
@@ -414,8 +504,9 @@ const L₊ = LeftRaising()
 
 
 @doc splice_signature_note(raw"""
-    L₋(s, ℓₘᵢₙ, ℓₘₐₓ, [T])
-    L₋(s, ℓₘₐₓ, [T])
+    L₋(s, ℓₘᵢₙ, ℓₘₐₓ, [T=Float64])
+    L₋(s, ℓₘₐₓ, [T=Float64])
+    L₋ * w
 
 Compute the angular-momentum lowering operator.  This is the standard ``L_-`` operator,
 familiar from basic physics, extended to work with SWSHs.  Note that this is the left Lie
@@ -435,7 +526,9 @@ Consequently, the *mode weights* of a function are affected as
 \left\{L_-(f)\right\}_{s,ℓ,m} = \sqrt{(ℓ-m)(ℓ+m+1)}\,\left\{f\right\}_{s,ℓ,m+1}.
 ```
 
-$(_operator_signature_note)
+$(operator_signature_note)
+
+The ASCII alias `Lminus` may be used in place of `L₋`; it is public but not exported.
 
 See also [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`R²`](@ref), [`Rz`](@ref), [`R₊`](@ref),
 [`R₋`](@ref), [`ð`](@ref), [`ð̄`](@ref).
@@ -444,8 +537,9 @@ const L₋ = LeftLowering()
 
 
 @doc splice_signature_note(raw"""
-    Lx(s, ℓₘᵢₙ, ℓₘₐₓ, [T])
-    Lx(s, ℓₘₐₓ, [T])
+    Lx(s, ℓₘᵢₙ, ℓₘₐₓ, [T=Float64])
+    Lx(s, ℓₘₐₓ, [T=Float64])
+    Lx * w
 
 Compute the ``x`` component of the left angular-momentum operator, ``L_x = (L_+ + L_-)/2``.
 
@@ -453,7 +547,7 @@ This is the standard ``L_x`` operator, familiar from basic physics, extended to 
 SWSHs.  See the [conventions summary](@ref summary_L_R_definitions) or [Boyle](@cite
 Boyle_2016) for more details.  The matrix is real, symmetric and tridiagonal.
 
-$(_operator_signature_note)
+$(operator_signature_note)
 
 Note that there are no corresponding `Rx` and `Ry` functions.  The right raising and
 lowering operators change the spin weight, so ``R_x = (R_+ + R_-)/2`` would map a function
@@ -468,18 +562,19 @@ const Lx = LeftX()
 
 
 @doc splice_signature_note(raw"""
-    Ly(s, ℓₘᵢₙ, ℓₘₐₓ, [T])
-    Ly(s, ℓₘₐₓ, [T])
+    Ly(s, ℓₘᵢₙ, ℓₘₐₓ, [T=Float64])
+    Ly(s, ℓₘₐₓ, [T=Float64])
+    Ly * w
 
-Compute the ``y`` component of the left angular-momentum operator,
-``L_y = (L_+ - L_-)/(2i)``.
+Compute the ``y`` component of the left angular-momentum operator, ``L_y = (L_+ -
+L_-)/(2i)``.
 
 This is the standard ``L_y`` operator, familiar from basic physics, extended to work with
 SWSHs.  See the [conventions summary](@ref summary_L_R_definitions) or [Boyle](@cite
 Boyle_2016) for more details.  The matrix is tridiagonal and purely imaginary, so its
 element type is `Complex{T}` rather than `T`.
 
-$(_operator_signature_note)
+$(operator_signature_note)
 
 There are no corresponding `Rx` and `Ry` functions; see [`Lx`](@ref) for why.
 
@@ -490,8 +585,9 @@ const Ly = LeftY()
 
 
 @doc splice_signature_note(raw"""
-    R²(s, ℓₘᵢₙ, ℓₘₐₓ, [T])
-    R²(s, ℓₘₐₓ, [T])
+    R²(s, ℓₘᵢₙ, ℓₘₐₓ, [T=Float64])
+    R²(s, ℓₘₐₓ, [T=Float64])
+    R² * w
 
 Compute the total angular-momentum operator (the Casimir operator) for spin weight `s`, in
 terms of the right Lie derivative.
@@ -511,7 +607,9 @@ In terms of the SWSHs, we can write the action of ``R^2`` as
 R^2 {}_{s}Y_{ℓ,m} = ℓ\,(ℓ+1) {}_{s}Y_{ℓ,m}.
 ```
 
-$(_operator_signature_note)
+$(operator_signature_note)
+
+The ASCII alias `R2` may be used in place of `R²`; it is public but not exported.
 
 See also [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`Rz`](@ref), [`R₊`](@ref),
 [`R₋`](@ref), [`ð`](@ref), [`ð̄`](@ref).
@@ -520,8 +618,9 @@ const R² = RightCasimir()
 
 
 @doc splice_signature_note(raw"""
-    Rz(s, ℓₘᵢₙ, ℓₘₐₓ, [T])
-    Rz(s, ℓₘₐₓ, [T])
+    Rz(s, ℓₘᵢₙ, ℓₘₐₓ, [T=Float64])
+    Rz(s, ℓₘₐₓ, [T=Float64])
+    Rz * w
 
 Compute the *right* angular-momentum operator associated with the ``z`` direction.
 
@@ -536,7 +635,7 @@ to the spin weight.  In particular,
 R_z {}_{s}Y_{ℓ,m} = s\, {}_{s}Y_{ℓ,m}.
 ```
 
-$(_operator_signature_note)
+$(operator_signature_note)
 
 See also [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`R²`](@ref), [`R₊`](@ref),
 [`R₋`](@ref), [`ð`](@ref), [`ð̄`](@ref).
@@ -545,8 +644,9 @@ const Rz = RightZ()
 
 
 @doc splice_signature_note(raw"""
-    R₊(s, ℓₘᵢₙ, ℓₘₐₓ, [T])
-    R₊(s, ℓₘₐₓ, [T])
+    R₊(s, ℓₘᵢₙ, ℓₘₐₓ, [T=Float64])
+    R₊(s, ℓₘₐₓ, [T=Float64])
+    R₊ * w
 
 Compute the *right* angular-momentum raising operator.
 
@@ -571,7 +671,9 @@ Consequently, the *mode weights* of a function are affected as
 ```
 where the argument `s` of this function is the spin weight of the *input*.
 
-$(_operator_signature_note)
+$(operator_signature_note)
+
+The ASCII alias `Rplus` may be used in place of `R₊`; it is public but not exported.
 
 See also [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`R²`](@ref), [`Rz`](@ref),
 [`R₋`](@ref), [`ð`](@ref), [`ð̄`](@ref).
@@ -580,8 +682,9 @@ const R₊ = RightRaising()
 
 
 @doc splice_signature_note(raw"""
-    R₋(s, ℓₘᵢₙ, ℓₘₐₓ, [T])
-    R₋(s, ℓₘₐₓ, [T])
+    R₋(s, ℓₘᵢₙ, ℓₘₐₓ, [T=Float64])
+    R₋(s, ℓₘₐₓ, [T=Float64])
+    R₋ * w
 
 Compute the *right* angular-momentum lowering operator.
 
@@ -606,7 +709,9 @@ Consequently, the *mode weights* of a function are affected as
 ```
 where the argument `s` of this function is the spin weight of the *input*.
 
-$(_operator_signature_note)
+$(operator_signature_note)
+
+The ASCII alias `Rminus` may be used in place of `R₋`; it is public but not exported.
 
 See also [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`Lx`](@ref), [`Ly`](@ref),
 [`R²`](@ref), [`Rz`](@ref), [`R₊`](@ref), [`ð`](@ref), [`ð̄`](@ref).
@@ -615,14 +720,15 @@ const R₋ = RightLowering()
 
 
 @doc splice_signature_note(raw"""
-    ð(s, ℓₘᵢₙ, ℓₘₐₓ, [T])
-    ð(s, ℓₘₐₓ, [T])
+    ð(s, ℓₘᵢₙ, ℓₘₐₓ, [T=Float64])
+    ð(s, ℓₘₐₓ, [T=Float64])
+    ð * w
 
-Compute coefficients for the spin-raising operator ``\eth``.
+Compute the spin-raising operator ``\eth``.
 
-This operator was originally defined by [Newman and Penrose](@cite Newman_1966), but is
-more completely defined by [Boyle](@cite Boyle_2016).  It is identical to [`R₊`](@ref); see
-the [conventions summary](@ref summary_spin_weight).
+This operator was originally defined by [Newman and Penrose](@cite Newman_1966), but is more
+completely defined by [Boyle](@cite Boyle_2016).  It is identical to [`R₊`](@ref); see the
+[conventions summary](@ref summary_spin_weight).
 
 By definition, the spin-raising operator satisfies the commutator relation ``[R_z, \eth] =
 \eth`` (recall that ``R_z`` multiplies a spin-weighted function by its spin weight).  In
@@ -636,22 +742,25 @@ Consequently, the *mode weights* of a function are affected as
 ```
 where the argument `s` of this function is the spin weight of the *input*.
 
-$(_operator_signature_note)
+$(operator_signature_note)
 
-See also [`ð̄`](@ref), [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref),
-[`R²`](@ref), [`Rz`](@ref), [`R₊`](@ref), [`R₋`](@ref).
+The ASCII alias `eth` may be used in place of `ð`; it is public but not exported.
+
+See also [`ð̄`](@ref), [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`R²`](@ref),
+[`Rz`](@ref), [`R₊`](@ref), [`R₋`](@ref).
 """)
 const ð = SpinRaising()
 
 
 @doc splice_signature_note(raw"""
-    ð̄(s, ℓₘᵢₙ, ℓₘₐₓ, [T])
-    ð̄(s, ℓₘₐₓ, [T])
+    ð̄(s, ℓₘᵢₙ, ℓₘₐₓ, [T=Float64])
+    ð̄(s, ℓₘₐₓ, [T=Float64])
+    ð̄ * w
 
-Compute coefficients for the spin-lowering operator ``\bar{\eth}``.
+Compute the spin-lowering operator ``\bar{\eth}``.
 
-This operator was originally defined by [Newman and Penrose](@cite Newman_1966), but is
-more completely defined by [Boyle](@cite Boyle_2016).  It is the negative of [`R₋`](@ref):
+This operator was originally defined by [Newman and Penrose](@cite Newman_1966), but is more
+completely defined by [Boyle](@cite Boyle_2016).  It is the negative of [`R₋`](@ref):
 ``\bar{\eth} = -R_-``; the sign is Newman and Penrose's.  See the [conventions summary](@ref
 summary_spin_weight).
 
@@ -667,9 +776,77 @@ Consequently, the *mode weights* of a function are affected as
 ```
 where the argument `s` of this function is the spin weight of the *input*.
 
-$(_operator_signature_note)
+$(operator_signature_note)
+
+The ASCII alias `ethbar` may be used in place of `ð̄`; it is public but not exported.
 
 See also [`ð`](@ref), [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@ref), [`R²`](@ref),
 [`Rz`](@ref), [`R₊`](@ref), [`R₋`](@ref).
 """)
 const ð̄ = SpinLowering()
+
+
+### ASCII aliases
+#
+# The operators whose names cannot be typed without Unicode input have ASCII aliases, which
+# are public but not exported, since names such as `L2` are generic enough to clash with a
+# user's own.  Each alias is the operator itself, so it shares its identity, its `nameof`
+# and its display.  An alias of a value, unlike one of a function or a type, does not lead
+# the documentation system to the value's docstring, so each has a short docstring of its
+# own.
+
+"""
+    L2
+
+An ASCII alias of the operator [`L²`](@ref), for use where the Unicode name is inconvenient.
+"""
+const L2 = L²
+
+"""
+    Lplus
+
+An ASCII alias of the operator [`L₊`](@ref), for use where the Unicode name is inconvenient.
+"""
+const Lplus = L₊
+
+"""
+    Lminus
+
+An ASCII alias of the operator [`L₋`](@ref), for use where the Unicode name is inconvenient.
+"""
+const Lminus = L₋
+
+"""
+    R2
+
+An ASCII alias of the operator [`R²`](@ref), for use where the Unicode name is inconvenient.
+"""
+const R2 = R²
+
+"""
+    Rplus
+
+An ASCII alias of the operator [`R₊`](@ref), for use where the Unicode name is inconvenient.
+"""
+const Rplus = R₊
+
+"""
+    Rminus
+
+An ASCII alias of the operator [`R₋`](@ref), for use where the Unicode name is inconvenient.
+"""
+const Rminus = R₋
+
+"""
+    eth
+
+An ASCII alias of the operator [`ð`](@ref), for use where the Unicode name is inconvenient.
+"""
+const eth = ð
+
+"""
+    ethbar
+
+An ASCII alias of the operator [`ð̄`](@ref), for use where the Unicode name is inconvenient.
+"""
+const ethbar = ð̄

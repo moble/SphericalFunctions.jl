@@ -102,15 +102,19 @@ photon.
 
 Imagining that we had a polarizing telescope measuring some other kind
 of field with spin ``s``, the complex combination would vary as
-``e^{isψ}``.  (This is important for gravitational-wave astronomy,
-which feature fields with spin between -2 and +2, inclusive.  In
-principle, we could use the same framework to consider neutrino
-telescopes with spin-1/2 polarization.) And since we could have
-half-integer spins, we actually need to consider not just the rotation
-group ``\mathrm{SO}(3)`` (which is topologically ``ℝℙ³``), but its
-double cover ``\mathrm{Spin}(3) \cong \mathrm{SU}(2)`` (which is
-topologically ``𝕊³``), to fully capture the behavior of general
-fields.
+``e^{isψ}``.  Here the polarization is rotated in the sense that
+Newman and Penrose use, which is opposite to the sense of the third
+Euler angle in the formula above; in terms of that Euler angle, a
+function of spin weight ``s`` varies as ``e^{-isψ}``, as the
+[conventions summary](@ref summary_spin_weight) states precisely.
+(This is important for gravitational-wave astronomy, which features
+fields with spin between -2 and +2, inclusive.  In principle, we could
+use the same framework to consider neutrino telescopes with spin-1/2
+polarization.) And since we could have half-integer spins, we actually
+need to consider not just the rotation group ``\mathrm{SO}(3)`` (which
+is topologically ``ℝℙ³``), but its double cover ``\mathrm{Spin}(3)
+\cong \mathrm{SU}(2)`` (which is topologically ``𝕊³``), to fully
+capture the behavior of general fields.
 
 ## Unification in ``\mathrm{Spin}(3)``
 

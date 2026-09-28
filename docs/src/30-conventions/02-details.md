@@ -857,8 +857,8 @@ algebraically mechanical: write ``e^{-ϵ𝐮/2}\, 𝐑_{α, β, γ}`` (or
 ``𝐑_{α, β, γ}\, e^{-ϵ𝐮/2}``) in terms of its quaternion components,
 equate this to a new rotor ``𝐑_{α', β', γ'}`` and extract the new
 Euler angles ``(α', β', γ')`` as functions of ``ϵ``, then
-differentiate at ``ϵ=0``, and apply the chain rule.  This is carried
-out symbolically on the [``L_j`` and ``R_j`` with Euler angles](@ref
+differentiate at ``ϵ=0``, and apply the chain rule.  This is done
+symbolically on the [``L_j`` and ``R_j`` with Euler angles](@ref
 euler_angular_momentum) page, which also verifies the commutation
 relations claimed above.  The results are collected in the
 [Summary](@ref summary_L_R_euler); the essential ones are
@@ -1013,11 +1013,11 @@ there.  Hence ``𝔇^{(ℓ)}(-𝐑) = 𝔇^{(ℓ)}(-𝟏)\, 𝔇^{(ℓ)}(𝐑) =
 
 That is, for integer ``ℓ`` the two quaternions representing a given
 rotation give the same matrix, so ``𝔇^{(ℓ)}`` is a representation of
-``\mathrm{SO}(3)``; for half-integer ``ℓ`` it is a genuine
-representation of ``\mathrm{Spin}(3)`` only, and changes sign under a
-rotation through ``2π``.  This is the group-theoretic reason that the
-Euler angle ``γ`` must range over ``[0, 4π)`` to cover
-``\mathrm{Spin}(3)``.
+``\mathrm{SO}(3)``; for half-integer ``ℓ`` it is a representation of
+``\mathrm{Spin}(3)`` *only*, and changes sign rather than returning to
+the same value under a rotation through ``2π``.  This is the
+group-theoretic reason that the Euler angle ``γ`` must range over
+``[0, 4π)`` to cover ``\mathrm{Spin}(3)``.
 
 The other basic symmetry follows from the reality of the ``d`` matrix
 introduced below and the structure of the phases:
@@ -1317,7 +1317,7 @@ The law above is stated for the harmonics; the consequence for the
 *weights* of a function expanded in them is generally more useful.  We
 start with ``f(𝐐) = \sum_{ℓ,m} f_{ℓ,m}\, Y_{ℓ,m}(𝐐)``.  The
 *actively rotated* field ``f'`` — meaning that the field is rotated,
-rather than the coordinates of its argument — obeys``f'(𝐐) =
+rather than the coordinates of its argument — obeys ``f'(𝐐) =
 f(𝐑^{-1}\, 𝐐)``.  Substituting the law and relabelling the summation
 index gives
 ```math
@@ -1568,10 +1568,10 @@ rotation law for the spin-weighted spherical harmonics is
 \end{aligned}
 ```
 This is *precisely* the same law as [for the ordinary spherical
-harmonics](@ref conv_rotation_law), with extra ``s`` indices carried
-along.  And exactly the same reasoning as for the [rotation of
-*scalar* mode weights](@ref conv_rotation_of_modes) gives the law for
-the weights of a rotated spin-weighted function:
+harmonics](@ref conv_rotation_law), with extra ``s`` indices added.
+And exactly the same reasoning as for the [rotation of *scalar* mode
+weights](@ref conv_rotation_of_modes) gives the law for the weights of
+a rotated spin-weighted function:
 ```math
 {}_sf'_{ℓ,m'} = \sum_m 𝔇^{(ℓ)}_{m',m}(𝐑)\, {}_sf_{ℓ,m}.
 ```
@@ -1707,11 +1707,11 @@ functions are preferred to Chebyshev polynomials for the spherical
 harmonics.  They also mention that since the Laplacian measures
 curvature, and spherical harmonics of a given degree have the same
 Laplacian eigenvalue, the spherical harmonics with a given ``ℓ`` all
-have the same "amount" of curvature.  So, for example, the ``ℓ = ±m``
-modes vary most rapidly with longitude least rapidly with latitude,
-while the ``ℓ = 0`` mode varies most rapidly with latitude but not
-at all with longitude.
+have the same "amount" of curvature.  So, for example, the ``m = ±ℓ``
+modes vary most rapidly with longitude and least rapidly with
+latitude, while the ``m = 0`` mode varies most rapidly with latitude
+but not at all with longitude.
 
 [Vasil_2019](@citet) use spin-weighted spherical harmonics to do
-tensor calculus *in* the 3-ball, and have a lot formulas for
+tensor calculus *in* the 3-ball, and have a lot of formulas for
 derivatives, as a result.

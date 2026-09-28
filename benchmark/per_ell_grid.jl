@@ -1,20 +1,23 @@
 ### How the cost of the per-ℓ H recursion depends on ℓₘₐₓ and on the number of rotors.
 ###
-### The version-2 code filled one large array of H values for all ℓ at once, for a single
-### rotor at a time.  The version-3 engine computes one ℓ at a time for a batch of Nᵣ rotors
-### at once, which is what the transforms need and what keeps memory bounded at large ℓₘₐₓ
-### (the whole-array form needed about 2.7 GB at ℓₘₐₓ = 1000).  The design question is how
-### much that costs for a single rotor and how much it gains for a batch.  Version 3 has no
-### second implementation to time against, so what this script measures is the *shape* of
-### the cost, which answers the same question:
+### The engine computes one ℓ at a time for a batch of Nᵣ rotors at once, which is what the
+### transforms need and what keeps memory bounded at large ℓₘₐₓ; the alternative, one large
+### array of H values for all ℓ at once, for a single rotor at a time, needs about 2.7 GB at
+### ℓₘₐₓ = 1000.  The design question is how much the per-ℓ form costs for a single rotor and
+### how much it gains for a batch.  The package has no second implementation to time against,
+### so what this script measures is the *shape* of the cost, which answers the same question:
 ###
 ###   * Absolute nanoseconds per H element per rotor, over the grid.  For comparison, the
-###     version-2 code took 0.5 to 1.1 ns per element per rotor at ℓₘₐₓ ≥ 64, and 3.6 ns at
-###     ℓₘₐₓ = 8.
+###     whole-array code of the 2.x releases took 0.5 to 1.1 ns per element per rotor at
+###     ℓₘₐₓ ≥ 64, and 3.6 ns at ℓₘₐₓ = 8.
 ###   * The ratio of the single-rotor cost to the large-batch cost at the same ℓₘₐₓ.  Whatever
-###     is left over at Nᵣ = 1 is per-ℓ fixed cost — recomputing recursion coefficients,
-###     setting up the loop — and that is exactly what precomputing the coefficients would
-###     remove.  A ratio near 1 means there is nothing to win.
+###     is left over at Nᵣ = 1 is per-ℓ fixed cost: mostly the setup of the loop over rotors,
+###     and then the square roots of the recursion coefficients.  The engine tabulates the
+###     coefficients of steps 4 and 5 once per ℓ and writes their single-rotor case as one
+###     statement, which together remove most of that cost for the full wedge.  For the axis
+###     alone, which is all that spin weight 0 needs, the fixed cost is instead that of the
+###     coefficients of step 2, which only a table kept for the lifetime of the calculator, of
+###     O(ℓₘₐₓ²) entries, would remove.  A ratio near 1 means there is nothing to win.
 ###
 ### Run it on an otherwise idle machine, with one thread, from the package root:
 ###
@@ -93,8 +96,10 @@ function main()
             first(Nᵣs), last(Nᵣs), worst_overhead)
     println("""
         The per-rotor cost at Nᵣ = $(first(Nᵣs)) divided by the cost at Nᵣ = $(last(Nᵣs)) is the
-        per-ℓ fixed overhead that precomputed recursion coefficients would remove.  They are
-        worth adding to the single-rotor path only if that ratio exceeds about 2.""")
+        per-ℓ fixed overhead of the single-rotor path.  For the axis alone that overhead is the
+        cost of the coefficients of step 2, which a table of O(ℓₘₐₓ²) coefficients kept for the
+        lifetime of the calculator would remove; such a table is worth adding only if that
+        ratio exceeds about 2.""")
 end
 
 main()

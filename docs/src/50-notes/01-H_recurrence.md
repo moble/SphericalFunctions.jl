@@ -57,23 +57,25 @@ becomes when it is written in terms of ``H``.  For integer indices
 ``ϵ_{|m'|} = (-1)^{m'}`` and ``(-1)^{ℓ-m} = (-1)^{ℓ+m}``, so the first
 two relations reduce to plain symmetry and the last two to the forms
 usually quoted, ``(-1)^{ℓ+m+m'}`` and ``(-1)^{m+m'}``.  For
-half-integer indices ``σ`` is genuinely ``-1`` whenever
-``\mathrm{sgn}(m) ≠ \mathrm{sgn}(m')`` — for example
-``H^{1/2}_{1/2,-1/2} = -\sin(β/2)`` while ``H^{1/2}_{-1/2,1/2} =
-+\sin(β/2)`` — and ``ℓ+m+m'`` is not even an integer, so the exponents
-above have to be written in the forms ``ℓ-m`` and ``m'-m``, which are.
-No other choice of the signs ``ϵ`` could remove ``σ``: on the
-anti-diagonal ``m = -m'`` the ``ϵ`` factors appear squared, so that
-``H`` and ``d`` coincide there, and ``d^{(1/2)}_{1/2,-1/2} =
--d^{(1/2)}_{-1/2,1/2}``.  Composing the first two relations shows that
-``H_{m', m}^ℓ = H_{-m, -m'}^ℓ`` holds without any sign, for both kinds
-of index.
+half-integer indices ``σ`` is ``-1`` whenever ``\mathrm{sgn}(m) ≠
+\mathrm{sgn}(m')`` — for example ``H^{1/2}_{1/2,-1/2} = -\sin(β/2)``
+while ``H^{1/2}_{-1/2,1/2} = +\sin(β/2)`` — and ``ℓ+m+m'`` is not even
+an integer, so the exponents above have to be written in the forms
+``ℓ-m`` and ``m'-m``, which are.  No other choice of the signs ``ϵ``
+could remove ``σ``: on the anti-diagonal ``m = -m'`` the ``ϵ`` factors
+appear squared, so that ``H`` and ``d`` coincide there, and
+``d^{(1/2)}_{1/2,-1/2} = -d^{(1/2)}_{-1/2,1/2}``.  Composing the first
+two relations shows that ``H_{m', m}^ℓ = H_{-m, -m'}^ℓ`` holds without
+any sign, for both kinds of index.
 
 !!! warning "Do not hand-roll these symmetries"
     In the code, ``σ`` is applied for you by [`wedge_value`](@ref
     SphericalFunctions.wedge_value) and [`wedge_source`](@ref
-    SphericalFunctions.wedge_source), which are the only places the
-    symmetries are encoded.  Reading the stored wedge of a
+    SphericalFunctions.wedge_source), which are the way to read an
+    element of the wedge.  The only other readers are the functions
+    that assemble the blocks of the calculators, which apply the same
+    cases a whole run of elements at a time, and are tested against
+    `wedge_value` element by element.  Reading the stored wedge of a
     [`HCalculator`](@ref) directly and transposing it by hand gives
     the wrong sign for every half-integer element with
     ``\mathrm{sgn}(m) ≠ \mathrm{sgn}(m')``.
@@ -506,11 +508,11 @@ integer ``ℓ`` and at ``m' = -1/2`` for half-integer ``ℓ`` — so that
 its first pass produces the row ``m' = -1`` (or ``-3/2``) from rows
 that steps 2 and 3 (or the seed) have already filled.  Also, the lower
 limit on ``m`` is ``1-m'``, the smallest value for which
-``H^{ℓ}_{m'−1, m}`` lies in the wedge.  An earlier version of these
-notes started the loop over ``m`` at ``-m'``, which computed one
-element outside the wedge at each ``m'``, and thereby required the
-elements ``H^{n}_{0, -1}`` to be set in advance; with the limits given
-here, nothing outside the wedge is ever read or written.
+``H^{ℓ}_{m'−1, m}`` lies in the wedge.  Starting the loop over ``m``
+at ``-m'`` instead would compute one element outside the wedge at each
+``m'``, and thereby require the elements ``H^{n}_{0, -1}`` to be set
+in advance; with the limits given here, nothing outside the wedge is
+ever read or written.
 
 
 ### Step 6: Use symmetries to fill in the rest of ``H``
@@ -533,10 +535,14 @@ If both ``|m'|`` and ``|m|`` exceed ``m'_{\mathrm{max}}``, the element
 cannot be obtained, and an error is thrown.
 
 The batched engine never actually runs this step.  It leaves the wedge
-alone, and applies the symmetries on the fly, as each element is read,
-through [`wedge_value`](@ref SphericalFunctions.wedge_value) or
-`wedge_source`.  Only the unbatched, integer-only reference
-implementation, [`recurrence_step6!`](@ref
+alone, and applies the symmetries on the fly as the elements are read:
+one at a time through [`wedge_value`](@ref
+SphericalFunctions.wedge_value) or `wedge_source`, or, when a
+calculator assembles a block of ``d``, ``𝔇`` or the harmonics, in runs
+along the rows of the wedge.  Each run lies within one of the four
+cases above, so the case and the row are settled once for the whole
+run, rather than once for each element.  Only the unbatched,
+integer-only reference implementation, [`recurrence_step6!`](@ref
 SphericalFunctions.recurrence_step6!), fills in the rest of the matrix
 explicitly.
 
@@ -593,34 +599,66 @@ most involve a division, which can be very costly to compute.  It can
 be advantageous to pre-compute the constants, and simply index the
 pre-computed arrays rather than re-computing them on each recursion.
 
-Measurements on the earlier, whole-array implementation of this
-recursion found that, *if* we include the cost of computing all these
-constants in a single call to the ``H`` recurrence, it can be much
-cheaper to compute each constant as needed within the algorithm,
-rather than computing them all at once at the beginning of the
-algorithm — but only for very small computations, such as those
-involving ``ℓ_{\mathrm{max}} ≈ 10``.  Beyond this, despite the storage
-penalties for all those constants, it turned out to be better to
-pre-compute them.  However, it should be noted that the fractional
-cost of storing the constants is ``\sim 3/ℓ_{\mathrm{max}}`` compared
-to just storing ``H`` itself, so this will never be a very significant
-amount of space.  On the other hand, if we can pre-compute the
-constants just once, and store them between multiple calls to the
-``H`` recurrence, then it was always advantageous to do so — typically
-by factors of 2 or 3 in speed.
+Measurements on a whole-array implementation of this recursion, which
+fills every ``ℓ`` for a single rotor in one call, found that, *if* we
+include the cost of computing all these constants in a single call to
+the ``H`` recurrence, it can be much cheaper to compute each constant
+as needed within the algorithm, rather than computing them all at once
+at the beginning of the algorithm — but only for very small
+computations, such as those involving ``ℓ_{\mathrm{max}} ≈ 10``.
+Beyond this, despite the storage penalties for all those constants, it
+turned out to be better to pre-compute them.  However, it should be
+noted that the fractional cost of storing the constants is
+``\sim 3/ℓ_{\mathrm{max}}`` compared to just storing ``H`` itself, so
+this will never be a very significant amount of space.  On the other
+hand, if we can pre-compute the constants just once, and store them
+between multiple calls to the ``H`` recurrence, then it was always
+advantageous to do so — typically by factors of 2 or 3 in speed.
 
-The current implementation nonetheless computes every constant on the
-fly, because batching changes the balance.  Each constant is computed
-once for a given ``(ℓ, m', m)`` and then used for every rotor in the
-batch, so its cost is divided among all of them.  Every transform in
-the package uses the batched path, and there the constants are a small
-part of the total.  A single rotor, on the other hand, pays the full
-cost of every constant: per element and per rotor, a full sweep with
-one rotor was measured to be between 7 and 19 times slower than the
-same sweep with a batch of 512, and most of that difference is the
-work of computing constants, which a cache could recover.  Such a
-cache has not been added, because it would give the calculators —
-which currently allocate nothing after construction and have no state
-to invalidate — both ``O(ℓ_{\mathrm{max}})`` storage and invalidation
-logic.  It could be added later without changing the interface, since
-it would be entirely internal to [`recurrence!`](@ref).
+The implementation in this package nonetheless computes nearly every
+constant on the fly, because batching changes the balance.  Each
+constant is computed once for a given ``ℓ`` and ``m'`` or ``m``, and
+then used for every rotor in the batch, so its cost is divided among
+all of them.  Every transform in the package uses the batched path, and
+there the constants are a small part of the total.
+
+The exception is the pair of coefficients on the ``m`` side of steps 4
+and 5, ``\sqrt{δ²(ℓ, m)}`` and ``\sqrt{δ²(ℓ, m-1)}``, which depend on
+``ℓ`` and ``m`` but not on ``m'``, so that the two ladders would
+otherwise take the same square roots again for every row.  Each call to
+[`recurrence!`](@ref) fills a table of them, one entry for each ``m``,
+before either step runs.  The table is ``O(ℓ_{\mathrm{max}})`` storage,
+allocated with the calculator.  Because it is refilled at every call,
+it is never out of date and needs no invalidation logic, and because
+each entry is computed from the same expression the steps would
+evaluate, the results are the same to the last bit.
+
+A single rotor pays the full cost of every constant, but the constants
+are not most of what makes it slower, per rotor, than a batch.  The
+innermost loop of each step runs over the rotors, and for one rotor the
+setup of that vectorized loop at every ``(m', m)`` costs more than the
+arithmetic it performs.  The inner loops of steps 4 and 5 therefore
+write the single-rotor case out as one statement, the loop's own
+expression; with the square roots taken from the table, the compiler
+then vectorizes the loop over ``m`` instead.  Measured for `Float64` on
+an Apple M2 Max, step 5 at ``ℓ = 200`` for one rotor took 52 µs as a
+loop over one rotor taking its own square roots, 33 µs with the table
+alone, 52 µs with the single statement alone, and 9.6 µs with both.  A
+full sweep of the wedge to ``ℓ = 200`` then costs about 0.52 ns per
+element for one rotor, against about 2.4 ns with neither measure, and
+0.27 to 0.36 ns per element and rotor for batches of 8 to 512.  For
+`BigFloat`, whose square roots are expensive, the table alone halves
+the time of a single-rotor sweep.
+
+The case in which the constants really do dominate is the axis alone,
+``m'_{\mathrm{max}} = 0``, which is all that spin weight zero needs.
+There the three square roots and three divisions in each coefficient
+of step 2 are most of the cost — a sweep to ``ℓ = 200`` costs about 3.8
+ns per element for one rotor, against 0.6 ns per element and rotor for
+a batch of 64 — and each is used only once per sweep, so that only a
+table kept for the lifetime of the calculator could remove it.  Such a
+table would hold ``O(ℓ_{\mathrm{max}}^2)`` numbers, although, since
+``ℓ_{\mathrm{max}}`` is fixed at construction, it too would need no
+invalidation.  It has not been added; it could be added later without
+changing the interface, since it would be entirely internal to
+[`recurrence!`](@ref).

@@ -1,16 +1,19 @@
-# Stage-1 oracle for the half-integer Wigner tests (design memo §6).
+# Stage-1 oracle for the half-integer Wigner tests, which are in two stages: this oracle is
+# checked first, against itself and against published tables, and the package is then
+# checked against it.
 #
 # Two *independent* reference implementations of the Wigner 𝔇 and d functions that are
 # valid for half-integer indices, plus the transcribed tables from Varshalovich et al.
 # Both are copied verbatim from the Literate comparison pages under
-# `docs/literate_input/conventions/comparisons/`, which are finished, reviewed work; the
-# copies exist because `@testmodule` cannot depend on another `@testmodule`, so the
+# `docs/literate_input/30-conventions/10-comparisons/`, which are finished, reviewed work;
+# the copies exist because `@testmodule` cannot depend on another `@testmodule`, so the
 # `Boyle2016` and `Varshalovich` modules defined on those pages cannot be imported here.
-# Each copy names its source page and the line range it was taken from.  The
-# "half-integer oracle: references agree with each other" test item in
-# `test/wigner/half_integer.jl` re-derives, against these copies, the cross-checks that
-# the comparison pages make, so that a drift between copy and original shows up as a
-# failure here rather than as a silently wrong oracle.
+# Each copy names its source page and the lines it was taken from.  The item "Half-integer
+# oracle: the copies are the originals" in `test/wigner/half_integer.jl` parses the pages and
+# this file and compares the definitions, so that a drift between copy and original is a
+# failure there rather than a silently wrong oracle; the item "Half-integer oracle: the two
+# references agree" then repeats, against these copies, the cross-checks that the comparison
+# pages make.
 #
 # Conventions.  Varshalovich's `d(J, M, M′, β)` is this package's `dᴶ_{m′m}(β)` with
 # `(M, M′) = (m′, m)`, and his `D(J, M, M′, α, β, γ)` is this package's `𝔇ᴶ_{m′m}`; the
@@ -24,10 +27,13 @@
 using Quaternionic: Rotor, from_euler_angles
 import Random
 
+# The comparison pages write the imaginary unit as `𝒾`, which the copies below keep.
+const 𝒾 = im
+
 
 # ---------------------------------------------------------------------------------------
 # Boyle (2016), Eq. (35) and Appendix A.
-# Copied verbatim from docs/literate_input/conventions/comparisons/boyle_2016.jl:59-167.
+# Copied verbatim from docs/literate_input/30-conventions/10-comparisons/boyle_2016.jl:59-167.
 # ---------------------------------------------------------------------------------------
 
 function WignerDElement(R::Rotor{T}, ℓ::I, m′::I, m::I) where {T, I}
@@ -47,7 +53,7 @@ function WignerDElement(R::Rotor{T}, ℓ::I, m′::I, m::I) where {T, I}
         error(
             "The maximum supported ℓ for this function is 8; " *
             "larger numbers become numerically unstable.\n" *
-            "Consider using the `WignerD` function instead."
+            "Consider using `SphericalFunctions.D` instead."
         )
     end
 
@@ -143,8 +149,9 @@ end
 
 # ---------------------------------------------------------------------------------------
 # Varshalovich, Moskalev & Khersonskii (1988).
-# Copied verbatim from docs/literate_input/conventions/comparisons/varshalovich_1988.jl:
-# the `Factorial` helper (lines 231-236) and Eq. 4.3.1(2) (lines 243-254).
+# Copied verbatim from docs/literate_input/30-conventions/10-comparisons/varshalovich_1988.jl:
+# the `Factorial` helper (lines 233-238), Eq. 4.3.1(2) (lines 245-256) and Eq. 4.3.(1)
+# (lines 259-262).
 # ---------------------------------------------------------------------------------------
 
 # Factorials of integers and of integer-valued rationals (half-integer arithmetic produces
@@ -169,19 +176,18 @@ end
 
 # Eq. 4.3.(1):
 function D(J, M, M′, α, β, γ)
-    exp(-im * M * α) * d(J, M, M′, β) * exp(-im * M′ * γ)
+    exp(-𝒾 * M * α) * d(J, M, M′, β) * exp(-𝒾 * M′ * γ)
 end
 
 
 # ---------------------------------------------------------------------------------------
 # Varshalovich Tables 4.3-4.12, the explicit half-integer `d` functions for J ≤ 9/2.
-# Copied verbatim from docs/literate_input/conventions/comparisons/varshalovich_1988.jl:
-# 300-467.  The tables list only the rows M ≥ 1/2, and for each such row only the entries
-# not obtainable by symmetry from the ones already given; the transcription returns
-# `nothing` for the entries the book omits, so every caller must guard on that.
+# Copied verbatim from docs/literate_input/30-conventions/10-comparisons/varshalovich_1988.jl:
+# 303-469.  The tables list only the rows M ≥ 1/2, and for each such row only the entries not
+# obtainable by symmetry from the ones already given; the transcription returns `nothing` for
+# the entries the book omits, so every caller must guard on that.
 # ---------------------------------------------------------------------------------------
 
-# 0``.
 function d_½_explicit(J::Rational{Int}, M::Rational{Int}, M′::Rational{Int}, β::T) where T
     if denominator(J) != 2 || denominator(M) != 2 || denominator(M′) != 2
         error("Only half-integer J, M, M′ are supported")
@@ -379,26 +385,6 @@ The entry of Varshalovich's Tables 4.3-4.12 for `dᴶ_{MM′}(β)`, or `nothing`
 does not print it.  Only `1//2 ≤ J ≤ 9//2` is transcribed.
 """
 d_table(J, M, M′, β) = d_½_explicit(J, M, M′, β)
-
-"Whole `dᴶ` block from the Varshalovich closed form, as a plain `Matrix` indexed `1:2J+1`."
-d_oracle_block(J, β::T) where {T<:Real} = T[d_oracle(J, m′, m, β) for m′ ∈ -J:J, m ∈ -J:J]
-
-"Whole `𝔇ᴶ` block from the Boyle (2016) reference, as a plain `Matrix` indexed `1:2J+1`."
-D_oracle_block(R::Rotor{T}, J) where {T} =
-    Complex{T}[D_oracle(R, J, m′, m) for m′ ∈ -J:J, m ∈ -J:J]
-
-"""
-    maxabsdiff(block, oracle_block)
-
-Largest absolute difference between a half-integer container (or any object supporting
-`collect`) and a plain matrix of oracle values in the same `(m′, m)` order.  Accumulating
-this and asserting once keeps a failing item from printing thousands of separate failures.
-"""
-function maxabsdiff(block, oracle_block)
-    A = collect(block)
-    size(A) == size(oracle_block) || return Inf
-    maximum(abs, A .- oracle_block; init=0.0)
-end
 
 
 # ---------------------------------------------------------------------------------------

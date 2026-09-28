@@ -28,8 +28,8 @@ per mode.  This is the ordering that [`sYlm`](@ref),
 use.  It is the same ordering for half-integer indices, with ``ℓ``
 starting at ``1/2`` rather than ``0``: the closed forms below hold for
 both kinds of index, and the indices in one call must all be of one
-kind.  Wigner's ``𝔇`` and ``d`` matrices are *not* stored this way in
-version 3: they are indexed by ``(ℓ, m', m)`` through the views a
+kind.  Wigner's ``𝔇`` and ``d`` matrices are *not* stored this way:
+they are indexed by ``(ℓ, m', m)`` through the views a
 [`WignerCalculator`](@ref) returns, so no separate index arithmetic is
 needed for them.
 
@@ -40,10 +40,13 @@ Order   = [:module, :type, :constant, :function, :macro]
 ```
 
 
-## Typing
+## Types of rotor data
 
-These are internal convenience functions for determining the types of
-various inputs.
+These functions report how the package reads the rotor data given to a
+calculator: the floating-point type it computes in, and the number of
+rotors.  `rotor_basetype`, `nrotors` and `floattype` are public; the
+others are the internal helpers that check the data and word the
+refusals.
 
 ```@autodocs
 Modules = [SphericalFunctions]
@@ -56,9 +59,12 @@ Filter  = f -> f !== SphericalFunctions.sqrtbinomial
 Spherical functions frequently involve binomial coefficients and
 similar terms, with arguments proportional to ``ℓ``, which we aim to
 allow to be very large — of order 1,000 or more.  Unfortunately, due
-to combinatorical explosions, this is frequently infeasible with naive
-methods.  Here, we collect any specialized methods that help us beat
-the limits.
+to combinatorial explosions, this is frequently infeasible with naive
+methods.  The public [`sqrtbinomial`](@ref
+SphericalFunctions.sqrtbinomial) computes the square root of a
+binomial coefficient through the logarithm of the beta function, so
+that it stays finite and accurate where the coefficient itself would
+overflow.
 
 ```@docs
 SphericalFunctions.sqrtbinomial

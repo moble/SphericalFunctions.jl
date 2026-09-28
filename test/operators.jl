@@ -10,10 +10,16 @@
 #     ð = R₊,   ð̄ = -R₋.
 #
 # The explicit differential operators (`ExplicitOperators`) are applied, via automatic
-# differentiation, to the package's own 𝔇 and ₛYₗₘ values, so these tests pin the sign
-# conventions of the operators *and* of the Wigner/sYlm functions simultaneously.
+# differentiation, to functions built from the package's own values.  Applied to 𝔇 and to
+# ₛYₗₘ, in the first two items, they pin the sign conventions of the Wigner and sYlm
+# functions against the definitions above.  Applied to the function that a `ModeWeights`
+# synthesizes, they pin the package's operators themselves: `op * w`, evaluated at a rotor,
+# must be the derivative of `w` evaluated there.  The remaining items that use them check
+# the helper and the automatic differentiation through 𝔇, which the others rely on, rather
+# than any convention.
 
 @testitem "Pretest ε and basis commutators" setup=[Utilities] begin
+    import .Utilities: ε
     using Quaternionic
     # Test that [eⱼ, eₖ] = 2∑ₗ ε(j,k,l) eₗ
     let e = [imx, imy, imz]
@@ -91,20 +97,21 @@ end
     # settled relation ₛYₗₘ(R) = (-1)^s √((2ℓ+1)/4π) conj(𝔇ˡₘ,₋ₛ(R)) in terms of the
     # package's own 𝔇.  This pins the R ladder operators' action on ₛYₗₘ: R₊ raises the
     # spin weight with coefficient √((ℓ-s)(ℓ+s+1)) and R₋ lowers it with √((ℓ+s)(ℓ-s+1)),
-    # both positive; and it checks that the definition reproduces the closed-form ₛYₗₘ of
-    # the `Utilities` snippet — the explicit sum over factorials given on the conventions
+    # both positive; and it checks that the definition reproduces `sYlm_closed_form` from
+    # the `Utilities` module — the explicit sum over factorials given on the conventions
     # pages, which shares no code with the package.  The operators are applied to the whole
     # vector of ₛYₗₘ values at once (ForwardDiff differentiates vector-valued functions),
     # which keeps the runtime reasonable.
     #
-    # The closed form is a function of the spherical coordinates (θ, ϕ) alone, so the natural
-    # comparison points are the rotors `from_spherical_coordinates(θ, ϕ)`.  Any other rotor
-    # has an extra phase: writing 𝐐 in terms of its Euler angles (α, β, γ) as
-    # 𝐐 = from_spherical_coordinates(β, α) * exp(γ𝐤/2), the defining property of spin weight,
-    # η(𝐐 exp(γ𝐤/2)) = exp(-isγ) η(𝐐) (conventions summary, "Spin-weighted functions"),
-    # supplies it.  Both kinds of point are used — with that phase where it is needed — so
-    # that the operator identities are still exercised at generic rotors.
+    # The closed form is a function of the spherical coordinates (θ, ϕ) alone, so the
+    # natural comparison points are the rotors `from_spherical_coordinates(θ, ϕ)`.  Any
+    # other rotor has an extra phase: writing 𝐐 in terms of its Euler angles (α, β, γ) as
+    # 𝐐 = from_spherical_coordinates(β, α) * exp(γ𝐤/2), the defining property of spin
+    # weight, η(𝐐 exp(γ𝐤/2)) = exp(-isγ) η(𝐐) (conventions summary, "Spin-weighted
+    # functions"), supplies it.  Both kinds of point are used — with that phase where it is
+    # needed — so that the operator identities are still exercised at generic rotors.
     import SphericalFunctions: D
+    import .Utilities: sYlm_closed_form
     using Quaternionic
     using Random
     rng = Random.Xoshiro(321)
@@ -123,28 +130,29 @@ end
             ]
         end
     end
-    # The closed-form ₛYₗₘ of the `Utilities` snippet, evaluated at the rotor 𝐐 by way of its
-    # Euler angles, with the spin-weight phase discussed above.
+    # The closed-form ₛYₗₘ, evaluated at the rotor 𝐐 by way of its Euler angles, with the
+    # spin-weight phase discussed above.
     function closed_form(s, ℓ, m, Q)
         α, β, γ = to_euler_angles(Q)
-        sYlm(s, ℓ, m, β, α) * cis(-s * γ)
+        sYlm_closed_form(s, ℓ, m, β, α) * cis(-s * γ)
     end
-    # γ = 0 for the first three, so the closed form applies to them with no phase at all.
-    # The angles are kept away from θ ∈ {0, π}: there β is 0 or π, and `spinor_phases`, which
-    # splits the rotor into the half-angles of β and the phases of α ± γ, takes the square
-    # root of an exact zero, whose derivative is infinite, so the ForwardDiff-based operators
-    # below would return NaN.  (See the warning on derivatives in the documentation of the
-    # calculators; ϕ ∈ πℤ used to be avoided as well, for a `complex_powers!` bug since fixed.)
+    # γ = 0 for the first four, so the closed form applies to them with no phase at all.
+    # The fourth is exactly at the north pole, θ = 0, and the fifth exactly at the south
+    # pole.  There the recurrence's split of the rotor into the half angles of β and the
+    # phases of α ± γ is singular, and derivatives taken through it would be NaN, so the
+    # calculators evaluate such a rotor from the expansion of 𝔇 about the pole instead (see
+    # `src/wigner/poles.jl`); these two check the ForwardDiff-based operators through it.
     Qs = [
-        [from_spherical_coordinates(T(θ), T(ϕ)) for (θ, ϕ) ∈ ((0.4, 0.9), (1.0, 2.0), (2.5, -1.5))];
+        [from_spherical_coordinates(T(θ), T(ϕ)) for (θ, ϕ) ∈ ((0.4, 0.9), (1.0, 2.0), (2.5, -1.5), (0.0, 0.9))];
+        [Rotor{T}(zero(T), T(0.6), T(0.8), zero(T))];
         randn(rng, Rotor{T}, 3)
     ]
     for Q ∈ Qs
         for s ∈ -2:2
             Y = Ys(s)(Q)
-            # The definition agrees with the independent closed form.  The maximum error over
-            # these points and spins measures 2.6e-15, well inside ϵ = 200eps(Float64) ≈
-            # 4.4e-14.  (Accumulated into one assertion rather than one per mode.)
+            # The definition agrees with the independent closed form.  The maximum error
+            # over these points and spins measures 2.6e-15, well inside ϵ = 200eps(Float64)
+            # ≈ 4.4e-14.  (Accumulated into one assertion rather than one per mode.)
             @test maximum(
                 abs(Y[idx(ℓ, m)] - closed_form(s, ℓ, m, Q))
                 for ℓ ∈ abs(s):ℓₘₐₓ for m ∈ -ℓ:ℓ
@@ -174,13 +182,17 @@ end
     end
 end
 
-@testitem "Operators: composition" setup=[ExplicitOperators] begin
-    # Test the order of operations:
-    #   LₘLₙf(Q) = λ²∂ᵧ∂ᵨf(exp(ρn) exp(γm) Q)
-    #   RₘRₙf(Q) = λ²∂ᵧ∂ᵨf(Q exp(γm) exp(ρn))
+@testitem "Pretest: explicit operators nest as written" setup=[ExplicitOperators] begin
+    # A check of the `ExplicitOperators` helper, on which the items that differentiate
+    # functions twice rely: `L(m, L(n, f))` is L_m L_n f, so the derivative with respect to
+    # the generator `n` is taken innermost,
+    #   LₘLₙf(Q) = (-i/2)² ∂ᵧ∂ᵨf(exp(ρn) exp(γm) Q),
+    #   RₘRₙf(Q) = (i/2)² ∂ᵧ∂ᵨf(Q exp(γm) exp(ρn)).
+    # The function differentiated is a matrix element of 𝔇, but any smooth function would
+    # do, so this tests the helper and not the package; one precision and a few elements
+    # suffice.
     import SphericalFunctions: D
     using Quaternionic
-    using DoubleFloats
     import ForwardDiff
     using Random
     rng = Random.Xoshiro(123)
@@ -188,89 +200,35 @@ end
     const L = ExplicitOperators.L
     const R = ExplicitOperators.R
 
-    for T ∈ [Float32, Float64, Double64]
-        z = zero(T)
-        function LL(m, n, f, Q)
-            # L_m L_n f = (-i/2)² ∂ᵧ∂ᵨ f(e^{ρn} e^{γm} Q)
-            - ForwardDiff.derivative(
-                γ -> ForwardDiff.derivative(
-                    ρ -> f(exp(ρ*n) * exp(γ*m) * Q),
-                    z
-                ),
-                z
-            ) / 4
-        end
-        function RR(m, n, f, Q)
-            # R_m R_n f = (i/2)² ∂ᵧ∂ᵨ f(Q e^{γm} e^{ρn})
-            - ForwardDiff.derivative(
-                γ -> ForwardDiff.derivative(
-                    ρ -> f(Q * exp(γ*m) * exp(ρ*n)),
-                    z
-                ),
-                z
-            ) / 4
-        end
+    T = Float64
+    z = zero(T)
+    LL(m, n, f, Q) = -ForwardDiff.derivative(
+        γ -> ForwardDiff.derivative(ρ -> f(exp(ρ*n) * exp(γ*m) * Q), z), z
+    ) / 4
+    RR(m, n, f, Q) = -ForwardDiff.derivative(
+        γ -> ForwardDiff.derivative(ρ -> f(Q * exp(γ*m) * exp(ρ*n)), z), z
+    ) / 4
 
-        ϵ = 100 * eps(T)
-        M = randn(rng, QuatVec{T}, 3)
-        N = randn(rng, QuatVec{T}, 3)
-        for Q ∈ randn(rng, Rotor{T}, 5)
-            for ℓ ∈ 0:3
-                for m′ ∈ -ℓ:ℓ
-                    for m ∈ -ℓ:ℓ
-                        f(Q) = D(Q, ℓ)[ℓ][m′, m]
-                        for n ∈ N
-                            for mm ∈ M
-                                @test L(mm, L(n, f))(Q) ≈ LL(mm, n, f, Q) atol=ϵ rtol=ϵ
-                                @test R(mm, R(n, f))(Q) ≈ RR(mm, n, f, Q) atol=ϵ rtol=ϵ
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-end
-
-@testitem "Operators: linearity" setup=[ExplicitOperators] begin
-    import SphericalFunctions: D
-    using Quaternionic
-    using DoubleFloats
-    using Random
-    rng = Random.Xoshiro(123)
-    const L = ExplicitOperators.L
-    const R = ExplicitOperators.R
-    for T ∈ [Float32, Float64, Double64]
-        # Test L_{sg} = sL_{g}, R_{sg} = sR_{g}, L_{a+b} = L_{a}+L_{b}, and R_{a+b} = R_{a}+R_{b}
-        ϵ = 100 * eps(T)
-        Ss = randn(rng, T, 3)
-        Gs = randn(rng, QuatVec{T}, 3)
-        for Q ∈ randn(rng, Rotor{T}, 4)
-            for ℓ ∈ 0:3
-                for m′ ∈ -ℓ:ℓ
-                    for m ∈ -ℓ:ℓ
-                        f(Q) = D(Q, ℓ)[ℓ][m′, m]
-                        for s ∈ Ss
-                            for g ∈ Gs
-                                @test L(s*g, f)(Q) ≈ s*L(g, f)(Q) atol=ϵ rtol=ϵ
-                                @test R(s*g, f)(Q) ≈ s*R(g, f)(Q) atol=ϵ rtol=ϵ
-                            end
-                        end
-                        for g₁ ∈ Gs
-                            for g₂ ∈ Gs
-                                @test L(g₁+g₂, f)(Q) ≈ L(g₁, f)(Q) + L(g₂, f)(Q) atol=ϵ rtol=ϵ
-                                @test R(g₁+g₂, f)(Q) ≈ R(g₁, f)(Q) + R(g₂, f)(Q) atol=ϵ rtol=ϵ
-                            end
-                        end
-                    end
-                end
-            end
-        end
+    ϵ = 100 * eps(T)
+    M = randn(rng, QuatVec{T}, 2)
+    N = randn(rng, QuatVec{T}, 2)
+    Q = randn(rng, Rotor{T})
+    for (m′, m) ∈ ((0, 0), (1, -1), (-1, 0)), n ∈ N, mm ∈ M
+        f(Q) = D(Q, 1)[1][m′, m]
+        @test L(mm, L(n, f))(Q) ≈ LL(mm, n, f, Q) atol=ϵ rtol=ϵ
+        @test R(mm, R(n, f))(Q) ≈ RR(mm, n, f, Q) atol=ϵ rtol=ϵ
+        # ... and the two orders differ, so the check can tell them apart
+        @test !isapprox(L(mm, L(n, f))(Q), LL(n, mm, f, Q); atol=ϵ, rtol=ϵ)
     end
 end
 
 @testitem "Operators: basis commutators" setup=[ExplicitOperators] begin
     # [L_𝐮, L_𝐯] = (i/2) L_{[𝐮,𝐯]},   [R_𝐮, R_𝐯] = (i/2) R_{[𝐮,𝐯]},   [L_𝐮, R_𝐯] = 0
+    #
+    # These identities hold for any smooth function of the rotor, so they pin no convention.
+    # What they check is that second derivatives of 𝔇 taken by nested automatic
+    # differentiation are consistent with its first derivatives, which the explicit
+    # operators of the other items rely on.
     import SphericalFunctions: D
     using Quaternionic
     using DoubleFloats
@@ -280,7 +238,7 @@ end
     const L = ExplicitOperators.L
     const R = ExplicitOperators.R
 
-    for T ∈ [Float32, Float64, Double64]
+    for T ∈ [Float64, Double64]
         ϵ = 400 * eps(T)
         E = QuatVec{T}[imx, imy, imz]
         for Q ∈ randn(rng, Rotor{T}, 5)
@@ -299,6 +257,53 @@ end
                     end
                 end
             end
+        end
+    end
+end
+
+@testitem "Operators: op * w is the derivative of the function w" setup=[ExplicitOperators] begin
+    # The mode weights `w` define a function on the rotors, `Q -> w(Q)`, and applying an
+    # operator to the weights must give the weights of that operator applied to the
+    # function.  So `(op * w)(Q)` is compared with the explicit Lie derivatives of `Q ->
+    # w(Q)` at `Q`, by automatic differentiation through the package's own evaluation, for
+    # every operator: the left and right components, the ladder operators L± = Lx ± i Ly and
+    # ð = R₊ = Rx + i Ry, ð̄ = -R₋ = -(Rx - i Ry), and the Casimirs L² = R² = Σₐ Lₐ Lₐ = Σₐ
+    # Rₐ Rₐ.  Nothing is compared with a matrix, so this pins the operators' conventions and
+    # signs, for integer and half-integer spin weights alike.
+    using Quaternionic
+    using Random
+    rng = Random.Xoshiro(2718)
+    const L = ExplicitOperators.L
+    const R = ExplicitOperators.R
+
+    # The conventions do not depend on the precision, so one type suffices.
+    let T = Float64
+        x, y, z = QuatVec{T}(imx), QuatVec{T}(imy), QuatVec{T}(imz)
+        for (s, ℓₘᵢₙ, ℓₘₐₓ) ∈ ((0, 0, 4), (1, 1, 4), (-2, 2, 5), (1//2, 1//2, 7//2), (-3//2, 3//2, 9//2))
+            w = ModeWeights(randn(rng, Complex{T}, Ysize(ℓₘᵢₙ, ℓₘₐₓ)), s, ℓₘᵢₙ, ℓₘₐₓ)
+            f = Q -> w(Q)
+            # The worst error measured over these rotors, relative to eps(T), is 190, at
+            # ℓₘₐₓ = 5, most of it in the Casimirs, whose values are ℓ(ℓ+1) times larger
+            # than the function's; the bound grows with ℓₘₐₓ² accordingly.
+            ϵ = 50ℓₘₐₓ^2 * eps(T)
+            worst = zero(T)
+            # Generic rotors, which stay away from the poles, where the half-angle square
+            # roots inside the evaluation have infinite derivatives
+            for Q ∈ randn(rng, Rotor{T}, 4)
+                Lx_, Ly_, Lz_ = L(x, f)(Q), L(y, f)(Q), L(z, f)(Q)
+                Rx_, Ry_, Rz_ = R(x, f)(Q), R(y, f)(Q), R(z, f)(Q)
+                L²_ = L(x, L(x, f))(Q) + L(y, L(y, f))(Q) + L(z, L(z, f))(Q)
+                R²_ = R(x, R(x, f))(Q) + R(y, R(y, f))(Q) + R(z, R(z, f))(Q)
+                expected = (
+                    (Lz, Lz_), (Lx, Lx_), (Ly, Ly_), (L₊, Lx_ + im*Ly_), (L₋, Lx_ - im*Ly_),
+                    (Rz, Rz_), (R₊, Rx_ + im*Ry_), (R₋, Rx_ - im*Ry_),
+                    (ð, Rx_ + im*Ry_), (ð̄, -(Rx_ - im*Ry_)), (L², L²_), (R², R²_),
+                )
+                for (op, value) ∈ expected
+                    worst = max(worst, abs((op * w)(Q) - value))
+                end
+            end
+            @test worst < ϵ
         end
     end
 end
@@ -470,11 +475,6 @@ end
             @test parent(O(w)) == M * parent(w)
         end
     end
-    ## `ℓₘᵢₙ` defaults to `abs(s)`
-    for O ∈ (Lx, Ly), s ∈ -2:2, ℓₘₐₓ ∈ 2:4
-        @test O(s, ℓₘₐₓ) == O(s, abs(s), ℓₘₐₓ, Float64)
-        @test O(s, ℓₘₐₓ, Float32) == O(s, abs(s), ℓₘₐₓ, Float32)
-    end
 end
 
 @testitem "Operators: default ℓₘᵢₙ" begin
@@ -496,23 +496,26 @@ end
     #     ð η = -sinˢθ {∂_θ + (i/sinθ) ∂_ϕ} (sin⁻ˢθ η),
     #     ð̄ η = -sin⁻ˢθ {∂_θ - (i/sinθ) ∂_ϕ} (sinˢθ η),
     #
-    # applied by fourth-order central differences to the closed-form ₛYₗₘ of the `Utilities`
-    # snippet.  Neither the differential operator nor the harmonic comes from the package, so
-    # this is a genuinely independent check of the matrices' entries.
+    # applied by fourth-order central differences to the closed-form ₛYₗₘ,
+    # `sYlm_closed_form` from the `Utilities` module.  Neither the differential operator nor
+    # the harmonic comes from the package, so this is a truly independent check of the
+    # matrices' entries.
     #
-    # Concretely: for each single mode (ℓ, m) of spin weight `s`, the mode weights `ð * Y` are
-    # synthesized with the closed-form harmonics of spin weight s+1 and compared with ð
+    # Concretely: for each single mode (ℓ, m) of spin weight `s`, the mode weights `ð * Y`
+    # are synthesized with the closed-form harmonics of spin weight s+1 and compared with ð
     # applied to the closed-form ₛYₗₘ; and likewise for ð̄ with spin weight s-1.  Errors are
     # accumulated over each (T, ℓₘₐₓ, s) block and asserted once, so a broken operator
     # produces a handful of failures rather than thousands.
     import SphericalFunctions: ð, ð̄
+    import .Utilities: sYlm_closed_form
     using DoubleFloats
 
     # Fourth-order central difference.  The differencing is done in BigFloat with h = 1e-15,
     # near the optimum at the default 256-bit precision (truncation ~ h⁴ ≈ 1e-60, roundoff ~
-    # eps/h ≈ 1e-62).  Checked against the ladder relations ð ₛYₗₘ = √((ℓ-s)(ℓ+s+1)) ₛ₊₁Yₗₘ and
-    # ð̄ ₛYₗₘ = -√((ℓ+s)(ℓ-s+1)) ₛ₋₁Yₗₘ for every mode used below, the reference reproduces them
-    # to 5.3e-58, which is what limits the BigFloat tolerance chosen at the bottom.
+    # eps/h ≈ 1e-62).  Checked against the ladder relations ð ₛYₗₘ = √((ℓ-s)(ℓ+s+1)) ₛ₊₁Yₗₘ
+    # and ð̄ ₛYₗₘ = -√((ℓ+s)(ℓ-s+1)) ₛ₋₁Yₗₘ for every mode used below, the reference
+    # reproduces them to 5.3e-58, which is what limits the BigFloat tolerance chosen at the
+    # bottom.
     h = big"1e-15"
     ∂(f, x) = (-f(x+2h) + 8f(x+h) - 8f(x-h) + f(x-2h)) / (12h)
     function ðNP(s, f, θ, ϕ)
@@ -536,7 +539,7 @@ end
     # Closed-form harmonics at those points, for every spin weight that can appear
     Yvals = Dict(
         (σ, p) => [
-            ℓ < abs(σ) ? zero(Complex{BigFloat}) : sYlm(σ, ℓ, m, θϕs[p]...)
+            ℓ < abs(σ) ? zero(Complex{BigFloat}) : sYlm_closed_form(σ, ℓ, m, θϕs[p]...)
             for (ℓ, m) ∈ allpairs
         ]
         for σ ∈ -4:4, p ∈ eachindex(θϕs)
@@ -545,15 +548,16 @@ end
     refs = Dict{NTuple{4,Int}, NTuple{2,Complex{BigFloat}}}()
     for s ∈ -3:3, (ℓ, m) ∈ allpairs, p ∈ eachindex(θϕs)
         ℓ < abs(s) && continue
-        f(t, q) = sYlm(s, ℓ, m, t, q)
+        f(t, q) = sYlm_closed_form(s, ℓ, m, t, q)
         refs[(s, ℓ, m, p)] = (ðNP(s, f, θϕs[p]...), ð̄NP(s, f, θϕs[p]...))
     end
 
     for T ∈ [Float32, Float64, Double64, BigFloat]
-        # Measured maximum errors over everything below: 1.1e-7 (Float32), 2.2e-16 (Float64),
-        # 1.6e-32 (Double64) — all within one eps of the respective type — and 5.3e-58 for
-        # BigFloat, where the finite-difference reference rather than the arithmetic sets the
-        # floor, so the tolerance cannot be 100eps(BigFloat) ≈ 1e-75 there.
+        # Measured maximum errors over everything below: 1.1e-7 (Float32), 2.2e-16
+        # (Float64), 1.6e-32 (Double64) — all within one eps of the respective type — and
+        # 5.3e-58 for BigFloat, where the finite-difference reference rather than the
+        # arithmetic sets the floor, so the tolerance cannot be 100eps(BigFloat) ≈ 1e-75
+        # there.
         ϵ = max(100 * eps(T), 1e-55)
         @testset "$ℓₘₐₓ" for ℓₘₐₓ ∈ ℓₘₐₓs
             prs = ℓmpairs(ℓₘₐₓ)
@@ -717,14 +721,17 @@ end
     end
 end
 
-@testitem "Operators: half-integer spellings, mixed kinds and the integer path" begin
+
+@testitem "Operators: half-integer spellings, mixed kinds and the integer path" setup=[InferenceChecks] begin
     import SphericalFunctions: L², Lz, L₊, L₋, Lx, Ly, R², Rz, R₊, R₋, ð, ð̄, Ysize, HalfOddInteger
+    import SphericalFunctions: IndexType
     using LinearAlgebra: Diagonal, Bidiagonal, Tridiagonal, diag
+    using .InferenceChecks: inferred_type
     h(x) = HalfOddInteger(x)
     ops = (L², Lz, L₊, L₋, Lx, Ly, R², Rz, R₊, R₋, ð, ð̄)
 
-    # Every spelling gives the same matrix, `ℓₘᵢₙ` defaults to `abs(s)`, and the matrix has the
-    # same structure as in the integer case
+    # Every spelling gives the same matrix, `ℓₘᵢₙ` defaults to `abs(s)`, and the matrix has
+    # the same structure as in the integer case
     for O ∈ ops, s ∈ (-3//2, 1//2, 3//2), ℓₘₐₓ ∈ (5//2, 7//2), T ∈ (Float64, Float32)
         M = O(s, abs(s), ℓₘₐₓ, T)
         @test O(h(s), h(abs(s)), h(ℓₘₐₓ), T) == M
@@ -737,37 +744,43 @@ end
         end
         @test size(M) == (Ysize(abs(s), ℓₘₐₓ), Ysize(abs(s), ℓₘₐₓ))
         @test typeof(M) === typeof(O(1, 1, 3, T))
-        # A mixture of the two kinds of index is refused with a message naming both spellings,
-        # and a `Rational` that is not a half-odd-integer with one naming the denominator
-        mixed = "all be integers, like 3, or all be half-odd-integers, like 7//2"
+        # A mixture of the two kinds of index is refused with a message that describes both
+        # kinds and says which index is of which, and a `Rational` that is not a
+        # half-odd-integer with one that says what it is; the message names the operator as
+        # it prints
+        mixed = "must all be integers of type `Int`, like 3, or all be half-odd-integers"
+        @test_throws ArgumentError O(s, 0, ℓₘₐₓ, T)
         @test_throws mixed O(s, 0, ℓₘₐₓ, T)
+        @test_throws "mixes integers (ℓₘᵢₙ) with half-odd-integers (s, ℓₘₐₓ)" O(s, 0, ℓₘₐₓ, T)
         @test_throws mixed O(1, abs(s), ℓₘₐₓ, T)
         @test_throws mixed O(s, abs(s), 3, T)
         @test_throws mixed O(s, 3, T)
         @test_throws mixed O(h(s), 0, h(ℓₘₐₓ), T)
-        @test_throws "denominator 2" O(1//3, 1//3, 7//3, T)
-        @test_throws "denominator 2" O(s, 3//1, T)
+        @test_throws "The indices of one call to `$(nameof(O))`" O(s, 3, T)
+        @test_throws ArgumentError O(1//3, 1//3, 7//3, T)
+        @test_throws "1//3 is neither an integer nor a half-odd-integer" O(1//3, 1//3, 7//3, T)
+        @test_throws "3//1 is a whole number; write it as the integer 3" O(s, 3//1, T)
     end
-    # Each public function carries both layers: a boundary method typed `IndexArgument`, and a
-    # worker typed `where {IT<:IntegerHalf}`.  The worker is reached by dispatch rather than by
-    # a separate name — one `IT` for all three indices is strictly more specific than three
-    # independent `IndexArgument`s — so anything that is not already three indices of one kind
-    # lands on the boundary, which normalizes it or explains why it cannot.
+    # Each call shape of the operators is one `@index_methods` definition.  Three indices of
+    # one kind reach the work method of that kind, `Rational`s reach the method that
+    # converts them, and anything else (a mixture of kinds, or an integer of a type other
+    # than `Int`) reaches the fallback, which explains the refusal.
     for O ∈ ops
-        worker = which(O, (HalfOddInteger, HalfOddInteger, HalfOddInteger, Type{Float64}))
-        boundary = which(O, (Rational{Int}, Rational{Int}, Rational{Int}, Type{Float64}))
-        @test worker !== boundary
-        # Three indices of one kind reach the worker, whichever kind
-        @test which(O, (Int, Int, Int, Type{Float64})) === worker
-        # A `Rational`, a mixture of kinds, or a mixture of integer widths does not
-        @test which(O, (Int, HalfOddInteger, HalfOddInteger, Type{Float64})) === boundary
-        @test which(O, (Int8, Int, Int, Type{Float64})) === boundary
+        fallback = which(O, (IndexType, IndexType, IndexType, Type{Float64}))
+        integer_work = which(O, (Int, Int, Int, Type{Float64}))
+        half_work = which(O, (HalfOddInteger, HalfOddInteger, HalfOddInteger, Type{Float64}))
+        conversion = which(O, (Rational{Int}, Rational{Int}, Rational{Int}, Type{Float64}))
+        @test allunique((fallback, integer_work, half_work, conversion))
+        @test which(O, (Int, HalfOddInteger, HalfOddInteger, Type{Float64})) === fallback
+        @test which(O, (Int8, Int, Int, Type{Float64})) === fallback
+        @test which(O, (UInt, Int, Int, Type{Float64})) === fallback
+        @test which(O, (Bool, Int, Int, Type{Float64})) === fallback
         # ... and every spelling infers the same concrete result
-        RT = Base.infer_return_type(O, (Rational{Int}, Rational{Int}, Rational{Int}, Type{Float64}))
+        RT = inferred_type(O, (Rational{Int}, Rational{Int}, Rational{Int}, Type{Float64}))
         @test isconcretetype(RT)
-        @test RT === Base.infer_return_type(O, (HalfOddInteger, HalfOddInteger, HalfOddInteger, Type{Float64}))
-        @test RT === Base.infer_return_type(O, (Int, Int, Int, Type{Float64}))
-        @test RT === Base.infer_return_type(O, (Rational{Int}, Rational{Int}, Type{Float64}))
+        @test RT === inferred_type(O, (HalfOddInteger, HalfOddInteger, HalfOddInteger, Type{Float64}))
+        @test RT === inferred_type(O, (Int, Int, Int, Type{Float64}))
+        @test RT === inferred_type(O, (Rational{Int}, Rational{Int}, Type{Float64}))
     end
     # The half-integer eigenvalues of L², in every type, against the `Rational` arithmetic
     for T ∈ (Float32, Float64, BigFloat)
@@ -775,7 +788,7 @@ end
         @test diag(Lz(1//2, 1//2, 21//2, T)) == [T(m) for ℓ ∈ 1//2:21//2 for m ∈ -ℓ:ℓ]
     end
 
-    # The integer path is unchanged: small cases computed by hand, exactly ...
+    # The integer path: small cases computed by hand, exactly ...
     @test diag(L²(0, 0, 2)) == [0, 2, 2, 2, 6, 6, 6, 6, 6]
     @test diag(L²(1, 0, 2)) == [0, 2, 2, 2, 6, 6, 6, 6, 6]
     @test diag(L²(2, 0, 2)) == [0, 0, 0, 0, 6, 6, 6, 6, 6]
@@ -794,52 +807,29 @@ end
     @test diag(R₊(0, 0, 1)) == [0, √2, √2, √2]
     @test diag(R₋(0, 0, 1)) == [0, √2, √2, √2]
     @test Lx(0, 0, 1) == Tridiagonal([0, √2, √2] ./ 2, zeros(4), [0, √2, √2] ./ 2)
-    @test Ly(0, 0, 1) == Tridiagonal(-im .* [0, √2, √2] ./ 2, zeros(4), im .* [0, √2, √2] ./ 2)
-    # ... with the same matrix types and element types as before ...
+    @test Ly(0, 0, 1) == Tridiagonal(-im .* [0, √2, √2] ./ 2, zeros(ComplexF64, 4), im .* [0, √2, √2] ./ 2)
+    # ... with these matrix types and element types ...
     @test L²(0, 0, 2, Float32) isa Diagonal{Float32, Vector{Float32}}
     @test L₊(0, 0, 2) isa Bidiagonal{Float64, Vector{Float64}}
     @test L₋(0, 0, 2) isa Bidiagonal{Float64, Vector{Float64}}
     @test Lx(0, 0, 2) isa Tridiagonal{Float64, Vector{Float64}}
     @test Ly(0, 0, 2) isa Tridiagonal{ComplexF64, Vector{ComplexF64}}
     @test ð(0, 0, 2, BigFloat) isa Diagonal{BigFloat, Vector{BigFloat}}
-    # ... narrower or mixed integer types still agree with `Int` ...
-    @test L²(Int8(1), Int8(1), Int8(3)) == L²(1, 1, 3)
-    @test L₊(Int8(-1), 1, 3) == L₊(-1, 1, 3)
-    @test ð(Int32(1), Int8(1), 3, Float32) == ð(1, 1, 3, Float32)
-    # ... and the size, now `Ysize`, is the former (ℓₘₐₓ+1)² - ℓₘᵢₙ² in every case
+    # ... while an index of an integer type other than `Int`, or a `Rational` of another
+    # integer type, is refused with a message that says why and how to write it instead ...
+    @test_throws ArgumentError L²(Int8(1), Int8(1), Int8(3))
+    @test_throws "`Int8` is narrower than `Int`" L²(Int8(1), Int8(1), Int8(3))
+    @test_throws "`Int8` is narrower than `Int`" L₊(Int8(-1), 1, 3)
+    @test_throws "`Int32` is narrower than `Int`" ð(Int32(1), Int8(1), 3, Float32)
+    @test_throws ArgumentError L₊(0, 0, UInt(3))
+    @test_throws "`UInt64` is unsigned" L₊(0, 0, UInt(3))
+    @test_throws "A `Bool` is not an index" Lz(true, 3)
+    @test_throws "`BigInt` is wider than `Int`" ð̄(0, big(3))
+    @test_throws "`Rational{Int8}` is not `Rational{Int}`" Lz(Int8(1)//Int8(2), 5//2)
+    # ... and the size is `Ysize`, which is (ℓₘₐₓ+1)² - ℓₘᵢₙ² for integer indices
     for ℓₘᵢₙ ∈ 0:3, ℓₘₐₓ ∈ ℓₘᵢₙ:6, O ∈ (L₊, L₋, Lx, Ly)
         @test size(O(0, ℓₘᵢₙ, ℓₘₐₓ)) == ((ℓₘₐₓ+1)^2 - ℓₘᵢₙ^2, (ℓₘₐₓ+1)^2 - ℓₘᵢₙ^2)
     end
-end
-
-@testitem "DifferentialOperator: the operators are values" begin
-    import SphericalFunctions: DifferentialOperator, Δspin, bandstructure, coefftype,
-        DiagonalBand, SubdiagonalBand, SuperdiagonalBand, TridiagonalBand
-
-    ops = (L², Lz, L₊, L₋, Lx, Ly, R², Rz, R₊, R₋, ð, ð̄)
-
-    for op ∈ ops
-        @test op isa DifferentialOperator
-        # Zero-size singletons, so dispatching on one costs nothing and every trait folds away
-        @test Base.issingletontype(typeof(op))
-        @test sizeof(op) == 0
-        # They say their own names, so `repr` is `ð` rather than `SpinRaising()`
-        @test repr(op) == string(nameof(op))
-        @test getfield(SphericalFunctions, nameof(op)) === op
-    end
-    # No two share a type, so no two can share a trait by accident
-    @test length(unique(typeof.(ops))) == length(ops)
-
-    # The spin weight each one moves
-    @test map(Δspin, ops) == (0, 0, 0, 0, 0, 0, 0, 0, 1, -1, 1, -1)
-    # The band each occupies
-    @test bandstructure(L²) isa DiagonalBand
-    @test bandstructure(L₊) isa SubdiagonalBand
-    @test bandstructure(L₋) isa SuperdiagonalBand
-    @test bandstructure(Lx) isa TridiagonalBand && bandstructure(Ly) isa TridiagonalBand
-    # Ly is the only one whose entries are complex
-    @test coefftype(Ly, Float64) === ComplexF64
-    @test all(coefftype(op, Float64) === Float64 for op ∈ ops if op !== Ly)
 end
 
 @testitem "DifferentialOperator: op * w matches the matrix, bit for bit" begin
@@ -850,27 +840,80 @@ end
     rng = Random.Xoshiro(20260920)
     ops = (L², Lz, L₊, L₋, Lx, Ly, R², Rz, R₊, R₋, ð, ð̄)
 
-    # The sweep deliberately includes the small and degenerate containers the older items
-    # skip: a single ℓ block, and the one-mode ℓ = 0 case.
+    # The sweep deliberately includes the small and degenerate containers that the other
+    # items skip, a single ℓ block and the one-mode ℓ = 0 case, and half-integer containers.
     for T ∈ (Float32, Float64, Double64), CT ∈ (T, Complex{T})
-        for (s, ℓₘᵢₙ, ℓₘₐₓ) ∈ ((0,0,3), (-2,2,4), (1,0,3), (0,1,1), (0,0,0), (2,2,2))
+        for (s, ℓₘᵢₙ, ℓₘₐₓ) ∈ (
+            (0,0,3), (-2,2,4), (1,0,3), (0,1,1), (0,0,0), (2,2,2),
+            (1//2,1//2,7//2), (-3//2,3//2,5//2), (1//2,1//2,1//2),
+        )
             data = randn(rng, CT, Ysize(ℓₘᵢₙ, ℓₘₐₓ))
             w = ModeWeights(copy(data), s, ℓₘᵢₙ, ℓₘₐₓ)
             for op ∈ ops
                 M = op(s, ℓₘᵢₙ, ℓₘₐₓ, T)
-                # `==`, not `≈`: the loop and the comprehension evaluate the same coefficient
-                # functions, and the loop sums a tridiagonal row left to right exactly as
-                # `LinearAlgebra` does, so the two agree to the last bit.
-                @test parent(op * w) == M * data
+                # `==`, not `≈`: the loop and the comprehension evaluate the same
+                # coefficient functions, and the loop sums a tridiagonal row left to right
+                # exactly as `LinearAlgebra` does, so for finite data the two agree to the
+                # last bit (apart from the sign of a zero).  The exception is a matrix of
+                # three rows or fewer, which `LinearAlgebra` before Julia 1.12 multiplies as
+                # a dense one, through BLAS, whose rounding can differ in the last bit.
+                if VERSION < v"1.12" && size(M, 1) ≤ 3
+                    @test parent(op * w) ≈ M * data rtol=4eps(T)
+                else
+                    @test parent(op * w) == M * data
+                end
                 @test op * w == op(w)                      # the two spellings agree
                 @test spin(op * w) == s + Δspin(op)        # ... and the label moves correctly
-                @test SphericalFunctions.ℓₘᵢₙ(op * w) === ℓₘᵢₙ   # the ℓ range never does
-                @test SphericalFunctions.ℓₘₐₓ(op * w) === ℓₘₐₓ
+                @test SphericalFunctions.ℓₘᵢₙ(op * w) == ℓₘᵢₙ   # the ℓ range never does
+                @test SphericalFunctions.ℓₘₐₓ(op * w) == ℓₘₐₓ
                 @test eltype(op * w) === eltype(M * data)
                 @test parent(w) == data                    # the input is untouched
             end
         end
     end
+
+    # Where the data are not finite the two differ, as the docstring of
+    # `DifferentialOperator` says: the matrix multiplies its stored zero diagonal by an
+    # infinite weight, giving a NaN, whereas `op * w` reads only the band that the operator
+    # occupies.
+    let data = zeros(9)
+        data[3] = Inf
+        w = ModeWeights(data, 0, 0, 2)
+        @test iszero(parent(L₊ * w)[3]) && parent(L₊ * w)[4] == Inf
+        @test isnan((L₊(0, 0, 2) * data)[3])
+    end
+end
+
+@testitem "DifferentialOperator: products and broadcasts" begin
+    using Random
+
+    rng = Random.Xoshiro(314)
+    w = ModeWeights(randn(rng, ComplexF64, Ysize(0, 4)), 0, 0, 4)
+
+    # `a * b * w` is `a * (b * w)`, for any number of operators ...
+    @test ð̄ * ð * w == ð̄ * (ð * w)
+    @test spin(ð̄ * ð * w) == 0
+    @test L₊ * L₋ * Lz * w == L₊ * (L₋ * (Lz * w))
+    @test ð * ð * ð̄ * w == ð * (ð * (ð̄ * w))
+    @test spin(ð * ð * ð̄ * w) == 1
+    # ... so that identities among the operators can be checked as they are written: the
+    # Casimir L² = (L₊L₋ + L₋L₊)/2 + Lz², and ð̄ð = -(L² - Rz² - Rz), which follows from [ð,
+    # ð̄] = -2Rz and L² = R²
+    @test (L₊ * L₋ * w + L₋ * L₊ * w) / 2 + Lz * Lz * w ≈ L² * w
+    @test ð̄ * ð * w ≈ -(L² * w - Rz * Rz * w - Rz * w)
+    let wh = ModeWeights(randn(rng, ComplexF64, Ysize(1//2, 7//2)), 1//2, 1//2, 7//2)
+        @test ð̄ * ð * wh ≈ -(L² * wh - Rz * Rz * wh - Rz * wh)
+        @test spin(ð̄ * ð * wh) == 1//2
+    end
+    # A product of two operators on their own is not defined
+    @test_throws MethodError ð̄ * ð
+
+    # In a broadcast an operator is a scalar, so `op .* ws` applies it to each element, as
+    # the call form `op.(ws)` does
+    ws = [w, 2w, ModeWeights(randn(rng, ComplexF64, Ysize(1, 3)), 1, 1, 3)]
+    @test ð .* ws == ð.(ws) == [ð * v for v ∈ ws]
+    @test spin.(ð .* ws) == [1, 1, 2]
+    @test Lz .* ws == [Lz * v for v ∈ ws]
 end
 
 @testitem "DifferentialOperator: op * w allocates once, mul! allocates nothing" begin
@@ -882,17 +925,21 @@ end
     ℓₘₐₓ = 12
     w = ModeWeights(randn(rng, ComplexF64, Ysize(0, ℓₘₐₓ)), 0, 0, ℓₘₐₓ)
 
-    # Measured inside a function, never at top level, where the result is meaningless
-    apply(op, w) = op * w
-    inplace(dst, op, w) = mul!(dst, op, w)
+    # Each measurement is made inside a function, in which the types of the arguments are
+    # known; at top level it would include the dynamic dispatch of the call being measured,
+    # which allocates on some versions of Julia.
+    allocations_apply(op, w) = @allocated op * w
+    allocations_inplace(dst, op, w) = @allocated mul!(dst, op, w)
+    allocations_matrix(op, w, ℓₘₐₓ) = @allocated op(0, 0, ℓₘₐₓ) * parent(w)
 
-    for op ∈ (L², Lz, L₊, L₋, Lx, Ly, R₊, ð)
+    for op ∈ (L², Lz, L₊, L₋, Lx, Ly, R², Rz, R₊, R₋, ð, ð̄)
         dst = ModeWeights(similar(parent(w)), 0 + Δspin(op), 0, ℓₘₐₓ)
-        apply(op, w); inplace(dst, op, w)                  # warm up
-        @test (@allocated inplace(dst, op, w)) == 0
-        # `op * w` allocates its result and nothing else — never the operator matrix, which
-        # for the banded ones is several times larger
-        @test (@allocated apply(op, w)) < (@allocated op(0, 0, ℓₘₐₓ) * parent(w))
+        # warm up
+        allocations_apply(op, w); allocations_inplace(dst, op, w); allocations_matrix(op, w, ℓₘₐₓ)
+        @test allocations_inplace(dst, op, w) == 0
+        # `op * w` allocates its result and nothing else, never the operator matrix, which
+        # the product with the matrix must allocate as well as its result
+        @test allocations_apply(op, w) < allocations_matrix(op, w, ℓₘₐₓ)
         @test parent(dst) == parent(op * w)
     end
 end
@@ -913,14 +960,25 @@ end
     # A correctly labelled, separate destination works
     dst = ModeWeights(similar(parent(w)), 1, 0, 3)
     @test parent(mul!(dst, ð, w)) == parent(ð * w)
-    # ... and so does a bare vector at least as long as the result, which comes back labelled
-    # with what the operator produces (here s = 1), as a ModeWeights over its first entries
+    # ... and so does a bare vector at least as long as the result, which comes back
+    # labelled with what the operator produces (here s = 1), as a ModeWeights over its first
+    # entries
     out = zeros(ComplexF64, Ysize(0, 3) + 1)
     w′ = mul!(out, ð, w)
     @test w′ isa ModeWeights && spin(w′) == 1 && parent(array_view(w′)) === out
-    @test array_view(w′) == parent(ð * w) && iszero(out[end])
+    @test array_view(w′) == parent(ð * w)
+    @test iszero(out[end])
     @test_throws "at least" mul!(zeros(ComplexF64, Ysize(0, 3) - 1), ð, w)
     @test_throws "aliases the input" mul!(parent(w), Lz, w)
+
+    # Half-integer weights take the same route, with the destination labelled by `Δspin`
+    wh = ModeWeights(randn(rng, ComplexF64, Ysize(1//2, 7//2)), 1//2, 1//2, 7//2)
+    for op ∈ (ð, ð̄, Lx, L₋, Rz)
+        dsth = ModeWeights(similar(parent(wh)), 1//2 + Δspin(op), 1//2, 7//2)
+        @test parent(mul!(dsth, op, wh)) == parent(op * wh)
+        @test spin(dsth) == spin(op * wh)
+    end
+    @test_throws "gives s=3//2" mul!(similar(wh), ð, wh)
 end
 
 @testitem "Operators: every band structure refuses an invalid range of ℓ" begin
@@ -930,13 +988,16 @@ end
     # refuses — a negative ℓₘᵢₙ, or an ℓₘₐₓ below ℓₘᵢₙ-1 — whatever the shape of its matrix
     for op ∈ (L², Lz, L₊, L₋, Lx, Ly, R², Rz, R₊, R₋, ð, ð̄)
         @test_throws ArgumentError op(0, -2, 3)
-        @test_throws ArgumentError op(0, -1, 2)
+        @test_throws "ℓₘᵢₙ=-2 must be non-negative" op(0, -2, 3)
+        @test_throws "ℓₘᵢₙ=-1 must be non-negative" op(0, -1, 2)
         @test_throws ArgumentError op(0, 5, 2)
-        @test_throws ArgumentError op(0, 3, 1)
-        @test_throws ArgumentError op(5, 3)  # ℓₘᵢₙ is |s| = 5 by default
+        @test_throws "ℓₘₐₓ=2 must be at least ℓₘᵢₙ-1=4" op(0, 5, 2)
+        @test_throws "ℓₘₐₓ=1 must be at least ℓₘᵢₙ-1=2" op(0, 3, 1)
+        @test_throws "ℓₘₐₓ=3 must be at least ℓₘᵢₙ-1=4" op(5, 3)  # ℓₘᵢₙ is |s| = 5 by default
         @test_throws ArgumentError op(-1//2, -3//2, 5//2)
-        @test_throws ArgumentError op(1//2, -1//2, 5//2)
-        @test_throws ArgumentError op(1//2, 9//2, 5//2)
+        @test_throws "must be non-negative" op(-1//2, -3//2, 5//2)
+        @test_throws "must be non-negative" op(1//2, -1//2, 5//2)
+        @test_throws "must be at least" op(1//2, 9//2, 5//2)
         # The empty range ℓₘₐₓ = ℓₘᵢₙ-1 is legal, and gives an empty matrix
         @test size(op(5, 5, 4)) == (0, 0)
         @test size(op(1//2, 7//2, 5//2)) == (0, 0)

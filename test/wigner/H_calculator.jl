@@ -3,9 +3,10 @@
 # closed-form H, built from the definition of H in terms of the Wigner d function; see the
 # first item below.
 
-@testitem "HCalculator vs closed-form H" setup=[HalfIntegerOracle] begin
+@testitem "HCalculator vs closed-form H" setup=[HalfIntegerOracle, Utilities] begin
     import SphericalFunctions: HCalculator, recurrence!, wedge_value
     import .HalfIntegerOracle: d_oracle
+    import .Utilities: βrange
     import DoubleFloats: Double64
     import Random
 
@@ -14,50 +15,58 @@
     #
     #     d^ℓ_{m′,m}(β) = ϵ(m′) ϵ(-m) H^ℓ_{m′,m}(β),   ϵ(k) = (-1)^⌊k⌋ for k > 0, else 1
     #
-    # (`docs/src/50-notes/01-H_recurrence.md`; design memo §5.2).  The ϵ are signs, so the
-    # relation inverts to H = ϵ(m′) ϵ(-m) d, and `d` is taken from Varshalovich
-    # Eq. 4.3.1(2) as transcribed in the `HalfIntegerOracle` setup module — a reference
-    # that owes nothing to this package.
+    # (`docs/src/50-notes/01-H_recurrence.md`).  The ϵ are signs, so the relation inverts to
+    # H = ϵ(m′) ϵ(-m) d, and `d` is taken from Varshalovich Eq. 4.3.1(2) as transcribed in the
+    # `HalfIntegerOracle` setup module — a reference that owes nothing to this package.
     #
     # Every index here is an integer, where the symmetry sign σ = sgn(m′) sgn(m) of
-    # `H_recurrence.md` is identically +1, so H_{m′,m} = H_{m,m′} = H_{-m′,-m} and the one
-    # expression above is the reference both for the elements stored in the wedge and for
-    # the elements `wedge_value` reconstructs from them by symmetry.  (The half-integer
-    # case, where σ is genuinely -1 whenever sgn(m′) ≠ sgn(m), reaches the same reads
-    # through the dᴶ and 𝔇ᴶ comparisons of `test/wigner/half_integer.jl`.)
+    # `H_recurrence.md` is identically +1, so H_{m′,m} = H_{m,m′} = H_{-m′,-m} = H_{-m,-m′}.
+    # The closed form is therefore evaluated on the stored wedge m ≥ |m′| only, and the
+    # other elements of the reference are filled from those identities, which is exact for
+    # integers.  (The half-integer case, where σ is -1 whenever sgn(m′) ≠ sgn(m), is the
+    # next item, whose reference is evaluated element by element.)
     ϵ(k) = ifelse(k > 0 && isodd(k), -1, 1)
 
-    # The closed form is evaluated at four times the working precision and rounded to `T`,
-    # so the reference has no more than half an ulp of its own error.  Evaluated *at*
+    # The closed form is evaluated at twice the working precision and more, and rounded to
+    # `T`, so the reference has no more than half an ulp of its own error.  Evaluated *at*
     # the working precision it would be useless as an oracle: its alternating sum loses
-    # about 270 eps at ℓ = 16 in Float64.
+    # about 270 eps (8 bits) at ℓ = 16 in Float64.
     function Href(::Type{T}, ℓ, m′, m, β) where {T<:Real}
-        r = setprecision(BigFloat, 4 * precision(T) + 64) do
+        r = setprecision(BigFloat, 2 * precision(T) + 64) do
             ϵ(m′) * ϵ(-m) * d_oracle(ℓ, m′, m, BigFloat(β))
         end
         T(r)
+    end
+    # The whole reference block, `Hblock(T, ℓ, β)[m′+ℓ+1, m+ℓ+1]`
+    function Hblock(::Type{T}, ℓ, β) where {T<:Real}
+        B = Matrix{T}(undef, 2ℓ + 1, 2ℓ + 1)
+        for m′ in -ℓ:ℓ, m in abs(m′):ℓ
+            B[m′+ℓ+1, m+ℓ+1] = Href(T, ℓ, m′, m, β)
+        end
+        for m′ in -ℓ:ℓ, m in -ℓ:ℓ
+            m ≥ abs(m′) && continue
+            a, b = m′ ≥ abs(m) ? (m, m′) : -m′ ≥ abs(m) ? (-m, -m′) : (-m′, -m)
+            B[m′+ℓ+1, m+ℓ+1] = B[a+ℓ+1, b+ℓ+1]
+        end
+        B
     end
 
     ℓᵗᵒᵖ = 16  # the largest ℓ reached by any configuration below
 
     @testset "$T" for T in (Float64, Double64, BigFloat)
         rng = Random.Xoshiro(1234)
-        # Both poles, their nearest neighbors, and four random angles — the same set as
-        # `Utilities.βrange`, which cannot build its `T(0):eps:T(π)` range for Double64.
-        β⃗ = T[0; nextfloat(T(0)); T.(rand(rng, 4)) .* T(π); prevfloat(T(π)); T(π)]
+        # Both poles, their nearest neighbors, and four random angles
+        β⃗ = βrange(rng, T, 4)
         @test length(β⃗) == 8
         @test iszero(first(β⃗)) && last(β⃗) == T(π)
 
         # H^ℓ_{m′,m}(β) depends on nothing but ℓ, m′, m and β, so one table of references
         # serves every (ℓₘₐₓ, m′ₘₐₓ, Nᵣ) configuration below: `ref[k][ℓ+1][m′+ℓ+1, m+ℓ+1]`
         # is H^ℓ_{m′,m}(β⃗[k]).
-        ref = [
-            [T[Href(T, ℓ, m′, m, β) for m′ in -ℓ:ℓ, m in -ℓ:ℓ] for ℓ in 0:ℓᵗᵒᵖ]
-            for β in β⃗
-        ]
+        ref = [[Hblock(T, ℓ, β) for ℓ in 0:ℓᵗᵒᵖ] for β in β⃗]
 
         # Measured worst case over every configuration below, with no growth in ℓ:
-        # 2.5 eps (Float64), 2.3 eps (Double64), 3.0 eps (BigFloat) at ℓ ≤ 16.
+        # 2.5 eps (Float64), 2.4 eps (Double64), 3.0 eps (BigFloat) at ℓ ≤ 16.
         atol = 10 * eps(T)
 
         @testset "ℓₘₐₓ=$ℓₘₐₓ" for ℓₘₐₓ in (0, 1, 2, 3, 7, 16)
@@ -110,6 +119,46 @@
 end
 
 
+@testitem "HCalculator: half-integer wedge_value vs closed-form H" setup=[HalfIntegerOracle] begin
+    import SphericalFunctions: HCalculator, recurrence!, wedge_value, wedge_source,
+        HalfOddInteger
+    import .HalfIntegerOracle: d_oracle
+
+    # `wedge_value` is the way the documentation gives to read the elements of H that the
+    # wedge does not store, and for half-integer indices it has to apply the sign σ, which is
+    # -1 for half of the elements that come from a transposition.  So every element that the
+    # wedge can supply is compared here with the definition H = ϵ(m′) ϵ(-m) d, with d from
+    # Varshalovich's closed form, evaluated for each element separately rather than filled in
+    # by a symmetry, so that the reference owes nothing to σ.  ϵ(k) = (-1)^⌊k⌋ for k > 0.
+    ϵ(k) = ifelse(k > 0 && isodd(floor(Int, k)), -1, 1)
+    Href(ℓ, m′, m, β) = Float64(ϵ(m′) * ϵ(-m) * d_oracle(ℓ, m′, m, big(β)))
+
+    # Measured worst case over everything below: 2.0 eps, over 12684 values of which 453
+    # come from an image with σ = -1; 10 eps is asserted.
+    atol = 10eps()
+    βs = [0.0, 1.0e-3, 0.4, 1.1, 2.9, π - 1.0e-9, Float64(π)]
+    worst, σ₋ = let worst = 0.0, σ₋ = 0
+        for ℓₘₐₓ ∈ (1//2, 7//2, 15//2), m′ₘₐₓ ∈ unique((1//2, 3//2, ℓₘₐₓ))
+            m′ₘₐₓ ≤ ℓₘₐₓ || continue
+            calc = HCalculator(βs, ℓₘₐₓ; m′ₘₐₓ)
+            for ℓ ∈ 1//2:1:ℓₘₐₓ
+                H = recurrence!(calc, ℓ)
+                for m′ ∈ -ℓ:ℓ, m ∈ -ℓ:ℓ
+                    min(abs(m′), abs(m)) ≤ m′ₘₐₓ || continue
+                    σ₋ += last(wedge_source(HalfOddInteger(m′), HalfOddInteger(m), H.m′ₘₐₓ)) == -1
+                    for (iᵣ, β) ∈ enumerate(βs)
+                        worst = max(worst, abs(wedge_value(H, iᵣ, m′, m) - Href(ℓ, m′, m, β)))
+                    end
+                end
+            end
+        end
+        (worst, σ₋)
+    end
+    @test worst ≤ atol
+    @test σ₋ == 453  # the comparison reaches the elements whose σ is -1
+end
+
+
 @testitem "HCalculator ℓ ordering" begin
     import SphericalFunctions
     import SphericalFunctions: HCalculator, HWedge, recurrence!
@@ -117,7 +166,7 @@ end
 
     # Snapshot of the stored wedge for the current ℓ, in storage order
     function wedge(H::HWedge)
-        [H[iᵣ, m′, m] for m′ in H.m′ₘᵢₙ:H.m′ₘₐₓ for m in abs(m′):H.ℓ for iᵣ in 1:H.Nᵣ]
+        [H[iᵣ, m′, m] for m′ in -H.m′ₘₐₓ:H.m′ₘₐₓ for m in abs(m′):H.ℓ for iᵣ in 1:H.Nᵣ]
     end
 
     T = Float64
@@ -133,6 +182,11 @@ end
         sequential = HCalculator(β⃗, ℓₘₐₓ; m′ₘₐₓ)
         reference = [wedge(recurrence!(sequential, ℓ)) for ℓ in 0:ℓₘₐₓ]
         @test all(!isempty, reference)
+
+        # A copy of the wedge is independent of the calculator, and survives its next step
+        snapshot = copy(recurrence!(sequential, 3))
+        recurrence!(sequential, 5)
+        @test wedge(snapshot) == reference[4]
 
         # Reusing the rotor data.  Every result must be identical to the sequential one:
         # a repeat recomputes from the same axes, a jump forward advances through the
@@ -154,6 +208,26 @@ end
             @test wedge(calc.Hˡ) == reference[ℓ+1]
         end
     end
+
+    # The same for half-integer ℓ, whose axis runs at the integer order ℓ - 1/2, with both
+    # poles among the angles
+    ℓₘₐₓₕ = 19//2
+    orderₕ = (1//2, 7//2, 3//2, 19//2, 19//2, 11//2, 13//2, 1//2, 5//2, 17//2)
+    β⃗ₕ = T[0; rand(rng, 3) .* T(π); T(π)]
+    for m′ₘₐₓ in (ℓₘₐₓₕ, 5//2, 1//2)
+        sequential = HCalculator(β⃗ₕ, ℓₘₐₓₕ; m′ₘₐₓ)
+        reference = Dict(ℓ => wedge(recurrence!(sequential, ℓ)) for ℓ in 1//2:1:ℓₘₐₓₕ)
+        calc = HCalculator(β⃗ₕ, ℓₘₐₓₕ; m′ₘₐₓ)
+        for ℓ in orderₕ
+            @test recurrence!(calc, ℓ) === calc.Hˡ
+            @test SphericalFunctions.ℓ(calc) == ℓ
+            @test wedge(calc.Hˡ) == reference[ℓ]
+        end
+        for ℓ in orderₕ
+            recurrence!(calc, β⃗ₕ, ℓ)
+            @test wedge(calc.Hˡ) == reference[ℓ]
+        end
+    end
 end
 
 
@@ -164,7 +238,7 @@ end
     import Random
 
     # The stored wedge of one rotor for the current ℓ
-    wedge(H::HWedge, iᵣ) = [H[iᵣ, m′, m] for m′ in H.m′ₘᵢₙ:H.m′ₘₐₓ for m in abs(m′):H.ℓ]
+    wedge(H::HWedge, iᵣ) = [H[iᵣ, m′, m] for m′ in -H.m′ₘₐₓ:H.m′ₘₐₓ for m in abs(m′):H.ℓ]
     maxabsdiff(a, b) = maximum(abs.(a .- b))
 
     ℓₘₐₓ = 8
@@ -178,8 +252,9 @@ end
         eⁱᵝ⃗ = cis.(β⃗)
         R⃗ = [Quaternionic.from_euler_angles(α, β, γ) for (α, β, γ) in zip(α⃗, β⃗, γ⃗)]
         # A quaternion that is not a `Rotor` is refused rather than normalized: `Rotor` is
-        # what says a quaternion denotes a rotation.  (This used to feed `2 * Quaternion(R)`
-        # in and check that the magnitude divided out, which it still does internally.)
+        # what says a quaternion denotes a rotation.  (A `Rotor` whose magnitude is not 1 is
+        # accepted, and the magnitude divides out; see the item "Calculators accept
+        # unnormalized rotors, and refuse phases that are not".)
         Q⃗ = [2 * Quaternion(R) for R in R⃗]
         @test_throws "Rotations are taken as" HCalculator(Q⃗, ℓₘₐₓ)
         @test_throws "Rotations are taken as" HCalculator(Q⃗[1], ℓₘₐₓ)
@@ -238,8 +313,8 @@ end
 end
 
 
-@testitem "HCalculator errors" begin
-    import SphericalFunctions: HCalculator, recurrence!, wedge_value
+@testitem "HCalculator errors" setup=[RefusalChecks] begin
+    import SphericalFunctions: HCalculator, recurrence!, wedge_value, HalfOddInteger
     import Quaternionic: Quaternionic
 
     ℓₘₐₓ = 4
@@ -247,33 +322,59 @@ end
     R = Quaternionic.from_euler_angles(0.1, 0.2, 0.3)
 
     # Invalid construction
-    @test_throws ErrorException HCalculator(0.3, ℓₘₐₓ; m′ₘₐₓ=ℓₘₐₓ+1)
-    @test_throws ErrorException HCalculator(0.3, ℓₘₐₓ; m′ₘₐₓ=-1)
-    @test_throws ErrorException HCalculator(0.3, -1)
-    # Nᵣ is implied by the rotor data, so an empty batch is how one asks for no rotors
-    @test_throws ErrorException HCalculator(Float64[], ℓₘₐₓ)
+    m′range = "must satisfy 0 ≤ m′ₘₐₓ ≤ ℓₘₐₓ"
+    @test refuses(() -> HCalculator(0.3, ℓₘₐₓ; m′ₘₐₓ=ℓₘₐₓ+1), ArgumentError, m′range)
+    @test refuses(() -> HCalculator(0.3, ℓₘₐₓ; m′ₘₐₓ=-1), ArgumentError, m′range)
+    # A bad ℓₘₐₓ is named as such, rather than as the `m′ₘₐₓ` that defaults to it
+    @test refuses(() -> HCalculator(0.3, -1), ArgumentError, "ℓₘₐₓ=-1 must be non-negative")
+    @test refuses(
+        () -> HCalculator(0.3, -1//2), ArgumentError, "ℓₘₐₓ=-1//2 must be non-negative"
+    )
+    @test refuses(
+        () -> HCalculator(0.3, 7//2; m′ₘₐₓ=9//2), ArgumentError,
+        "must satisfy 1//2 ≤ m′ₘₐₓ ≤ ℓₘₐₓ"
+    )
+    # Nᵣ is implied by the rotor data, and an empty batch would be a request for no rotors,
+    # which is refused.  (`nrotors` owns this message and its exception type.)
+    @test_throws "at least one rotor" HCalculator(Float64[], ℓₘₐₓ)
+
+    # The indices are of one kind, and `Int` or half-odd-integers, in any spelling of either
+    @test refuses(() -> HCalculator(0.3, 7//2; m′ₘₐₓ=1), ArgumentError, "keyword argument `m′ₘₐₓ`")
+    @test refuses(() -> HCalculator(0.3, Int16(4)), ArgumentError, "narrower than `Int`")
+    @test refuses(() -> HCalculator(0.3, 4; m′ₘₐₓ=Int8(2)), ArgumentError, "narrower than `Int`")
 
     # Out-of-range ℓ, with and without fresh rotor data
     calc = HCalculator(0.3, ℓₘₐₓ)
-    @test_throws ErrorException recurrence!(calc, 0.3, -1)
-    @test_throws ErrorException recurrence!(calc, 0.3, ℓₘₐₓ + 1)
+    @test refuses(() -> recurrence!(calc, 0.3, -1), ArgumentError, "out of bounds")
+    @test refuses(() -> recurrence!(calc, 0.3, ℓₘₐₓ + 1), ArgumentError, "out of bounds")
     recurrence!(calc, 0.3, 2)
-    @test_throws ErrorException recurrence!(calc, -1)
-    @test_throws ErrorException recurrence!(calc, ℓₘₐₓ + 1)
+    @test refuses(() -> recurrence!(calc, -1), ArgumentError, "out of bounds")
+    @test refuses(() -> recurrence!(calc, ℓₘₐₓ + 1), ArgumentError, "out of bounds")
+    # ... and an ℓ that is not an index of this calculator's kind at all
+    @test refuses(() -> recurrence!(calc, 2.0), ArgumentError, "so ℓ must be one too")
+    @test refuses(() -> recurrence!(calc, 3//2), ArgumentError, "so ℓ must be one too")
+    @test refuses(() -> recurrence!(calc, 2//1), ArgumentError, "so ℓ must be one too")
+    @test refuses(() -> recurrence!(calc, true), ArgumentError, "so ℓ must be one too")
     @test calc.Hˡ.ℓ == 2  # the rejected requests left the calculator where it was
+    # An integer of another type is the same index
+    @test recurrence!(calc, Int8(3)) == recurrence!(HCalculator(0.3, ℓₘₐₓ), 3)
 
     # Wrong number of rotors
     calc₄ = HCalculator(β⃗, ℓₘₐₓ)
-    @test_throws ErrorException recurrence!(calc₄, β⃗[1:3], 0)
-    @test_throws ErrorException recurrence!(calc₄, [β⃗; 0.5], 0)
-    @test_throws ErrorException recurrence!(calc₄, cis.(β⃗[1:2]), 0)
-    @test_throws ErrorException recurrence!(calc₄, fill(R, 3), 0)
-    @test_throws ErrorException recurrence!(calc, β⃗[1:2], 0)  # Nᵣ=1 given two
+    @test refuses(() -> recurrence!(calc₄, β⃗[1:3], 0), DimensionMismatch, "Expected 4 rotors")
+    @test refuses(() -> recurrence!(calc₄, [β⃗; 0.5], 0), DimensionMismatch, "Expected 4 rotors")
+    @test refuses(
+        () -> recurrence!(calc₄, cis.(β⃗[1:2]), 0), DimensionMismatch, "Expected 4 rotors"
+    )
+    @test refuses(() -> recurrence!(calc₄, fill(R, 3), 0), DimensionMismatch, "Expected 4 rotors")
+    @test refuses(() -> recurrence!(calc, β⃗[1:2], 0), DimensionMismatch, "Expected 1 rotors")
 
     # A single rotor for a calculator with Nᵣ>1
-    @test_throws ErrorException recurrence!(calc₄, 0.3, 0)
-    @test_throws ErrorException recurrence!(calc₄, cis(0.3), 0)
-    @test_throws ErrorException recurrence!(calc₄, R, 0)
+    for single ∈ (0.3, cis(0.3), R)
+        @test refuses(
+            () -> recurrence!(calc₄, single, 0), DimensionMismatch, "A single rotor was given"
+        )
+    end
 
     # Reads outside the stored wedge
     recurrence!(calc, 0.3, 2)
@@ -288,9 +389,72 @@ end
     calc₁ = HCalculator(0.3, ℓₘₐₓ; m′ₘₐₓ=1)
     recurrence!(calc₁, 0.3, ℓₘₐₓ)
     @test_throws BoundsError calc₁.Hˡ[1, 2, 3]  # |m′| > m′ₘₐₓ is not stored ...
-    @test_throws ArgumentError wedge_value(calc₁.Hˡ, 1, 2, 3)  # ... nor obtainable by symmetry
+    @test refuses(  # ... nor obtainable by symmetry
+        () -> wedge_value(calc₁.Hˡ, 1, 2, 3), ArgumentError, "both |m′| and |m| exceed"
+    )
     @test wedge_value(calc₁.Hˡ, 1, 3, 1) == calc₁.Hˡ[1, 1, 3]  # unlike |m| ≤ m′ₘₐₓ < |m′|
+    # The indices of `wedge_value` must be of the wedge's kind, in any spelling of it
+    @test wedge_value(calc₁.Hˡ, 1, Int8(3), 1) == wedge_value(calc₁.Hˡ, 1, 3, 1)
+    @test refuses(() -> wedge_value(calc₁.Hˡ, 1, 1//2, 1), ArgumentError, "so m′ must be one too")
+    Hₕ = recurrence!(HCalculator(0.3, 7//2), 7//2)
+    @test wedge_value(Hₕ, 1, 1//2, -3//2) ==
+        wedge_value(Hₕ, 1, HalfOddInteger(1//2), HalfOddInteger(-3//2))
+    @test refuses(() -> wedge_value(Hₕ, 1, 1, 2), ArgumentError, "so m′ must be one too")
+    @test refuses(() -> wedge_value(Hₕ, 1, 1//2, 1//1), ArgumentError, "so m must be one too")
 end
+
+
+@testitem "HCalculator: either spelling of the keyword, and of a half-integer" begin
+    import SphericalFunctions: HCalculator, recurrence!, HalfOddInteger
+    import SphericalFunctions
+
+    # `mp_max` is the ASCII spelling of `m′ₘₐₓ`, and a half-integer keyword may be spelled as a
+    # `Rational` whatever the spelling of ℓₘₐₓ
+    for (ℓₘₐₓ, m′ₘₐₓ, ℓ) ∈ ((6, 2, 5), (HalfOddInteger(13//2), 3//2, 9//2), (13//2, HalfOddInteger(3//2), 9//2))
+        reference = recurrence!(HCalculator([0.3, 1.1], ℓₘₐₓ; m′ₘₐₓ), ℓ)
+        @test recurrence!(HCalculator([0.3, 1.1], ℓₘₐₓ; mp_max=m′ₘₐₓ), ℓ) == reference
+        @test SphericalFunctions.m′ₘₐₓ(HCalculator(0.3, ℓₘₐₓ; mp_max=m′ₘₐₓ)) == m′ₘₐₓ
+    end
+end
+
+
+@testitem "Calculators accept unnormalized rotors, and refuse phases that are not" setup=[RefusalChecks] begin
+    import SphericalFunctions: D, d, sYlm, DCalculator, dCalculator, HCalculator, recurrence!,
+        set_β!, ℓ, array_view
+    import Quaternionic: Rotor, Quaternion, rotor
+
+    # A `Rotor` whose magnitude is not 1 is representable, and denotes the same rotation as the
+    # normalized one: `spinor_phases` divides the magnitude out.  Measured differences at most
+    # 3.6e-16; 4 eps is asserted.
+    Ru = Rotor{Float64}(0.6, 0.8, 0.4, 0.2)
+    @test abs2(Quaternion(Ru)) ≈ 1.2
+    Rn = rotor(Quaternion(Ru))
+    ϵ = 4eps()
+    for ℓₘₐₓ ∈ (3, 5//2)
+        @test maximum(abs, array_view(D(Ru, ℓₘₐₓ)[ℓₘₐₓ]) - array_view(D(Rn, ℓₘₐₓ)[ℓₘₐₓ])) ≤ ϵ
+        @test maximum(abs, array_view(d(Ru, ℓₘₐₓ)[ℓₘₐₓ]) - array_view(d(Rn, ℓₘₐₓ)[ℓₘₐₓ])) ≤ ϵ
+        s = ℓₘₐₓ isa Integer ? 1 : 1//2
+        @test maximum(abs, array_view(sYlm(Ru, ℓₘₐₓ, s)) - array_view(sYlm(Rn, ℓₘₐₓ, s))) ≤ ϵ
+        calc = DCalculator(Rn, ℓₘₐₓ)
+        @test maximum(abs, array_view(recurrence!(calc, Ru, ℓₘₐₓ)) -
+            array_view(recurrence!(DCalculator(Rn, ℓₘₐₓ), ℓₘₐₓ))) ≤ ϵ
+    end
+
+    # A phase must have unit modulus.  The usual mistake is to pass β itself as a complex
+    # number, which would otherwise give silently wrong values; a NaN is refused as well.
+    for bad ∈ (complex(0.7), complex(NaN, NaN), complex(1.0, NaN))
+        @test refuses(() -> d(bad, 3), DomainError, "must have unit modulus")
+        @test refuses(() -> dCalculator(bad, 3), DomainError, "must have unit modulus")
+        @test refuses(() -> HCalculator([cis(0.1), bad], 3), DomainError, "must have unit modulus")
+    end
+    # ... and a refused phase leaves the calculator, and what it had computed, as they were
+    calc = dCalculator(0.3, 3)
+    before = copy(recurrence!(calc, 2))
+    @test refuses(() -> set_β!(calc, complex(0.7)), DomainError, "must have unit modulus")
+    @test ℓ(calc) == 2
+    @test recurrence!(calc, 2) == before
+end
+
 
 
 @testitem "HCalculator similar and fill!" begin
@@ -302,7 +466,7 @@ end
 
     # Snapshot of the stored wedge for the current ℓ, in storage order
     function wedge(H::HWedge)
-        [H[iᵣ, m′, m] for m′ in H.m′ₘᵢₙ:H.m′ₘₐₓ for m in abs(m′):H.ℓ for iᵣ in 1:H.Nᵣ]
+        [H[iᵣ, m′, m] for m′ in -H.m′ₘₐₓ:H.m′ₘₐₓ for m in abs(m′):H.ℓ for iᵣ in 1:H.Nᵣ]
     end
 
     @testset "$T" for T in (Float64, Double64, BigFloat)
@@ -403,9 +567,9 @@ end
 
     # As documented for every calculator, and as `dCalculator` does: `ℓ` is the order of the
     # block most recently computed, and `ℓₘᵢₙ - 1` when nothing has been computed since the
-    # calculator was built or its data were last replaced.  The `HCalculator` once reported
-    # its wedge's own layout — ℓₘᵢₙ when fresh, and the old ℓ after `set_β!` or `fill!`, while
-    # `show` said nothing was computed and the wedge held stale numbers.
+    # calculator was built or its data were last replaced.  The layout of the wedge would give
+    # a different answer — ℓₘᵢₙ when fresh, and the old ℓ after `set_β!` or `fill!`, while
+    # `show` says that nothing was computed and the wedge holds stale numbers.
     for (β, ℓₘₐₓ, ℓ₂) ∈ ((0.3, 4, 2), (0.3, 9//2, 5//2))
         for calc ∈ (HCalculator(β, ℓₘₐₓ), dCalculator(β, ℓₘₐₓ))
             @test ℓ(calc) == ℓₘᵢₙ(calc) - 1
@@ -424,7 +588,7 @@ end
     @test occursin("nothing computed yet", sprint(show, HCalculator(0.3, 4)))
 end
 
-@testitem "Rotor-data setters: a refused angle leaves the calculator as it was" begin
+@testitem "Rotor-data setters: a refused angle leaves the calculator as it was" setup=[RefusalChecks] begin
     import SphericalFunctions
     import SphericalFunctions: HCalculator, dCalculator, sYlmCalculator, recurrence!
     import SphericalFunctions: set_β!, set_θ!
@@ -435,24 +599,25 @@ end
     # second rotor, so that the first would already have been stored if the angles were not
     # all checked first.
     β = [0.3, 0.5]
-    bad = [0.9, Inf]
-    for (ℓₘₐₓ, ℓ) ∈ ((6, 3), (13//2, 5//2))
-        c = HCalculator(β, ℓₘₐₓ)
-        recurrence!(c, ℓ)
-        @test_throws DomainError set_β!(c, bad)
-        @test recurrence!(c, ℓ + 1) == recurrence!(HCalculator(β, ℓₘₐₓ), ℓ + 1)
-    end
+    for bad ∈ ([0.9, Inf], [0.9, -Inf], [0.9, NaN])
+        for (ℓₘₐₓ, ℓ) ∈ ((6, 3), (13//2, 5//2))
+            c = HCalculator(β, ℓₘₐₓ)
+            recurrence!(c, ℓ)
+            @test refuses(() -> set_β!(c, bad), DomainError, "so it has no phase")
+            @test recurrence!(c, ℓ + 1) == recurrence!(HCalculator(β, ℓₘₐₓ), ℓ + 1)
+        end
 
-    # ... and the same through the calculators built on it
-    c = dCalculator(β, 6)
-    recurrence!(c, 3)
-    @test_throws DomainError set_β!(c, bad)
-    @test copy(recurrence!(c, 4)) == copy(recurrence!(dCalculator(β, 6), 4))
-    for Calculator ∈ (SphericalFunctions.sλlmCalculator, sYlmCalculator)
-        c = Calculator(β, 6, 1)
+        # ... and the same through the calculators built on it
+        c = dCalculator(β, 6)
         recurrence!(c, 3)
-        @test_throws DomainError set_θ!(c, bad)
-        @test copy(recurrence!(c, 4)) == copy(recurrence!(Calculator(β, 6, 1), 4))
+        @test refuses(() -> set_β!(c, bad), DomainError, "so it has no phase")
+        @test copy(recurrence!(c, 4)) == copy(recurrence!(dCalculator(β, 6), 4))
+        for Calculator ∈ (SphericalFunctions.sλlmCalculator, sYlmCalculator)
+            c = Calculator(β, 6, 1)
+            recurrence!(c, 3)
+            @test refuses(() -> set_θ!(c, bad), DomainError, "so it has no phase")
+            @test copy(recurrence!(c, 4)) == copy(recurrence!(Calculator(β, 6, 1), 4))
+        end
     end
 end
 
@@ -488,4 +653,41 @@ end
         @test array_view(𝒯 \ (𝒯 * f̃)) ≈ f̃ atol=ϵ rtol=ϵ
         @test array_view(𝒯 \ (𝒯 * f̃)) ≈ f̃ atol=ϵ rtol=ϵ
     end
+end
+
+
+@testitem "HCalculator: the table of coefficients is refilled at every step" setup=[RefusalChecks] begin
+    import SphericalFunctions: HCalculator, HAxis, HWedge, recurrence!, ℓₘᵢₙ, ℓₘₐₓ
+    import SphericalFunctions: FixedSizeVector
+
+    # Steps 4 and 5 read their m-side coefficients √δ²(ℓ, m) from a table, which every
+    # `recurrence!` fills for its own ℓ before either step runs.  The table therefore has no
+    # state that could go out of date: poisoning it before each step, whether the step
+    # advances by one ℓ, jumps ahead, or restarts from a smaller ℓ, changes nothing.
+    snapshot(H) = [H[iᵣ, m′, m] for iᵣ ∈ 1:H.Nᵣ for m′ ∈ -H.m′ₘₐₓ:H.m′ₘₐₓ for m ∈ abs(m′):H.ℓ]
+    for (ℓmax, β) ∈ ((12, [0.3, 1.7, 2.9]), (23//2, [0.3, 1.7]), (12, 0.9), (23//2, 2.2))
+        clean = HCalculator(β, ℓmax)
+        poisoned = HCalculator(β, ℓmax)
+        ℓs = collect(ℓₘᵢₙ(clean):ℓₘₐₓ(clean))
+        for ℓ ∈ [ℓs; ℓs[end-3]; ℓs[2]; ℓs[end]]
+            reference = snapshot(recurrence!(clean, ℓ))
+            fill!(poisoned.d̄ₗ, NaN)
+            @test isequal(snapshot(recurrence!(poisoned, ℓ)), reference)
+        end
+    end
+
+    # The steps read the table under `@inbounds`, for every m below the largest ℓ of the
+    # wedge, so the calculator's own constructor refuses one that is too short.
+    Hˡ = HWedge(Float64, 1, 4)
+    h⃗ᵃ, h⃗ᵇ = HAxis(Float64, 1, 5), HAxis(Float64, 1, 5)
+    h⃗ᵇ.ℓ = 1
+    eⁱᵝ = FixedSizeVector{ComplexF64}(undef, 1)
+    eⁱᵝ[1] = cis(0.3)
+    none = FixedSizeVector{Float64}(undef, 0)
+    build(n) = HCalculator{Int, Float64, typeof(parent(Hˡ))}(
+        h⃗ᵃ, h⃗ᵇ, Hˡ, eⁱᵝ, none, none, FixedSizeVector{Float64}(undef, n), 4, 4, Ref(false),
+        Ref(false)
+    )
+    @test refuses(() -> build(3), DimensionMismatch, "the table of coefficients 4 entries")
+    @test recurrence!(build(4), 4) === Hˡ
 end

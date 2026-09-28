@@ -65,6 +65,7 @@ formulas in a module so that we can test them against the `SphericalFunctions` p
 
 using TestItems: @testitem  #hide
 @testitem "NIST DLMF conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
+import .Utilities: θϕrange  #hide
 
 module NIST_DLMF
 #+
@@ -114,10 +115,11 @@ end  # module NIST_DLMF
 #+
 
 # We only test up to
-ℓₘₐₓ = 4
+ℓₘₐₓ = 6
 #+
-# because the formulas are slow, and this will be sufficient to sort out any sign or
-# normalization differences, which are the most likely source of error.
+# because the symbolic derivatives in the formulas become expensive to compute at higher
+# orders, and this will be sufficient to sort out any sign or normalization differences,
+# which are the most likely source of error.
 
 # We will also need the imaginary unit from the utilities module.
 import .ConventionsUtilities: 𝒾
@@ -134,9 +136,9 @@ end
 #+
 
 # Now, the spherical harmonics agree with ours:
-for (θ, ϕ) ∈ θϕrange(Float64, 7)
-    for (ℓ, m) ∈ ℓmrange(ℓₘₐₓ)
-        @test NIST_DLMF.Y(ℓ, m, θ, ϕ) ≈ ConventionsUtilities.Y(ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+for (θ, ϕ) ∈ θϕrange(rng, Float64, 7)
+    for (ℓ, Yˡ) ∈ SphericalFunctions.YlmCalculator(θ, ϕ, ℓₘₐₓ), m ∈ -ℓ:ℓ
+        @test NIST_DLMF.Y(ℓ, m, θ, ϕ) ≈ Yˡ[m] atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+

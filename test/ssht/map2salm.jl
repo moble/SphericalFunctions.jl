@@ -1,10 +1,9 @@
 # Tests of the equiangular-grid convenience functions `map2salm` and `salm2map` from
-# `src/ssht/rs.jl`, ported from the v2 `test/deprecated/map2salm.jl` (deleted in 3.0) to the
-# v3 API.
+# `src/ssht/rs.jl`.
 #
 # The grid is the one documented for `map2salm`: an `Nϕ × Nθ` array with `ϕₖ = 2πk/Nϕ` along
 # the first dimension and `θ = clenshaw_curtis_rings(Nθ)` (both poles included) along the
-# second.  The oracle is the closed-form `sYlm(s, ℓ, m, θ, ϕ)` from the `Utilities` snippet
+# second.  The oracle is `sYlm_closed_form(s, ℓ, m, θ, ϕ)` from the `Utilities` module
 # sampled on that grid — the explicit sum over factorials from the conventions pages, which
 # owes nothing to this package — applied to an isolated mode, to a random combination of
 # modes (linearity), and to the round trip `map2salm ∘ salm2map`.  The colatitudes and
@@ -15,17 +14,17 @@
 # are metamorphic: they pin the wiring — grid, ordering, ℓ range, trailing dimensions — but
 # they run the same numerics, and it is the closed form that is the independent reference.
 #
-# Float16 is not tested, because FFTW has no Float16 transforms (the v2 tests skipped it for
-# the same reason).
+# The closed-form comparisons are made in Float64, Float32 and BigFloat.  Float16, for which
+# FFTW has no transforms and GenericFFT serves instead, is checked by a round trip in the
+# last item.
 #
-# The item names use a "Transforms: " prefix so that they are distinguishable — to a human
-# reading a results list, and to the name filters of `juliati` and the MCP runner — from the
-# v2 items, which were also named `map2salm`.  Those items are gone with the `Deprecated`
-# module, but the prefix is kept: the names are what people filter on.
+# The item names use a "Transforms: " prefix so that they can be picked out together — by a
+# human reading a results list, and by the name filters of `juliati` and the MCP runner.
 
 @testitem "Transforms: map2salm" setup=[Utilities] begin
     import SphericalFunctions: map2salm, SSHTRS, ModeWeights, Yindex, Yrange, Ysize,
         clenshaw_curtis_rings, clenshaw_curtis, spin, ℓₘᵢₙ, ℓₘₐₓ
+    import .Utilities: sYlm_closed_form
     using Random
     using LinearAlgebra: norm
 
@@ -33,7 +32,7 @@
     function sampled_sYlm(::Type{T}, s, ℓ, m, Nϕ, Nθ) where {T}
         θs = clenshaw_curtis_rings(Nθ, T)
         ϕs = [2T(π) * k / Nϕ for k ∈ 0:Nϕ-1]
-        [sYlm(s, ℓ, m, θ, ϕ) for ϕ ∈ ϕs, θ ∈ θs]
+        [sYlm_closed_form(s, ℓ, m, θ, ϕ) for ϕ ∈ ϕs, θ ∈ θs]
     end
 
     ℓmax = 7
@@ -43,9 +42,9 @@
 
     # Measured over every T and s ∈ -2:2, in units of eps(T): single-mode analysis ≤ 10.9
     # (worst in BigFloat; 5.5 in Float64, 8.0 in Float32) and linearity ≤ 10.0 eps(T)‖a‖.
-    # 100 eps(T) therefore leaves a factor of ≳ 9.  (The 30 eps left over unexamined
-    # from the v2 test left only 2.8 — the tightest margin anywhere in these files, and not
-    # enough to be stable across platforms and BLAS versions.)
+    # 100 eps(T) therefore leaves a factor of ≳ 9.  (A tolerance of 30 eps would leave only
+    # 2.8 — the tightest margin anywhere in these files, and not enough to be stable across
+    # platforms and BLAS versions.)
     for T ∈ (Float64, Float32, BigFloat)
         ϵ = 100eps(T)
 
@@ -60,10 +59,11 @@
             nmodes = Ysize(abs(s), ℓmax)
             modelist = Yrange(abs(s), ℓmax)
             # The transform `map2salm` is documented to build for this grid, constructed
-            # explicitly.  Comparing to it is metamorphic — the same code path — so it checks
-            # the plumbing, not the numbers; the closed-form checks below are the reference.
+            # explicitly.  Comparing to it is metamorphic — the same code path — so it
+            # checks the plumbing, not the numbers; the closed-form checks below are the
+            # reference.
             𝒯 = SSHTRS(
-                s, ℓmax; T, θ=clenshaw_curtis_rings(Nθ, T),
+                s, ℓmax, T; θ=clenshaw_curtis_rings(Nθ, T),
                 quadrature_weights=clenshaw_curtis(Nθ, T), Nϕ
             )
             # Coefficients of a random band-limited function, accumulated below from the
@@ -124,6 +124,7 @@ end
 @testitem "Transforms: map2salm plan reuse" setup=[Utilities] begin
     import SphericalFunctions: map2salm, map2salm_plan, salm2map, SSHTRS, ModeWeights, Ysize,
         clenshaw_curtis_rings, fejer1, pixels, spin, ℓₘₐₓ
+    import .Utilities: array_equal
     using Random
 
     ℓmax = 7
@@ -165,23 +166,24 @@ end
         # A plan for a different grid shape is rejected, in either direction
         for (nϕ, nθ) ∈ ((Nϕ + 1, Nθ), (Nϕ, Nθ + 1), (Nθ, Nϕ), (2Nϕ, 2Nθ))
             h = randn(rng, Complex{T}, nϕ, nθ)
-            @test_throws ErrorException map2salm(h, plan)
+            @test_throws DimensionMismatch map2salm(h, plan)
             @test_throws "planned for a different grid" map2salm(h, plan)
-            @test_throws ErrorException map2salm(f, map2salm_plan(h, s, ℓmax))
+            @test_throws DimensionMismatch map2salm(f, map2salm_plan(h, s, ℓmax))
         end
 
         # So is a plan of the right shape on other rings, or with other quadrature weights.
         # The default `SSHT(s, ℓₘₐₓ)` is the trap: its Fejér grid of 2ℓₘₐₓ+1 rings with
         # 2ℓₘₐₓ+1 points has exactly the shape of the smallest Clenshaw–Curtis grid.
         cc = "works on the Clenshaw–Curtis grid"
-        fejér = SSHTRS(s, ℓmax; T, Nϕ)
+        fejér = SSHTRS(s, ℓmax, T; Nϕ)
         @test size(f) == (only(unique(fejér.Nϕ)), length(fejér.θ))
+        @test_throws ArgumentError map2salm(f, fejér)
         @test_throws cc map2salm(f, fejér)
         @test_throws cc salm2map(map2salm(f, plan), fejér)
         # (Its constructor warns that one rule's weights on another's rings are inexact.)
         θcc = clenshaw_curtis_rings(Nθ, T)
         wrong_weights = @test_logs (:warn, r"exact") SSHTRS(
-            s, ℓmax; T, Nϕ, θ=θcc, quadrature_weights=fejer1(Nθ, T)
+            s, ℓmax, T; Nϕ, θ=θcc, quadrature_weights=fejer1(Nθ, T)
         )
         @test_throws cc map2salm(f, wrong_weights)
         @test_throws cc salm2map(map2salm(f, plan), wrong_weights)
@@ -192,6 +194,7 @@ end
 @testitem "Transforms: salm2map" setup=[Utilities] begin
     import SphericalFunctions: salm2map, map2salm, map2salm_plan, ModeWeights, Yindex, Yrange,
         Ysize, clenshaw_curtis_rings, spin, ℓₘᵢₙ, ℓₘₐₓ
+    import .Utilities: array_equal, sYlm_closed_form
     using Random
     using LinearAlgebra: norm
 
@@ -199,7 +202,7 @@ end
     function sampled_sYlm(::Type{T}, s, ℓ, m, Nϕ, Nθ) where {T}
         θs = clenshaw_curtis_rings(Nθ, T)
         ϕs = [2T(π) * k / Nϕ for k ∈ 0:Nϕ-1]
-        [sYlm(s, ℓ, m, θ, ϕ) for ϕ ∈ ϕs, θ ∈ θs]
+        [sYlm_closed_form(s, ℓ, m, θ, ϕ) for ϕ ∈ ϕs, θ ∈ θs]
     end
 
     ℓmax = 7
@@ -248,11 +251,19 @@ end
             @test ℓₘᵢₙ(rt) == abs(s)
             @test ℓₘₐₓ(rt) == ℓmax
             @test maximum(abs, rt .- w) ≤ ϵ * norm(w)
-            # Mode weights of the wrong length or ℓ range are rejected (with enough points along
-            # each ring for the larger ℓmax, so that only the mismatch is reported)
-            @test_throws ErrorException salm2map(w, s, ℓmax + 1, 2ℓmax + 3, Nθ)
-            @test_throws ErrorException salm2map(parent(w), s, ℓmax + 1, 2ℓmax + 3, Nθ)
-            @test_throws ErrorException salm2map(zeros(Complex{T}, nmodes + 1), s, ℓmax, Nϕ, Nθ)
+            # Mode weights of the wrong length are rejected.  A ModeWeights knows its range
+            # of ℓ, and may cover less than the grid's ℓₘₐₓ, the modes it lacks being zero;
+            # but not more.  (With enough points along each ring for the larger ℓmax, so
+            # that only the mismatch is at issue.)
+            @test_throws DimensionMismatch salm2map(parent(w), s, ℓmax + 1, 2ℓmax + 3, Nθ)
+            @test_throws DimensionMismatch salm2map(zeros(Complex{T}, nmodes + 1), s, ℓmax, Nϕ, Nθ)
+            let padded = ModeWeights([parent(w); zeros(Complex{T}, 2ℓmax + 3)], s)
+                @test salm2map(w, s, ℓmax + 1, 2ℓmax + 3, Nθ) == salm2map(padded, s, ℓmax + 1, 2ℓmax + 3, Nθ)
+            end
+            @test_throws ArgumentError salm2map(w, s, ℓmax - 1, Nϕ, Nθ)
+            @test_throws "synthesizes ℓ ≤ $(ℓmax - 1) only" salm2map(w, s, ℓmax - 1, Nϕ, Nθ)
+            # ... and its spin weight and ℓₘₐₓ need not be restated
+            @test salm2map(w, Nϕ, Nθ) == fw
 
             # Trailing dimensions are broadcast over
             salm2 = randn(rng, Complex{T}, nmodes, 2)
@@ -274,19 +285,27 @@ end
         end
     end
 
-    # Fewer than 2ℓmax+1 points along a ring cannot resolve m = ±ℓmax, and both directions
-    # warn about the aliasing
-    @test_logs (:warn, r"fewer than 2ℓₘₐₓ\+1") salm2map(
-        zeros(Complex{Float64}, Ysize(ℓmax)), 0, ℓmax, 2ℓmax, Nθ
-    )
+    # Fewer than 2ℓmax+1 points along a ring cannot resolve m = ±ℓmax, so analysis on such a
+    # grid warns about the aliasing.  Synthesis is exact on any grid, folding the aliased
+    # frequencies correctly, and stays quiet; its values are those of the closed form.
+    # (Measured: ≤ 14 eps ‖salm‖ over ten draws.)
+    let salm = randn(rng, ComplexF64, Ysize(ℓmax)), Nϕ = 2ℓmax
+        f = @test_logs salm2map(salm, 0, ℓmax, Nϕ, Nθ)
+        θs, ϕs = clenshaw_curtis_rings(Nθ), [2π * k / Nϕ for k ∈ 0:Nϕ-1]
+        g = sum(
+            salm[i] .* [sYlm_closed_form(0, ℓ, m, θ, ϕ) for ϕ ∈ ϕs, θ ∈ θs]
+            for (i, (ℓ, m)) ∈ enumerate(Yrange(0, ℓmax))
+        )
+        @test maximum(abs, f - g) ≤ 100eps() * norm(salm)
+    end
     @test_logs (:warn, r"fewer than 2ℓₘₐₓ\+1") map2salm(
         zeros(Complex{Float64}, 2ℓmax, Nθ), 0, ℓmax
     )
 
     # Too few rings make the analysis inexact, and are warned about too, exactly below the
-    # number at which it becomes exact: 2⌊ℓₘₐₓ⌋+1 rings.  Measured at ℓₘₐₓ = 7 (for s = 0, ±1
-    # and ±2 alike): exact at Nθ = 15, wrong by 4e-3 at 14 and by 1.7 at 8, where this was
-    # once silent.  Synthesis is exact on any number of rings, and stays quiet.
+    # number at which it becomes exact: 2⌊ℓₘₐₓ⌋+1 rings.  Measured at ℓₘₐₓ = 7 (for s = 0,
+    # ±1 and ±2 alike): exact at Nθ = 15, wrong by 4e-3 at 14 and by 1.7 at 8.  Synthesis is
+    # exact on any number of rings, and stays quiet.
     let L = 7
         @test_logs (:warn, r"Nθ=14 rings, but the Clenshaw–Curtis analysis needs at least 15") map2salm(
             zeros(ComplexF64, 2L + 1, 2L), 0, L
@@ -297,6 +316,18 @@ end
     # For a half-odd ℓₘₐₓ one ring fewer suffices (measured: exact at 2ℓₘₐₓ rings)
     @test_logs map2salm(zeros(ComplexF64, 8, 7), 1//2, 7//2)
     @test_logs (:warn, r"needs at least 7 for ℓₘₐₓ=7//2") map2salm(zeros(ComplexF64, 8, 6), 1//2, 7//2)
+
+    # The grid has two dimensions, and at least two rings, since the Clenshaw–Curtis rings
+    # include both poles; anything else is refused with an explanation, rather than by FFTW
+    @test_throws DimensionMismatch map2salm(zeros(ComplexF64, 81), 0, 4)
+    @test_throws "takes a map of size Nϕ × Nθ" map2salm(zeros(ComplexF64, 81), 0, 4)
+    @test_throws DimensionMismatch map2salm(
+        zeros(ComplexF64, 81), map2salm_plan(zeros(ComplexF64, 9, 9), 0, 4)
+    )
+    @test_throws "at least two rings" map2salm(zeros(ComplexF64, 9, 1), 0, 4)
+    @test_throws "at least two rings" salm2map(zeros(ComplexF64, Ysize(4)), 0, 4, 9, 1)
+    @test_throws ArgumentError salm2map(zeros(ComplexF64, Ysize(4)), 0, 4, 9, 0)
+    @test_throws "at least one point" salm2map(zeros(ComplexF64, Ysize(4)), 0, 4, 0, 9)
 end
 
 @testitem "Transforms: map2salm and salm2map with half-integer spin weight" begin
@@ -304,20 +335,45 @@ end
     using SphericalFunctions: HalfOddInteger
     using Random
 
+    # Measured over 30 draws, in the norm of the error relative to that of the result: at
+    # most 0.9ℓₘₐₓ eps, so 100ℓₘₐₓ eps leaves a factor of ≳ 100.
     rng = MersenneTwister(17)
     for (s, ℓₘₐₓ) ∈ ((1//2, 7//2), (-3//2, 9//2))
+        ϵ = 100ℓₘₐₓ * eps()
         Nϕ, Nθ = Int(2ℓₘₐₓ + 3), Int(2ℓₘₐₓ + 2)  # at least 2ℓₘₐₓ+1 each
         f̃ = ModeWeights(randn(rng, ComplexF64, Ysize(abs(s), ℓₘₐₓ)), s)
         map = salm2map(f̃, s, ℓₘₐₓ, Nϕ, Nθ)
         @test size(map) == (Nϕ, Nθ)
         g̃ = map2salm(map, s, ℓₘₐₓ)
         @test g̃ isa ModeWeights && spin(g̃) === HalfOddInteger(s)
-        @test parent(g̃) ≈ parent(f̃) rtol=1e-11
+        @test parent(g̃) ≈ parent(f̃) rtol=ϵ
         # The map holds the function's values at the plan's rotors
         plan = SphericalFunctions.map2salm_plan(map, s, ℓₘₐₓ)
-        @test vec(map) ≈ sYlm_matrix(rotors(plan), ℓₘₐₓ, s) * parent(f̃) rtol=1e-12
-        # A stack of maps is transformed map by map
+        @test vec(map) ≈ sYlm_matrix(rotors(plan), ℓₘₐₓ, s) * parent(f̃) rtol=ϵ
+        # A stack of maps is transformed map by map, each exactly as it would be alone (and
+        # doubling a map doubles every rounded result exactly)
         G̃ = map2salm(cat(map, 2map; dims=3), s, ℓₘₐₓ)
-        @test G̃[:, 1] ≈ parent(f̃) && G̃[:, 2] ≈ 2 .* parent(f̃)
+        @test G̃[:, 1] == parent(g̃) && G̃[:, 2] == 2 .* parent(g̃)
+    end
+end
+
+
+@testitem "Transforms: map2salm and salm2map in Float16" begin
+    import SphericalFunctions: map2salm, salm2map, ModeWeights, Ysize, array_view, spin
+    import Random
+
+    # FFTW has no Float16 transforms, so the ring transforms go through GenericFFT, and the
+    # quadrature weights, computed through FFTW in Float32, are returned in Float16.  A
+    # round trip on a grid of 2ℓₘₐₓ+1 rings recovers the mode weights; the error measured
+    # over these cases is at most 0.71ℓₘₐₓ eps.
+    rng = Random.Xoshiro(20260924)
+    for s ∈ (0, 1, -2), ℓₘₐₓ ∈ (2, 4, 8)
+        f̃ = ModeWeights(ComplexF16.(randn(rng, ComplexF64, Ysize(abs(s), ℓₘₐₓ)) ./ 4), s)
+        f = salm2map(f̃, 2ℓₘₐₓ + 1, 2ℓₘₐₓ + 1)
+        @test f isa Matrix{ComplexF16}
+        g̃ = map2salm(f, s, ℓₘₐₓ)
+        @test eltype(g̃) === ComplexF16 && spin(g̃) == s
+        @test maximum(abs, ComplexF64.(array_view(g̃)) .- ComplexF64.(array_view(f̃))) ≤
+            10ℓₘₐₓ * eps(Float16)
     end
 end

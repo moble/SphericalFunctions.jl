@@ -1,15 +1,14 @@
 # The last parameter, `B`, records whether the calculator was built from a *vector* of rotor
-# data — batched, with blocks indexed `[iᵣ, m′, m]` — or from a single rotor.  It is decided by
-# the type of that data rather than by its length, so that a one-element vector gives batched
-# blocks like any other vector, and so that `B` is known at compile time: the block then has
-# one type rather than a union of the batched and unbatched ones, because the branch in `block`
-# below is resolved at compile time.  (It used to be `Nᵣ > 1`, which made a one-element vector
-# unbatched, and was not inferrable.)  Only the predicate is lifted into the type, not `Nᵣ`
-# itself: `SSHTRS` sets `Nᵣ = Nθ`, which grows with ℓₘₐₓ, and parameterizing on the count would
-# recompile the recurrence for every resolution.
+# data — batched, with blocks indexed `[iᵣ, m′, m]` — or from a single rotor.  It is decided
+# by the type of that data rather than by its length, so that a one-element vector gives
+# batched blocks like any other vector, and so that `B` is known at compile time: the block
+# then has one type rather than a union of the batched and unbatched ones, because the
+# branch in `block` below is resolved at compile time.  Only the predicate is lifted into
+# the type, not `Nᵣ` itself: `SSHTRS` sets `Nᵣ = Nθ`, which grows with ℓₘₐₓ, and
+# parameterizing on the count would recompile the recurrence for every resolution.
 
 """
-    WignerCalculator{IT, RT, NT}
+    WignerCalculator{IT, RT, NT, ST, B}
 
 Calculator producing Wigner's ``𝔇`` matrices (when `NT` is `Complex{RT}`) or ``d`` matrices
 (when `NT` is `RT`) for `Nᵣ` rotors at a time, one ``ℓ`` at a time.  Use the constructors
@@ -17,94 +16,103 @@ Calculator producing Wigner's ``𝔇`` matrices (when `NT` is `Complex{RT}`) or 
 
 Internally this wraps a [`HCalculator`](@ref), which does the actual recurrence, plus a
 buffer into which the requested block of the matrix is written for the current ``ℓ``; that
-block is what [`recurrence!`](@ref) returns, as an array indexed naturally by `[m′, m]` (or
-`[iᵣ, m′, m]` when it was built from a vector of rotor data).
+block is what [`recurrence!`](@ref) returns, as a [`WignerMatrix`](@ref) indexed naturally
+by `[m′, m]`, or a [`WignerMatrixBatch`](@ref) indexed by `[iᵣ, m′, m]` when the calculator
+was built from a vector of rotor data.
 
-Which of those two shapes comes back is recorded in the type, as the `Bool` parameter
-read by [`isbatched`](@ref), so that the return type is inferrable; see the comment on the
-struct.
+`IT` is the index type (`Int` or [`HalfOddInteger`](@ref)), `RT` the real type the
+calculator works in, and `NT` the type of the matrix elements.  `ST` is the storage type of
+the ``H`` wedge.  `B` is `true` exactly when the calculator was built from a vector of rotor
+data, of any length, and is what [`isbatched`](@ref) reads; because it is a type parameter,
+the type of the block is known at compile time, and a loop over the blocks is inferrable.
 """
 struct WignerCalculator{IT, RT<:Real, NT<:Union{RT, Complex{RT}}, ST, B}
     H::HCalculator{IT, RT, ST}
     Wˡ::Array{NT, 3}  # [iᵣ, m′, m] block for the current ℓ, using the leading entries
-    Z₊::Matrix{Complex{RT}}  # Z₊[k+1, iᵣ] = z₊^k for k ∈ 0:2ℓₘₐₓ; empty when NT is real
-    Z₋::Matrix{Complex{RT}}  # Z₋[k+1, iᵣ] = z₋^k for k ∈ 0:2ℓₘₐₓ; empty when NT is real
+    Z₊::Matrix{Complex{RT}}  # Z₊[iᵣ, k+1] = z₊^k for k ∈ 0:2ℓₘₐₓ; empty when NT is real
+    Z₋::Matrix{Complex{RT}}  # Z₋[iᵣ, k+1] = z₋^k for k ∈ 0:2ℓₘₐₓ; empty when NT is real
+    poles::Vector{PoleRotor{RT}}  # the rotors at or near a pole; always empty when NT is real
     m′ₘₐₓ::IT
     m′ₘᵢₙ::IT
     mₘₐₓ::IT
     mₘᵢₙ::IT
     ℓ::Base.RefValue{IT}  # ℓ of the block currently in Wˡ; ℓₘᵢₙ-1 if none
-    # `materialize!` writes `Wˡ` and reads the power tables under `@inbounds`, for every rotor
-    # of `H` and every (m′, m) within the limits, so the buffers must be large enough for
-    # those; as for `HCalculator`, this checks them once, as they are brought together.
+    # `materialize!` writes `Wˡ` and reads the power tables under `@inbounds`, for every
+    # rotor of `H` and every (m′, m) within the limits, and for every rotor recorded near a
+    # pole, so the buffers must be large enough for those, and the records must name rotors
+    # that exist; as for `HCalculator`, this checks them once, as they are brought together.
     function WignerCalculator{IT, RT, NT, ST, B}(
-        H, Wˡ, Z₊, Z₋, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, ℓ
+        H, Wˡ, Z₊, Z₋, poles, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, ℓ
     ) where {IT, RT<:Real, NT<:Union{RT, Complex{RT}}, ST, B}
         let n = Nᵣ(H), K = NT <: Complex ? 2ℓₘₐₓ(H) + 1 : 0
             if !(
                 size(Wˡ, 1) ≥ n
                 && size(Wˡ, 2) ≥ Int(m′ₘₐₓ - m′ₘᵢₙ) + 1 && size(Wˡ, 3) ≥ Int(mₘₐₓ - mₘᵢₙ) + 1
-                && size(Z₊, 1) ≥ K && size(Z₊, 2) ≥ n && size(Z₋, 1) ≥ K && size(Z₋, 2) ≥ n
+                && size(Z₊, 1) ≥ n && size(Z₊, 2) ≥ K && size(Z₋, 1) ≥ n && size(Z₋, 2) ≥ K
             )
                 throw(DimensionMismatch(
                     "The buffers of a WignerCalculator for Nᵣ=$n rotors, m′ ∈ $m′ₘᵢₙ:$m′ₘₐₓ "
                     * "and m ∈ $mₘᵢₙ:$mₘₐₓ are too small: the block has size $(size(Wˡ)), "
-                    * "and the power tables $(size(Z₊)) and $(size(Z₋)), which need at least "
-                    * "$K rows."
+                    * "and the power tables $(size(Z₊)) and $(size(Z₋)), which need a row "
+                    * "for each rotor and at least $K columns."
                 ))
             end
+            check_pole_records(poles, n)
         end
-        new{IT, RT, NT, ST, B}(H, Wˡ, Z₊, Z₋, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, ℓ)
+        new{IT, RT, NT, ST, B}(H, Wˡ, Z₊, Z₋, poles, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, ℓ)
     end
 end
 
 # Allocate the buffers without touching them.  PRIVATE: see the note on `allocate_H`.  The
 # rotor data here is the nested `H`'s phases *plus* this calculator's own power tables `Z₊`
-# and `Z₋`, so a caller that copies rather than sets must copy all of them.
+# and `Z₋` and its record of the rotors near a pole, so a caller that copies rather than
+# sets must copy all of them.
 function allocate_W(
     ::Type{IT}, ::Type{RT}, ::Type{NT}, ℓₘₐₓ::IT,
     m′ₘₐₓ::IT, m′ₘᵢₙ::IT, mₘₐₓ::IT, mₘᵢₙ::IT, Nᵣ::Int, ::Val{B}
 ) where {IT<:IntegerHalf, RT<:Real, NT<:Union{RT, Complex{RT}}, B}
     validate_index_ranges(ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
-    # The recurrence needs the wedge for |m′| up to the larger of the two m′ limits (and all
-    # m); the four limits only select the block that is materialized.
-    H = allocate_H(IT, RT, ℓₘₐₓ, max(m′ₘₐₓ, -m′ₘᵢₙ), Nᵣ)
+    # The wedge holds the rows |m′| ≤ W of H, for every m, and `materialize!` reads an element
+    # whose |m′| exceeds W from its transpose, whose |m| does not.  So W need only be the
+    # narrower of the widest m′ and the widest m of the block, and restricting either the
+    # rows or the columns of the block to a narrow band narrows the recurrence with it.
+    # Both limits bracket ±ℓₘᵢₙ, so W does too, as the recurrence requires.
+    W = min(max(m′ₘₐₓ, -m′ₘᵢₙ), max(mₘₐₓ, -mₘᵢₙ))
+    H = allocate_H(IT, RT, ℓₘₐₓ, W, Nᵣ)
     Wˡ = Array{NT, 3}(undef, Nᵣ, Int(m′ₘₐₓ - m′ₘᵢₙ) + 1, Int(mₘₐₓ - mₘᵢₙ) + 1)
-    K = NT <: Complex ? Int(2ℓₘₐₓ) + 1 : 0
-    Z₊ = Matrix{Complex{RT}}(undef, K, Nᵣ)
-    Z₋ = Matrix{Complex{RT}}(undef, K, Nᵣ)
-    # The reference is typed explicitly for the same reason as in `allocate_Y`: for a narrower
-    # integer `IT`, `ℓₘᵢₙ(IT) - 1` is an `Int`, and the field is a `RefValue{IT}`.
+    # The power tables have the rotor index first, so that the innermost loop of
+    # `materialize!`, which runs over the rotors at a fixed power, reads them contiguously.
+    K = NT <: Complex ? 2ℓₘₐₓ + 1 : 0
+    Z₊ = Matrix{Complex{RT}}(undef, Nᵣ, K)
+    Z₋ = Matrix{Complex{RT}}(undef, Nᵣ, K)
+    # The reference is typed explicitly, as in `allocate_Y`, because the field is a
+    # `RefValue{IT}`.
     WignerCalculator{IT, RT, NT, typeof(parent(H.Hˡ)), B}(
-        H, Wˡ, Z₊, Z₋, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, Ref{IT}(ℓₘᵢₙ(IT) - 1)
-    )
-end
-
-function WignerCalculator{IT, RT, NT}(
-    R, ℓₘₐₓ::IT;
-    m′ₘₐₓ::IT=ℓₘₐₓ, m′ₘᵢₙ::IT=-m′ₘₐₓ, mₘₐₓ::IT=ℓₘₐₓ, mₘᵢₙ::IT=-mₘₐₓ
-) where {IT<:IntegerHalf, RT<:Real, NT<:Union{RT, Complex{RT}}}
-    set_rotors!(
-        allocate_W(IT, RT, NT, ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, nrotors(R), batched_data(R)), R
+        H, Wˡ, Z₊, Z₋, PoleRotor{RT}[], m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, Ref{IT}(ℓₘᵢₙ(IT) - 1)
     )
 end
 
 """
     DCalculator(R, ℓₘₐₓ; m′ₘₐₓ=ℓₘₐₓ, m′ₘᵢₙ=-m′ₘₐₓ, mₘₐₓ=ℓₘₐₓ, mₘᵢₙ=-mₘₐₓ)
+    DCalculator(α, β, γ, ℓₘₐₓ; m′ₘₐₓ=ℓₘₐₓ, m′ₘᵢₙ=-m′ₘₐₓ, mₘₐₓ=ℓₘₐₓ, mₘᵢₙ=-mₘₐₓ)
 
 Calculator for Wigner's ``𝔇^{(ℓ)}_{m′,m}(R)`` matrices, for ``ℓ ≤ ℓₘₐₓ``, with elements of
-type `Complex{RT}`.  The keyword arguments restrict the block of each matrix that is computed
-and returned.
+type `Complex{RT}`.  The keyword arguments restrict the block of each matrix that is
+computed and returned; they may also be spelled `mp_max`, `mp_min`, `m_max` and `m_min`.
+Restricting either the rows ``m′`` or the columns ``m`` to a narrow band also narrows the
+recurrence itself, which at each ``ℓ`` costs in proportion to the narrower of the two
+ranges.
 
 The rotor is given at construction, so that the calculator is usable the moment it exists,
 and so that the element type is the rotor's own: a `Rotor{Float32}` gives a `Float32`
 calculator, and `floattype(calc)` reports it.  There is no argument to override that — to
-compute in another type, convert the rotor, which is the honest way to say that those are the
-values to be treated as exact.  Give `R` as an `AbstractVector` of rotors to
-get a calculator that handles all `Nᵣ = length(R)` of them at once — which is substantially
-faster per rotor, for the reason described under
-[Reusing the workspace](@ref interface_wigner_matrices).  Later rotors are supplied with
-[`set_R!`](@ref).
+compute in another type, convert the rotor, which is the honest way to say that those are
+the values to be treated as exact.  Give `R` as an `AbstractVector` of rotors to get a
+calculator that handles all `Nᵣ = length(R)` of them at once — which is substantially faster
+per rotor, for the reason described under [Reusing the workspace](@ref
+interface_wigner_matrices).  Later rotors are supplied with [`set_R!`](@ref).  A single
+rotor may instead be given by its Euler angles: `DCalculator(α, β, γ, ℓₘₐₓ)` is
+`DCalculator(from_euler_angles(α, β, γ), ℓₘₐₓ)`.
 
 The calculator is iterable, yielding one ``ℓ`` at a time:
 
@@ -116,25 +124,31 @@ end
 ```
 
 For a calculator built from a vector of rotors — of any length, even one — each block is
-indexed as `[iᵣ, m′, m]` instead.  The block is a view into the
-calculator's storage and is overwritten by the next step, so `copy` it if it must survive
-(the copy keeps the natural indices), or `collect` it to get an ordinary 1-based `Matrix`.
-`collect(calc)` copies every block, so it is safe.  To sweep part of the range, or to take
-the values of ``ℓ`` in some other order, loop over [`recurrence!`](@ref) yourself.
+indexed as `[iᵣ, m′, m]` instead.  The block is a view into the calculator's storage and is
+overwritten by the next step, so `copy` it if it must survive (the copy keeps the natural
+indices), or `collect` it to get an ordinary 1-based `Array`: a `Matrix`, or a
+three-dimensional `Array` for a block with a rotor index.  `collect(calc)` copies every
+block, so it is safe.  To sweep part of the range, or to take the values of ``ℓ`` in some
+other order, loop over [`recurrence!`](@ref) yourself.
 
-The convention is ``𝔇^{(ℓ)}_{m′,m}(𝐑_{α,β,γ}) = e^{-im′α}\\, d^{(ℓ)}_{m′,m}(β)\\, e^{-imγ}``;
-see the "Conventions" section of the documentation.
+A calculator is a mutable workspace, which every step and every setter overwrites, so one
+calculator must not be used by two tasks at once; `similar(calc)` gives each task a
+calculator of its own, holding the same rotor data.
+
+The convention is ``𝔇^{(ℓ)}_{m′,m}(𝐑_{α,β,γ}) = e^{-im′α}\\, d^{(ℓ)}_{m′,m}(β)\\,
+e^{-imγ}``; see the "Conventions" section of the documentation.
 
 # Half-integer indices
 
-`DCalculator(R, 7//2)` — a `Rational` `ℓₘₐₓ` with denominator 2 — gives a
-calculator for half-integer ``ℓ, m′, m``.  All four keyword limits must then be
-half-integers too, `recurrence!` accepts only half-integer `ℓ` and returns a
-[`WignerMatrix`](@ref) (or a [`WignerMatrixBatch`](@ref) when built from a vector) whose indices are
-half-odd-integers; it is indexed the same way.  The double cover is respected exactly: ``𝔇(-R) = -𝔇(R)``.
+`DCalculator(R, 7//2)` — a `Rational` `ℓₘₐₓ` with denominator 2, or a
+[`HalfOddInteger`](@ref) — gives a calculator for half-integer ``ℓ, m′, m``.  All four
+keyword limits must then be half-integers too, in either spelling; `recurrence!` accepts
+only half-integer `ℓ` and returns a [`WignerMatrix`](@ref) (or a [`WignerMatrixBatch`](@ref)
+when built from a vector) whose indices are half-odd-integers; it is indexed the same way.
+The double cover is respected exactly: ``𝔇(-R) = -𝔇(R)``.
 
-See also [`D`](@ref) for a simpler interface when the matrices for only one rotor are needed,
-[`dCalculator`](@ref) for the real ``d`` matrices, and [`recurrence!`](@ref).
+See also [`D`](@ref) for a simpler interface when the matrices for only one rotor are
+needed, [`dCalculator`](@ref) for the real ``d`` matrices, and [`recurrence!`](@ref).
 """
 const DCalculator{IT, RT, ST, B} = WignerCalculator{IT, RT, Complex{RT}, ST, B} where {IT, RT<:Real, ST, B}
 
@@ -142,11 +156,16 @@ const DCalculator{IT, RT, ST, B} = WignerCalculator{IT, RT, Complex{RT}, ST, B} 
     dCalculator(β, ℓₘₐₓ; m′ₘₐₓ=ℓₘₐₓ, m′ₘᵢₙ=-m′ₘₐₓ, mₘₐₓ=ℓₘₐₓ, mₘᵢₙ=-mₘₐₓ)
 
 Calculator for Wigner's real ``d^{(ℓ)}_{m′,m}(β)`` matrices, for ``ℓ ≤ ℓₘₐₓ``, with elements
-of the angle's own floating-point type.  The first argument may be the angle ``β``, the phase ``e^{iβ}``, or a `Rotor`
-(of which only the ``β`` Euler angle is used), or an `AbstractVector` of `Nᵣ` of any one of
-those; later values are supplied with [`set_β!`](@ref).  Otherwise this behaves exactly like
-[`DCalculator`](@ref) — including iteration, and half-integer ``ℓ`` for a `Rational`
-`ℓₘₐₓ`.
+of the angle's own floating-point type.  The first argument may be the angle ``β``, the
+phase ``e^{iβ}``, or a `Rotor`, or an `AbstractVector` of `Nᵣ` of any one of those; later
+values are supplied with [`set_β!`](@ref).  Otherwise this behaves exactly like
+[`DCalculator`](@ref) — including iteration, the ASCII spellings of the keywords, and
+half-integer ``ℓ`` for a `Rational` or [`HalfOddInteger`](@ref) `ℓₘₐₓ`.
+
+A `Rotor` contributes the ``β ∈ [0, π]`` of its canonical Euler decomposition.  If the rotor
+was built from a ``β`` outside that range, that ``β`` is folded into its ``α`` and ``γ``,
+which a ``d`` matrix does not see, so `d` of such a rotor equals `d` of its angle only for
+``β ∈ [0, π]``; this is consistent with [`D`](@ref) of the same rotor.
 
 Half-integer ``d`` has period ``4π`` in ``β``, so an angle or a `Rotor` determines it
 unambiguously, while a bare phase ``e^{iβ}`` determines it only up to the double-cover sign
@@ -156,51 +175,104 @@ See also [`d`](@ref).
 """
 const dCalculator{IT, RT, ST, B} = WignerCalculator{IT, RT, RT, ST, B} where {IT, RT<:Real, ST, B}
 
-# `ℓₘₐₓ` is constrained to `IntegerHalf` here (with the `Rational`s taken by the methods at
-# the bottom of this file) so that a call in the old argument order —
-# `DCalculator(ℓₘₐₓ, Float64)` — is an immediate `MethodError` at the call site rather
-# than something that dispatches with the element type in the rotor's place.
-# The element type is derived here and passed on as a *type*, to the helpers below, rather
-# than computed inside the body as a value: that is what lets the compiler settle the concrete
+# The keyword limits are normalized by `@index_methods` against the kind of `ℓₘₐₓ`, so that
+# either spelling of each, and either spelling of a half-integer, reaches the work method as
+# an `Int` or a `HalfOddInteger`.  `R` is untyped, but `ℓₘₐₓ` is an index, so a call with
+# ℓₘₐₓ first — `DCalculator(ℓₘₐₓ, Float64)` — is an immediate `MethodError` at the call site
+# rather than something that dispatches with the element type in the rotor's place.  The
+# element type is derived here and passed on as a *type*, to the helpers below, rather than
+# computed inside the body as a value: that is what lets the compiler settle the concrete
 # return type, including the `B` parameter that the block's type depends on.
 #
-# Those helpers are deliberately *not* methods of `DCalculator` and `dCalculator`.
-# A three-argument method of either name would be a public way to override the element type,
-# and version 3 has none by design — the type of the rotor data is the only thing that decides
-# it.  `test/wigner/iteration.jl` asserts exactly that, with `@test_throws MethodError`.
-function DCalculator(R, ℓₘₐₓ::IT; kwargs...) where {IT<:IntegerHalf}
-    wigner_D_calculator(R, ℓₘₐₓ, rotor_basetype(R); kwargs...)
+# Those helpers are deliberately *not* methods of `DCalculator` and `dCalculator`.  A
+# three-argument method of either name would be a public way to override the element type,
+# and there is none by design — the type of the rotor data is the only thing that decides
+# it.  For the same reason there is no constructor `WignerCalculator{IT, RT, NT}(R, ℓₘₐₓ)`:
+# `DCalculator{Int, Float64}` names that very type, and is what `show` prints.
+# `test/wigner/iteration.jl` asserts exactly that, with `@test_throws MethodError`.
+@index_methods function DCalculator(
+    R, ℓₘₐₓ::IndexType;
+    mp_max::IndexType=ℓₘₐₓ, m′ₘₐₓ::IndexType=mp_max,
+    mp_min::IndexType=-m′ₘₐₓ, m′ₘᵢₙ::IndexType=mp_min,
+    m_max::IndexType=ℓₘₐₓ, mₘₐₓ::IndexType=m_max,
+    m_min::IndexType=-mₘₐₓ, mₘᵢₙ::IndexType=m_min
+)
+    wigner_D_calculator(R, ℓₘₐₓ, rotor_basetype(R), m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
 end
-function dCalculator(β, ℓₘₐₓ::IT; kwargs...) where {IT<:IntegerHalf}
-    wigner_d_calculator(β, ℓₘₐₓ, rotor_basetype(β); kwargs...)
+@index_methods function DCalculator(
+    α::Real, β::Real, γ::Real, ℓₘₐₓ::IndexType;
+    mp_max::IndexType=ℓₘₐₓ, m′ₘₐₓ::IndexType=mp_max,
+    mp_min::IndexType=-m′ₘₐₓ, m′ₘᵢₙ::IndexType=mp_min,
+    m_max::IndexType=ℓₘₐₓ, mₘₐₓ::IndexType=m_max,
+    m_min::IndexType=-mₘₐₓ, mₘᵢₙ::IndexType=m_min
+)
+    DCalculator(Quaternionic.from_euler_angles(α, β, γ), ℓₘₐₓ; m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
 end
-function wigner_D_calculator(R, ℓₘₐₓ::IT, ::Type{RT}; kwargs...) where {IT<:IntegerHalf, RT<:Real}
-    WignerCalculator{IT, RT, Complex{RT}}(R, ℓₘₐₓ; kwargs...)
+@index_methods function dCalculator(
+    β, ℓₘₐₓ::IndexType;
+    mp_max::IndexType=ℓₘₐₓ, m′ₘₐₓ::IndexType=mp_max,
+    mp_min::IndexType=-m′ₘₐₓ, m′ₘᵢₙ::IndexType=mp_min,
+    m_max::IndexType=ℓₘₐₓ, mₘₐₓ::IndexType=m_max,
+    m_min::IndexType=-mₘₐₓ, mₘᵢₙ::IndexType=m_min
+)
+    wigner_d_calculator(β, ℓₘₐₓ, rotor_basetype(β), m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
 end
-function wigner_d_calculator(β, ℓₘₐₓ::IT, ::Type{RT}; kwargs...) where {IT<:IntegerHalf, RT<:Real}
-    WignerCalculator{IT, RT, RT}(β, ℓₘₐₓ; kwargs...)
+function wigner_D_calculator(
+    R, ℓₘₐₓ::IT, ::Type{RT}, m′ₘₐₓ::IT, m′ₘᵢₙ::IT, mₘₐₓ::IT, mₘᵢₙ::IT
+) where {IT<:IntegerHalf, RT<:Real}
+    wigner_calculator(RT, Complex{RT}, R, ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
+end
+function wigner_d_calculator(
+    β, ℓₘₐₓ::IT, ::Type{RT}, m′ₘₐₓ::IT, m′ₘᵢₙ::IT, mₘₐₓ::IT, mₘᵢₙ::IT
+) where {IT<:IntegerHalf, RT<:Real}
+    wigner_calculator(RT, RT, β, ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
+end
+function wigner_calculator(
+    ::Type{RT}, ::Type{NT}, R, ℓₘₐₓ::IT, m′ₘₐₓ::IT, m′ₘᵢₙ::IT, mₘₐₓ::IT, mₘᵢₙ::IT
+) where {IT<:IntegerHalf, RT<:Real, NT<:Union{RT, Complex{RT}}}
+    set_rotors!(
+        allocate_W(IT, RT, NT, ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, nrotors(R), batched_data(R)), R
+    )
 end
 
-# A second workspace holding the same rotor data, with nothing computed — which is what a
-# thread wants.  The assertion is what keeps this inferrable: `Nᵣ(c)` is a field lookup, so
-# the constructor cannot know `B`, but the copy necessarily has the same parameters as the
-# original.  The data is copied buffer-by-buffer rather than re-derived; see the comment on
-# `similar(::HCalculator)` for why it cannot be re-derived at all.
+"""
+    similar(calc)
+    similar(calc, R)
+
+A second calculator of exactly the type of `calc` — the same limits, number of rotors and
+element type — with storage of its own and nothing computed.  With one argument it holds a
+copy of the rotor data of `calc`, so that stepping it gives the values `calc` would give;
+with two it holds the rotor data `R` instead, which must describe the same number of rotors,
+in the same floating-point type.  This applies to every calculator: [`DCalculator`](@ref),
+[`dCalculator`](@ref), [`HCalculator`](@ref), [`sYlmCalculator`](@ref) and
+[`sλlmCalculator`](@ref).
+
+Unlike `similar` of an array, this does copy the rotor data, because a calculator without
+rotor data is not representable, and the rotor data cannot be recovered from what a
+calculator stores.  The second argument is rotor data rather than an element type; to
+compute in another type, build a calculator from rotor data of that type.
+
+A calculator is a mutable workspace, which every step and every setter overwrites, so one
+calculator must not be used by two tasks at once.  `similar` is the way to give each task a
+calculator of its own; the two share nothing that either one changes.
+"""
 function Base.similar(c::WignerCalculator{IT, RT, NT, ST, B}) where {IT, RT, NT, ST, B}
+    # A second workspace holding the same rotor data, with nothing computed.  The assertion
+    # is what keeps this inferrable: `Nᵣ(c)` is a field lookup, so the constructor cannot
+    # know `B`, but the copy necessarily has the same parameters as the original.  The data
+    # is copied buffer by buffer rather than re-derived; see the comment on
+    # `copy_rotor_data!` for why it cannot be re-derived at all.
     c′ = allocate_W(
         IT, RT, NT, ℓₘₐₓ(c), c.m′ₘₐₓ, c.m′ₘᵢₙ, c.mₘₐₓ, c.mₘᵢₙ, Nᵣ(c), Val(B)
     )::WignerCalculator{IT, RT, NT, ST, B}
-    copyto!(c′.H.eⁱᵝ, c.H.eⁱᵝ)
-    copyto!(c′.H.cβ½, c.H.cβ½)
-    copyto!(c′.H.sβ½, c.H.sβ½)
+    copy_rotor_data!(c′.H, c.H)
     copyto!(c′.Z₊, c.Z₊)
     copyto!(c′.Z₋, c.Z₋)
+    append!(c′.poles, c.poles)
     c′
 end
 function Base.similar(c::WignerCalculator{IT, RT, NT, ST, B}, R) where {IT, RT, NT, ST, B}
-    if nrotors(R) != Nᵣ(c)
-        error("This calculator handles Nᵣ=$(Nᵣ(c)) rotors, but got $(nrotors(R)).")
-    end
+    check_rotor_count(c, R)
     check_rotor_type(c, R)
     set_rotors!(
         allocate_W(
@@ -221,11 +293,14 @@ Nᵣ(c::WignerCalculator) = Nᵣ(c.H)
 floattype(::WignerCalculator{IT, RT}) where {IT, RT} = RT
 isbatched(::WignerCalculator{IT, RT, NT, ST, B}) where {IT, RT, NT, ST, B} = B
 
+# A batched calculator says so, because its blocks have a rotor index that those of an
+# unbatched one with the same `Nᵣ = 1` do not.
 function Base.show(io::IO, c::WignerCalculator{IT, RT, NT}) where {IT, RT, NT}
     print(
         io,
         NT <: Complex ? "D" : "d", "Calculator{$IT, $RT} for ",
         "ℓₘₐₓ=$(ℓₘₐₓ(c)), m′=$(c.m′ₘᵢₙ):$(c.m′ₘₐₓ), m=$(c.mₘᵢₙ):$(c.mₘₐₓ), Nᵣ=$(Nᵣ(c))",
+        isbatched(c) ? ", batched" : "",
         c.ℓ[] < ℓₘᵢₙ(c) ? " (nothing computed yet)" : ", currently at ℓ=$(c.ℓ[])"
     )
 end
@@ -237,12 +312,12 @@ end
     fill!(c::WignerCalculator, v)
 
 Fill the axis, wedge and output buffers of `c` with the value `v` and mark the current
-results as invalid.  The stored rotor data — `e^{iβ}`, the half angles, and the phase powers
-`Z₊`, `Z₋` — is deliberately *not* touched, so `recurrence!(c, ℓ)` still has everything it
-needs, exactly as for [`HCalculator`](@ref).  Useful for testing
-that no uninitialized storage is ever read: everything the recurrence is responsible for
-writing is poisoned, while everything `set_rotors!` is responsible for writing is left
-alone.
+results as invalid.  The stored rotor data — `e^{iβ}`, the half angles, the phase powers
+`Z₊`, `Z₋`, and the record of the rotors near a pole — is deliberately *not* touched, so
+`recurrence!(c, ℓ)` still has everything it needs, exactly as for [`HCalculator`](@ref).
+Useful for testing that no uninitialized storage is ever read: everything the recurrence is
+responsible for writing is poisoned, while everything `set_rotors!` is responsible for
+writing is left alone.
 """
 function Base.fill!(c::WignerCalculator{IT, RT, NT}, v::Number) where {IT, RT, NT}
     fill!(c.H, real(v))
@@ -255,46 +330,43 @@ end
 ### Rotor data
 
 # For 𝔇 we need the full rotor: eⁱᵝ for the recurrence, and the powers of z₊ and z₋ for the
-# phases.
+# phases, together with a record of the rotors near a pole (see `src/wigner/poles.jl`).
 function set_rotors!(
     c::WignerCalculator{IT, RT, Complex{RT}}, R::AbstractVector{<:Rotor}
 ) where {IT, RT<:Real}
     # The loop writes the calculator's 1-based buffers at the input's own indices, under
     # `@inbounds`, so an offset vector would write outside them.
     Base.require_one_based_indexing(R)
-    if length(R) != Nᵣ(c)
-        error("Expected $(Nᵣ(c)) rotors (Nᵣ), but got $(length(R)).")
-    end
+    check_rotor_length(c, R)
     # As in `set_rotors!(::HCalculator, …)`: every rotor is acceptable, and the results are
     # marked invalid before the first one is replaced.
     c.H.axes_valid[] = false
     c.ℓ[] = ℓₘᵢₙ(IT) - 1
+    empty!(c.poles)
+    r = pole_radius(RT, ℓₘₐₓ(c))
     @inbounds for i ∈ eachindex(R)
-        eⁱᵝ, z₊, z₋, cβ½, sβ½ = spinor_phases(R[i], RT)
-        c.H.eⁱᵝ[i] = eⁱᵝ
-        set_half_angles!(c.H, i, cβ½, sβ½)
-        complex_powers!(view(c.Z₊, :, i), z₊)
-        complex_powers!(view(c.Z₋, :, i), z₋)
+        z₊, z₋ = store_complex_rotor!(c.H, c.poles, i, R[i], r)
+        complex_powers!(view(c.Z₊, i, :), z₊)
+        complex_powers!(view(c.Z₋, i, :), z₋)
     end
     c
 end
 function set_rotors!(c::WignerCalculator{IT, RT, Complex{RT}}, R::Rotor) where {IT, RT<:Real}
-    if Nᵣ(c) != 1
-        error("A single rotor was given, but this calculator expects Nᵣ=$(Nᵣ(c)) rotors.")
-    end
+    check_single_rotor(c)
     set_rotors!(c, @SVector [R])
 end
 function set_rotors!(c::WignerCalculator{IT, RT, Complex{RT}}, R) where {IT, RT<:Real}
-    error(
+    throw(ArgumentError(
         "A DCalculator needs rotors, given as `Rotor`s — one, or an AbstractVector "
         * "of $(Nᵣ(c)) of them — not $(typeof(R)); use a dCalculator if only β is "
         * "available."
-    )
+    ))
 end
 
 # For d we need only eⁱᵝ, and accept anything the H calculator accepts.  That calculator
-# validates everything before it replaces anything, so if it refuses the data this calculator
-# is left exactly as it was, and its own `ℓ` is reset only once the new data are in place.
+# validates everything before it replaces anything, so if it refuses the data this
+# calculator is left exactly as it was, and its own `ℓ` is reset only once the new data are
+# in place.
 function set_rotors!(c::WignerCalculator{IT, RT, RT}, R) where {IT, RT<:Real}
     set_rotors!(c.H, R)
     c.ℓ[] = ℓₘᵢₙ(IT) - 1
@@ -311,73 +383,201 @@ function recurrence!(c::WignerCalculator, R, ℓ)
     recurrence!(c, ℓ)
 end
 function recurrence!(c::WignerCalculator{IT}, ℓ) where {IT}
-    let ℓ = convert(IT, ℓ)
+    let ℓ = calculator_index(IT, ℓ, "ℓ")
         recurrence!(c.H, ℓ)
         materialize!(c, ℓ)
         current_block(c, ℓ)
     end
 end
 
-# The block for the ``ℓ`` just computed, restricted to the m′ and m limits the calculator was
-# built with.
+# The block for the ``ℓ`` just computed, restricted to the m′ and m limits the calculator
+# was built with.
 current_block(c::WignerCalculator{IT}, ℓ::IT) where {IT} =
     block(c, ℓ, m′range(c, ℓ), mrange(c, ℓ))
 
-# Ranges of m′ and m in the block for a given ℓ
+# Ranges of m′ and m in the block for a given ℓ, which are both what `materialize!` writes
+# and what `current_block` labels.
 m′range(c::WignerCalculator, ℓ) = max(-ℓ, c.m′ₘᵢₙ):min(ℓ, c.m′ₘₐₓ)
 mrange(c::WignerCalculator, ℓ) = max(-ℓ, c.mₘᵢₙ):min(ℓ, c.mₘₐₓ)
 
-# Powers zᵏ for k of either sign, given Z[k+1, iᵣ] = zᵏ for k ≥ 0
-@inline zpower(Z, iᵣ, k) = k ≥ 0 ? (@inbounds Z[k+1, iᵣ]) : conj(@inbounds Z[1-k, iᵣ])
+# Powers zᵏ for k of either sign, given Z[iᵣ, k+1] = zᵏ for k ≥ 0.  The three-argument form
+# decides the sign itself; the four-argument form is told it, as `Val(k < 0)`, so that a
+# loop over rotors at a fixed k has no branch in it (see `with_power_signs`).
+@inline zpower(Z, iᵣ, k, ::Val{false}) = @inbounds Z[iᵣ, k+1]
+@inline zpower(Z, iᵣ, k, ::Val{true}) = conj(@inbounds Z[iᵣ, 1-k])
+@inline zpower(Z, iᵣ, k) = k ≥ 0 ? zpower(Z, iᵣ, k, Val(false)) : zpower(Z, iᵣ, k, Val(true))
+
+# Call `f(Val(k₊ < 0), Val(k₋ < 0))`, so that the signs of two powers are compile-time
+# constants inside `f`.  Each loop over rotors in `materialize!` is at fixed powers, and
+# settling there, once, which of the two table entries are conjugated leaves a loop body
+# with no branch at all.  The arithmetic is the same in each of the four cases, so the
+# values are those the three-argument `zpower` gives.
+@inline function with_power_signs(f, k₊, k₋)
+    if k₊ ≥ 0
+        k₋ ≥ 0 ? f(Val(false), Val(false)) : f(Val(false), Val(true))
+    else
+        k₋ ≥ 0 ? f(Val(true), Val(false)) : f(Val(true), Val(true))
+    end
+end
 
 # Write the block of the d matrix (real NT) or 𝔇 matrix (complex NT) for the current ℓ into
-# c.Wˡ, reading the H wedge through `wedge_source` (the only place the symmetries of H are
-# encoded) and applying the ϵ signs relating H to d, and for 𝔇 the phases e^{-i(m′α+mγ)}.
+# c.Wˡ, applying the ϵ signs relating H to d, and for 𝔇 the phases e^{-i(m′α+mγ)}.
+#
+# The block is written a column at a time, in the order of its storage, and the source of
+# each element in the wedge is resolved by the column's runs rather than element by element
+# through `wedge_source`, whose index arithmetic would otherwise cost more than the
+# recurrence that computed the wedge.  For a column m, the symmetries that `wedge_source`
+# applies divide the m′ axis into three parts:
+#
+#     -m′ > |m|     H[-m, -m′]                     row -m, one run, descending in m′
+#     |m′| ≤ |m|    H[m′, m] or σ H[-m′, -m]       rows m′ or -m′, by the sign of m
+#     m′ > |m|      σ H[m, m′]                     row m, one run, ascending in m′
+#
+# with σ = `transpose_sign(m′, m)`.  These are exactly the branches that `wedge_source`
+# takes; in the middle part the element m′ = m = 0 belongs with m ≥ 0, as it does there.
+# The two runs read rows |m| ≤ W, where W is the number of rows of the wedge above the axis,
+# and the middle part reads rows |m′| ≤ W; every element of the block is of one kind or the
+# other, because the wedge is as wide as the narrower of the m′ and m ranges (see
+# `allocate_W`), so the runs are needed only for the columns |m| ≤ W, and the middle part
+# never reaches beyond |m′| = W.  The result is compared with `wedge_value`, element by
+# element, in `test/wigner/calculators.jl`.
 #
 # Nothing here depends on whether the indices are integers or half-odd-integers: the
-# exponents m′±m of z₊ and z₋ are `Integer`s either way (see the v3 design memo, §5.4), and
-# ϵ and σ are already general.
+# exponents m′±m of z₊ and z₋ are `Integer`s either way (see "Step 7" of
+# `docs/src/50-notes/01-H_recurrence.md`), and ϵ and σ are already general.
 function materialize!(c::WignerCalculator{IT, RT, NT}, ℓ::IT) where {IT, RT, NT}
     let H = c.H.Hˡ, Wˡ = c.Wˡ, Z₊ = c.Z₊, Z₋ = c.Z₋, Nᵣ = Nᵣ(c), Hp = parent(H)
         if H.ℓ != ℓ
             error("The H wedge holds ℓ=$(H.ℓ), but ℓ=$ℓ was requested.")
         end
-        m′ₘₐₓw = m′ₘₐₓ(H)
+        W = m′ₘₐₓ(H)
         m′ₘᵢₙw = m′ₘᵢₙ(H)
-        mlo = max(-ℓ, c.mₘᵢₙ)
-        mhi = min(ℓ, c.mₘₐₓ)
-        m′lo = max(-ℓ, c.m′ₘᵢₙ)
-        m′hi = min(ℓ, c.m′ₘₐₓ)
-        @inbounds for (j, m) ∈ enumerate(mlo:mhi)
-            for (j′, m′) ∈ enumerate(m′lo:m′hi)
-                a, b, σ = wedge_source(m′, m, m′ₘₐₓw)
-                offset = wedge_offset(H, a, b, m′ₘᵢₙw)
-                # d = ϵ(m′) ϵ(-m) H, with the transposition sign σ
-                coefficient = convert(RT, σ * ϵ(m′) * ϵ(-m))
-                if NT <: Real
-                    @simd for iᵣ ∈ 1:Nᵣ
-                        Wˡ[iᵣ, j′, j] = coefficient * Hp[offset + iᵣ]
-                    end
-                else
-                    # 𝔇 = d e^{-i(m′α + mγ)} = d conj(z₊^(m′+m) z₋^(m′-m))
-                    k₊ = m′ + m
-                    k₋ = m′ - m
-                    for iᵣ ∈ 1:Nᵣ
-                        phase = conj(zpower(Z₊, iᵣ, k₊) * zpower(Z₋, iᵣ, k₋))
-                        Wˡ[iᵣ, j′, j] = coefficient * Hp[offset + iᵣ] * phase
-                    end
+        ri = row_index(H)
+        m′lo, m′hi = first(m′range(c, ℓ)), last(m′range(c, ℓ))
+        mlo, mhi = first(mrange(c, ℓ)), last(mrange(c, ℓ))
+        # `r` is the offset of the first element of a row, H[±m, |m|]; element iᵣ of H[a, b]
+        # is at `ri[(a - m′ₘᵢₙw) + 1] - 1 + Nᵣ * (b - |a|) + iᵣ`, as in `wedge_offset`.
+        @inbounds for m ∈ mlo:mhi
+            a = abs(m)
+            j = Int(m - mlo) + 1
+            if a ≤ W
+                # -m′ > |m|: d = ϵ(m′) ϵ(-m) H[-m, -m′], with σ = 1
+                r = ri[(-m - m′ₘᵢₙw) + 1] - 1
+                for m′ ∈ m′lo:min(m′hi, -a - 1)
+                    coefficient = convert(RT, ϵ(m′) * ϵ(-m))
+                    materialize_element!(
+                        Wˡ, Hp, Z₊, Z₋, Nᵣ, Int(m′ - m′lo) + 1, j, r + Nᵣ * Int(-m′ - a),
+                        coefficient, m′ + m, m′ - m
+                    )
+                end
+            end
+            b = min(a, W)
+            if m ≥ 0
+                # m ≥ |m′|: the element is stored, with σ = 1
+                for m′ ∈ max(m′lo, -b):min(m′hi, b)
+                    coefficient = convert(RT, ϵ(m′) * ϵ(-m))
+                    materialize_element!(
+                        Wˡ, Hp, Z₊, Z₋, Nᵣ, Int(m′ - m′lo) + 1, j,
+                        ri[(m′ - m′ₘᵢₙw) + 1] - 1 + Nᵣ * Int(m - abs(m′)),
+                        coefficient, m′ + m, m′ - m
+                    )
+                end
+            else
+                # -m ≥ |m′|: σ H[-m′, -m]
+                for m′ ∈ max(m′lo, -b):min(m′hi, b)
+                    coefficient = convert(RT, transpose_sign(m′, m) * ϵ(m′) * ϵ(-m))
+                    materialize_element!(
+                        Wˡ, Hp, Z₊, Z₋, Nᵣ, Int(m′ - m′lo) + 1, j,
+                        ri[(-m′ - m′ₘᵢₙw) + 1] - 1 + Nᵣ * Int(-m - abs(m′)),
+                        coefficient, m′ + m, m′ - m
+                    )
+                end
+            end
+            if a ≤ W
+                # m′ > |m|: σ H[m, m′]
+                r = ri[(m - m′ₘᵢₙw) + 1] - 1
+                for m′ ∈ max(m′lo, a + 1):m′hi
+                    coefficient = convert(RT, transpose_sign(m′, m) * ϵ(m′) * ϵ(-m))
+                    materialize_element!(
+                        Wˡ, Hp, Z₊, Z₋, Nᵣ, Int(m′ - m′lo) + 1, j, r + Nᵣ * Int(m′ - a),
+                        coefficient, m′ + m, m′ - m
+                    )
                 end
             end
         end
+    end
+    # A real calculator never records a rotor near a pole, so this is compiled only for 𝔇.
+    if NT <: Complex
+        materialize_poles!(c, ℓ)
     end
     c.ℓ[] = ℓ
     c
 end
 
-# `isbatched(c)` reads the type parameter, so this branch is resolved at compile time and the
-# method has a single concrete return type.  The same containers are returned for integer and
-# half-odd-integer indices alike; see the note on `AbstractWignerMatrix` for why they are not
-# `OffsetArray`s even where an `OffsetArray` could represent them.
+# Overwrite the block of every rotor near a pole with its values from the expansion about
+# that pole (see `src/wigner/poles.jl`), in place of those that the loop above computed from
+# the recurrence.  The phase is the power of z₊ or z₋ that the loop applied to the same
+# element.
+function materialize_poles!(c::WignerCalculator{IT, RT, Complex{RT}}, ℓ::IT) where {IT, RT}
+    let Wˡ = c.Wˡ, Z₊ = c.Z₊, Z₋ = c.Z₋, m′r = m′range(c, ℓ), mr = mrange(c, ℓ)
+        for p ∈ c.poles
+            iᵣ = p.iᵣ
+            @inbounds for m ∈ mr, m′ ∈ m′r
+                phase = p.north ? conj(zpower(Z₊, iᵣ, m′ + m)) : conj(zpower(Z₋, iᵣ, m′ - m))
+                Wˡ[iᵣ, Int(m′ - first(m′r)) + 1, Int(m - first(mr)) + 1] = pole_element(
+                    ℓ, m′, m, p.north, p.ζ, p.κ, phase
+                )
+            end
+        end
+    end
+    nothing
+end
+
+# One element (m′, m) of the block, at position (j′, j) of `Wˡ`, for every rotor, from the
+# wedge element whose first rotor is at `offset + 1` of `Hp`.
+@inline function materialize_element!(
+    Wˡ::AbstractArray{NT}, Hp, Z₊, Z₋, Nᵣ, j′, j, offset, coefficient, k₊, k₋
+) where {NT}
+    # With one rotor there is nothing to vectorize, and the setup of a loop would cost more
+    # than the element itself, so that case is written out.
+    if NT <: Real
+        if Nᵣ == 1
+            @inbounds Wˡ[1, j′, j] = coefficient * Hp[offset + 1]
+        else
+            @inbounds @simd for iᵣ ∈ 1:Nᵣ
+                Wˡ[iᵣ, j′, j] = coefficient * Hp[offset + iᵣ]
+            end
+        end
+    elseif Nᵣ == 1
+        # 𝔇 = d e^{-i(m′α + mγ)} = d conj(z₊^(m′+m) z₋^(m′-m))
+        @inbounds Wˡ[1, j′, j] = (
+            coefficient * Hp[offset + 1] * conj(zpower(Z₊, 1, k₊) * zpower(Z₋, 1, k₋))
+        )
+    elseif Nᵣ < 8
+        # For a few rotors the four loops of `with_power_signs`, and the setup of a
+        # vectorized loop, cost more than they save, so the sign of each power is tested on
+        # every rotor instead.  Each element is computed by the same expression in every
+        # branch, so the values do not depend on `Nᵣ`.
+        @inbounds for iᵣ ∈ 1:Nᵣ
+            Wˡ[iᵣ, j′, j] = (
+                coefficient * Hp[offset + iᵣ] * conj(zpower(Z₊, iᵣ, k₊) * zpower(Z₋, iᵣ, k₋))
+            )
+        end
+    else
+        with_power_signs(k₊, k₋) do n₊, n₋
+            @inbounds @simd for iᵣ ∈ 1:Nᵣ
+                phase = conj(zpower(Z₊, iᵣ, k₊, n₊) * zpower(Z₋, iᵣ, k₋, n₋))
+                Wˡ[iᵣ, j′, j] = coefficient * Hp[offset + iᵣ] * phase
+            end
+        end
+    end
+    nothing
+end
+
+# `isbatched(c)` reads the type parameter, so this branch is resolved at compile time and
+# the method has a single concrete return type.  The same containers are returned for
+# integer and half-odd-integer indices alike; see the note on `AbstractWignerMatrix` for why
+# they are not `OffsetArray`s even where an `OffsetArray` could represent them.
 function block(c::WignerCalculator{IT}, ℓ::IT, m′r, mr) where {IT<:IntegerHalf}
     if isbatched(c)
         WignerMatrixBatch(
@@ -397,78 +597,100 @@ end
 
 """
     D(R, ℓₘₐₓ; m′ₘₐₓ=ℓₘₐₓ, m′ₘᵢₙ=-m′ₘₐₓ, mₘₐₓ=ℓₘₐₓ, mₘᵢₙ=-mₘₐₓ)
+    D(α, β, γ, ℓₘₐₓ; m′ₘₐₓ=ℓₘₐₓ, m′ₘᵢₙ=-m′ₘₐₓ, mₘₐₓ=ℓₘₐₓ, mₘᵢₙ=-mₘₐₓ)
 
-Wigner's ``𝔇^{(ℓ)}_{m′,m}(R)`` matrices for all ``ℓ ≤ ℓₘₐₓ``, for the single rotor `R`.
+Wigner's ``𝔇^{(ℓ)}_{m′,m}(R)`` matrices for all ``ℓ ≤ ℓₘₐₓ``, for the single rotor `R`, or
+for the rotor `from_euler_angles(α, β, γ)` of the Euler angles ``(α, β, γ)``.
 
 The result is a [`WignerSeries`](@ref), indexed by ``ℓ`` and then naturally by ``(m′, m)``:
-`D(R, ℓₘₐₓ)[ℓ][m′, m]`.  Each block is a [`WignerMatrix`](@ref); `Matrix` (or `collect`) gives
-the ordinary ``(2ℓ+1)×(2ℓ+1)`` `Matrix` with rows and columns in order of increasing ``m′``
-and ``m``.
-The keyword arguments restrict the block of each matrix that is computed.  The convention is
+`D(R, ℓₘₐₓ)[ℓ][m′, m]`.  Each block is a [`WignerMatrix`](@ref); `Matrix` (or `collect`)
+gives the ordinary ``(2ℓ+1)×(2ℓ+1)`` `Matrix` with rows and columns in order of increasing
+``m′`` and ``m``.  The keyword arguments restrict the block of each matrix that is computed,
+and may also be spelled `mp_max`, `mp_min`, `m_max` and `m_min`.  The convention is
 ``𝔇^{(ℓ)}_{m′,m}(𝐑_{α,β,γ}) = e^{-im′α}\\, d^{(ℓ)}_{m′,m}(β)\\, e^{-imγ}``; see the
 "Conventions" section of the documentation.
 
-`ℓₘₐₓ` may be a half-integer `Rational` (denominator 2), as may the keyword limits; then
-``ℓ`` runs over ``1/2, 3/2, …, ℓₘₐₓ`` rather than ``0, 1, …, ℓₘₐₓ``.  The container types are
-the same either way, and `D(R, ℓₘₐₓ)[ℓ][m′, m]` reads the same.
+`ℓₘₐₓ` may be a half-integer, as a `Rational` with denominator 2 or a
+[`HalfOddInteger`](@ref), as may the keyword limits; then ``ℓ`` runs over ``1/2, 3/2, …,
+ℓₘₐₓ`` rather than ``0, 1, …, ℓₘₐₓ``.  The container types are the same either way, and
+`D(R, ℓₘₐₓ)[ℓ][m′, m]` reads the same.
 
-This function allocates all of its output on every call.  To evaluate the matrices for many
-rotors, or to avoid holding every ``ℓ`` at once, use a [`DCalculator`](@ref) instead,
-which allocates once and computes one ``ℓ`` at a time.
+This function allocates all of its output on every call, and takes a single rotor.  To
+evaluate the matrices for many rotors, or to avoid holding every ``ℓ`` at once, use a
+[`DCalculator`](@ref) instead, which allocates once, computes one ``ℓ`` at a time, and takes
+a vector of rotors as a batch.
 
 See also [`d`](@ref) and [`sYlm`](@ref).
 """
-function D(R::Rotor{T}, ℓₘₐₓ::IT; kwargs...) where {T<:Real, IT<:IntegerHalf}
-    calc = DCalculator(R, ℓₘₐₓ; kwargs...)
+@index_methods function D(
+    R::Rotor, ℓₘₐₓ::IT;
+    mp_max::IndexType=ℓₘₐₓ, m′ₘₐₓ::IndexType=mp_max,
+    mp_min::IndexType=-m′ₘₐₓ, m′ₘᵢₙ::IndexType=mp_min,
+    m_max::IndexType=ℓₘₐₓ, mₘₐₓ::IndexType=m_max,
+    m_min::IndexType=-mₘₐₓ, mₘᵢₙ::IndexType=m_min
+) where {IT<:IndexType}
+    calc = DCalculator(R, ℓₘₐₓ; m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
     WignerSeries(
         [copy(recurrence!(calc, ℓ)) for ℓ ∈ ℓₘᵢₙ(IT):ℓₘₐₓ], ℓₘᵢₙ(IT), ℓₘₐₓ
     )
+end
+@index_methods function D(
+    α::Real, β::Real, γ::Real, ℓₘₐₓ::IndexType;
+    mp_max::IndexType=ℓₘₐₓ, m′ₘₐₓ::IndexType=mp_max,
+    mp_min::IndexType=-m′ₘₐₓ, m′ₘᵢₙ::IndexType=mp_min,
+    m_max::IndexType=ℓₘₐₓ, mₘₐₓ::IndexType=m_max,
+    m_min::IndexType=-mₘₐₓ, mₘᵢₙ::IndexType=m_min
+)
+    D(Quaternionic.from_euler_angles(α, β, γ), ℓₘₐₓ; m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
 end
 
 """
     d(β, ℓₘₐₓ; m′ₘₐₓ=ℓₘₐₓ, m′ₘᵢₙ=-m′ₘₐₓ, mₘₐₓ=ℓₘₐₓ, mₘᵢₙ=-mₘₐₓ)
 
 Wigner's real ``d^{(ℓ)}_{m′,m}(β)`` matrices for all ``ℓ ≤ ℓₘₐₓ``, for the single angle `β`,
-which may also be given as the phase ``e^{iβ}`` or as a `Rotor` (of which only the ``β`` Euler
-angle is used).  The result is indexed as `d(β, ℓₘₐₓ)[ℓ][m′, m]`.  See [`D`](@ref) for
-details; this function is the real, ``β``-only analogue.
+which may also be given as the phase ``e^{iβ}`` or as a `Rotor`.  The result is indexed as
+`d(β, ℓₘₐₓ)[ℓ][m′, m]`.  See [`D`](@ref) for details, including the keyword arguments and
+their ASCII spellings; this function is the real, ``β``-only analogue.
 
-`ℓₘₐₓ` may be a half-integer `Rational` (denominator 2).  Half-integer ``d`` has period
-``4π`` in ``β``, so an angle or a `Rotor` determines it unambiguously, but a bare phase
-``e^{iβ}`` determines it only up to the sign ``(-1)^{2ℓ}`` (the branch ``β ∈ (-π, π]`` is
-used).
+A `Rotor` contributes the ``β ∈ [0, π]`` of its canonical Euler decomposition, as described
+under [`dCalculator`](@ref), so `d(R, ℓₘₐₓ)` equals `d(β, ℓₘₐₓ)` for the angle ``β`` used to
+build `R` only when ``β ∈ [0, π]``.
+
+`ℓₘₐₓ` may be a half-integer, as a `Rational` with denominator 2 or a
+[`HalfOddInteger`](@ref).  Half-integer ``d`` has period ``4π`` in ``β``, so an angle or a
+`Rotor` determines it unambiguously, but a bare phase ``e^{iβ}`` determines it only up to
+the sign ``(-1)^{2ℓ}`` (the branch ``β ∈ (-π, π]`` is used).
 """
-function d(β::Union{Real, Complex, Rotor}, ℓₘₐₓ::IT; kwargs...) where {IT<:IntegerHalf}
-    calc = dCalculator(β, ℓₘₐₓ; kwargs...)
+@index_methods function d(
+    β::Union{Real, Complex, Rotor}, ℓₘₐₓ::IT;
+    mp_max::IndexType=ℓₘₐₓ, m′ₘₐₓ::IndexType=mp_max,
+    mp_min::IndexType=-m′ₘₐₓ, m′ₘᵢₙ::IndexType=mp_min,
+    m_max::IndexType=ℓₘₐₓ, mₘₐₓ::IndexType=m_max,
+    m_min::IndexType=-mₘₐₓ, mₘᵢₙ::IndexType=m_min
+) where {IT<:IndexType}
+    calc = dCalculator(β, ℓₘₐₓ; m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
     WignerSeries(
         [copy(recurrence!(calc, ℓ)) for ℓ ∈ ℓₘᵢₙ(IT):ℓₘₐₓ], ℓₘᵢₙ(IT), ℓₘₐₓ
     )
 end
 
-
-# ASCII aliases for the public accessors (see also `ell`, `mpmax`, etc. in wigner_matrix.jl)
-const ellmax = ℓₘₐₓ
-const Nr = Nᵣ
-
-
-### Boundary conversion.
-#
-# The recurrences want a `HalfOddInteger`, but `3//2` is what a caller naturally writes, and
-# is what every previous version of this package accepted.  These methods convert and
-# re-dispatch, so no `Rational` ever reaches the hot code.  See
-# [`half_integer`](@ref).
-
-function DCalculator(R, ℓₘₐₓ::Rational; kwargs...)
-    DCalculator(R, half_integer(ℓₘₐₓ); half_integer_kwargs(kwargs)...)
+# `D` and `d` take one rotor.  A vector of them is what a calculator is for, and is refused
+# with that advice rather than with a bare `MethodError`; so is a quaternion that is not a
+# `Rotor`, with the advice of `not_a_rotor`.
+function D(R⃗::AbstractVector{<:Rotor}, ℓₘₐₓ; kwargs...)
+    throw(ArgumentError(
+        "`D` takes a single rotor; for a vector of $(length(R⃗)) "
+        * "rotor$(length(R⃗) == 1 ? "" : "s") use "
+        * "`DCalculator(R⃗, ℓₘₐₓ)`, which computes all of them at once, one ℓ at a time, "
+        * "in blocks indexed [iᵣ, m′, m]."
+    ))
 end
-function dCalculator(β, ℓₘₐₓ::Rational; kwargs...)
-    dCalculator(β, half_integer(ℓₘₐₓ); half_integer_kwargs(kwargs)...)
+function d(β⃗::AbstractVector{<:Union{Real, Complex, Rotor}}, ℓₘₐₓ; kwargs...)
+    throw(ArgumentError(
+        "`d` takes a single angle, phase or rotor; for a vector of $(length(β⃗)) of them use "
+        * "`dCalculator(β⃗, ℓₘₐₓ)`, which computes all of them at once, one ℓ at a time, in "
+        * "blocks indexed [iᵣ, m′, m]."
+    ))
 end
-function D(R::Rotor, ℓₘₐₓ::Rational; kwargs...)
-    D(R, half_integer(ℓₘₐₓ); half_integer_kwargs(kwargs)...)
-end
-function d(β::Union{Real, Complex, Rotor}, ℓₘₐₓ::Rational; kwargs...)
-    d(β, half_integer(ℓₘₐₓ); half_integer_kwargs(kwargs)...)
-end
-D(R::NonRotorData, ℓₘₐₓ; kwargs...) = error(not_a_rotor(R))
-d(R::NonRotorData, ℓₘₐₓ; kwargs...) = error(not_a_rotor(R))
+D(R::NonRotorData, ℓₘₐₓ; kwargs...) = throw(ArgumentError(not_a_rotor(R)))
+d(R::NonRotorData, ℓₘₐₓ; kwargs...) = throw(ArgumentError(not_a_rotor(R)))

@@ -7,9 +7,9 @@
 #
 # A calculator iterates as key–value pairs, ℓ => block.  That is the `AbstractDict` shape
 # rather than the array shape, and the names follow it: `keys` is the range of ℓ, `length`
-# counts ℓ values, `eltype` is a `Pair`, and `pairs` is the calculator itself.  Note that
-# those last two names mean something else one level down: on a block, `length` counts matrix
-# elements and `eltype` is the number type.
+# counts ℓ values, `eltype` is a `Pair`, `pairs` is the calculator itself, and `values` yields
+# the blocks alone.  Note that `length` and `eltype` mean something else one level down: on a
+# block, `length` counts matrix elements and `eltype` is the number type.
 #
 # A calculator is *not* indexed.  `recurrence!(calc, ℓ)` computes one ℓ and returns its block,
 # which is the whole of the random-access story and is also what each step of the loop below
@@ -20,11 +20,18 @@
 # restart cleanly from ℓₘᵢₙ — including after a `break` — instead of continuing from wherever
 # the previous one stopped.
 
-# The index type of a calculator, which is also its key type.
+# The index type of a calculator, which is also its key type.  The value method is restricted
+# to calculators, so that a type which is not a calculator of one index type — such as the
+# `UnionAll` `DCalculator` — is not passed on to `typeof` again and again.
 indextype(::Type{<:WignerCalculator{IT}}) where {IT} = IT
 indextype(::Type{<:HarmonicCalculator{IT}}) where {IT} = IT
 indextype(::Type{<:HCalculator{IT}}) where {IT} = IT
-indextype(c) = indextype(typeof(c))
+indextype(c::Union{WignerCalculator, HarmonicCalculator, HCalculator}) = indextype(typeof(c))
+
+# Like a container's, a calculator's kind of index is a type parameter, so this is known at
+# compile time.
+ishalfinteger(c::Union{WignerCalculator, HarmonicCalculator, HCalculator}) =
+    indextype(c) === HalfOddInteger
 
 # The calculators that yield one block per ℓ.  An `sYlmCalculator` belongs here because it is
 # built for the spin weights it serves: its block is the whole of what it holds, whether that
@@ -59,28 +66,30 @@ end
 # rather than failing first on the missing `length`.
 Base.IteratorSize(::Type{<:HCalculator}) = Base.SizeUnknown()
 function Base.iterate(w::HCalculator, args...)
-    error(
+    throw(ArgumentError(
         "An HCalculator is not iterable: its wedge is one mutable object handed back by "
         * "identity, rather than a view that `copy` can preserve.  Step it with "
         * "`recurrence!(calc, ℓ)`, which returns that wedge, or use a DCalculator or "
         * "dCalculator, which are iterable."
-    )
+    ))
 end
 
 
 ### The container interface.
 
-# `keys` is a plain `UnitRange`, as it is for `WignerSeries`; the half-integer `WignerRange`
-# is for array axes and cannot be printed or collected.  `length` subtracts the two limits
-# rather than measuring `keys`, because `Int(ℓ)` throws for a half-integer ℓ while the
-# difference of two of them is an `Int` by construction.
+# `keys` is a plain `UnitRange`, as it is for `WignerSeries`, rather than the `WignerRange`
+# that serves as an axis of a block.  `length` subtracts the two limits rather than measuring
+# `keys`, because `Int(ℓ)` throws for a half-integer ℓ while the difference of two of them is
+# an `Int` by construction.
 Base.keys(c::WignerCalculator) = ℓₘᵢₙ(c):ℓₘₐₓ(c)
 Base.keys(c::HarmonicCalculator) = ℓₘᵢₙ(c):ℓₘₐₓ(c)
 Base.length(c::WignerCalculator) = Int(ℓₘₐₓ(c) - ℓₘᵢₙ(c)) + 1
 Base.length(c::HarmonicCalculator) = Int(ℓₘₐₓ(c) - ℓₘᵢₙ(c)) + 1
 
-Base.eltype(::Type{C}) where {C<:WignerCalculator} = Pair{indextype(C), blocktype(C)}
-Base.eltype(::Type{C}) where {C<:HarmonicCalculator} = Pair{indextype(C), blocktype(C)}
+# Only a type with a fixed index type has a known element type; any other, such as the
+# `UnionAll` `DCalculator`, falls through to Base's `eltype(::Type) = Any`.
+Base.eltype(::Type{C}) where {IT, C<:WignerCalculator{IT}} = Pair{IT, blocktype(C)}
+Base.eltype(::Type{C}) where {IT, C<:HarmonicCalculator{IT}} = Pair{IT, blocktype(C)}
 Base.eltype(c::IterableCalculator) = eltype(typeof(c))
 
 # Both are already Base's defaults for a type it knows nothing else about; they are stated
@@ -92,6 +101,24 @@ Base.IteratorEltype(::Type{<:IterableCalculator}) = Base.HasEltype()
 # Iteration already yields pairs, so the calculator is its own `pairs`; this says so rather
 # than leaving the generic wrapper to pair the pairs with positions.
 Base.pairs(c::IterableCalculator) = c
+
+# The blocks alone, as `values` of a `WignerSeries` gives them.  They are the same views of the
+# calculator's storage that iteration yields, so `collect` of this copies each one, as
+# `collect(calc)` does; see its docstring.
+struct CalculatorValues{C<:IterableCalculator}
+    calculator::C
+end
+Base.values(c::IterableCalculator) = CalculatorValues(c)
+@inline function Base.iterate(v::CalculatorValues, state...)
+    let next = iterate(v.calculator, state...)
+        next === nothing ? nothing : (last(first(next)), last(next))
+    end
+end
+Base.length(v::CalculatorValues) = length(v.calculator)
+Base.eltype(::Type{CalculatorValues{C}}) where {C} = blocktype(C)
+Base.IteratorSize(::Type{<:CalculatorValues}) = Base.HasLength()
+Base.IteratorEltype(::Type{<:CalculatorValues}) = Base.HasEltype()
+Base.collect(v::CalculatorValues) = [copy(block) for block ∈ v]
 
 """
     collect(calc)
@@ -107,5 +134,9 @@ generic functions that store what they are handed — `map`, `first(calc, n)`,
 
 Note that the result is indexed from 1, while [`D`](@ref) and [`d`](@ref) return containers
 indexed by ``ℓ``; `collect(calc)[i]` is the pair whose first element is the ``ℓ``.
+
+`values(calc)` iterates over the blocks alone, as `values` of a [`WignerSeries`](@ref) does.
+Those blocks are the same views that iteration over `calc` yields, and `collect(values(calc))`
+copies each of them for the same reason.
 """
 Base.collect(c::IterableCalculator) = [ℓ => copy(block) for (ℓ, block) ∈ c]

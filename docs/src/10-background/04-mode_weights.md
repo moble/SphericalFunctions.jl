@@ -73,7 +73,7 @@ in which ``f(θ, ϕ)`` means ``f`` evaluated at the rotor that
 [spherical coordinates](@ref "Pushing forward to ``𝕊²``") assign to
 the point ``(θ, ϕ)``.  Note that this step relies on ``f`` having a
 definite spin weight; for a function with contributions from several
-spin weights — where the third Euler angle genuinely matters — the
+spin weights — where the third Euler angle really matters — the
 integral over ``\mathrm{Spin}(3)`` in the previous expression is the
 one to use.  Functions whose domain is really ``I × 𝕊¹`` rather than
 ``𝕊²`` are discussed [here](@ref "Pulling back to ``I×𝕊¹``").
@@ -181,7 +181,7 @@ we *do* care about the ``m`` component of ``L_+ f``.  Perhaps a
 simpler way to see this is to write the modes as vectors, and look at
 the operators in matrix form, as we do in the next section.
 
-# Vector/matrix forms
+## Vector/matrix forms
 
 We conventionally assemble the mode weights of a function ``f`` with a
 fixed spin weight ``s`` into a single vector of data, with ``ℓ``

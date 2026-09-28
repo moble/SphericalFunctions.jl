@@ -1,5 +1,22 @@
-# Robustness tests for the v3 Wigner engine: uninitialized memory, generic number types,
+# Robustness tests for the Wigner engine: uninitialized memory, generic number types,
 # differentiability, and interface details (show, allocation, independence of calculators).
+
+# A refusal is recognized by the type of the exception and by a fragment of its message, so
+# that an unrelated error raised later, for another reason, cannot stand in for it.  (A
+# function given to `@test_throws` is applied to the message rather than to the exception, so
+# it cannot check the type.)  This is used by the test items of the Wigner and harmonic
+# calculators and of their containers, here and in `test/wigner/*.jl`, `test/sYlm/*.jl`,
+# `test/hwedge.jl`, `test/haxis.jl` and `test/mode_weights/mode_weights.jl`.
+@testsnippet RefusalChecks begin
+    function refuses(f, ::Type{T}, fragment::AbstractString) where {T<:Exception}
+        try
+            f()
+        catch e
+            return e isa T && occursin(fragment, sprint(showerror, e))
+        end
+        false
+    end
+end
 
 @testitem "Wigner calculators never read uninitialized memory" begin
     import SphericalFunctions: HCalculator, DCalculator, dCalculator,
@@ -37,19 +54,29 @@
         )
     end
 
+    # The smallest index of the kind of ℓₘₐₓ, which is 0 for integers and 1/2 for
+    # half-integers, given here as `Rational`s
+    lowest(ℓₘₐₓ) = ℓₘₐₓ isa Integer ? 0 : 1//2
+
     # Every ℓ in order, then a backwards jump (which restarts the recurrence), then a forward
     # jump that skips the intermediate values.
-    schedule(ℓₘₐₓ) = [collect(0:ℓₘₐₓ); ℓₘₐₓ ÷ 2; ℓₘₐₓ]
+    function schedule(ℓₘₐₓ)
+        lo = lowest(ℓₘₐₓ)
+        [collect(lo:1:ℓₘₐₓ); lo + (ℓₘₐₓ - lo) ÷ 2; ℓₘₐₓ]
+    end
 
-    # Symmetric limits m′ₘₐₓ ∈ (0, 1, ℓₘₐₓ), plus a couple of asymmetric blocks.
+    # Symmetric limits m′ₘₐₓ ∈ (lo, lo+1, ℓₘₐₓ), plus a couple of asymmetric blocks.  For
+    # half-integers the rows m′ = ±1/2 must both be present, so the asymmetric windows stop
+    # at -1/2 rather than at 0.
     function block_limits(ℓₘₐₓ)
+        lo = lowest(ℓₘₐₓ)
         limits = [
             (m′ₘₐₓ=k, m′ₘᵢₙ=-k, mₘₐₓ=ℓₘₐₓ, mₘᵢₙ=-ℓₘₐₓ)
-            for k in unique((0, 1, ℓₘₐₓ)) if k ≤ ℓₘₐₓ
+            for k in unique((lo, lo + 1, ℓₘₐₓ)) if k ≤ ℓₘₐₓ
         ]
-        if ℓₘₐₓ ≥ 2
-            push!(limits, (m′ₘₐₓ=2, m′ₘᵢₙ=-1, mₘₐₓ=ℓₘₐₓ, mₘᵢₙ=-min(3, ℓₘₐₓ)))
-            push!(limits, (m′ₘₐₓ=ℓₘₐₓ, m′ₘᵢₙ=0, mₘₐₓ=1, mₘᵢₙ=-ℓₘₐₓ))
+        if ℓₘₐₓ ≥ lo + 2
+            push!(limits, (m′ₘₐₓ=lo+2, m′ₘᵢₙ=-lo-1, mₘₐₓ=ℓₘₐₓ, mₘᵢₙ=-min(lo+3, ℓₘₐₓ)))
+            push!(limits, (m′ₘₐₓ=ℓₘₐₓ, m′ₘᵢₙ=-lo, mₘₐₓ=lo+1, mₘᵢₙ=-ℓₘₐₓ))
         end
         limits
     end
@@ -72,6 +99,7 @@
 
     # Same for the H wedge, reading every (m′, m) with |m′| ≤ m′ₘₐₓ through `wedge_value`.
     function check_wedge(calc, calcF, ℓ, atol)
+        ℓ = ℓ isa Rational ? SphericalFunctions.HalfOddInteger(ℓ) : ℓ  # the wedge's index type
         H = calc.Hˡ
         HF = calcF.Hˡ
         SphericalFunctions.ℓ(H) == ℓ || return false
@@ -85,12 +113,17 @@
         true
     end
 
-    for ℓₘₐₓ in (0, 1, 2, 5, 9), Nᵣ in (1, 3)
+    # The half-integer ℓₘₐₓ exercise the paths of their own: the half-angle buffers, the seed
+    # of the rows m′ = ±1/2, whose last column is peeled because the axis slot it would read
+    # holds another order's data (or, after `fill!`, a NaN that a zero coefficient would not
+    # annihilate), and the half-integer phases.
+    for ℓₘₐₓ in (0, 1, 2, 5, 9, 1//2, 5//2, 9//2), Nᵣ in (1, 3)
         data = rotor_data(Nᵣ)
         atol = 4 * max(1, ℓₘₐₓ) * eps(Float64)
+        lo = lowest(ℓₘₐₓ)
 
         # The raw H engine, driven by β
-        for m′ₘₐₓ in unique((0, 1, ℓₘₐₓ))
+        for m′ₘₐₓ in unique((lo, lo + 1, ℓₘₐₓ))
             m′ₘₐₓ ≤ ℓₘₐₓ || continue
             calc = HCalculator(data.βNC, ℓₘₐₓ; m′ₘₐₓ)
             calcF = HCalculator(data.β, ℓₘₐₓ; m′ₘₐₓ)
@@ -98,9 +131,9 @@
             @test all(isnan, parent(calc.Hˡ))
             @test all(isnan, parent(calc.h⃗ᵃ))
             @test all(isnan, parent(calc.h⃗ᵇ))
-            recurrence!(calc, 0)
-            recurrence!(calcF, 0)
-            if ℓₘₐₓ > 0
+            recurrence!(calc, lo)
+            recurrence!(calcF, lo)
+            if ℓₘₐₓ > lo
                 # The detector works: storage for the larger ℓ values is still NaN, and
                 # touching it throws.
                 @test_throws NaNError parent(calc.Hˡ)[end] + NC(1.0)
@@ -363,7 +396,7 @@ end
                     "Float32", sprint(show, MIME("text/plain"), HCalculator(βs32, ℓₘₐₓ))
                 )
                 # The wedge itself can be displayed
-                @test sprint(show, MIME("text/plain"), calc.Hˡ) isa String
+                @test occursin("HWedge", sprint(show, MIME("text/plain"), calc.Hˡ))
             else
                 s = sprint(
                     show, MIME("text/plain"),
@@ -373,7 +406,7 @@ end
                 @test occursin("m′=-1:2", s)
                 @test occursin("m=-3:3", s)
                 # The returned block can be displayed
-                @test sprint(show, MIME("text/plain"), recurrence!(calc, 4)) isa String
+                @test occursin("for ℓ=4", sprint(show, MIME("text/plain"), recurrence!(calc, 4)))
             end
         end
     end
@@ -389,14 +422,17 @@ end
 
     R = from_euler_angles(0.3, 0.7, 1.1)
     β = 0.7
-    for calc in (DCalculator(R, 3), dCalculator(β, 3), HCalculator(β, 3))
-        @test sprint(show, calc) isa String
-        @test repr(calc) isa String
-        @test sprint(show, [calc]) isa String
+    for (calc, name) in (
+        (DCalculator(R, 3), "DCalculator"), (dCalculator(β, 3), "dCalculator"),
+        (HCalculator(β, 3), "HCalculator"),
+    )
+        @test occursin(name, sprint(show, calc))
+        @test repr(calc) == sprint(show, calc)
+        @test occursin(name, sprint(show, [calc]))
     end
     calc = HCalculator(β, 3)
-    @test sprint(show, calc.Hˡ) isa String
-    @test sprint(show, calc.h⃗ᵃ) isa String
+    @test occursin("HWedge", sprint(show, calc.Hˡ))
+    @test occursin("HAxis", sprint(show, calc.h⃗ᵃ))
 end
 
 
@@ -435,23 +471,23 @@ end
     # The 𝔇 calculator (recurrence + materialization)
     alloc_D(calc, ℓ)
     aD = alloc_D(calc, ℓ)
-    @test aD ≤ 512
+    @test aD == 0
     recurrence!(calc, ℓ - 1)
     aD_step = alloc_D(calc, ℓ)
-    @test aD_step ≤ 512
+    @test aD_step == 0
 
     # Setting the rotors.  (The block `recurrence!` returns is a view, and is counted in
     # `aD` above; there is no separate indexing step to measure.)
     alloc_set(calc, Rs, ℓ)
     aS = alloc_set(calc, Rs, ℓ)
-    @test aS ≤ 512
+    @test aS == 0
     @info "Allocation (bytes)" aH aH_step aH_restart aD aD_step aS
 end
 
 
 @testitem "Wigner calculators thread safety via similar" begin
-    import SphericalFunctions: DCalculator, dCalculator, HCalculator,
-        recurrence!, wedge_value
+    import SphericalFunctions: DCalculator, dCalculator, HCalculator, sYlmCalculator,
+        sλlmCalculator, recurrence!, wedge_value
     import SphericalFunctions
     import Quaternionic: Rotor
     import Random
@@ -460,20 +496,30 @@ end
     ℓₘₐₓ = 20
     Rs = randn(rng, Rotor{Float64}, 8)
 
-    # Whether two objects share no mutable part: each mutable field must be a different
-    # object, and each immutable wrapper of mutable storage (an `HWedge`, a `FixedSizeArray`)
-    # is searched in turn.  Empty arrays are exempt, because Julia makes every empty `Memory`
-    # of a type one shared object, and there is nothing in them to share; the half-angle
-    # buffers of an integer-index calculator are empty.
+    # Whether two objects share no mutable part, at any depth.  Arrays are the leaves: each
+    # must be a different object in the two, except that an empty one is exempt, because Julia
+    # makes every empty `Memory` of a type one shared object, and there is nothing in them to
+    # share (the half-angle buffers of an integer-index calculator are empty).  Every other
+    # mutable object, such as an `HWedge`, an `HAxis` or a `Ref`, must be a different object
+    # too, and is searched in turn, as is every immutable one.
     function unshared(a, b)
         all(fieldnames(typeof(a))) do f
             x, y = getfield(a, f), getfield(b, f)
-            if ismutable(x)
-                x !== y || (x isa AbstractArray && isempty(x))
+            if isbitstype(typeof(x)) || x isa Union{Type, Symbol, Module}
+                true
+            elseif x isa AbstractArray
+                x !== y || isempty(x)
+            elseif ismutable(x)
+                x !== y && unshared(x, y)
             else
-                isbitstype(typeof(x)) || unshared(x, y)
+                unshared(x, y)
             end
         end
+    end
+    # The helper does find storage shared at depth, inside distinct mutable wrappers
+    let v = [1.0]
+        @test !unshared((w=Ref(v),), (w=Ref(v),))
+        @test unshared((w=Ref(v),), (w=Ref(copy(v)),))
     end
 
     # `similar` gives an independent calculator with the same sizes and types, holding a copy
@@ -481,13 +527,18 @@ end
     # the rotors handed to them here serve only to fix Nᵣ = 3 and 4 — and, for the Float32 d
     # calculator, the element type it works in.
     # The half-integer calculators are included because only they use the half-angle
-    # buffers `cβ½` and `sβ½`.
+    # buffers `cβ½` and `sβ½`, and the harmonic calculators built from angles because only
+    # they hold the `phases` flag false.
     for calc in (
         DCalculator(Rs[1:2], 5; m′ₘₐₓ=3, m′ₘᵢₙ=-2, mₘₐₓ=5, mₘᵢₙ=-4),
         dCalculator(Rotor{Float32}.(Rs[1:3]), 5; m′ₘₐₓ=1),
         HCalculator(Rs[1:4], 5; m′ₘₐₓ=2),
         DCalculator(Rs[1:2], 7//2; m′ₘₐₓ=3//2),
         HCalculator(Rs[1:4], 7//2),
+        sYlmCalculator(Rs[1:3], 5, -2:2),
+        sYlmCalculator(Rs[1], 9//2, -3//2:3//2),
+        sYlmCalculator([0.3, 1.1], 5, 1),
+        sλlmCalculator([0.3, 1.1], 9//2, 1//2),
     )
         c = similar(calc)
         @test typeof(c) === typeof(calc)
@@ -495,29 +546,44 @@ end
         # Nothing that can change is shared — not the buffers, nor the `Ref`s such as `ℓ` and
         # `axes_valid` that record what has been computed — at any depth
         @test unshared(c, calc)
-        for f in (
-            SphericalFunctions.ℓₘₐₓ, SphericalFunctions.m′ₘₐₓ, SphericalFunctions.m′ₘᵢₙ,
-            SphericalFunctions.Nᵣ,
-        )
+        for f in (SphericalFunctions.ℓₘₐₓ, SphericalFunctions.Nᵣ, SphericalFunctions.ℓₘᵢₙ)
             @test f(c) == f(calc)
         end
-        if calc isa HCalculator
-            @test parent(c.Hˡ) !== parent(calc.Hˡ)
-            @test parent(c.h⃗ᵃ) !== parent(calc.h⃗ᵃ)
-            @test parent(c.h⃗ᵇ) !== parent(calc.h⃗ᵇ)
-            @test c.eⁱᵝ !== calc.eⁱᵝ
-            @test c.eⁱᵝ == calc.eⁱᵝ
-        else
-            @test SphericalFunctions.mₘₐₓ(c) == SphericalFunctions.mₘₐₓ(calc)
-            @test SphericalFunctions.mₘᵢₙ(c) == SphericalFunctions.mₘᵢₙ(calc)
-            @test parent(c.H.Hˡ) !== parent(calc.H.Hˡ)
-            @test c.Wˡ !== calc.Wˡ
+        H, Hc = calc isa HCalculator ? (calc, c) : (calc.H, c.H)
+        @test SphericalFunctions.m′ₘₐₓ(Hc) == SphericalFunctions.m′ₘₐₓ(H)
+        @test parent(Hc.Hˡ) !== parent(H.Hˡ)
+        @test Hc.Hˡ.row_index !== H.Hˡ.row_index
+        @test parent(Hc.h⃗ᵃ) !== parent(H.h⃗ᵃ)
+        @test parent(Hc.h⃗ᵇ) !== parent(H.h⃗ᵇ)
+        @test Hc.eⁱᵝ !== H.eⁱᵝ
+        @test Hc.eⁱᵝ == H.eⁱᵝ
+        @test Hc.cβ½ == H.cβ½ && Hc.sβ½ == H.sβ½
+        if !(calc isa HCalculator)
             @test c.Z₊ !== calc.Z₊
             @test c.Z₋ !== calc.Z₋
-            @test c.Z₊ == calc.Z₊
-            @test c.Z₋ == calc.Z₋
+            # A calculator built from angles never fills its phase buffers, which then hold
+            # whatever the allocation held, NaN included, so the copies are compared with
+            # `isequal`, under which a NaN equals itself
+            @test isequal(c.Z₊, calc.Z₊)
+            @test isequal(c.Z₋, calc.Z₋)
             # `similar` copies no results: `ℓ` reports that nothing has been computed
             @test SphericalFunctions.ℓ(c) == SphericalFunctions.ℓₘᵢₙ(c) - 1
+            # ... and stepping it gives what the original gives, bit for bit
+            @test all(
+                copy(recurrence!(c, ℓ)) == copy(recurrence!(calc, ℓ))
+                for ℓ ∈ SphericalFunctions.ℓₘᵢₙ(c):SphericalFunctions.ℓₘₐₓ(c)
+            )
+        end
+        if calc isa SphericalFunctions.WignerCalculator
+            @test c.Wˡ !== calc.Wˡ
+            for f in (SphericalFunctions.m′ₘₐₓ, SphericalFunctions.m′ₘᵢₙ,
+                    SphericalFunctions.mₘₐₓ, SphericalFunctions.mₘᵢₙ)
+                @test f(c) == f(calc)
+            end
+        elseif calc isa SphericalFunctions.HarmonicCalculator
+            @test c.Yˡ !== calc.Yˡ
+            @test c.phases[] == calc.phases[] && c.phases !== calc.phases
+            @test SphericalFunctions.spins(c) == SphericalFunctions.spins(calc)
         end
     end
 
@@ -585,9 +651,9 @@ end
     import Quaternionic: from_euler_angles
     import OffsetArrays: OffsetVector, OffsetArray
 
-    # Every one of these once wrote the calculator's 1-based buffers (or the caller's output)
-    # at the input's own indices, under `@inbounds`, so that an offset array wrote outside
-    # them.  Each must now be refused, with the ArgumentError from
+    # Each of these writes the calculator's 1-based buffers (or the caller's output) at the
+    # input's own indices, under `@inbounds`, so that an offset array would write outside
+    # them.  Each must therefore be refused, with the ArgumentError from
     # `Base.require_one_based_indexing`, before anything is written.
     offset = "offset arrays are not supported"
     R = [from_euler_angles(0.1i, 0.2i, 0.3i) for i ∈ 1:2]

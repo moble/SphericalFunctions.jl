@@ -132,6 +132,7 @@ encapsulate the formulas in a module so that we can test them against the
 
 using TestItems: @testitem  #hide
 @testitem "Newman-Penrose conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
+import .Utilities: sℓmrange, θϕrange  #hide
 
 module NewmanPenrose
 #+
@@ -245,14 +246,14 @@ sₘₐₓ = 2
 # because the formulas are slow, and this will be sufficient to sort out any sign or
 # normalization differences, which are the most likely source of error.  For the same
 # reason we use a modest grid of points:
-θϕs = θϕrange(Float64, 7)
+θϕs = θϕrange(rng, Float64, 7)
 #+
 # The differential operators involve ``1/\sin θ``, so for them we avoid the poles.  Even so,
 # the factor ``\sin^{-s} θ`` inside ``\eth`` amplifies rounding errors near the poles by a
 # factor of order ``1/\sin^{|s|} θ``, so we evaluate the differential tests in `BigFloat`
 # arithmetic (the automatic differentiation is exact, so this leaves only the analytic
 # comparison), while still requiring agreement to `Float64` precision:
-θϕs_big = [(big(θ), big(ϕ)) for (θ, ϕ) ∈ θϕrange(Float64, 5; avoid_poles=1e-3)]
+θϕs_big = [(big(θ), big(ϕ)) for (θ, ϕ) ∈ θϕrange(rng, Float64, 5; avoid_poles=1e-3)]
 #+
 
 # We will also need the imaginary unit from the utilities module.
@@ -261,8 +262,10 @@ import .ConventionsUtilities: 𝒾
 
 # First, we check that our transcription of the explicit formula agrees with the package:
 for (θ, ϕ) ∈ θϕs
-    for (s, ℓ, m) ∈ sℓmrange(ℓₘₐₓ, sₘₐₓ)
-        @test NewmanPenrose.ₛYₗₘ(s, ℓ, m, θ, ϕ) ≈ ConventionsUtilities.Y(s, ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+    for (ℓ, Yˡ) ∈ SphericalFunctions.sYlmCalculator(θ, ϕ, ℓₘₐₓ, -sₘₐₓ:sₘₐₓ)
+        for s ∈ -min(ℓ, sₘₐₓ):min(ℓ, sₘₐₓ), m ∈ -ℓ:ℓ
+            @test NewmanPenrose.ₛYₗₘ(s, ℓ, m, θ, ϕ) ≈ Yˡ[s, m] atol=ϵₐ rtol=ϵᵣ
+        end
     end
 end
 #+
@@ -311,9 +314,11 @@ end
 # basis, as discussed above.  Because ``ζ`` itself diverges at the north pole, we again use
 # the pole-avoiding `BigFloat` grid.
 for (θ, ϕ) ∈ θϕs_big
-    for (s, ℓ, m) ∈ sℓmrange(ℓₘₐₓ, sₘₐₓ)
-        c = (-1)^ℓ * exp(-𝒾 * s * ϕ) * √(4big(π) / ((2ℓ+1) * factorial(ℓ+m) * factorial(ℓ-m)))
-        @test NewmanPenrose.ₛYₗₘ_ζ(s, ℓ, m, θ, ϕ) ≈ c * ConventionsUtilities.Y(s, ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+    for (ℓ, Yˡ) ∈ SphericalFunctions.sYlmCalculator(θ, ϕ, ℓₘₐₓ, -sₘₐₓ:sₘₐₓ)
+        for s ∈ -min(ℓ, sₘₐₓ):min(ℓ, sₘₐₓ), m ∈ -ℓ:ℓ
+            c = (-1)^ℓ * exp(-𝒾 * s * ϕ) * √(4big(π) / ((2ℓ+1) * factorial(ℓ+m) * factorial(ℓ-m)))
+            @test NewmanPenrose.ₛYₗₘ_ζ(s, ℓ, m, θ, ϕ) ≈ c * Yˡ[s, m] atol=ϵₐ rtol=ϵᵣ
+        end
     end
 end
 #+

@@ -1,7 +1,9 @@
-# Stage-2 tests of the half-integer Wigner engine (design memo §6): `𝔇ˡ[m′, m]`,
-# `D` and `d` against the stage-1 oracle of `test/wigner/half_integer_oracle.jl`, the
-# oracle-free metamorphic identities that stay valid at large `J`, the validation of
-# `Rational` index ranges, and the half-integer containers.
+# Tests of the half-integer Wigner engine, in two stages.  Stage 1 checks the oracle of
+# `test/wigner/half_integer_oracle.jl` — its copies against their originals, and its two
+# references against each other and against published tables — and stage 2 checks
+# `𝔇ˡ[m′, m]`, `D` and `d` against that oracle, together with the oracle-free metamorphic
+# identities that stay valid at large `J`, the validation of `Rational` index ranges, and the
+# half-integer containers.
 #
 # Every comparison accumulates a single worst-case error over a whole block (or a whole
 # sweep) and asserts once.  A half-integer block has O(ℓ²) elements, and asserting element
@@ -13,16 +15,66 @@
 # worst case and the resulting margin are stated in a comment at the point of use.
 
 
+@testitem "Half-integer oracle: the copies are the originals" begin
+    import SphericalFunctions
+
+    # The oracle's references are copied from the Literate comparison pages, which cannot be
+    # imported into a test module.  The copies must stay verbatim, so the pages and the
+    # oracle's file are parsed, and every definition that the oracle shares with a page —
+    # found by its signature, at any depth of modules and macro calls — must be the same
+    # expression, apart from line numbers and comments.
+    root = pkgdir(SphericalFunctions)
+    pages = joinpath(root, "docs", "literate_input", "30-conventions", "10-comparisons")
+    function definitions(file)
+        found = Dict{String, Any}()
+        function walk(ex)
+            ex isa Expr || return
+            if ex.head ∈ (:toplevel, :block, :module)
+                foreach(walk, ex.args)
+            elseif ex.head === :macrocall
+                foreach(walk, ex.args[2:end])
+            elseif ex.head === :function || (ex.head === :(=) && Meta.isexpr(ex.args[1], (:call, :where)))
+                found[string(Base.remove_linenums!(deepcopy(ex.args[1])))] =
+                    Base.remove_linenums!(deepcopy(ex))
+            elseif ex.head === :struct
+                found["struct $(ex.args[2])"] = Base.remove_linenums!(deepcopy(ex))
+            elseif ex.head === :const && Meta.isexpr(ex.args[1], :(=))
+                found["const $(ex.args[1].args[1])"] = Base.remove_linenums!(deepcopy(ex))
+            end
+        end
+        walk(Meta.parseall(read(file, String); filename=file))
+        found
+    end
+    originals = merge(
+        definitions(joinpath(pages, "boyle_2016.jl")),
+        definitions(joinpath(pages, "varshalovich_1988.jl")),
+    )
+    copies = definitions(joinpath(root, "test", "wigner", "half_integer_oracle.jl"))
+    shared = sort(collect(intersect(keys(originals), keys(copies))))
+    # `WignerDElement`, `Factorial` with its two methods of `*` and the constant `❗`, the
+    # imaginary unit `𝒾`, `d`, `D`, and the transcribed tables
+    @test length(shared) == 9
+    for name ∈ (
+        "WignerDElement(", "struct Factorial", "const ❗", "const 𝒾", "d(", "D(", "d_½_explicit("
+    )
+        @test any(startswith(name), shared)
+    end
+    for k ∈ shared
+        @test copies[k] == originals[k]
+    end
+end
+
+
 @testitem "Half-integer oracle: the two references agree" setup=[HalfIntegerOracle] begin
     import Quaternionic: Rotor, from_euler_angles
     import .HalfIntegerOracle: WignerDElement, D_oracle, d_oracle, d_table, βvalues
 
-    # Stage 1 of memo §6.  Varshalovich's closed form (Eq. 4.3.1(2), exact factorials) and
-    # the quaternionic algorithm of Boyle (2016) are independent implementations; here they
-    # are checked against each other and against Varshalovich's transcribed tables, so that
-    # the oracle every item below leans on is anchored before it is used.  The two Literate
-    # comparison pages make the same checks against the originals; repeating them here
-    # catches a drift between those originals and the copies in `half_integer_oracle.jl`.
+    # Stage 1.  Varshalovich's closed form (Eq. 4.3.1(2), exact factorials) and the
+    # quaternionic algorithm of Boyle (2016) are independent implementations; here they are
+    # checked against each other and against Varshalovich's transcribed tables, so that the
+    # oracle every item below leans on is anchored before it is used.  The two Literate
+    # comparison pages make the same checks against the originals, of which the previous item
+    # shows these to be copies.
 
     αβγs = [(0.0, 0.0, 0.0), (0.7, 1.1, 2.3), (2.9, 0.4, 5.1), (4.0, 2.2, 0.3), (1.3, 2.9, 4.7)]
 
@@ -68,13 +120,15 @@
                 continue
             end
             nc += 1
-            e = max(e, abs(Float64(t) - Float64(d_oracle(J, M, M′, big(β)))))
+            e = max(e, abs(t - d_oracle(J, M, M′, big(β))))
         end
         (e, nc, no)
     end
     @test nchecked == 144 * length(βvalues)   # 144 distinct transcribed entries
     @test nomitted == 76 * length(βvalues)
-    @test errtab < 1e-70   # measured 0.0: both sides are evaluated in BigFloat
+    # Both sides are evaluated in BigFloat, and differ only by the rounding of two different
+    # formulas: measured 115 eps(BigFloat), or 2.0e-75
+    @test errtab < 1000eps(BigFloat)
     @info "Stage-1 oracle cross-checks" err errdc errtab nchecked nomitted
 
     # The tables are transcribed only for 1/2 ≤ J ≤ 9/2, and only for half-integers
@@ -148,7 +202,8 @@ end
 
 @testitem "Half-integer 𝔇 vs Boyle (2016)" setup=[HalfIntegerOracle] begin
     import SphericalFunctions: D, DCalculator, recurrence!
-    import .HalfIntegerOracle: D_oracle, rotors
+    import .HalfIntegerOracle: D_oracle, d_oracle, rotors
+    import Quaternionic: Quaternion, components
 
     # `D(R, ℓₘₐₓ)` and `DCalculator` against the independent quaternionic reference of
     # Boyle (2016), whose convention is the complex conjugate of this package's.
@@ -176,6 +231,33 @@ end
         @test e < ϵ
     end
     @info "Half-integer 𝔇 vs Boyle (2016)" errbyJ
+
+    # The reference above is only as accurate as its Float64 arithmetic, so the error it
+    # measures is mostly its own.  The settled factorization 𝔇 = e^{-im′α} d(β) e^{-imγ},
+    # with Varshalovich's d and the Euler angles taken from the rotor's components, all in
+    # BigFloat, is a reference with none of its own at Float64 resolution.  Measured worst
+    # case over 45 rotors at J ≤ 15/2: 4.5 eps; 32 eps is asserted.  (The angles come from
+    # `atan` of the components rather than from `acos`, which would throw on a rotor
+    # normalized only to Float64 precision.)
+    function euler_angles(R)
+        w, x, y, z = BigFloat.(components(Quaternion(R)))
+        ϕₛ, ϕₐ = angle(Complex(w, z)), angle(Complex(y, x))
+        (ϕₛ - ϕₐ, 2 * atan(abs(Complex(y, x)), abs(Complex(w, z))), ϕₛ + ϕₐ)
+    end
+    errbig = let e = 0.0
+        for R ∈ Rs, J ∈ 1//2:1:15//2
+            𝔇ᴶ = recurrence!(DCalculator(R, J), J)
+            e = max(e, setprecision(BigFloat, 320) do
+                α, β, γ = euler_angles(R)
+                Float64(maximum(
+                    abs(Complex{BigFloat}(𝔇ᴶ[m′, m]) - cis(-m′ * α) * d_oracle(J, m′, m, β) * cis(-m * γ))
+                    for m′ ∈ -J:J, m ∈ -J:J
+                ))
+            end)
+        end
+        e
+    end
+    @test errbig < 32eps()
 
     # The calculator, with restricted m′ blocks and batched rotors
     errcalc = let e = 0.0
@@ -300,9 +382,10 @@ end
     import SphericalFunctions: d, D
     import .HalfIntegerOracle: rotors
 
-    # The same β, once in Float64 and once in BigFloat, at the three J of memo §5.5.
-    # BigFloat's default 256-bit precision makes its result exact at Float64 resolution, so
-    # this measures the engine's own error growth with J where no closed form is available.
+    # The same β, once in Float64 and once in BigFloat, at three J well beyond the reach of
+    # the closed forms, which lose accuracy past J ≈ 8.  BigFloat's default 256-bit precision
+    # makes its result exact at Float64 resolution, so this measures the engine's own error
+    # growth with J where no closed form is available.
     #
     # Measured worst cases (absolute; and relative, restricted to |d| > 1e-3, where a
     # relative error is meaningful):
@@ -374,17 +457,31 @@ end
     end
 
     # A bare phase e^{iβ} fixes β only modulo 2π, so the branch β ∈ (-π, π] is used.  For β
-    # in that branch the phase and the angle give bitwise identical results, and the same
-    # phase built from β + 2π gives the same answer again -- i.e. the double-cover sign is
-    # lost, exactly as the `dCalculator` docstring says.
-    for J ∈ (1//2, 3//2, 7//2), β ∈ (0.3, 1.1, 2.0, 2.9)
-        # `cis(β)` for β in the branch: bitwise identical to passing the angle itself
-        @test Matrix(d(cis(β), J)[J]) == Matrix(d(β, J)[J])
+    # in that branch the phase and the angle agree to rounding — the half angles are taken
+    # from β directly on one path and reconstructed from the phase on the other, so they may
+    # differ in the last bit — and the same phase built from β + 2π gives the same answer
+    # again, i.e. the double-cover sign is lost, exactly as the `dCalculator` docstring says.
+    # Measured worst differences over a hundred β: 1.3 eps for the phase against the angle,
+    # and for the phase of β + 2π, 10.5 eps against d(β) and 1.5 eps against -d(β + 2π);
+    # `4eps()` and `40eps()` are asserted.
+    for J ∈ (1//2, 3//2, 7//2), β ∈ range(0.03, 3.11; length=100)
+        @test Matrix(d(cis(β), J)[J]) ≈ Matrix(d(β, J)[J]) atol=4eps()
         # `cis(β + 2π)` is the same point of the circle to within rounding, and gives the
         # same d -- with the opposite sign to `d(β + 2π, J)`, which is the information the
-        # bare phase cannot preserve.  Measured difference 4.4e-16; `40eps()` gives ≳ 20.
+        # bare phase cannot preserve.
         @test Matrix(d(cis(β + 2π), J)[J]) ≈ Matrix(d(β, J)[J]) atol=ϵ
         @test Matrix(d(cis(β + 2π), J)[J]) ≈ -Matrix(d(β + 2π, J)[J]) atol=ϵ
+    end
+    # For an integer ℓ both paths form `cis(β)`, so they agree bit for bit
+    for ℓ ∈ (1, 4), β ∈ range(0.03, 3.11; length=20)
+        @test Matrix(d(cis(β), ℓ)[ℓ]) == Matrix(d(β, ℓ)[ℓ])
+    end
+
+    # d(-β) is the transpose of d(β), from the angle exactly, and from the phase, whose branch
+    # contains -β as well, to rounding
+    for J ∈ (1//2, 5//2), β ∈ (0.3, 2.9, 3.1)
+        @test Matrix(d(-β, J)[J]) == transpose(Matrix(d(β, J)[J]))
+        @test Matrix(d(cis(-β), J)[J]) ≈ transpose(Matrix(d(β, J)[J])) atol=4eps()
     end
 
     # A `Rotor` restricts β to [0, π] only, so d sees the same β for R and -R; the
@@ -398,11 +495,11 @@ end
 end
 
 
-@testitem "Half-integer index validation and error messages" begin
+@testitem "Half-integer index validation and error messages" setup=[RefusalChecks] begin
     import Quaternionic: Rotor
     import SphericalFunctions: D, d, DCalculator, dCalculator,
         HCalculator, WignerMatrix, WignerDMatrix, recurrence!,
-        HalfOddInteger, half_integer
+        HalfOddInteger
 
     # Half-integer indices may be spelled as `Rational`s with denominator exactly 2, which
     # the public entry points convert to `HalfOddInteger`.  Everything else must fail loudly,
@@ -410,56 +507,116 @@ end
     𝟙 = Rotor{Float64}(1)
 
     # ℓₘₐₓ must be a half-integer, not an integer-valued Rational and not a Float
-    @test_throws "must have denominator 2" D(𝟙, 3//1)
-    @test_throws "must have denominator 2" d(1.1, 4//2)
-    @test_throws "must have denominator 2" DCalculator(𝟙, 7//3)
+    @test refuses(() -> D(𝟙, 3//1), ArgumentError, "3//1 is a whole number")
+    @test refuses(() -> d(1.1, 4//2), ArgumentError, "2//1 is a whole number")
+    @test refuses(() -> DCalculator(𝟙, 7//3), ArgumentError, "7//3 is neither an integer nor")
     @test_throws MethodError D(𝟙, 3.5)
-    @test_throws "must be non-negative" DCalculator(𝟙, -1//2)
+    @test refuses(() -> DCalculator(𝟙, -1//2), ArgumentError, "must be non-negative")
 
-    # The four block limits must be half-integers of the same type as ℓₘₐₓ
-    @test_throws TypeError DCalculator(𝟙, 7//2; m′ₘₐₓ=1)
-    @test_throws "must have denominator 2" DCalculator(𝟙, 7//2; m′ₘₐₓ=2//1, m′ₘᵢₙ=-2//1)
+    # The four block limits must be half-integers, like ℓₘₐₓ, in either spelling
+    @test refuses(
+        () -> DCalculator(𝟙, 7//2; m′ₘₐₓ=1), ArgumentError,
+        "keyword argument `m′ₘₐₓ` of `DCalculator` must be an index of the same kind"
+    )
+    @test refuses(
+        () -> DCalculator(𝟙, 7//2; m′ₘₐₓ=2//1, m′ₘᵢₙ=-2//1), ArgumentError,
+        "2//1 is a whole number"
+    )
+    @test refuses(
+        () -> DCalculator(𝟙, HalfOddInteger(7//2); mp_max=1), ArgumentError,
+        "keyword argument `mp_max`"
+    )
+    @test DCalculator(𝟙, HalfOddInteger(7//2); m′ₘₐₓ=3//2) isa DCalculator{HalfOddInteger}
+    @test DCalculator(𝟙, 7//2; mp_max=HalfOddInteger(3//2)) isa DCalculator{HalfOddInteger}
 
     # Both rows m′ = ±1/2 are needed to seed the half-integer ladder, so the m′ and m
-    # windows must bracket ±ℓₘᵢₙ
-    @test_throws "too large for this index type" DCalculator(𝟙, 7//2; m′ₘₐₓ=3//2, m′ₘᵢₙ=1//2)
-    @test_throws "too small for this index type" DCalculator(𝟙, 7//2; m′ₘₐₓ=-1//2, m′ₘᵢₙ=-3//2)
-    @test_throws "too large for this index type" DCalculator(𝟙, 7//2; mₘₐₓ=7//2, mₘᵢₙ=1//2)
-    @test_throws "is too large for ℓₘₐₓ" DCalculator(𝟙, 7//2; m′ₘₐₓ=9//2)
+    # windows must bracket ±ℓₘᵢₙ.  (`validate_index_ranges` owns these messages.)
+    small, large = "too small for this index type", "too large for this index type"
+    @test refuses(() -> DCalculator(𝟙, 7//2; m′ₘₐₓ=3//2, m′ₘᵢₙ=1//2), ArgumentError, large)
+    @test refuses(() -> DCalculator(𝟙, 7//2; m′ₘₐₓ=-1//2, m′ₘᵢₙ=-3//2), ArgumentError, small)
+    @test refuses(() -> DCalculator(𝟙, 7//2; mₘₐₓ=7//2, mₘᵢₙ=1//2), ArgumentError, large)
+    @test refuses(() -> DCalculator(𝟙, 7//2; m′ₘₐₓ=9//2), ArgumentError, "is too large for ℓₘₐₓ")
 
     # ...but a legal narrow window is fine, including the narrowest one
     @test DCalculator(𝟙, 7//2; m′ₘₐₓ=1//2, m′ₘᵢₙ=-1//2) isa DCalculator
     @test dCalculator(1.1, 1//2) isa dCalculator
     @test HCalculator(1.1, 1//2; m′ₘₐₓ=1//2) isa HCalculator
 
-    # `recurrence!` rejects the wrong parity of ℓ, and ℓ out of range
+    # `recurrence!` rejects the wrong parity of ℓ, and ℓ out of range, and says what the
+    # calculator's indices are
     calc = DCalculator(𝟙, 5//2)
-    @test_throws InexactError recurrence!(calc, 𝟙, 2)
-    @test_throws "out of bounds" recurrence!(calc, 𝟙, 7//2)
+    parity = "indices are half-odd-integers, like 7//2, so ℓ must be one too"
+    @test refuses(() -> recurrence!(calc, 𝟙, 2), ArgumentError, parity)
+    @test refuses(() -> recurrence!(calc, 𝟙, 7//2), ArgumentError, "out of bounds")
     recurrence!(calc, 𝟙, 5//2)
-    @test_throws "out of bounds" recurrence!(calc, 9//2)
-    @test_throws InexactError recurrence!(calc, 3)
+    @test refuses(() -> recurrence!(calc, 9//2), ArgumentError, "out of bounds")
+    @test refuses(() -> recurrence!(calc, 3), ArgumentError, parity)
+    @test refuses(() -> recurrence!(calc, 1.5), ArgumentError, parity)
+    @test refuses(() -> recurrence!(DCalculator(𝟙, 3), 3//2), ArgumentError, "indices are integers")
 
     # An integer ℓ on a half-integer `WignerSeries` must say so, rather than throwing a bare
     # `InexactError` out of the index arithmetic (or, under `@inbounds`, quietly returning a
     # neighboring block)
     𝔇 = D(𝟙, 7//2)
-    @test_throws "is not one of the ℓ values" 𝔇[2]
-    @test_throws "is not one of the ℓ values" 𝔇[3//1]
+    @test refuses(() -> 𝔇[2], ArgumentError, "indices of this `WignerSeries` are half-odd-integers")
+    @test refuses(() -> 𝔇[3//1], ArgumentError, "3//1 is a whole number")
     @test_throws BoundsError 𝔇[9//2]
     @test 𝔇[5//2] === 𝔇[5//2]
 
-    # Index-type mismatches on a block are a `MethodError`, not a silent conversion
+    # Index-type mismatches on a block are refused with the reason, not converted silently
     block = 𝔇[7//2]
-    @test_throws MethodError block[1, 1]
+    @test refuses(
+        () -> block[1, 1], ArgumentError, "indices of this `WignerMatrix` are half-odd-integers"
+    )
     @test_throws BoundsError block[9//2, 1//2]
     @test_throws BoundsError block[1//2, 9//2]
 
     # The containers apply the same rules as the calculators
-    @test_throws "must have denominator 2" WignerMatrix(zeros(ComplexF64, 3, 3), 1//1)
-    @test_throws TypeError WignerMatrix(zeros(ComplexF64, 3, 3), half_integer(1//2); m′ₘₐₓ=1)
-    @test_throws "must have denominator 2" WignerDMatrix(ComplexF64, 5//3)
+    @test refuses(
+        () -> WignerMatrix(zeros(ComplexF64, 3, 3), 1//1), ArgumentError, "is a whole number"
+    )
+    @test refuses(
+        () -> WignerMatrix(zeros(ComplexF64, 3, 3), HalfOddInteger(1//2); m′ₘₐₓ=1),
+        ArgumentError, "keyword argument `m′ₘₐₓ`"
+    )
+    @test refuses(() -> WignerDMatrix(ComplexF64, 5//3), ArgumentError, "neither an integer nor")
     @test WignerDMatrix(ComplexF64, 5//2) isa WignerMatrix{HalfOddInteger}
+end
+
+
+@testitem "Half-integer Wigner calculator block limits" begin
+    import Quaternionic: Rotor, from_euler_angles
+    import SphericalFunctions: D, d, DCalculator, dCalculator, recurrence!, HalfOddInteger
+
+    # Restricting the block to some rows and columns changes no value: the limited calculator
+    # runs exactly the same operations for the elements it keeps, so every element of a
+    # restricted block, symmetric or not, must equal the full block's bit for bit.  Both rows
+    # m′ = ±1/2 seed the recurrence, so every window brackets them, and the same holds for m.
+    J = 9//2
+    R = Rotor(from_euler_angles(0.7, 1.1, 2.3))
+    β = 1.1
+    fullD = [copy(recurrence!(DCalculator(R, J), ℓ)) for ℓ ∈ 1//2:1:J]
+    fulld = [copy(recurrence!(dCalculator(β, J), ℓ)) for ℓ ∈ 1//2:1:J]
+    for m′ₘᵢₙ ∈ (-J, -3//2, -1//2), m′ₘₐₓ ∈ (1//2, 5//2, J), mₘᵢₙ ∈ (-J, -1//2), mₘₐₓ ∈ (1//2, J)
+        limits = (; m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
+        for (full, calc, series) ∈ (
+            (fullD, DCalculator(R, J; limits...), D(R, J; limits...)),
+            (fulld, dCalculator(β, J; limits...), d(β, J; limits...)),
+        )
+            for (k, ℓ) ∈ enumerate(1//2:1:J)
+                m′r = max(-ℓ, m′ₘᵢₙ):min(ℓ, m′ₘₐₓ)
+                mr = max(-ℓ, mₘᵢₙ):min(ℓ, mₘₐₓ)
+                block = recurrence!(calc, ℓ)
+                @test axes(block) == (m′r, mr)
+                @test all(block[m′, m] == full[k][m′, m] for m′ ∈ m′r, m ∈ mr)
+                @test axes(series[ℓ]) == (m′r, mr)
+                @test all(series[ℓ][m′, m] == full[k][m′, m] for m′ ∈ m′r, m ∈ mr)
+            end
+        end
+    end
+    # The limits may be given as `HalfOddInteger`s, and in their ASCII spellings
+    @test D(R, J; mp_max=HalfOddInteger(5//2), mp_min=-1//2, m_max=1//2, m_min=-J) ==
+        D(R, J; m′ₘₐₓ=5//2, m′ₘᵢₙ=-1//2, mₘₐₓ=1//2, mₘᵢₙ=-J)
 end
 
 
@@ -633,14 +790,14 @@ end
         @test step(r) === 1
         @test length(r) == 6 && lastindex(r) == 6
         @test collect(r) == [h for h ∈ -J:J]
-        @test sprint(show, r) == "-5//2:1:5//2"
-        @test sprint(show, MIME("text/plain"), r) == "-5//2:1:5//2"
-        @test sprint(show, axes(v)) == "(-5//2:1:5//2,)"
-        # ... while the integer axis is exactly what `Base` gives it
+        @test sprint(show, r) == "-5//2:5//2"
+        @test sprint(show, MIME("text/plain"), r) == "-5//2:5//2"
+        @test sprint(show, axes(v)) == "(-5//2:5//2,)"
+        # ... and the integer axis is shown in the same way
         ri = WignerRange(-2:2)
         @test step(ri) === 1 && length(ri) == 5
-        @test sprint(show, ri) == "-2:1:2"
-        @test sprint(show, (ri, ri)) == "(-2:1:2, -2:1:2)"
+        @test sprint(show, ri) == "-2:2"
+        @test sprint(show, (ri, ri)) == "(-2:2, -2:2)"
         # Both are indexed by position, so their own axes are 1-based, and broadcasting a
         # function over one maps its values rather than mis-reading them as positions
         @test axes(ri) == (Base.OneTo(5),) && axes(r) == (Base.OneTo(6),)

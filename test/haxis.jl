@@ -1,10 +1,10 @@
-@testitem "HAxis" setup=[EncodeDecode] begin
-    using SphericalFunctions: HAxis, Nᵣ, ℓ, ℓₘᵢₙ, maxℓ, m′ₘᵢₙ, m′ₘₐₓ, mₘᵢₙ, mₘₐₓ, half_integer
+@testitem "HAxis" setup=[EncodeDecode, RefusalChecks] begin
+    using SphericalFunctions: HAxis, Nᵣ, ℓ, ℓₘᵢₙ, maxℓ, m′ₘᵢₙ, m′ₘₐₓ, mₘᵢₙ, mₘₐₓ, HalfOddInteger
     using .EncodeDecode: encode, decode
 
-    # HAxis stores only the m′=ℓₘᵢₙ axis (0 or 1/2), with m ranging from ℓₘᵢₙ to ℓₘₐₓ.
-    # The data layout is: [value for iᵣ ∈ 1:Nᵣ, m ∈ ℓₘᵢₙ:ℓₘₐₓ]
-    # We want inner loop over iᵣ, outer loop over m for vectorization.
+    # HAxis stores only the m′=ℓₘᵢₙ axis (0 or 1/2), with m ranging from ℓₘᵢₙ to ℓₘₐₓ.  The
+    # data layout is `[value for iᵣ ∈ 1:Nᵣ, m ∈ ℓₘᵢₙ:ℓₘₐₓ]`.  We want inner loop over iᵣ,
+    # outer loop over m for vectorization.
     
     function fill_1index!(h::HAxis{IT}) where {IT}
         let Nᵣ = Nᵣ(h), ℓ = ℓ(h), ℓₘᵢₙ = ℓₘᵢₙ(IT)
@@ -74,7 +74,7 @@
     end
 
     # Test both integer and half-integer ℓ
-    for ℓₘₐₓ ∈ (5, half_integer(9//2))  # an `Int` and a `HalfOddInteger`
+    for ℓₘₐₓ ∈ (5, HalfOddInteger(9//2))  # an `Int` and a `HalfOddInteger`
         for Nᵣ ∈ (1, 2, 3, 7)
             IT = typeof(ℓₘₐₓ)
             RT = Float64
@@ -97,12 +97,20 @@
             expected_length = Nᵣ * (Int(ℓₘₐₓ - ℓₘᵢₙ(IT)) + 1)
             @test length(h.parent) == expected_length
 
+            # The axes are those of the two-index form `h[iᵣ, m]`, while `length` and `size(h)`
+            # count the flat storage
+            @test axes(h) == (1:Nᵣ, ℓₘᵢₙ(IT):ℓₘᵢₙ(IT))
+            @test (size(h, 1), size(h, 2), size(h, 3)) == (Nᵣ, 1, 1)
+            @test length(h) == expected_length
+
             # Test changing ℓ
             for new_ell in (ℓₘᵢₙ(IT):ℓₘₐₓ)
                 h.ℓ = new_ell
                 @test h.ℓ == new_ell
                 @test ℓ(h) == new_ell
                 @test mₘₐₓ(h) == new_ell  # mₘₐₓ should track current ℓ
+                @test axes(h, 2) == ℓₘᵢₙ(IT):new_ell
+                @test size(h, 2) == Int(new_ell - ℓₘᵢₙ(IT)) + 1
 
                 # Test all three indexing methods (1D, 2D, 3D)
                 fill_1index!(h)
@@ -135,12 +143,16 @@
             end
 
             # Test error conditions for changing ℓ
-            @test_throws "greater than maxℓ" h.ℓ = ℓₘₐₓ + 1
-            @test_throws "less than ℓₘᵢₙ" h.ℓ = ℓₘᵢₙ(IT) - 1
-            
+            @test refuses(() -> h.ℓ = ℓₘₐₓ + 1, ArgumentError, "greater than maxℓ")
+            @test refuses(() -> h.ℓ = ℓₘᵢₙ(IT) - 1, ArgumentError, "less than ℓₘᵢₙ")
+            other = IT <: Integer ? HalfOddInteger(1//2) : 1
+            @test refuses(() -> h.ℓ = other, ArgumentError, "they must be the same")
+
             # Test that we can't change other properties
-            @test_throws "only `ℓ` is allowed to be changed" h.Nᵣ = 10
-            @test_throws "only `ℓ` is allowed to be changed" h.maxℓ = ℓₘₐₓ + 1
+            @test refuses(() -> h.Nᵣ = 10, ArgumentError, "only `ℓ` is allowed to be changed")
+            @test refuses(
+                () -> h.maxℓ = ℓₘₐₓ + 1, ArgumentError, "only `ℓ` is allowed to be changed"
+            )
         end
     end
 end

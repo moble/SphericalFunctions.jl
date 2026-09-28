@@ -2,17 +2,17 @@
 #
 #     [ f(ℓ, m) for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ for m ∈ -ℓ:ℓ ],
 #
-# provided by `Ysize`, `Yindex` and `Yrange`.  The oracle is that ordering itself, enumerated
-# directly by the local helper `ℓmpairs(ℓₘᵢₙ, ℓₘₐₓ)`: `Ysize` must be its length, `Yrange`
-# must be the list, and `Yindex(ℓ, m, ℓₘᵢₙ)` must be the 1-based position of `(ℓ, m)` in it.
-# The enumeration shares no code with the closed forms under test, so it is an independent
-# reference; the structural invariants of the ordering (first pair at index 1, consecutive
-# pairs at consecutive indices, last pair at index `Ysize`) are checked as well.
+# provided by `Ysize`, `Yindex` and `Yrange`.  The oracle is that ordering itself,
+# enumerated directly by the local helper `ℓmpairs(ℓₘᵢₙ, ℓₘₐₓ)`: `Ysize` must be its length,
+# `Yrange` must be the list, and `Yindex(ℓ, m, ℓₘᵢₙ)` must be the 1-based position of `(ℓ,
+# m)` in it.  The enumeration shares no code with the closed forms under test, so it is an
+# independent reference; the structural invariants of the ordering (first pair at index 1,
+# consecutive pairs at consecutive indices, last pair at index `Ysize`) are checked as well.
 #
 # The item names use an "Indexing: " prefix so that they are distinguishable — to a human
 # reading a results list, and to the name filters of `juliati` and the MCP runner — from the
-# v2 items, which were also named `Ysize`, `Yindex` and `Yrange`.  Those items are gone with
-# the `Deprecated` module, but the prefix is kept: the names are what people filter on.
+# other items whose names mention `Ysize`, `Yindex` and `Yrange`, such as those in
+# `test/bounds.jl`.
 
 @testitem "Indexing: Ysize" begin
     import SphericalFunctions: Ysize
@@ -42,9 +42,9 @@
         @test Ysize(ℓₘₐₓ) == length(ℓmpairs(0, ℓₘₐₓ))
     end
 
-    # A size can never be negative (GitHub issue #52).  The bare formula (ℓₘₐₓ+1)² - ℓₘᵢₙ²,
-    # which is what v2 returned, goes negative whenever ℓₘᵢₙ > ℓₘₐₓ + 1, even though the
-    # ordering it is meant to count is simply empty there; v3 throws instead ...
+    # A size can never be negative (GitHub issue #52).  The bare formula (ℓₘₐₓ+1)² - ℓₘᵢₙ²
+    # goes negative whenever ℓₘᵢₙ > ℓₘₐₓ + 1, even though the ordering it is meant to count
+    # is simply empty there; `Ysize` throws instead ...
     @test (0 + 1)^2 - 3^2 < 0
     @test isempty(ℓmpairs(3, 0))
     @test_throws ArgumentError Ysize(3, 0)
@@ -55,7 +55,8 @@
     for ℓₘₐₓ in -4:-2
         @test_throws ArgumentError Ysize(ℓₘₐₓ)
     end
-    # ... and also rejects a negative ℓₘᵢₙ, even where the formula would give a positive number
+    # ... and also rejects a negative ℓₘᵢₙ, even where the formula would give a positive
+    # number
     for ℓₘᵢₙ in -3:-1, ℓₘₐₓ in -1:6
         @test_throws ArgumentError Ysize(ℓₘᵢₙ, ℓₘₐₓ)
     end
@@ -63,22 +64,46 @@
     @test_throws "ℓₘₐₓ" Ysize(3, 0)
     @test_throws "ℓₘᵢₙ" Ysize(-1, 3)
 
-    # Narrower integer types, alone or mixed, give the same numbers; (10+1)² = 121 fits in Int8
-    for IT in (Int8, Int32)
-        for ℓₘᵢₙ in 0:6, ℓₘₐₓ in ℓₘᵢₙ-1:10
-            @test Ysize(IT(ℓₘᵢₙ), IT(ℓₘₐₓ)) == length(ℓmpairs(ℓₘᵢₙ, ℓₘₐₓ))
-            @test Ysize(IT(ℓₘᵢₙ), IT(ℓₘₐₓ)) == Ysize(ℓₘᵢₙ, ℓₘₐₓ)
-            @test Ysize(IT(ℓₘᵢₙ), IT(ℓₘₐₓ)) isa Integer
-            @test Ysize(IT(ℓₘᵢₙ), ℓₘₐₓ) == Ysize(ℓₘᵢₙ, ℓₘₐₓ)
-            @test Ysize(ℓₘᵢₙ, IT(ℓₘₐₓ)) == Ysize(ℓₘᵢₙ, ℓₘₐₓ)
+    # The result is an `Int`
+    @test Ysize(2, 5) === 32
+    @test Ysize(5) === 36
+end
+
+
+@testitem "Indexing: integer indices must be `Int`s" begin
+    import SphericalFunctions: Ysize, Yindex, Yrange
+
+    # Every other integer type is refused rather than converted, with a sentence saying why:
+    # the index arithmetic is not closed under it.  In `Int8`, for example, ℓₘᵢₙ² wraps for
+    # ℓₘᵢₙ ≥ 12, so that `Ysize(Int8(12), Int8(13))` would be 308 rather than 52, and in an
+    # unsigned type ℓₘᵢₙ - 1 wraps at ℓₘᵢₙ = 0.
+    narrow = "narrower than `Int`, and index arithmetic such as `ℓ^2` overflows in it"
+    unsigned = "is unsigned, and index arithmetic such as `-m` and `ℓ - 1` wraps around in it"
+    wide = "is wider than `Int`"
+    for (IT, sentence) in (
+        (Int8, narrow), (Int16, narrow), (Int32, narrow),
+        (UInt8, unsigned), (UInt, unsigned), (Int128, wide), (BigInt, wide),
+    )
+        for args in ((IT(12), IT(13)), (IT(0), IT(3)), (IT(3),), (IT(0),))
+            @test_throws ArgumentError Ysize(args...)
+            @test_throws sentence Ysize(args...)
+            @test_throws sentence Yrange(args...)
         end
-        for ℓₘₐₓ in -1:10
-            @test Ysize(IT(ℓₘₐₓ)) == Ysize(ℓₘₐₓ)
-        end
-        @test_throws ArgumentError Ysize(IT(3), IT(1))
-        @test_throws ArgumentError Ysize(IT(-1), IT(3))
-        @test_throws ArgumentError Ysize(IT(-2))
+        @test_throws sentence Yindex(IT(12), IT(0), IT(12))
+        @test_throws sentence Yindex(IT(2), IT(1))
+        # ... alone or mixed with `Int`s, and the message names the argument
+        @test_throws sentence Ysize(0, IT(3))
+        @test_throws sentence Yindex(2, IT(1), 0)
+        @test_throws "m = $(repr(IT(1)))::$IT" Yindex(2, IT(1), 0)
+        @test_throws "convert it with `Int`" Ysize(IT(0), 3)
     end
+    @test_throws "A `Bool` is not an index" Ysize(false, true)
+    @test_throws "A `Bool` is not an index" Yindex(true, false)
+    # The `Int` spelling of the same indices gives the right answers
+    @test Ysize(12, 13) == 52
+    @test Yindex(12, -12, 12) == 1
+    @test Yindex(12, 0, 12) == 13
+    @test Ysize(0, 3) == 16 && Ysize(3) == 16
 end
 
 
@@ -131,18 +156,9 @@ end
         @test indices == 1:length(ℓmpairs(ℓₘᵢₙ, ℓₘₐₓ))
     end
 
-    # Narrower integer types, alone or mixed; ℓ ≤ 10 keeps every index within Int8
-    for IT in (Int8, Int32)
-        for ℓₘᵢₙ in 0:4
-            position = positions(ℓₘᵢₙ, 10)
-            for ℓ in ℓₘᵢₙ:10, m in -ℓ:ℓ
-                @test Yindex(IT(ℓ), IT(m), IT(ℓₘᵢₙ)) == position[(ℓ, m)]
-                @test Yindex(IT(ℓ), IT(m), IT(ℓₘᵢₙ)) == Yindex(ℓ, m, ℓₘᵢₙ)
-                @test Yindex(IT(ℓ), IT(m)) == Yindex(ℓ, m)
-                @test Yindex(IT(ℓ), m, ℓₘᵢₙ) == Yindex(ℓ, m, ℓₘᵢₙ)
-            end
-        end
-    end
+    # The index is an `Int`
+    @test Yindex(3, -2) === 11
+    @test Yindex(3, -2, 1) === 10
 end
 
 
@@ -184,18 +200,11 @@ end
         @test Yrange(ℓₘₐₓ) == ℓmpairs(0, ℓₘₐₓ)
     end
 
-    # Narrower integer types
-    for IT in (Int8, Int32)
-        for ℓₘᵢₙ in 0:3, ℓₘₐₓ in ℓₘᵢₙ-1:10
-            r = Yrange(IT(ℓₘᵢₙ), IT(ℓₘₐₓ))
-            @test r == Yrange(ℓₘᵢₙ, ℓₘₐₓ)
-            @test r == ℓmpairs(ℓₘᵢₙ, ℓₘₐₓ)
-            @test length(r) == Ysize(IT(ℓₘᵢₙ), IT(ℓₘₐₓ))
-        end
-        @test Yrange(IT(5)) == Yrange(5)
-    end
+    # The pairs are of `Int`s, and the element type is the same for the empty range
+    @test Yrange(0, 5) isa Vector{Tuple{Int, Int}}
+    @test Yrange(3, 2) isa Vector{Tuple{Int, Int}}
+    @test Yrange(-1) isa Vector{Tuple{Int, Int}}
 end
-
 
 # The half-integer items below repeat the checks above for half-odd indices.  The oracle is
 # again the ordering itself, but enumerated in `Rational` arithmetic — a `UnitRange` of
@@ -287,8 +296,8 @@ end
         end
     end
 
-    # The structural invariants of the ordering, as in the integer item: first pair at
-    # index 1, consecutive pairs at consecutive indices, the ℓ block ending at Ysize(ℓₘᵢₙ, ℓ)
+    # The structural invariants of the ordering, as in the integer item: first pair at index
+    # 1, consecutive pairs at consecutive indices, the ℓ block ending at Ysize(ℓₘᵢₙ, ℓ)
     for ℓₘᵢₙ in 1//2:ℓₘₐₓ
         @test Yindex(ℓₘᵢₙ, -ℓₘᵢₙ, ℓₘᵢₙ) == 1
         for ℓ in ℓₘᵢₙ:ℓₘₐₓ
@@ -373,8 +382,9 @@ end
     @test Yrange(5//2) == Yrange(h(5//2))
 
     # Mixing an integer index with a half-odd one is refused, with a message that names both
-    # spellings and the offending values, rather than with a bare `MethodError`
-    msg = "all be integers, like 3, or all be half-odd-integers, like 7//2"
+    # spellings and says which arguments are of which kind, rather than with a bare
+    # `MethodError`
+    msg = "must all be integers of type `Int`, like 3, or all be half-odd-integers"
     @test_throws ArgumentError Ysize(0, 7//2)
     @test_throws msg Ysize(0, 7//2)
     @test_throws msg Ysize(7//2, 0)
@@ -384,26 +394,38 @@ end
     @test_throws msg Yindex(1, h(1//2))
     @test_throws msg Yrange(0, 7//2)
     @test_throws msg Yrange(1//2, 7)
-    @test_throws "got 0, 7//2" Ysize(0, 7//2)
+    @test_throws "and so mixes integers (ℓₘᵢₙ) with half-odd-integers (ℓₘₐₓ)" Ysize(0, 7//2)
+    @test_throws "and so mixes integers (ℓₘₐₓ) with half-odd-integers (ℓₘᵢₙ)" Yrange(1//2, 7)
+    @test_throws "and so mixes integers (ℓₘᵢₙ) with half-odd-integers (ℓ, m)" Yindex(3//2, 1//2, 0)
+    @test_throws "ℓₘₐₓ = 7//2::Rational{Int64}" Ysize(0, 7//2)
+    @test_throws "call to `Yrange`" Yrange(0, 7//2)
 
-    # A `Rational` with denominator 1 is not accepted as a spelling of an integer index.
-    # `half_integer` rejects every `Rational` whose denominator is not 2, as it does at the
-    # Wigner constructors, so an integer index is spelled as an `Integer`; this is
-    # deliberate, and the message says what was expected
-    @test_throws "must have denominator 2" Ysize(3//1)
-    @test_throws "must have denominator 2" Ysize(0//1, 3//1)
-    @test_throws "must have denominator 2" Yindex(3//1, 1//1)
-    @test_throws "must have denominator 2" Yindex(3//1, 1//1, 0//1)
-    @test_throws "must have denominator 2" Yrange(3//1)
-    @test_throws "must have denominator 2" Yrange(0//1, 3//1)
+    # A `Rational` with denominator 1 is not accepted as a spelling of an integer index, as
+    # at every function that takes indices: an integer index is spelled as an `Int`.  This
+    # is deliberate, and the message says how to write it
+    @test_throws ArgumentError Ysize(3//1)
+    @test_throws "3//1 is a whole number; write it as the integer 3" Ysize(3//1)
+    @test_throws "3//1 is a whole number; write it as the integer 3" Ysize(0//1, 3//1)
+    @test_throws "3//1 is a whole number; write it as the integer 3" Yindex(3//1, 1//1)
+    @test_throws "1//1 is a whole number; write it as the integer 1" Yindex(3//1, 1//1, 0//1)
+    @test_throws "3//1 is a whole number; write it as the integer 3" Yrange(3//1)
+    @test_throws "0//1 is a whole number; write it as the integer 0" Yrange(0//1, 3//1)
     # ... as are the other denominators
-    @test_throws "must have denominator 2" Ysize(1//2, 5//3)
-    @test_throws "must have denominator 2" Yindex(1//2, 1//4)
+    @test_throws "5//3 is neither an integer nor a half-odd-integer" Ysize(1//2, 5//3)
+    @test_throws "1//4 is neither an integer nor a half-odd-integer" Yindex(1//2, 1//4)
+    # ... and a half-odd-integer whose integer type is not `Int`, which would otherwise do
+    # its arithmetic in that type
+    rational_int8 = "`Rational{Int8}` is not `Rational{Int}`; write the value with `Int`s, as 7//2"
+    @test_throws rational_int8 Ysize(Int8(1)//Int8(2), Int8(7)//Int8(2))
+    @test_throws "`Rational{BigInt}` is not `Rational{Int}`" Ysize(big(7)//2)
+    @test_throws "`Rational{Int32}` is not `Rational{Int}`" Yindex(Int32(3)//Int32(2), 1//2)
+    @test_throws "`Rational{UInt8}` is not `Rational{Int}`" Yrange(UInt8(7)//UInt8(2))
 end
 
 
-@testitem "Indexing: half-integer arithmetic stays in `Int`" begin
+@testitem "Indexing: half-integer arithmetic stays in `Int`" setup=[InferenceChecks] begin
     import SphericalFunctions: Ysize, Yindex, Yrange, HalfOddInteger
+    import .InferenceChecks: dynamic_calls
     using Test: @inferred
 
     # The closed forms on `HalfOddInteger` arguments infer to `Int`, through every method
@@ -431,11 +453,49 @@ end
         @test !occursin("Rational", ir)
     end
 
-    # The integer path is untouched
+    # The integer path is the bare formula: an `Int` call reaches the `Int` method directly,
+    # and nothing in it is called at run time
     @test @inferred(Ysize(2, 5)) === 32
     @test @inferred(Yindex(3, -2)) === 11
+    @test @inferred(Yrange(0, 2)) isa Vector{Tuple{Int, Int}}
     @test Base.return_types(Ysize, (Int, Int)) == [Int]
+    @test Base.return_types(Ysize, (Int,)) == [Int]
     @test Base.return_types(Yindex, (Int, Int, Int)) == [Int]
+    @test Base.return_types(Yindex, (Int, Int)) == [Int]
+    @test Base.return_types(Yrange, (Int, Int)) == [Vector{Tuple{Int, Int}}]
+    for (f, sig) in ((Yindex, (Int, Int)), (Yindex, (Int, Int, Int)), (Yindex, (H, H, H)))
+        @test dynamic_calls(f, sig) == 0
+        code = only(Base.code_typed(f, sig; optimize=true)).first.code
+        @test !any(ex -> Meta.isexpr(ex, :invoke), code)
+    end
+
+    # A call that is refused is known to be refused from the argument types alone
+    for sig in ((Int8, Int8), (Int, H), (Int, Q), (UInt, Int), (Rational{Int8}, Q), (Bool,))
+        @test Base.return_types(Ysize, sig) == [Union{}]
+    end
+    @test Base.return_types(Yindex, (Int, Int, Int8)) == [Union{}]
+    @test Base.return_types(Yindex, (H, Int)) == [Union{}]
+end
+
+@testitem "Indexing: Yindex allocates nothing in a loop" begin
+    import SphericalFunctions: Yindex, HalfOddInteger
+
+    # `Yindex` is called in the inner loops of the package, for either kind of index.
+    # Measured inside a function, never at top level, where the result is meaningless.
+    function total(ℓₘₐₓ, ℓₘᵢₙ)
+        s = 0
+        for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ, m ∈ -ℓ:ℓ
+            s += Yindex(ℓ, m, ℓₘᵢₙ) + Yindex(ℓ, m)
+        end
+        s
+    end
+    allocations(ℓₘₐₓ, ℓₘᵢₙ) = @allocated total(ℓₘₐₓ, ℓₘᵢₙ)
+    for (ℓₘₐₓ, ℓₘᵢₙ) ∈ ((100, 0), (100, 3), (HalfOddInteger(201//2), HalfOddInteger(1//2)))
+        allocations(ℓₘₐₓ, ℓₘᵢₙ)  # warm up
+        @test allocations(ℓₘₐₓ, ℓₘᵢₙ) == 0
+    end
+    n = Yindex(100, 100)
+    @test total(100, 0) == n * (n + 1)
 end
 
 @testitem "Indexing: Yrange refuses what Ysize refuses" begin
@@ -465,8 +525,8 @@ end
     import SphericalFunctions: Ysize, Yrange
 
     # The length of the ordering is known in closed form, so the vector is allocated once,
-    # at its final size, rather than grown pair by pair.  Measured inside a function, never at
-    # top level, where the result is meaningless.
+    # at its final size, rather than grown pair by pair.  Measured inside a function, never
+    # at top level, where the result is meaningless.
     allocations(ℓₘᵢₙ, ℓₘₐₓ) = @allocated Yrange(ℓₘᵢₙ, ℓₘₐₓ)
     for (ℓₘᵢₙ, ℓₘₐₓ) ∈ ((0, 200), (3, 150), (1//2, 401//2))
         allocations(ℓₘᵢₙ, ℓₘₐₓ)  # warm up

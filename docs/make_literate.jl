@@ -9,20 +9,27 @@ skip_input_files = (  # Non-.jl files will be skipped anyway
 )
 literate_input = joinpath(@__DIR__, "literate_input")
 
-# Ensure a file is listed in the .gitignore file.  The argument is a full path; the entry is
-# written relative to the package root with `/` separators, which is what git expects on
-# every platform.
-function ensure_in_gitignore(full_path)
-    file_path = join(splitpath(relpath(full_path, package_root)), "/")
-    gitignore_path = joinpath(package_root, ".gitignore")
-    if isfile(gitignore_path)
-        existing_entries = readlines(gitignore_path)
-        if file_path in existing_entries
-            return  # File is already listed
-        end
-    end
-    open(gitignore_path, "a") do io
-        write(io, file_path * "\n")
+# The directories of `docs/src` that hold only generated pages.  The `.gitignore` file
+# ignores both of them as a whole, so nothing written here is ever tracked.
+generated_dirs = (
+    joinpath(docs_src_dir, "30-conventions", "10-comparisons"),
+    joinpath(docs_src_dir, "30-conventions", "20-calculations"),
+)
+
+# A page left behind by a Literate script that has since been renamed or deleted would
+# still be listed in the navigation, because `make.jl` lists every Markdown file in these
+# directories.  So each Markdown file without a source in `literate_input` is removed
+# before the pages are generated.  The LALSuite source page is generated from a `.c` file,
+# below.
+for dir ∈ generated_dirs
+    isdir(dir) || continue
+    sourcedir = joinpath(literate_input, relpath(dir, docs_src_dir))
+    for file ∈ readdir(dir)
+        endswith(file, ".md") || continue
+        file == "lalsuite_SphericalHarmonics.md" && continue
+        isfile(joinpath(sourcedir, splitext(file)[1] * ".jl")) && continue
+        @info "Removing $(joinpath(relpath(dir, docs_src_dir), file)), which has no Literate source"
+        rm(joinpath(dir, file))
     end
 end
 
@@ -40,8 +47,6 @@ function generate_markdown(inputfile)
     # `literate_input`, so that the checkout's own path — often ending in
     # `SphericalFunctions.jl` — is never rewritten.
     outputdir = joinpath(docs_src_dir, dirname(relpath(inputfile, literate_input)))
-    # Ensure the output path is in .gitignore
-    ensure_in_gitignore(joinpath(outputdir, splitext(basename(inputfile))[1] * ".md"))
     # Generate the markdown file calling Literate
     Literate.markdown(inputfile, outputdir; documenter, mdstrings, execute)
 end
@@ -62,14 +67,10 @@ end
 # Make "lalsuite_SphericalHarmonics.c" available in the docs
 let
     inputfile = joinpath(literate_input, "30-conventions", "10-comparisons", "lalsuite_SphericalHarmonics.c")
-    outputfile = joinpath(docs_src_dir, "30-conventions", "10-comparisons", "lalsuite_SphericalHarmonics.c")
-    ensure_in_gitignore(joinpath(dirname(outputfile), "lalsuite_SphericalHarmonics.md"))
-    lalsource = read(
-        joinpath(literate_input, "30-conventions", "10-comparisons", "lalsuite_SphericalHarmonics.c"),
-        String
-    )
+    outputfile = joinpath(docs_src_dir, "30-conventions", "10-comparisons", "lalsuite_SphericalHarmonics.md")
+    lalsource = read(inputfile, String)
     write(
-        joinpath(docs_src_dir, "30-conventions", "10-comparisons", "lalsuite_SphericalHarmonics.md"),
+        outputfile,
         "# LALSuite: Spherical Harmonics original source code\n"
         * "The official repository is [here]("
         * "https://git.ligo.org/lscsoft/lalsuite/-/blob/22e4cd8fff0487c7b42a2c26772ae9204c995637/lal/lib/utilities/SphericalHarmonics.c"

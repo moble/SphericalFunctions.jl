@@ -51,6 +51,7 @@ against the `Quaternionic` and `SphericalFunctions` package.
 
 using TestItems: @testitem  #hide
 @testitem "Whittaker conventions" setup=[ConventionsSetup, Utilities] begin  #hide
+import .Utilities: αβγrange, v̂range  #hide
 
 module Whittaker
 #+
@@ -234,10 +235,8 @@ function YÔK(θ, ϕ, ψ)
 end
 function zÔZ(θ, ϕ, ψ)
     OZ = 𝐤
-    let OK=OK(θ, ϕ, ψ)
-        Oz = eulerian_rotation(θ, ϕ, ψ)(OZ)
-        acos(clamp(Oz ⋅ OZ, -1, 1))
-    end
+    Oz = eulerian_rotation(θ, ϕ, ψ)(OZ)
+    acos(clamp(Oz ⋅ OZ, -1, 1))
 end
 function yÔK(θ, ϕ, ψ)
     OY = 𝐣
@@ -295,10 +294,9 @@ end  #module Whittaker
 # not a unit vector, and `acos(l ⋅ Ox)` is just `acos(cos(α))`.  So we start from a sampling
 # of unit vectors — the axes and their negatives, and random directions — measure the angle
 # each makes with the three axes, and check that `line` rebuilds the vector from those
-# angles.  (The `Utilities` function `v̂range` supplies the vectors, and needs the names
-# imported here.)
-import Quaternionic: Quaternionic, QuatVec, 𝐢, 𝐣, 𝐤, ⋅
-for v̂ ∈ v̂range(Float64)
+# angles.  (The `Utilities` function `v̂range` supplies the vectors.)
+import Quaternionic: Quaternionic, ⋅
+for v̂ ∈ v̂range(rng, Float64)
     α, β, γ = acos(v̂ ⋅ Whittaker.Ox), acos(v̂ ⋅ Whittaker.Oy), acos(v̂ ⋅ Whittaker.Oz)
     @test Whittaker.line(α, β, γ) ≈ v̂ atol=ϵₐ rtol=ϵᵣ
 end
@@ -348,8 +346,8 @@ const ϕθψrange = αβγrange
 
 # First, we test that the rotation as we've implemented it does correspond to the Euler
 # rotation implemented by `Quaternionic`:
-for (ϕ,θ,ψ) ∈ ϕθψrange()
-    @test Whittaker.eulerian_rotation(θ, ϕ, ψ) ≈ Quaternionic.from_euler_angles(ϕ, θ, ψ)
+for (ϕ,θ,ψ) ∈ ϕθψrange(rng)
+    @test Whittaker.eulerian_rotation(θ, ϕ, ψ) ≈ Quaternionic.from_euler_angles(ϕ, θ, ψ) atol=ϵₐ rtol=ϵᵣ
 end
 #+
 
@@ -362,7 +360,7 @@ avoid_poles = √(eps(Float64))
 # Also, because we have to use "direction angles" again, we need to ensure that ϕ and ψ
 # are in ``[-π, π]``, so we just subtract ``π`` from each to use the usual generator, and
 # only test that the absolute values of those two angles are correct:
-for (ϕ,θ,ψ) ∈ ϕθψrange(;avoid_poles)
+for (ϕ,θ,ψ) ∈ ϕθψrange(rng; avoid_poles)
     ϕ = ϕ - π
     ψ = ψ - π
     @test Whittaker.YÔK(θ, ϕ, ψ) ≈ abs(ϕ) atol=√ϵₐ rtol=√ϵᵣ
@@ -373,7 +371,7 @@ end
 
 # Now, we'll test that the rotated axes project onto the fixed axes according to Whittaker's
 # table of direction-cosines:
-for (ϕ,θ,ψ) ∈ ϕθψrange()
+for (ϕ,θ,ψ) ∈ ϕθψrange(rng)
     X = Whittaker.Ox
     Y = Whittaker.Oy
     Z = Whittaker.Oz
@@ -396,7 +394,7 @@ end
 #
 # Finally, we can just test that the quaternion components Whittaker derived are the
 # components we've been using.
-for (ϕ,θ,ψ) ∈ ϕθψrange()
+for (ϕ,θ,ψ) ∈ ϕθψrange(rng)
     R₁ = Whittaker.eulerian_rotation(θ, ϕ, ψ)
     R₂ = Whittaker.quaternion_from_eulerian(θ, ϕ, ψ)
     @test R₁ ≈ R₂ atol=ϵₐ rtol=ϵᵣ

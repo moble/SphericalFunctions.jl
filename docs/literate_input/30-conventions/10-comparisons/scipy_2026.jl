@@ -60,13 +60,14 @@ the argument order and naming, the two functions agree.  SciPy does not provide 
 
 We begin by writing code that implements the formulas from the SciPy documentation.  We
 encapsulate the formulas in a module so that we can test them against the
-`SphericalFunctions` package.  A second test — which is skipped by default because it needs
-a Python installation, and is run by the scheduled CI workflow — calls the actual SciPy
-function through `PythonCall`.
+`SphericalFunctions` package.  A second test, which needs a Python installation, calls the
+actual SciPy function through `PythonCall`; `Pkg.test` runs it only on request, and the
+scheduled CI workflow requests it.
 """
 
 using TestItems: @testitem  #hide
 @testitem "SciPy conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
+import .Utilities: θϕrange  #hide
 
 module SciPy
 #+
@@ -116,16 +117,17 @@ end  # module SciPy
 #+
 
 # We only test up to
-ℓₘₐₓ = 4
+ℓₘₐₓ = 6
 #+
-# because the formulas are slow, and this will be sufficient to sort out any sign or
-# normalization differences, which are the most likely source of error.
+# because the symbolic derivatives in the formulas become expensive to compute at higher
+# orders, and this will be sufficient to sort out any sign or normalization differences,
+# which are the most likely source of error.
 
 # `sph_harm_y` agrees with ours, and the legacy `sph_harm` agrees with `sph_harm_y` once the
 # arguments are reordered:
-for (θ, ϕ) ∈ θϕrange(Float64, 7)
-    for (ℓ, m) ∈ ℓmrange(ℓₘₐₓ)
-        @test SciPy.sph_harm_y(ℓ, m, θ, ϕ) ≈ ConventionsUtilities.Y(ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+for (θ, ϕ) ∈ θϕrange(rng, Float64, 7)
+    for (ℓ, Yˡ) ∈ SphericalFunctions.YlmCalculator(θ, ϕ, ℓₘₐₓ), m ∈ -ℓ:ℓ
+        @test SciPy.sph_harm_y(ℓ, m, θ, ϕ) ≈ Yˡ[m] atol=ϵₐ rtol=ϵᵣ
         @test SciPy.sph_harm(m, ℓ, ϕ, θ) ≈ SciPy.sph_harm_y(ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
     end
 end
@@ -141,22 +143,24 @@ md"""
 
 The test above implements the *documented* formula.  To make sure the documentation matches
 the code, the following test calls `scipy.special.sph_harm_y` itself, via `PythonCall`.  It
-is tagged `:python` (and `:skipci`) so that it runs only when explicitly requested — e.g.,
-with `julia --project=. scripts/test.jl :python` — or in the scheduled CI workflow, which
-installs SciPy through `CondaPkg`.
+is tagged `:python` (and `:skipci`), so that `Pkg.test` and `scripts/test.jl` run it only
+when that tag is requested — e.g., with `julia --project=. scripts/test.jl :python`, as the
+scheduled CI workflow does, installing SciPy through `CondaPkg`.  Other test-item runners
+run it unless it is filtered out, e.g., with `juliati --filter '!(:python in tags)'`.
 """
 
 @testitem "SciPy cross-check" tags=[:python, :skipci] setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
 using PythonCall
+import .Utilities: θϕrange  #hide
 special = pyimport("scipy.special")
 scipy_version = pyconvert(String, pyimport("scipy").__version__)
 @info "Cross-checking against SciPy version $scipy_version"
 ϵₐ = 100eps()
 ϵᵣ = 1000eps()
-for (θ, ϕ) ∈ θϕrange(Float64, 7)
-    for (ℓ, m) ∈ ℓmrange(6)
+for (θ, ϕ) ∈ θϕrange(rng, Float64, 7)
+    for (ℓ, Yˡ) ∈ SphericalFunctions.YlmCalculator(θ, ϕ, 6), m ∈ -ℓ:ℓ
         Y_scipy = pyconvert(ComplexF64, pybuiltins.complex(special.sph_harm_y(ℓ, m, θ, ϕ)))
-        @test Y_scipy ≈ ConventionsUtilities.Y(ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+        @test Y_scipy ≈ Yˡ[m] atol=ϵₐ rtol=ϵᵣ
     end
 end
 end  #hide

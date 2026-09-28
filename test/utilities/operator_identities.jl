@@ -1,10 +1,11 @@
 # Tests of the parts of `src/utilities/operators.jl` that compute no numbers.
 #
-# `test/operators.jl` and `test/utilities/explicit_operators.jl` check what the operators
-# compute.  What neither checks is that each operator can say what it *is*: its name, how it
-# prints, how it shifts the spin weight, and which band of the matrix it occupies.  Those are
-# the small dispatch tables at the top of the file, and they are what a user sees when an
-# operator turns up in an error message or at the REPL.
+# `test/operators.jl` checks what the operators compute, with the help of the explicit
+# derivatives in `test/utilities/explicit_operators.jl`.  The items here check what each
+# operator *is*: a singleton value with its own name and display, its shift of the spin weight,
+# the band of the matrix it occupies, its ASCII alias, and its documentation.  Those are the
+# small dispatch tables at the top of the file, and they are what a user sees when an operator
+# turns up in an error message or at the REPL.
 
 @testitem "Differential operators: names, display and spin shift" begin
     import SphericalFunctions: DifferentialOperator, Δspin, bandstructure, coefftype
@@ -16,15 +17,23 @@
 
     for (op, nm) ∈ zip(operators, names)
         @test op isa DifferentialOperator
+        # Zero-size singletons, so dispatching on one costs nothing and every trait folds away
+        @test Base.issingletontype(typeof(op))
+        @test sizeof(op) == 0
         @test nameof(op) == nm
+        # ... bound to the name it reports
+        @test getfield(SphericalFunctions, nm) === op
         # `show` prints the name rather than the internal struct, so that an operator in an
         # error message reads as `ð` and not as `SphericalFunctions.SpinRaising()`
         @test sprint(show, op) == string(nm)
+        @test repr(op) == string(nm)
         @test !occursin("SphericalFunctions", sprint(show, op))
     end
 
-    # All twelve names are distinct, so none of the `nameof` methods shadows another
+    # All twelve names are distinct, so none of the `nameof` methods shadows another, and no
+    # two operators share a type, so no two can share a trait by accident
     @test length(unique(nameof.(operators))) == length(operators)
+    @test length(unique(typeof.(operators))) == length(operators)
 
     # The spin weight is changed only by the right-handed ladder and the eth operators
     for op ∈ (L², R², Lz, L₊, L₋, Lx, Ly, Rz)
@@ -104,4 +113,45 @@ end
         @test diagonal_coefficient(SpinLowering(), T, 1, 3, 0) ==
             -diagonal_coefficient(RightLowering(), T, 1, 3, 0)
     end
+end
+
+@testitem "Differential operators: ASCII aliases and documentation" begin
+    import SphericalFunctions
+    import SphericalFunctions: DifferentialOperator, Δspin, Deltaspin
+    import SphericalFunctions: L2, Lplus, Lminus, R2, Rplus, Rminus, eth, ethbar
+
+    # Each alias is the operator itself, so it shares its identity, its name and its display
+    for (alias, op) ∈ (
+        (L2, L²), (Lplus, L₊), (Lminus, L₋), (R2, R²), (Rplus, R₊), (Rminus, R₋),
+        (eth, ð), (ethbar, ð̄),
+    )
+        @test alias === op
+        @test repr(alias) == repr(op)
+        @test alias(1, 3) == op(1, 3)
+    end
+    @test Deltaspin === Δspin
+    @test Deltaspin(ethbar) == -1
+
+    # The aliases are not exported, since names such as `L2` are generic enough to clash with
+    # a user's own
+    for name ∈ (:L2, :Lplus, :Lminus, :R2, :Rplus, :Rminus, :eth, :ethbar, :Deltaspin)
+        @test !Base.isexported(SphericalFunctions, name)
+    end
+
+    # The abstract type, `Δspin`, and each alias have docstrings of their own.  An alias of a
+    # value, unlike one of a function, does not lead to the value's docstring, so each alias
+    # needs its own for `?eth` to say anything.  (The registry is read directly, because
+    # `Base.Docs.hasdoc` exists only from Julia 1.11 on.)
+    documented = Base.Docs.meta(SphericalFunctions)
+    for name ∈ (:DifferentialOperator, :Δspin, :L2, :Lplus, :Lminus, :R2, :Rplus, :Rminus, :eth, :ethbar)
+        @test haskey(documented, Base.Docs.Binding(SphericalFunctions, name))
+    end
+    @test occursin("ASCII alias of the operator", string(@doc eth))
+    @test occursin("`ethbar` may be used in place of `ð̄`", string(@doc ð̄))
+    @test occursin("Deltaspin", string(@doc Δspin))
+    @test occursin("not an extension point", string(@doc DifferentialOperator))
+    # ... and the note shared by the operators' docstrings says what `T` is and how an operator
+    # applies to mode weights
+    @test occursin("real floating-point type", string(@doc L²))
+    @test occursin("without building the matrix", string(@doc ð))
 end

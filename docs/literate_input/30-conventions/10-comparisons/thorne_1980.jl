@@ -45,6 +45,7 @@ formulas in a module so that we can test them against the `SphericalFunctions` p
 
 using TestItems: @testitem  #hide
 @testitem "Thorne conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
+import .Utilities: θϕrange  #hide
 
 module Thorne
 #+
@@ -113,7 +114,7 @@ function Y₂₇(ℓ, m, θ::T, ϕ::T) where {T<:Real}
         init=zero(T)
     )
 end
-for (θ, ϕ) ∈ θϕrange(Float64, 15; avoid_poles=1e-3)
+for (θ, ϕ) ∈ θϕrange(rng, Float64, 15; avoid_poles=1e-3)
     for ℓ ∈ 0:ℓₘₐₓ
         for m ∈ 1:ℓ
             @test Y₂₇(ℓ, -m, big(θ), big(ϕ)) ≈ (-1)^m * conj(Thorne.Y(ℓ, m, θ, ϕ)) atol=ϵₐ rtol=ϵᵣ
@@ -123,9 +124,9 @@ end
 #+
 
 # Now we compare to the `SphericalFunctions` package:
-for (θ, ϕ) ∈ θϕrange()
-    for (ℓ, m) ∈ ℓmrange(ℓₘₐₓ)
-        @test Thorne.Y(ℓ, m, θ, ϕ) ≈ ConventionsUtilities.Y(ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+for (θ, ϕ) ∈ θϕrange(rng)
+    for (ℓ, Yˡ) ∈ SphericalFunctions.YlmCalculator(θ, ϕ, ℓₘₐₓ), m ∈ -ℓ:ℓ
+        @test Thorne.Y(ℓ, m, θ, ϕ) ≈ Yˡ[m] atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+

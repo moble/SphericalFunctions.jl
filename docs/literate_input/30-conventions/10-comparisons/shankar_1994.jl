@@ -93,6 +93,7 @@ formulas in a module so that we can test them against the `SphericalFunctions` p
 
 using TestItems: @testitem  #hide
 @testitem "Shankar conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
+import .Utilities: αβγrange, θϕrange  #hide
 
 module Shankar
 #+
@@ -171,12 +172,12 @@ end  # module Shankar
 # because the formulas are slow, and this will be sufficient to sort out any sign or
 # normalization differences, which are the most likely source of error.  For the same reason
 # we use a modest grid of Euler angles.
-αβγs = αβγrange(Float64, 5)
+αβγs = αβγrange(rng, Float64, 5)
 #+
 
 # First, the explicit formulas of Eq. (12.5.39) agree with the general formula (12.5.35).
 # The general formula has a factor of ``1/\sin^m θ``, so we avoid the poles.
-for (θ, ϕ) ∈ θϕrange(; avoid_poles=ϵₐ/40)
+for (θ, ϕ) ∈ θϕrange(rng; avoid_poles=ϵₐ/40)
     @test Shankar.Y₀⁰(θ, ϕ) ≈ Shankar.Y(0, 0, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
     @test Shankar.Y₁⁻¹(θ, ϕ) ≈ Shankar.Y(1, -1, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
     @test Shankar.Y₁⁰(θ, ϕ) ≈ Shankar.Y(1, 0, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
@@ -190,17 +191,17 @@ end
 #+
 
 # Next, the spherical harmonics agree with ours:
-for (θ, ϕ) ∈ θϕrange(; avoid_poles=ϵₐ/40)
-    for (ℓ, m) ∈ ℓmrange(ℓₘₐₓ)
-        @test Shankar.Y(ℓ, m, θ, ϕ) ≈ ConventionsUtilities.Y(ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+for (θ, ϕ) ∈ θϕrange(rng; avoid_poles=ϵₐ/40)
+    for (ℓ, Yˡ) ∈ SphericalFunctions.YlmCalculator(θ, ϕ, ℓₘₐₓ), m ∈ -ℓ:ℓ
+        @test Shankar.Y(ℓ, m, θ, ϕ) ≈ Yˡ[m] atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
 
 # Finally, the matrix elements of Shankar's rotation operator agree with our ``𝔇``:
 for (α, β, γ) ∈ αβγs
-    for (j, m′, m) ∈ ℓm′mrange(ℓₘₐₓ)
-        @test Shankar.D(j, m′, m, α, β, γ) ≈ ConventionsUtilities.D(j, m′, m, α, β, γ) atol=ϵₐ rtol=ϵᵣ
+    for (j, 𝔇ʲ) ∈ SphericalFunctions.DCalculator(α, β, γ, ℓₘₐₓ), m′ ∈ -j:j, m ∈ -j:j
+        @test Shankar.D(j, m′, m, α, β, γ) ≈ 𝔇ʲ[m′, m] atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+

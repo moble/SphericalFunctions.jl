@@ -4,13 +4,13 @@
 # error rather than a conversion — and `Ylm`.
 #
 # The oracle throughout is the package's own manual path — the `recurrence!` loop, and the
-# convenience functions `D`, `d`, `sYlm` and `sYlm_matrix` that are built on it —
-# because iteration is meant to do exactly the same arithmetic in exactly the same order and
-# nothing else.  Every comparison is therefore bitwise, except in the two places where
-# genuinely different code paths are being compared: a rotor's `β` reaches the recurrence
-# through the quaternion's components rather than through `cis(β)`, and the `(θ, ϕ=0)` path
-# skips the phase tables that a rotor at `ϕ = 0` still multiplies in.  Those two have a
-# stated tolerance, with the measured error in a comment.
+# convenience functions `D`, `d`, `sYlm` and `sYlm_matrix` that are built on it — because
+# iteration is meant to do exactly the same arithmetic in exactly the same order and nothing
+# else.  Every comparison is therefore bitwise, except in the two places where different
+# code paths are being compared: a rotor's `β` reaches the recurrence through the
+# quaternion's components rather than through `cis(β)`, and the `(θ, ϕ=0)` path skips the
+# phase tables that a rotor at `ϕ = 0` still multiplies in.  Those two have a stated
+# tolerance, with the measured error in a comment.
 
 @testitem "Iteration reproduces D and d" begin
     import SphericalFunctions: DCalculator, dCalculator, D, d
@@ -165,9 +165,10 @@ end
 end
 
 
-@testitem "Calculator setters reach a freshly constructed state" begin
+@testitem "Calculator setters reach a freshly constructed state" setup=[RefusalChecks] begin
     import SphericalFunctions: DCalculator, dCalculator, HCalculator,
-        sYlmCalculator, HWedge, recurrence!, set_R!, set_β!, set_θ!
+        sYlmCalculator, sλlmCalculator, HWedge, recurrence!, set_R!, set_β!, set_θ!,
+        set_beta!, set_theta!
     using Quaternionic: Rotor, from_euler_angles
     using Random
 
@@ -208,7 +209,7 @@ end
     # `set_β!` also serves the H calculator, which is not iterable: its wedge is read after
     # a manual step, entry by entry, in storage order
     wedge(H::HWedge) =
-        [H[iᵣ, m′, m] for m′ ∈ H.m′ₘᵢₙ:H.m′ₘₐₓ for m ∈ abs(m′):H.ℓ for iᵣ ∈ 1:H.Nᵣ]
+        [H[iᵣ, m′, m] for m′ ∈ -H.m′ₘₐₓ:H.m′ₘₐₓ for m ∈ abs(m′):H.ℓ for iᵣ ∈ 1:H.Nᵣ]
     H₁ = HCalculator(0.25, ℓₘₐₓ)
     @test set_β!(H₁, β) === H₁
     H₂ = HCalculator(β, ℓₘₐₓ)
@@ -225,15 +226,31 @@ end
     @test snapshot(calcθ) == snapshot(sYlmCalculator(θ, ℓₘₐₓ, -2:2))
     @test snapshot(set_θ!(calcθ, 0.0)) == snapshot(sYlmCalculator(0.0, ℓₘₐₓ, -2:2))
 
+    # The ASCII spellings are the same functions
+    @test set_beta! === set_β! && set_theta! === set_θ!
+
     # The wrong setter for a calculator is an error that names the right one
-    @test_throws "set_β!" set_R!(dCalculator(β, ℓₘₐₓ), R)
-    @test_throws "set_β!" set_R!(HCalculator(β, ℓₘₐₓ), R)
-    @test_throws "set_R!" set_β!(DCalculator(R, ℓₘₐₓ), β)
-    @test_throws "set_R!" set_θ!(DCalculator(R, ℓₘₐₓ), θ)
-    @test_throws "set_β!" set_θ!(dCalculator(β, ℓₘₐₓ), θ)
-    @test_throws "set_β!" set_θ!(HCalculator(β, ℓₘₐₓ), θ)
-    # An sYlmCalculator takes rotors (`set_R!`) or angles (`set_θ!`); β alone is not enough
-    # to place a point on the sphere, so it has no `set_β!` at all
+    @test refuses(() -> set_R!(dCalculator(β, ℓₘₐₓ), R), ArgumentError, "set_β!")
+    @test refuses(() -> set_R!(HCalculator(β, ℓₘₐₓ), R), ArgumentError, "set_β!")
+    @test refuses(() -> set_β!(DCalculator(R, ℓₘₐₓ), β), ArgumentError, "set_R!")
+    @test refuses(() -> set_θ!(DCalculator(R, ℓₘₐₓ), θ), ArgumentError, "set_R!")
+    @test refuses(() -> set_θ!(dCalculator(β, ℓₘₐₓ), θ), ArgumentError, "set_β!")
+    @test refuses(() -> set_θ!(HCalculator(β, ℓₘₐₓ), θ), ArgumentError, "set_β!")
+    # ... and says that both kinds of harmonic calculator evaluate at (θ, ϕ=0)
+    @test refuses(() -> set_θ!(dCalculator(β, ℓₘₐₓ), θ), ArgumentError, "or an sλlmCalculator")
+    # An sYlmCalculator takes rotors (`set_R!`) or angles (`set_θ!`), and neither setter
+    # quietly accepts the other's data, singly or in a vector, so that `set_R!` never
+    # switches a calculator to the (θ, ϕ=0) evaluation
+    for calcY ∈ (sYlmCalculator(R, ℓₘₐₓ, -2:2), sYlmCalculator(rotors, ℓₘₐₓ, -2:2))
+        @test refuses(() -> set_R!(calcY, θ), ArgumentError, "set_θ!")
+        @test refuses(() -> set_R!(calcY, fill(θ, 3)), ArgumentError, "set_θ!")
+        @test refuses(() -> set_θ!(calcY, R), ArgumentError, "set_R!")
+        @test refuses(() -> set_θ!(calcY, fill(R, 3)), ArgumentError, "set_R!")
+        @test calcY.phases[]  # still evaluating at the rotors
+    end
+    @test refuses(() -> set_θ!(sλlmCalculator(θ, ℓₘₐₓ, 1), R), ArgumentError, "nowhere to put")
+    # β alone is not enough to place a point on the sphere, so an sYlmCalculator has no
+    # `set_β!` at all
     @test_throws MethodError set_β!(sYlmCalculator(R, ℓₘₐₓ, -2:2), β)
 end
 
@@ -269,7 +286,6 @@ end
     calc = DCalculator(R, 5)
     full = snapshot(calc)
     partial = [ℓ => copy(recurrence!(calc, ℓ)) for ℓ ∈ 2:4]
-    @test [ℓ for (ℓ, _) ∈ partial] == 2:4
     @test partial == full[3:5]
     @test snapshot(calc) == full
     @test [ℓ => copy(recurrence!(calc, ℓ)) for ℓ ∈ 2:4] == partial
@@ -398,30 +414,34 @@ end
     R = randn(rng, Rotor{Float64})
     rotors = randn(rng, Rotor{Float64}, 8)
 
+    # Before Julia 1.12 a loop that reads the blocks costs a few small allocations in all,
+    # rather than any per ℓ (measured at most 80 bytes on 1.10, with half-integer ℓ); from
+    # 1.12 on it costs nothing.
+    budget = VERSION ≥ v"1.12" ? 0 : 128
     for (ℓₘₐₓ, lo, hi) ∈ ((16, 2, 12), (25//2, 3//2, 21//2))
         single = DCalculator(R, ℓₘₐₓ)
         batched = DCalculator(rotors, ℓₘₐₓ)
         singled = dCalculator(0.7, ℓₘₐₓ)
         trace(single); trace_batched(batched); trace(singled)  # warm-up
         trace_range(single, lo, hi)
-        @test (@allocated trace(single)) == 0
-        @test (@allocated trace_batched(batched)) == 0
-        @test (@allocated trace(singled)) == 0
-        @test (@allocated trace_range(single, lo, hi)) == 0
+        @test (@allocated trace(single)) ≤ budget
+        @test (@allocated trace_batched(batched)) ≤ budget
+        @test (@allocated trace(singled)) ≤ budget
+        @test (@allocated trace_range(single, lo, hi)) ≤ budget
     end
 
     calcY = sYlmCalculator(R, 16, -2:2)
     batchedY = sYlmCalculator(rotors, 16, -2:2)
     trace_spin(calcY, 1)
-    @test (@allocated trace_spin(calcY, 1)) == 0
+    @test (@allocated trace_spin(calcY, 1)) ≤ budget
     trace_spin_batched(batchedY, 1)
-    @test (@allocated trace_spin_batched(batchedY, 1)) == 0
+    @test (@allocated trace_spin_batched(batchedY, 1)) ≤ budget
     # Bare iteration of an sYlmCalculator, for both shapes of block
     calcY1 = sYlmCalculator(R, 16, 1)
     trace_bare_spin(calcY1)
-    @test (@allocated trace_bare_spin(calcY1)) == 0
+    @test (@allocated trace_bare_spin(calcY1)) ≤ budget
     trace_bare_spins(calcY, 1)
-    @test (@allocated trace_bare_spins(calcY, 1)) == 0
+    @test (@allocated trace_bare_spins(calcY, 1)) ≤ budget
 
     # `iterate` returns `nothing` at the end, so its type is a `Union` by construction: the
     # one-argument `@inferred` is *supposed* to fail on it, and the two-argument form —
@@ -492,14 +512,23 @@ end
     @test axes(vY) == (1:5,)
     @test axes(vY[3].second) == (-2:2, -2:2)
     @test vY == [ℓ => copy(block) for (ℓ, block) ∈ calcY]
-    # A partial sweep gathers only its own ℓ, and the copying is then the caller's to do
-    vr = [ℓ => copy(recurrence!(calc, ℓ)) for ℓ ∈ 2:3]
-    @test axes(vr) == (1:2,)
-    @test [p.first for p ∈ vr] == [2, 3]
+
+    # `values` yields the blocks alone, as it does for a `WignerSeries`, and `collect` of it
+    # copies them for the same reason
+    vals = values(calc)
+    @test length(vals) == length(calc)
+    @test eltype(vals) === eltype(calc).parameters[2]
+    @test [copy(b) for b ∈ vals] == last.(reference)
+    cv = collect(vals)
+    @test cv == last.(reference)
+    @test all(parent(cv[k]) !== parent(cv[k+1]) for k ∈ 1:length(cv)-1)
+    recurrence!(calc, 1)
+    @test cv == last.(reference)
+    @test collect(values(DCalculator(R, 7//2))) == last.(vₕ)
 end
 
 
-@testitem "Calculator container interface" begin
+@testitem "Calculator container interface" setup=[RefusalChecks] begin
     import SphericalFunctions
     import SphericalFunctions: DCalculator, dCalculator, sYlmCalculator, recurrence!
     using Quaternionic: Rotor
@@ -526,12 +555,20 @@ end
     end
 
     # `keys` is what a partial sweep is written against, and a sweep over any part of it
-    # yields exactly those ℓ
+    # gives the blocks of those ℓ
     calc = DCalculator(R, 5)
+    full = [copy(block) for (_, block) ∈ calc]
     for (lo, hi) ∈ ((0, 5), (2, 4), (3, 3), (0, 0))
-        @test [ℓ for (ℓ, _) ∈ (ℓ => recurrence!(calc, ℓ) for ℓ ∈ lo:hi)] == lo:hi
         @test lo:hi ⊆ keys(calc)
+        @test [copy(recurrence!(calc, ℓ)) for ℓ ∈ lo:hi] == full[(lo:hi) .+ 1]
     end
+
+    # A type that does not fix the index type has no known element type, rather than one
+    # that is looked for without end
+    @test eltype(SphericalFunctions.DCalculator) === Any
+    @test eltype(SphericalFunctions.dCalculator) === Any
+    @test eltype(SphericalFunctions.sYlmCalculator) === Any
+    @test eltype(SphericalFunctions.WignerCalculator) === Any
 
     # A multi-spin calculator iterates over its own whole block, and reports the same keys
     # as a single-spin one over the same ℓ
@@ -543,9 +580,9 @@ end
     @test keys(sYlmCalculator(R, 4, -1)) == keys(calcY)
 
     # An ℓ outside the calculator's own is refused rather than silently clamped
-    @test_throws "out of bounds" recurrence!(calc, -1)
-    @test_throws "out of bounds" recurrence!(calc, 6)
-    @test_throws "out of bounds" recurrence!(calcY, 5)
+    @test refuses(() -> recurrence!(calc, -1), ArgumentError, "out of bounds")
+    @test refuses(() -> recurrence!(calc, 6), ArgumentError, "out of bounds")
+    @test refuses(() -> recurrence!(calcY, 5), ArgumentError, "out of bounds")
 end
 
 
@@ -584,6 +621,13 @@ end
     @test_throws MethodError dCalculator(0.5f0, 3, BigFloat)
     @test_throws MethodError HCalculator(0.5f0, 3, Float64)
     @test_throws MethodError sYlmCalculator(R32, 3, 1, Float64)
+    # ... nor a constructor of the parametric type, which `show` prints, and which names the
+    # element type
+    @test_throws MethodError SphericalFunctions.DCalculator{Int, Float64}(R32, 3)
+    @test_throws MethodError SphericalFunctions.WignerCalculator{Int, Float32, ComplexF32}(
+        Rotor{BigFloat}(R64), 3
+    )
+    @test_throws MethodError SphericalFunctions.dCalculator{Int, Float64}(0.5f0, 3)
     # To compute in another type, build the rotor data in that type — which is also the
     # honest way to say it, since the type of the data is the claim being made about it
     @test blocktype(DCalculator(Rotor{BigFloat}(R64), 3)) === Complex{BigFloat}
@@ -592,7 +636,7 @@ end
     @test blocktype(DCalculator(Rotor{Float32}(R64), 3)) === ComplexF32
 
     # A vector argument gives a batch of exactly that length; `Nᵣ` is implied by it, and is
-    # no longer a keyword argument anywhere
+    # not a keyword argument anywhere
     @test SphericalFunctions.Nᵣ(DCalculator(rotors, 3)) == 4
     @test SphericalFunctions.Nᵣ(dCalculator(βs, 3)) == 4
     @test SphericalFunctions.Nᵣ(HCalculator(βs, 3)) == 4
@@ -609,14 +653,14 @@ end
     @test_throws "at least one rotor" HCalculator(Float64[], 3)
     @test_throws "at least one rotor" sYlmCalculator(Rotor{Float64}[], 3, -1:1)
 
-    # The old ℓₘₐₓ-first spelling has no method at all, so a stale call fails at the call
-    # site rather than dispatching with the element type in the rotor's place
+    # An ℓₘₐₓ-first spelling has no method at all, so such a call fails at the call site
+    # rather than dispatching with the element type in the rotor's place
     @test_throws MethodError DCalculator(3)
     @test_throws MethodError DCalculator(3, Float64)
     @test_throws MethodError dCalculator(3, Float64)
     @test_throws MethodError HCalculator(3, Float64)
     @test_throws MethodError sYlmCalculator(3, 1, Float64)
-    # A `Rational` ℓₘₐₓ still selects the half-integer path
+    # A `Rational` ℓₘₐₓ selects the half-integer path
     @test SphericalFunctions.ℓₘₐₓ(DCalculator(R64, 7//2)) == 7//2
     @test first(DCalculator(R64, 7//2)).first == 1//2
 
@@ -637,8 +681,8 @@ end
             @test all(all(iszero, imag.(block)) for block ∈ fromθ)
             @test maximum(maximum(abs.(a .- b)) for (a, b) ∈ zip(fromθ, fromR)) ≤ 8eps()
         end
-        # Away from ϕ = 0 the harmonics are genuinely complex, so the angle path is not
-        # merely a different spelling of a rotor
+        # Away from ϕ = 0 the harmonics are complex, so the angle path is not merely a
+        # different spelling of a rotor
         if 0 < θ < π
             fromϕ = [copy(block[1, :]) for (_, block) ∈ calcϕ]
             @test any(any(!iszero, imag.(block)) for block ∈ fromϕ)
@@ -654,6 +698,53 @@ end
             @test all(block[2, 1, m] == single[k][m] for m ∈ -ℓ:ℓ)
         end
     end
+end
+
+
+@testitem "Angles in place of a rotor give exactly the rotor's values" begin
+    import SphericalFunctions: D, DCalculator, sYlm, sYlmCalculator, Ylm, YlmCalculator
+    using Quaternionic: from_euler_angles, from_spherical_coordinates
+    using DoubleFloats: Double64
+
+    # `===` on every element, so that the angle forms are seen to be the rotor forms rather
+    # than merely close to them; a signed zero would be caught too.
+    function identical(a, b)
+        pairs_a, pairs_b = collect(a), collect(b)
+        length(pairs_a) == length(pairs_b) && all(
+            ℓa == ℓb && all(x === y for (x, y) ∈ zip(collect(blka), collect(blkb)))
+            for ((ℓa, blka), (ℓb, blkb)) ∈ zip(pairs_a, pairs_b)
+        )
+    end
+
+    for T ∈ (Float64, Float32, Double64)
+        α, β, γ = T(3)/10, T(11)/10, T(24)/10
+        θ, ϕ = T(7)/10, T(4)
+        R = from_euler_angles(α, β, γ)
+        Rθϕ = from_spherical_coordinates(θ, ϕ)
+        for (ℓₘₐₓ, s, spins) ∈ ((4, 2, -2:2), (7//2, 1//2, -3//2:3//2))
+            @test identical(D(α, β, γ, ℓₘₐₓ), D(R, ℓₘₐₓ))
+            @test identical(DCalculator(α, β, γ, ℓₘₐₓ), DCalculator(R, ℓₘₐₓ))
+            @test identical(sYlm(θ, ϕ, ℓₘₐₓ, s), sYlm(Rθϕ, ℓₘₐₓ, s))
+            @test identical(sYlm(θ, ϕ, ℓₘₐₓ, spins), sYlm(Rθϕ, ℓₘₐₓ, spins))
+            @test identical(sYlmCalculator(θ, ϕ, ℓₘₐₓ, s), sYlmCalculator(Rθϕ, ℓₘₐₓ, s))
+        end
+        # The keywords pass through
+        @test identical(D(α, β, γ, 3; mₘₐₓ=1), D(R, 3; mₘₐₓ=1))
+        @test identical(
+            DCalculator(α, β, γ, 3; m′ₘₐₓ=2, mₘᵢₙ=-1), DCalculator(R, 3; m′ₘₐₓ=2, mₘᵢₙ=-1)
+        )
+        @test identical(sYlm(θ, ϕ, 5, 1; ℓₘᵢₙ=3), sYlm(Rθϕ, 5, 1; ℓₘᵢₙ=3))
+        @test identical(Ylm(θ, ϕ, 5), Ylm(Rθϕ, 5))
+        @test identical(Ylm(θ, ϕ, 5; ℓₘᵢₙ=2), Ylm(Rθϕ, 5; ℓₘᵢₙ=2))
+        @test identical(YlmCalculator(θ, ϕ, 4), YlmCalculator(Rθϕ, 4))
+    end
+
+    # The indices obey the same rules as ever, and a forgotten spin weight has no method
+    @test_throws ArgumentError Ylm(0.7, 4.0, 1//2)
+    @test_throws ArgumentError YlmCalculator(0.7, 4.0, 3//2)
+    @test_throws ArgumentError D(0.3, 1.1, 2.4, Int8(3))
+    @test_throws ArgumentError sYlm(0.7, 4.0, 2, 3)
+    @test_throws MethodError sYlmCalculator(0.7, 4.0, 3)
 end
 
 
@@ -692,8 +783,8 @@ end
     @test_throws "works in Float64" set_θ!(sYlmCalculator(0.25, 3, -1:1), 0.5f0)
     @test_throws "works in Float32" set_θ!(sYlmCalculator(0.25f0, 3, -1:1), 0.5)
     # `recurrence!(calc, data, ℓ)` replaces the data too, and follows the same rule rather than
-    # silently converting (a BigFloat rotor once came back as a ComplexF64 block).  The check
-    # comes before anything is written, so a refused call leaves the calculator as it was.
+    # silently converting, which would return a BigFloat rotor's block as a ComplexF64 one.  The
+    # check comes before anything is written, so a refused call leaves the calculator as it was.
     import SphericalFunctions: recurrence!
     rotorsb1 = Rotor{BigFloat}(rotors[1])
     @test_throws "works in Float64" recurrence!(DCalculator(rotors[1], 3), rotorsb1, 2)
@@ -723,7 +814,7 @@ end
 
     # `sYlm!` writes into a buffer the caller supplies, and the same rule reaches that
     # buffer: the working type comes from the rotor (or from the calculator), so `Y` must be
-    # `Complex` of it.  It is no longer `Y` that decides what arithmetic is done.
+    # `Complex` of it, and `Y` does not decide what arithmetic is done.
     Y64 = Vector{ComplexF64}(undef, Ysize(1, 4))
     Y32 = Vector{ComplexF32}(undef, Ysize(1, 4))
     @test_throws "must be Complex{Float64}" sYlm!(Y32, rotors[1], 4, 1)
@@ -738,9 +829,9 @@ end
     @test array_view(sYlm!(Y32, rotors32[1], 4, 1)) == array_view(sYlm(rotors32[1], 4, 1))
     @test array_view(sYlm!(Y64, sYlmCalculator(rotors[1], 4, -1:1), rotors[1], 1)) == array_view(sYlm(rotors[1], 4, 1))
 
-    # A vector of rotor data must say what it holds.  The path that used to re-box such a
-    # vector into a `Vector{AbstractQuaternion}` — and fall back on Float64 — is gone, so an
-    # abstract or ambiguous element type is refused instead of guessed at.
+    # A vector of rotor data must say what it holds, so an abstract or ambiguous element type
+    # is refused instead of guessed at, as it would be by re-boxing such a vector into a
+    # `Vector{AbstractQuaternion}` and falling back on Float64.
     anyvector = Any[rotors[1], rotors[2]]
     abstractvector = Rotor[rotors[1], rotors[2]]
     mixedvector = Union{Rotor{Float64}, Rotor{Float32}}[rotors[1], rotors32[2]]
@@ -755,7 +846,7 @@ end
     @test_throws "Cannot build a calculator" dCalculator(Number[0.3, 0.5], 3)
     # The error names the offending type and says what to do about it
     err = try DCalculator(anyvector, 3) catch e; e end
-    @test err isa ErrorException
+    @test err isa ArgumentError
     @test occursin("Vector{Any}", err.msg)
     @test occursin("should be converted", err.msg)
 
@@ -793,8 +884,7 @@ end
 
     # Concretely typed data is untouched by any of this, in each of its forms
     @test SphericalFunctions.Nᵣ(DCalculator(rotors, 3)) == 2
-    # (A `Vector{Quaternion}` was a form here until rotations were narrowed to `Rotor`s;
-    # it is covered by the refusals above instead.)
+    # (A `Vector{Quaternion}` is not one of these forms; it is covered by the refusals above.)
     @test SphericalFunctions.Nᵣ(DCalculator(SVector{2}(rotors[1], rotors[2]), 3)) == 2
     @test SphericalFunctions.Nᵣ(dCalculator([0.3, 0.5], 3)) == 2
     @test SphericalFunctions.Nᵣ(dCalculator(cis.([0.3, 0.5]), 3)) == 2
@@ -813,8 +903,8 @@ end
     rotors = randn(rng, Rotor{Float64}, 3)
     snapshot(iterable) = [ℓ => copy(block) for (ℓ, block) ∈ iterable]
 
-    # A data-free calculator is no longer representable, so `similar` has to retain the rotor
-    # data; only the computed results are absent, and iterating recomputes them
+    # A calculator without rotor data is not representable, so `similar` has to retain the
+    # rotor data; only the computed results are absent, and iterating recomputes them
     for calc ∈ (
         DCalculator(rotors[1], 4),
         DCalculator(rotors, 4; m′ₘₐₓ=2, mₘᵢₙ=-3),
@@ -859,7 +949,7 @@ end
 end
 
 
-@testitem "Ylm is the spin-zero case of sYlm" begin
+@testitem "Ylm is the spin-zero case of sYlm" setup=[RefusalChecks] begin
     import SphericalFunctions: Ylm, sYlm
     using Quaternionic: Rotor
     using Random
@@ -871,6 +961,7 @@ end
         @test array_view(Ylm(R, 5)) == array_view(sYlm(R, 5, 0))
         @test array_view(Ylm(R, 5; ℓₘᵢₙ=0)) == array_view(sYlm(R, 5, 0; ℓₘᵢₙ=0))
         @test array_view(Ylm(R, 5; ℓₘᵢₙ=2)) == array_view(sYlm(R, 5, 0; ℓₘᵢₙ=2))
+        @test array_view(Ylm(R, 5; ell_min=2)) == array_view(sYlm(R, 5, 0; ℓₘᵢₙ=2))
         @test array_view(Ylm(R, 0)) == array_view(sYlm(R, 0, 0))
         # The two agree in whatever type the rotor is given in, which is the only thing
         # that decides it
@@ -879,13 +970,23 @@ end
     end
     @test eltype(array_view(Ylm(Rotor{Float32}(rotors[1]), 3))) === ComplexF32
     @test eltype(array_view(Ylm(Rotor{BigFloat}(rotors[1]), 3))) === Complex{BigFloat}
-    # Neither function has an element-type keyword argument any more
+    # Neither function has an element-type keyword argument
     @test_throws MethodError array_view(Ylm(rotors[1], 3; T=BigFloat))
     @test_throws MethodError array_view(sYlm(rotors[1], 3, 0; T=BigFloat))
 
     # Half-integer ℓ goes with half-integer spin weight, so these functions have no
-    # half-integer analogue: the `Rational` is a MethodError, not an error from deeper down
-    @test_throws MethodError array_view(Ylm(rotors[1], 7//2))
+    # half-integer analogue, and a half-integer index is refused with a message that says so
+    # and names the functions that do take one
+    for f ∈ (() -> Ylm(rotors[1], 7//2), () -> Ylm(rotors, 7//2))
+        @test refuses(f, ArgumentError, "does not accept half-odd-integers")
+    end
+    @test refuses(() -> Ylm(rotors[1], 5; ℓₘᵢₙ=1//2), ArgumentError, "keyword argument `ℓₘᵢₙ`")
+    @test refuses(() -> Ylm(rotors[1], 7//2), ArgumentError, "`sYlm` and `sYlmCalculator`")
+    @test refuses(() -> YlmCalculator(rotors[1], 7//2), ArgumentError, "`sYlm` and `sYlmCalculator`")
+    # An integer of another type than `Int` is refused as everywhere else, and a
+    # floating-point ℓ is not an index at all
+    @test refuses(() -> Ylm(rotors[1], Int32(3)), ArgumentError, "narrower than `Int`")
+    @test refuses(() -> YlmCalculator(rotors[1], Int32(3)), ArgumentError, "narrower than `Int`")
     @test_throws MethodError array_view(Ylm(rotors[1], 3.0))
 end
 
@@ -900,8 +1001,8 @@ end
     R = randn(rng, Rotor{Float64})
 
     # An sYlmCalculator is built for the spin weights it serves, so bare iteration has
-    # something to yield and no longer refuses; what is refused is a spin weight it was not
-    # built for, which is now out of bounds of the block rather than a message of its own.
+    # something to yield; what is refused is a spin weight it was not built for, which is out
+    # of bounds of the block.
     calcY = sYlmCalculator(R, 3, -1:1)
     @test first(calcY).first == 0
     @test length(collect(calcY)) == 4
@@ -912,7 +1013,7 @@ end
     # names the manual loop it has always had.
     calcH = HCalculator(0.7, 3)
     err = try iterate(calcH) catch e; e end
-    @test err isa ErrorException
+    @test err isa ArgumentError
     @test occursin("not iterable", err.msg)
     @test occursin("recurrence!", err.msg)
     @test occursin("DCalculator", err.msg)

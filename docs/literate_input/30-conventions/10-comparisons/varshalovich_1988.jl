@@ -8,8 +8,8 @@ md"""
     = (m', m)``.  Their *body-fixed* operators ``\hat{J}'`` are related to our ``R``
     operators by ``\hat{J}'_x = -R_x``, ``\hat{J}'_y = R_y``, ``\hat{J}'_z = -R_z``.  Their
     closed-form ``d`` function and tables are also valid for half-integer ``J``, where they
-    agree with the complex conjugate of the half-integer ``𝔇`` of [Boyle (2016)](@ref
-    "Boyle (2016)"), providing an independent reference for half-integer indices.
+    agree with ours and with the complex conjugate of the half-integer ``𝔇`` of [Boyle
+    (2016)](@ref "Boyle (2016)"), providing an independent reference for half-integer indices.
 
 [Varshalovich_1988](@citet) is the encyclopedic reference on the quantum theory of angular
 momentum, and has a fairly decent comparison of definitions related to the rotation matrix
@@ -103,22 +103,22 @@ D^J_{M M'}
 \qquad (M' \neq -J),
 \end{aligned}
 ```
-where all ``D`` on the right-hand sides have the same Euler angles as the left.  (The forms
-given here are the ones that we have verified numerically against the closed-form
-expression; earlier transcriptions of these equations in the author's notes contained sign
-errors.)  Tables 4.3–4.12 list the ``d^J_{MM'}`` explicitly for ``J \leq 9/2``; we
-transcribe below the entries with ``M \geq 1/2``, and obtain the rows with ``M < 0`` from
-``d^J_{MM'} = (-1)^{M-M'} d^J_{-M,-M'}``.  The closed form 4.3(2), the recursions,
+where all ``D`` on the right-hand sides have the same Euler angles as the left.  (Signs in
+these forms are easy to get wrong, so the tests below check them numerically against the
+closed-form expression.)  Tables 4.3–4.12 list the ``d^J_{MM'}`` explicitly for ``J \leq
+9/2``; we transcribe below the entries with ``M \geq 1/2``, and obtain the rows with ``M <
+0`` from ``d^J_{MM'} = (-1)^{M-M'} d^J_{-M,-M'}``.  The closed form 4.3(2), the recursions,
 and the tables are all valid for half-integer ``J``, which makes Varshalovich et al. an
-independent reference for the half-integer matrices computed by the algorithm of [Boyle
-(2016)](@ref "Boyle (2016)"), whose matrices are the complex conjugates of ours.
+independent reference for the half-integer matrices computed by this package, and by the
+algorithm of [Boyle (2016)](@ref "Boyle (2016)"), whose matrices are the complex conjugates
+of ours.
 
 Finally, the spin-weighted spherical harmonics of half-integer spin weight — defined on
 [our summary page](@ref summary_swsh) by ``{}_sY_{ℓ,m} = (-1)^s \sqrt{(2ℓ+1)/4π}\,
 \overline{𝔇_{m,-s}}`` with ``(-1)^s \equiv e^{iπs}`` — can be built from Varshalovich's
-``D``, and we use them to check the anchor ``{}_sY_{ℓ,-s}(𝟏) = i^{2s}\sqrt{(2ℓ+1)/4π}`` and
-the conjugation relation ``\overline{{}_sY_{ℓ,m}} = (-1)^{m+s}\, {}_{-s}Y_{ℓ,-m}`` for
-half-integer indices.
+``D``.  We compare them with ours, and use them to check the anchor ``{}_sY_{ℓ,-s}(𝟏) =
+i^{2s}\sqrt{(2ℓ+1)/4π}`` and the conjugation relation ``\overline{{}_sY_{ℓ,m}} =
+(-1)^{m+s}\, {}_{-s}Y_{ℓ,-m}`` for half-integer indices.
 
 ## Body-fixed operators
 
@@ -211,8 +211,9 @@ Comparing with [our ``R`` operators](@ref euler_R_S3), we have ``\hat{J}'_y = R_
 ``[\hat{J}'_{z}, \hat{J}'_{x}] = i \hat{J}'_{y}``, as expected from the general expression
 in their Eq. (12), so these expressions are — at least — consistent with the claims of
 Varshalovich et al.; the sign difference arises from their treatment of the body-fixed
-frame.  Below we verify all six relations numerically, by applying both sets of operators to
-the ``D`` functions with automatic differentiation.
+frame.  Below we verify all six relations numerically: the code builds the Cartesian
+components from the spherical components exactly as printed in Eqs. 4.2(6) and (7), and
+applies both sets of operators to the ``D`` functions with automatic differentiation.
 
 ## Implementing formulas
 
@@ -468,18 +469,32 @@ function d_½_explicit(J::Rational{Int}, M::Rational{Int}, M′::Rational{Int}, 
 end
 #+
 
-# The angular-momentum operators of Sec. 4.2, Eqs. (6) and (7), in their Cartesian forms
-# as expanded above.  Each takes a function `f(α, β, γ)` and returns a new function, with the
+# The angular-momentum operators of Sec. 4.2: the spherical components exactly as printed
+# in Eqs. (6) and (7), and the Cartesian components built from them as in the expansions
+# above.  Each takes a function `f(α, β, γ)` and returns a new function, with the
 # derivatives evaluated by forward-mode automatic differentiation.
+
+## Utilities for the angular-momentum operators
 ∂α(f) = (α, β, γ) -> ForwardDiff.derivative(α′ -> f(α′, β, γ), α)
 ∂β(f) = (α, β, γ) -> ForwardDiff.derivative(β′ -> f(α, β′, γ), β)
 ∂γ(f) = (α, β, γ) -> ForwardDiff.derivative(γ′ -> f(α, β, γ′), γ)
-Ĵx(f) = (α, β, γ) -> 𝒾 * (cos(α)/tan(β) * ∂α(f)(α, β, γ) + sin(α) * ∂β(f)(α, β, γ) - cos(α)/sin(β) * ∂γ(f)(α, β, γ))
-Ĵy(f) = (α, β, γ) -> 𝒾 * (sin(α)/tan(β) * ∂α(f)(α, β, γ) - cos(α) * ∂β(f)(α, β, γ) - sin(α)/sin(β) * ∂γ(f)(α, β, γ))
-Ĵz(f) = (α, β, γ) -> -𝒾 * ∂α(f)(α, β, γ)
-Ĵ′x(f) = (α, β, γ) -> -𝒾 * (cos(γ)/tan(β) * ∂γ(f)(α, β, γ) + sin(γ) * ∂β(f)(α, β, γ) - cos(γ)/sin(β) * ∂α(f)(α, β, γ))
-Ĵ′y(f) = (α, β, γ) -> -𝒾 * (sin(γ)/tan(β) * ∂γ(f)(α, β, γ) - cos(γ) * ∂β(f)(α, β, γ) - sin(γ)/sin(β) * ∂α(f)(α, β, γ))
-Ĵ′z(f) = (α, β, γ) -> -𝒾 * ∂γ(f)(α, β, γ)
+
+## Eq. 4.2(6)
+Ĵ₊₁(f) = (α, β, γ) -> 𝒾/√2 * exp(𝒾*α) * (-cot(β) * ∂α(f)(α, β, γ) + 𝒾 * ∂β(f)(α, β, γ) + 1/sin(β) * ∂γ(f)(α, β, γ))
+Ĵ₋₁(f) = (α, β, γ) -> 𝒾/√2 * exp(-𝒾*α) * (cot(β) * ∂α(f)(α, β, γ) + 𝒾 * ∂β(f)(α, β, γ) - 1/sin(β) * ∂γ(f)(α, β, γ))
+Ĵ₀(f) = (α, β, γ) -> -𝒾 * ∂α(f)(α, β, γ)
+## Eq. 4.2(7)
+Ĵ′⁺¹(f) = (α, β, γ) -> 𝒾/√2 * exp(-𝒾*γ) * (cot(β) * ∂γ(f)(α, β, γ) + 𝒾 * ∂β(f)(α, β, γ) - 1/sin(β) * ∂α(f)(α, β, γ))
+Ĵ′⁻¹(f) = (α, β, γ) -> 𝒾/√2 * exp(𝒾*γ) * (-cot(β) * ∂γ(f)(α, β, γ) + 𝒾 * ∂β(f)(α, β, γ) + 1/sin(β) * ∂α(f)(α, β, γ))
+Ĵ′⁰(f) = (α, β, γ) -> -𝒾 * ∂γ(f)(α, β, γ)
+
+## See above for the Cartesian components, built from the spherical components:
+Ĵx(f) = (α, β, γ) -> -(Ĵ₊₁(f)(α, β, γ) - Ĵ₋₁(f)(α, β, γ)) / √2
+Ĵy(f) = (α, β, γ) -> -(Ĵ₊₁(f)(α, β, γ) + Ĵ₋₁(f)(α, β, γ)) / (𝒾 * √2)
+Ĵz(f) = Ĵ₀(f)
+Ĵ′x(f) = (α, β, γ) -> -(Ĵ′⁺¹(f)(α, β, γ) - Ĵ′⁻¹(f)(α, β, γ)) / √2
+Ĵ′y(f) = (α, β, γ) -> (Ĵ′⁺¹(f)(α, β, γ) + Ĵ′⁻¹(f)(α, β, γ)) / (𝒾 * √2)
+Ĵ′z(f) = Ĵ′⁰(f)
 #+
 
 end  #hide
@@ -495,6 +510,7 @@ Euler angles, which we transcribe from the [summary page](@ref summary_L_R_euler
 @testitem "Varshalovich conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities, Varshalovich, Boyle2016] begin  #hide
 import ForwardDiff
 import Quaternionic: from_euler_angles
+import .Utilities: ℓm′mrange, βrange, αβγrange, θϕrange  #hide
 const 𝒾 = im
 #+
 
@@ -516,27 +532,27 @@ Rz(f) = (α, β, γ) -> 𝒾 * ∂γ(f)(α, β, γ)
 ϵᵣ = 1000eps()
 #+
 
-# The closed-form expression for ``d`` overflows `Float64` for ``J \gtrsim 8``, so we test
-# up to
+# The closed form is slow, because it uses exact integer arithmetic for the factorials, and
+# its alternating sum slowly loses accuracy to cancellation as ``J`` grows (to about
+# ``10^{-14}`` at ``J = 10``).  Mainly to keep the running time down, we test up to
 Jₘₐₓ = 5
 #+
-# for integers and ``15/2`` for half-integers.  The closed form is slow (it uses exact
-# integer arithmetic for the factorials), so we use a modest grid of Euler angles for the
-# integer tests and a smaller one for the half-integer and operator tests:
-αβγs = αβγrange(Float64, 5)
-αβγs_small = αβγrange(Float64, 1)
+# for integers and ``15/2`` for half-integers, and we use a modest grid of Euler angles for
+# the integer tests and a smaller one for the half-integer and operator tests:
+αβγs = αβγrange(rng, Float64, 5)
+αβγs_small = αβγrange(rng, Float64, 1)
 #+
 
 # First, the integer case: with ``(M, M') = (m', m)``, Varshalovich's ``d`` and ``D`` are
 # ours:
-for β ∈ βrange()
-    for (J, m′, m) ∈ ℓm′mrange(Jₘₐₓ)
-        @test Varshalovich.d(J, m′, m, β) ≈ ConventionsUtilities.d(J, m′, m, β) atol=ϵₐ rtol=ϵᵣ
+for β ∈ βrange(rng)
+    for (J, dᴶ) ∈ SphericalFunctions.dCalculator(β, Jₘₐₓ), m′ ∈ -J:J, m ∈ -J:J
+        @test Varshalovich.d(J, m′, m, β) ≈ dᴶ[m′, m] atol=ϵₐ rtol=ϵᵣ
     end
 end
 for (α, β, γ) ∈ αβγs
-    for (J, m′, m) ∈ ℓm′mrange(Jₘₐₓ)
-        @test Varshalovich.D(J, m′, m, α, β, γ) ≈ ConventionsUtilities.D(J, m′, m, α, β, γ) atol=ϵₐ rtol=ϵᵣ
+    for (J, 𝔇ᴶ) ∈ SphericalFunctions.DCalculator(α, β, γ, Jₘₐₓ), m′ ∈ -J:J, m ∈ -J:J
+        @test Varshalovich.D(J, m′, m, α, β, γ) ≈ 𝔇ᴶ[m′, m] atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
@@ -557,32 +573,83 @@ for (α, β, γ) ∈ αβγs_small
 end
 #+
 
-# Every entry transcribed from Tables 4.3–4.12 agrees with the closed form (entries the
-# tables omit return `nothing` and are skipped):
-for β ∈ βrange()
-    for J ∈ 1//2:9//2, M ∈ -J:J, M′ ∈ -J:J
-        dₜ = Varshalovich.d_½_explicit(J, M, M′, β)
-        dₜ === nothing && continue
-        @test dₜ ≈ Varshalovich.d(J, M, M′, β) atol=ϵₐ rtol=ϵᵣ
+# Every entry transcribed from Tables 4.3–4.12 agrees with the closed form, and with our
+# half-integer ``d`` (entries the tables omit return `nothing` and are skipped).  Our
+# calculators label half-integer blocks with `HalfOddInteger`s, which serve as indices but
+# refuse arithmetic with other kinds of number; the transcriptions do that arithmetic, so
+# here and below each label is converted to a `Rational` first.
+for β ∈ βrange(rng)
+    for (J, dᴶ) ∈ SphericalFunctions.dCalculator(β, 9//2)
+        J = Rational(J)
+        for M ∈ -J:J, M′ ∈ -J:J
+            dₜ = Varshalovich.d_½_explicit(J, M, M′, β)
+            dₜ === nothing && continue
+            @test dₜ ≈ Varshalovich.d(J, M, M′, β) atol=ϵₐ rtol=ϵᵣ
+            @test dₜ ≈ dᴶ[M, M′] atol=ϵₐ rtol=ϵᵣ
+        end
+    end
+end
+#+
+
+# With the phases of Eq. 4.3(1), the tabulated entries also give our half-integer ``𝔇``:
+for (α, β, γ) ∈ αβγs_small
+    for (J, 𝔇ᴶ) ∈ SphericalFunctions.DCalculator(α, β, γ, 9//2)
+        J = Rational(J)
+        for M ∈ -J:J, M′ ∈ -J:J
+            dₜ = Varshalovich.d_½_explicit(J, M, M′, β)
+            dₜ === nothing && continue
+            @test exp(-𝒾 * M * α) * dₜ * exp(-𝒾 * M′ * γ) ≈ 𝔇ᴶ[M, M′] atol=ϵₐ rtol=ϵᵣ
+        end
+    end
+end
+#+
+
+# And through our definition ``{}_sY_{ℓ,m}(θ, ϕ) = (-1)^s \sqrt{(2ℓ+1)/4π}\, e^{imϕ}\,
+# d^{(ℓ)}_{m,-s}(θ)`` with ``(-1)^s ≡ e^{iπs}``, they give our half-integer spin-weighted
+# spherical harmonics, with ``(ℓ, m, s) = (J, M, -M')``:
+for (θ, ϕ) ∈ θϕrange(rng, Float64, 3)
+    for (J, Yᴶ) ∈ SphericalFunctions.sYlmCalculator(θ, ϕ, 9//2, -9//2:9//2)
+        J = Rational(J)
+        for M ∈ -J:J, M′ ∈ -J:J
+            dₜ = Varshalovich.d_½_explicit(J, M, M′, θ)
+            dₜ === nothing && continue
+            s = -M′
+            @test exp(𝒾 * π * s) * √((2J+1) / (4π)) * exp(𝒾 * M * ϕ) * dₜ ≈
+                Yᴶ[s, M] atol=ϵₐ rtol=ϵᵣ
+        end
     end
 end
 #+
 
 # For half-integer ``J``, Varshalovich's closed form and the quaternion algorithm of Boyle
-# (2016) are independent references; they agree up to the complex conjugation that
-# distinguishes the 2016 convention from the present one, for ``J \leq 15/2``:
+# (2016) are independent references.  Both agree with our half-integer ``𝔇`` for ``J \leq
+# 15/2``, Boyle's up to the complex conjugation that distinguishes the 2016 convention from
+# the present one:
 for (α, β, γ) ∈ αβγs_small
     R = from_euler_angles(α, β, γ)
-    for J ∈ 1//2:15//2, M ∈ -J:J, M′ ∈ -J:J
-        @test Varshalovich.D(J, M, M′, α, β, γ) ≈ conj(Boyle2016.WignerDElement(R, J, M, M′)) atol=ϵₐ rtol=ϵᵣ
+    for (J, 𝔇ᴶ) ∈ SphericalFunctions.DCalculator(R, 15//2)
+        J = Rational(J)
+        for M ∈ -J:J, M′ ∈ -J:J
+            @test Varshalovich.D(J, M, M′, α, β, γ) ≈ 𝔇ᴶ[M, M′] atol=ϵₐ rtol=ϵᵣ
+            @test Varshalovich.D(J, M, M′, α, β, γ) ≈
+                conj(Boyle2016.WignerDElement(R, J, M, M′)) atol=ϵₐ rtol=ϵᵣ
+        end
     end
 end
 #+
 
 # Half-integer spin-weighted spherical harmonics built from Varshalovich's ``D``, following
-# our definition with ``(-1)^s ≡ e^{iπs}``, satisfy the anchor condition and the conjugation
-# relation from the summary page:
+# our definition with ``(-1)^s ≡ e^{iπs}``, agree with ours, and satisfy the anchor
+# condition and the conjugation relation from the summary page:
 ₛYₗₘ(s, ℓ, m, α, β, γ) = exp(𝒾 * π * s) * √((2ℓ+1) / (4π)) * conj(Varshalovich.D(ℓ, m, -s, α, β, γ))
+for (θ, ϕ) ∈ θϕrange(rng, Float64, 3)
+    for (ℓ, Yˡ) ∈ SphericalFunctions.sYlmCalculator(θ, ϕ, 7//2, -7//2:7//2)
+        ℓ = Rational(ℓ)
+        for s ∈ -ℓ:ℓ, m ∈ -ℓ:ℓ
+            @test ₛYₗₘ(s, ℓ, m, ϕ, θ, 0.0) ≈ Yˡ[s, m] atol=ϵₐ rtol=ϵᵣ
+        end
+    end
+end
 for ℓ ∈ 1//2:7//2, s ∈ -ℓ:ℓ
     @test ₛYₗₘ(s, ℓ, -s, 0.0, 0.0, 0.0) ≈ (1.0𝒾)^Int(2s) * √((2ℓ+1) / (4π)) atol=ϵₐ rtol=ϵᵣ
 end
@@ -615,9 +682,9 @@ for (α, β, γ) ∈ [(0.7, 1.1, 2.3), (2.9, 0.4, 5.1), (4.0, 2.2, 0.3), (1.3, 2
 end
 #+
 
-# These successful tests show that Varshalovich et al.'s ``D`` and ``d`` functions agree
-# with ours (with the indices read in their order), for integer and half-integer ``J``; that
-# their lab-fixed operators are our ``L`` operators; and that their body-fixed operators are
-# ``(-R_x, R_y, -R_z)``.
+# These successful tests show that Varshalovich et al.'s ``D`` and ``d`` functions, and
+# their tables of the half-integer ``d``, agree with ours (with the indices read in their
+# order), for integer and half-integer ``J``; that their lab-fixed operators are our ``L``
+# operators; and that their body-fixed operators are ``(-R_x, R_y, -R_z)``.
 
 end  #hide

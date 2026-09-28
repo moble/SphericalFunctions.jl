@@ -1,17 +1,18 @@
 # Where test items are looked for.  Scanning every `.jl` file is the
-# right default for most packages, but not this one:
-# `docs/src/30-conventions/10-comparisons` holds generated output, so it
-# should not be searched.  Listing the three trees that do hold test
-# items is clearer than excluding the ones that do not.
+# right default for most packages, but not this one: the checkout also
+# holds `notes/` and `docs/src/local_notes`, symbolic links to a
+# separate repository of notes, whose `.jl` files, if any, are not part
+# of the suite.  Listing the three trees that do hold test items is
+# clearer than excluding the ones that do not.
 #
 #   src/**                    a handful of items live next to the code
 #                             they test
 #   test/**                   the bulk of the suite
 #   docs/literate_input/**    the literature-comparison pages, which
 #                             are Literate scripts containing test
-#                             items; parts of `docs/src/**` are
-#                             generated from them at build time and
-#                             would otherwise be scanned twice
+#                             items; the pages generated from them in
+#                             `docs/src/**` are Markdown, which is
+#                             never searched
 include = ["src/**", "test/**", "docs/literate_input/**"]
 
 # `test/.CondaPkg` is the Conda environment that the `:python` test items

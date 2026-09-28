@@ -124,6 +124,7 @@ formulas in a module so that we can test them against the `SphericalFunctions` p
 
 using TestItems: @testitem  #hide
 @testitem "Zettili conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
+import .Utilities: βrange, αβγrange, θϕrange  #hide
 
 module Zettili
 #+
@@ -179,27 +180,27 @@ end  # module Zettili
 # because the formulas are slow, and this will be sufficient to sort out any sign or
 # normalization differences, which are the most likely source of error.  For the same reason
 # we use a modest grid of Euler angles.
-αβγs = αβγrange(Float64, 5)
+αβγs = αβγrange(rng, Float64, 5)
 #+
 
 # First, the spherical harmonics agree with ours.  The general formula has a factor of
 # ``1/\sin^m θ``, so we avoid the poles.
-for (θ, ϕ) ∈ θϕrange(; avoid_poles=ϵₐ/40)
-    for (ℓ, m) ∈ ℓmrange(ℓₘₐₓ)
-        @test Zettili.Y(ℓ, m, θ, ϕ) ≈ ConventionsUtilities.Y(ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+for (θ, ϕ) ∈ θϕrange(rng; avoid_poles=ϵₐ/40)
+    for (ℓ, Yˡ) ∈ SphericalFunctions.YlmCalculator(θ, ϕ, ℓₘₐₓ), m ∈ -ℓ:ℓ
+        @test Zettili.Y(ℓ, m, θ, ϕ) ≈ Yˡ[m] atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
 
 # The ``d`` and ``D`` matrices agree with ours:
-for β ∈ βrange()
-    for (j, m′, m) ∈ ℓm′mrange(ℓₘₐₓ)
-        @test Zettili.d(j, m′, m, β) ≈ ConventionsUtilities.d(j, m′, m, β) atol=ϵₐ rtol=ϵᵣ
+for β ∈ βrange(rng)
+    for (j, dʲ) ∈ SphericalFunctions.dCalculator(β, ℓₘₐₓ), m′ ∈ -j:j, m ∈ -j:j
+        @test Zettili.d(j, m′, m, β) ≈ dʲ[m′, m] atol=ϵₐ rtol=ϵᵣ
     end
 end
 for (α, β, γ) ∈ αβγs
-    for (j, m′, m) ∈ ℓm′mrange(ℓₘₐₓ)
-        @test Zettili.D(j, m′, m, α, β, γ) ≈ ConventionsUtilities.D(j, m′, m, α, β, γ) atol=ϵₐ rtol=ϵᵣ
+    for (j, 𝔇ʲ) ∈ SphericalFunctions.DCalculator(α, β, γ, ℓₘₐₓ), m′ ∈ -j:j, m ∈ -j:j
+        @test Zettili.D(j, m′, m, α, β, γ) ≈ 𝔇ʲ[m′, m] atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
@@ -208,18 +209,22 @@ end
 # rotor ``𝐑_{α,β,γ}`` to obtain ``𝐧(θ', ϕ')``, and check that the spherical harmonics at
 # the rotated point are given by the stated combination of the harmonics at the original
 # point.  We use our own spherical harmonics on both sides, since we have just shown that
-# they agree with Zettili's, and avoid the poles so that ``ϕ'`` is well defined.
+# they agree with Zettili's.  The original points avoid the poles only to keep the grid
+# generic; the two-argument `atan` below computes ``(θ', ϕ')`` stably wherever the rotated
+# point lands.
 import Quaternionic: from_euler_angles, from_spherical_coordinates, imz, components
-for (α, β, γ) ∈ αβγrange(Float64, 3)
+for (α, β, γ) ∈ αβγrange(rng, Float64, 3)
     R = from_euler_angles(α, β, γ)
-    for (θ, ϕ) ∈ θϕrange(Float64, 3; avoid_poles=1e-3)
+    for (θ, ϕ) ∈ θϕrange(rng, Float64, 3; avoid_poles=1e-3)
         𝐧 = from_spherical_coordinates(θ, ϕ) * imz * conj(from_spherical_coordinates(θ, ϕ))
         𝐧′ = R * 𝐧 * conj(R)
         _, x, y, z = components(𝐧′)
         θ′, ϕ′ = atan(hypot(x, y), z), atan(y, x)  # well conditioned near the poles
-        for (ℓ, m) ∈ ℓmrange(ℓₘₐₓ)
-            @test conj(ConventionsUtilities.Y(ℓ, m, θ′, ϕ′)) ≈ sum(
-                Zettili.D(ℓ, m, m′, α, β, γ) * conj(ConventionsUtilities.Y(ℓ, m′, θ, ϕ))
+        Y = SphericalFunctions.YlmCalculator(θ, ϕ, ℓₘₐₓ)
+        Y′ = SphericalFunctions.YlmCalculator(θ′, ϕ′, ℓₘₐₓ)
+        for ((ℓ, Yˡ), (_, Y′ˡ)) ∈ zip(Y, Y′), m ∈ -ℓ:ℓ
+            @test conj(Y′ˡ[m]) ≈ sum(
+                Zettili.D(ℓ, m, m′, α, β, γ) * conj(Yˡ[m′])
                 for m′ ∈ -ℓ:ℓ
             ) atol=ϵₐ rtol=ϵᵣ
         end

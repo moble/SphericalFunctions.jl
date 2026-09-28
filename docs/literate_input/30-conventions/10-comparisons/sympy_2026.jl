@@ -105,13 +105,14 @@ which happens to be [Wigner's original convention](@ref "Wigner (1959)"), and al
 ## Implementing formulas
 
 We begin by transcribing the SymPy code into Julia.  We encapsulate the formulas in a module
-so that we can test them against the `SphericalFunctions` package.  A second test — which
-is skipped by default because it needs a Python installation, and is run by the scheduled CI
-workflow — calls the actual SymPy functions through `PythonCall`.
+so that we can test them against the `SphericalFunctions` package.  A second test, which
+needs a Python installation, calls the actual SymPy functions through `PythonCall`;
+`Pkg.test` runs it only on request, and the scheduled CI workflow requests it.
 """
 
 using TestItems: @testitem  #hide
 @testitem "SymPy conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
+import .Utilities: βrange, αβγrange, θϕrange  #hide
 
 module SymPy
 #+
@@ -179,27 +180,27 @@ end  # module SymPy
 # because the formulas are slow, and this will be sufficient to sort out any sign or
 # normalization differences, which are the most likely source of error.  For the same reason
 # we use a modest grid of Euler angles.
-αβγs = αβγrange(Float64, 5)
+αβγs = αβγrange(rng, Float64, 5)
 #+
 
 # `Ynm` agrees with ours:
-for (θ, ϕ) ∈ θϕrange(Float64, 7)
-    for (ℓ, m) ∈ ℓmrange(ℓₘₐₓ)
-        @test SymPy.Ynm(ℓ, m, θ, ϕ) ≈ ConventionsUtilities.Y(ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+for (θ, ϕ) ∈ θϕrange(rng, Float64, 7)
+    for (ℓ, Yˡ) ∈ SphericalFunctions.YlmCalculator(θ, ϕ, ℓₘₐₓ), m ∈ -ℓ:ℓ
+        @test SymPy.Ynm(ℓ, m, θ, ϕ) ≈ Yˡ[m] atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
 
 # `wigner_d_small` is the transpose of our ``d``, and `wigner_d` is ``𝔇_{-m',-m}``:
-for β ∈ βrange()
-    for (J, m′, m) ∈ ℓm′mrange(ℓₘₐₓ)
-        @test SymPy.wigner_d_small(J, m′, m, β) ≈ ConventionsUtilities.d(J, m, m′, β) atol=ϵₐ rtol=ϵᵣ
+for β ∈ βrange(rng)
+    for (J, dᴶ) ∈ SphericalFunctions.dCalculator(β, ℓₘₐₓ), m′ ∈ -J:J, m ∈ -J:J
+        @test SymPy.wigner_d_small(J, m′, m, β) ≈ dᴶ[m, m′] atol=ϵₐ rtol=ϵᵣ
     end
 end
 for (α, β, γ) ∈ αβγs
-    for (J, m′, m) ∈ ℓm′mrange(ℓₘₐₓ)
-        @test SymPy.wigner_d(J, m′, m, α, β, γ) ≈ ConventionsUtilities.D(J, -m′, -m, α, β, γ) atol=ϵₐ rtol=ϵᵣ
-        @test SymPy.wigner_d(J, m′, m, α, β, γ) ≈ (-1)^(m′-m) * conj(ConventionsUtilities.D(J, m′, m, α, β, γ)) atol=ϵₐ rtol=ϵᵣ
+    for (J, 𝔇ᴶ) ∈ SphericalFunctions.DCalculator(α, β, γ, ℓₘₐₓ), m′ ∈ -J:J, m ∈ -J:J
+        @test SymPy.wigner_d(J, m′, m, α, β, γ) ≈ 𝔇ᴶ[-m′, -m] atol=ϵₐ rtol=ϵᵣ
+        @test SymPy.wigner_d(J, m′, m, α, β, γ) ≈ (-1)^(m′-m) * conj(𝔇ᴶ[m′, m]) atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
@@ -215,31 +216,33 @@ md"""
 The test above transcribes the SymPy source.  To make sure the transcription is faithful,
 the following test calls `sympy.physics.wigner.wigner_d` and `sympy.functions.Ynm`
 themselves, via `PythonCall`, evaluating the symbolic results numerically.  It is tagged
-`:python` (and `:skipci`) so that it runs only when explicitly requested — e.g., with `julia
---project=. scripts/test.jl :python` — or in the scheduled CI workflow, which installs SymPy
-through `CondaPkg`.
+`:python` (and `:skipci`), so that `Pkg.test` and `scripts/test.jl` run it only when that
+tag is requested — e.g., with `julia --project=. scripts/test.jl :python`, as the scheduled
+CI workflow does, installing SymPy through `CondaPkg`.  Other test-item runners run it
+unless it is filtered out, e.g., with `juliati --filter '!(:python in tags)'`.
 """
 
 @testitem "SymPy cross-check" tags=[:python, :skipci] setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
 using PythonCall
+import .Utilities: αβγrange, θϕrange  #hide
 sympy = pyimport("sympy")
 wigner = pyimport("sympy.physics.wigner")
 sympy_version = pyconvert(String, sympy.__version__)
 @info "Cross-checking against SymPy version $sympy_version"
 ϵₐ = 1e-12
 ϵᵣ = 1e-12
-for (θ, ϕ) ∈ θϕrange(Float64, 3)
-    for (ℓ, m) ∈ ℓmrange(3)
+for (θ, ϕ) ∈ θϕrange(rng, Float64, 3)
+    for (ℓ, Yˡ) ∈ SphericalFunctions.YlmCalculator(θ, ϕ, 3), m ∈ -ℓ:ℓ
         Y_sympy = pyconvert(ComplexF64, pybuiltins.complex(sympy.N(sympy.Ynm(ℓ, m, θ, ϕ).expand(func=true), 20)))
-        @test Y_sympy ≈ ConventionsUtilities.Y(ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+        @test Y_sympy ≈ Yˡ[m] atol=ϵₐ rtol=ϵᵣ
     end
 end
-for (α, β, γ) ∈ αβγrange(Float64, 1)
-    for J ∈ 0:3
+for (α, β, γ) ∈ αβγrange(rng, Float64, 1)
+    for (J, 𝔇ᴶ) ∈ SphericalFunctions.DCalculator(α, β, γ, 3)
         D_sympy = wigner.wigner_d(J, α, β, γ)
         for m′ ∈ -J:J, m ∈ -J:J
             element = pyconvert(ComplexF64, pybuiltins.complex(sympy.N(D_sympy[J-m′, J-m], 20)))
-            @test element ≈ ConventionsUtilities.D(J, -m′, -m, α, β, γ) atol=ϵₐ rtol=ϵᵣ
+            @test element ≈ 𝔇ᴶ[-m′, -m] atol=ϵₐ rtol=ϵᵣ
         end
     end
 end

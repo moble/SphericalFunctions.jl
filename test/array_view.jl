@@ -1,10 +1,10 @@
 # Tests of `array_view` and `relabel` — the explicit route between the labelled containers
 # and ordinary 1-based arrays, in `src/array_view.jl`.
 #
-# The reason this route exists at all is the first test item below.  Before version 3 the
-# integer path returned `OffsetArray`s, and an `OffsetArray` with non-trivial offsets
-# accepts `*` and `mul!` and returns *silently wrong* answers: a product of two blocks came
-# back as a 1-based `Matrix` of mostly zeros, and an adjoint product came back holding
+# The reason this route exists at all is the first test item below.  A block with integer
+# indices could be an `OffsetArray`, but an `OffsetArray` with non-trivial offsets accepts
+# `*` and `mul!` and returns *silently wrong* answers: a product of two blocks comes back as
+# a 1-based `Matrix` of mostly zeros, and an adjoint product comes back holding
 # uninitialized memory.  Refusing to be an `AbstractMatrix` turns that silence into a
 # `MethodError`, and `array_view` is what a caller reaches for once they actually mean it.
 
@@ -16,9 +16,9 @@
     R₁ = randn(rng, Rotor{Float64})
     R₂ = randn(rng, Rotor{Float64})
 
-    # 𝔇(R₁R₂) = 𝔇(R₁) 𝔇(R₂).  This is the property that the `OffsetArray` bug broke:
-    # written as `𝔇₁[ℓ] * 𝔇₂[ℓ]` it used to give an answer wrong in the first digit, with
-    # no error.
+    # 𝔇(R₁R₂) = 𝔇(R₁) 𝔇(R₂).  This is the property that `OffsetArray` blocks would break:
+    # written as `𝔇₁[ℓ] * 𝔇₂[ℓ]` with such blocks, the product is wrong in the first
+    # digit, with no error.
     for ℓₘₐₓ ∈ (4, 7//2)
         𝔇₁ = D(R₁, ℓₘₐₓ)
         𝔇₂ = D(R₂, ℓₘₐₓ)
@@ -153,6 +153,7 @@ end
 end
 
 @testitem "array_view of a ModeWeights is its flat storage" begin
+    import OffsetArrays: OffsetArray
     using Random
     rng = Random.Xoshiro(55)
 
@@ -169,9 +170,23 @@ end
     end
 
     # An ordinary array is already in that form, which is what lets the transforms take
-    # either a container or a plain array
+    # either a container or a plain array; an array with other axes is refused, because
+    # every caller indexes the result from 1
     A = randn(rng, ComplexF64, 3, 4)
     @test array_view(A) === A
+    @test array_view(view(A, :, 2:3)) == A[:, 2:3]
+    for offset ∈ (OffsetArray(copy(A), 0:2, 1:4), OffsetArray(randn(rng, ComplexF64, 25), 0:24))
+        @test_throws ArgumentError array_view(offset)
+        @test_throws "offset arrays are not supported" array_view(offset)
+    end
+    # ... which the transforms, which take their input through `array_view`, inherit
+    for method ∈ ("RS", "Minimal", "Matrix")
+        𝒯 = SSHT(0, 4; method)
+        @test_throws ArgumentError 𝒯 * OffsetArray(zeros(ComplexF64, 25), 0:24)
+        @test_throws "offset arrays are not supported" 𝒯 * OffsetArray(zeros(ComplexF64, 25), 0:24)
+        f = 𝒯 * zeros(ComplexF64, 25)
+        @test_throws "offset arrays are not supported" 𝒯 \ OffsetArray(f, 0:length(f)-1)
+    end
 end
 
 @testitem "Broadcast assignment writes through a container" begin

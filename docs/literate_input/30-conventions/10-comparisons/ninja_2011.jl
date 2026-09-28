@@ -28,6 +28,7 @@ encapsulate the formulas in a module so that we can test them against the
 """
 using TestItems: @testitem  #hide
 @testitem "NINJA conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
+import .Utilities: θrange, θϕrange  #hide
 
 module NINJA
 #+
@@ -114,7 +115,7 @@ end  # module NINJA
 #+
 
 # First, we compare the explicit formulas to the general formulas.
-for (ι, ϕ) ∈ θϕrange()
+for (ι, ϕ) ∈ θϕrange(rng)
     @test NINJA.ₛYₗₘ(-2, 2, 2, ι, ϕ) ≈ NINJA.₋₂Y₂₂(ι, ϕ) atol=ϵₐ rtol=ϵᵣ
     @test NINJA.ₛYₗₘ(-2, 2, 1, ι, ϕ) ≈ NINJA.₋₂Y₂₁(ι, ϕ) atol=ϵₐ rtol=ϵᵣ
     @test NINJA.ₛYₗₘ(-2, 2, 0, ι, ϕ) ≈ NINJA.₋₂Y₂₀(ι, ϕ) atol=ϵₐ rtol=ϵᵣ
@@ -132,17 +133,19 @@ sₘₐₓ = 2
 #+
 # because the formulas are very slow, and this will be sufficient to sort out any sign or
 # normalization differences, which are the most likely source of error.
-for (θ, ϕ) ∈ θϕrange()
-    for (s, ℓ, m) ∈ sℓmrange(ℓₘₐₓ, sₘₐₓ)
-        @test NINJA.ₛYₗₘ(s, ℓ, m, θ, ϕ) ≈ ConventionsUtilities.Y(s, ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+for (θ, ϕ) ∈ θϕrange(rng)
+    for (ℓ, Yˡ) ∈ SphericalFunctions.sYlmCalculator(θ, ϕ, ℓₘₐₓ, -sₘₐₓ:sₘₐₓ)
+        for s ∈ -min(ℓ, sₘₐₓ):min(ℓ, sₘₐₓ), m ∈ -ℓ:ℓ
+            @test NINJA.ₛYₗₘ(s, ℓ, m, θ, ϕ) ≈ Yˡ[s, m] atol=ϵₐ rtol=ϵᵣ
+        end
     end
 end
 #+
 
 # Finally, we compare the Wigner ``d`` matrix to the `SphericalFunctions` package.
-for ι ∈ θrange()
-    for (ℓ, m′, m) ∈ ℓm′mrange(ℓₘₐₓ)
-        @test NINJA.d(ℓ, m′, m, ι) ≈ ConventionsUtilities.d(ℓ, m′, m, ι) atol=ϵₐ rtol=ϵᵣ
+for ι ∈ θrange(rng)
+    for (ℓ, dˡ) ∈ SphericalFunctions.dCalculator(ι, ℓₘₐₓ), m′ ∈ -ℓ:ℓ, m ∈ -ℓ:ℓ
+        @test NINJA.d(ℓ, m′, m, ι) ≈ dˡ[m′, m] atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+

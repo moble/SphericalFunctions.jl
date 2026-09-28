@@ -9,7 +9,7 @@ md"""
 routines, comprising the primary official software used by the LIGO-Virgo-KAGRA
 Collaboration to detect and characterize gravitational waves.  As far as I can tell, the
 ultimate source for all spin-weighted spherical harmonics used in `LALSuite` is the function
-[`XLALSpinWeightedSphericalHarmonic`](https://git.ligo.org/lscsoft/lalsuite/-/blob/6e653c91b6e8a6728c4475729c4f967c9e09f020/lal/lib/utilities/SphericalHarmonics.c),
+[`XLALSpinWeightedSphericalHarmonic`](https://git.ligo.org/lscsoft/lalsuite/-/blob/22e4cd8fff0487c7b42a2c26772ae9204c995637/lal/lib/utilities/SphericalHarmonics.c),
 which cites the NINJA paper [AjithEtAl_2011](@cite) as its source.  Unfortunately, it cites
 version *1*, which contained a serious error, using ``\tfrac{\cos\iota}{2}`` instead of
 ``\cos \tfrac{\iota}{2}`` and similarly for ``\sin``.  This error was corrected in version
@@ -47,6 +47,7 @@ usually be defined in separate C headers.
 """
 using TestItems: @testitem  #hide
 @testitem "LALSuite conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
+import .Utilities: βrange, αβγrange, θϕrange  #hide
 
 
 module LALSuite
@@ -56,15 +57,14 @@ using Printf: @sprintf
 const I = im
 const LAL_PI = π
 const XLAL_EINVAL = "XLAL Error: Invalid arguments"
+XLAL_ERROR_VAL(val, err) = throw(ArgumentError(err))
 MIN(a, b) = min(a, b)
 gsl_sf_choose(a, b) = binomial(a, b)
 pow(a, b) = a^b
 cexp(a) = exp(a)
 cpolar(a, b) = a * cis(b)
 macro XLALPrError(msg, args...)
-    quote
-        @error @sprintf($msg, $(args...))
-    end
+    esc(:(@error @sprintf($msg, $(args...))))
 end
 #+
 
@@ -173,10 +173,10 @@ s = -2
 ℓₘₐₓ = 8
 #+
 # so we only test up to that point.
-for (θ, ϕ) ∈ θϕrange()
-    for (ℓ, m) ∈ ℓmrange(abs(s), ℓₘₐₓ)
+for (θ, ϕ) ∈ θϕrange(rng)
+    for (ℓ, Yˡ) ∈ SphericalFunctions.sYlm(θ, ϕ, ℓₘₐₓ, s), m ∈ -ℓ:ℓ
         @test LALSuite.XLALSpinWeightedSphericalHarmonic(θ, ϕ, s, ℓ, m) ≈
-            ConventionsUtilities.Y(s, ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+            Yˡ[m] atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
@@ -187,10 +187,10 @@ end
 # because the formulas are fairly inefficient and inaccurate, and this will be sufficient to
 # sort out any sign or normalization differences, which are the most likely sources of
 # error.
-for β ∈ βrange()
-    for (ℓ, m′, m) ∈ ℓm′mrange(ℓₘₐₓ)
+for β ∈ βrange(rng)
+    for (ℓ, dˡ) ∈ SphericalFunctions.dCalculator(β, ℓₘₐₓ), m′ ∈ -ℓ:ℓ, m ∈ -ℓ:ℓ
         @test LALSuite.XLALWignerdMatrix(ℓ, m′, m, β) ≈
-            ConventionsUtilities.d(ℓ, m′, m, β) atol=ϵₐ rtol=ϵᵣ
+            dˡ[m′, m] atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
@@ -200,11 +200,12 @@ end
 # ```c
 # cexp( -(1.0I)*mp*alpha ) * XLALWignerdMatrix( l, mp, m, beta ) * cexp( -(1.0I)*m*gam );
 # ```
-# Note that this package changed conventions in version 3.0 to use these signs.
-for (α,β,γ) ∈ αβγrange()
-    for (ℓ, m′, m) ∈ ℓm′mrange(ℓₘₐₓ)
+# Note that these are the signs this package uses, while its versions before 3.0 used the
+# complex-conjugate convention.
+for (α,β,γ) ∈ αβγrange(rng)
+    for (ℓ, 𝔇ˡ) ∈ SphericalFunctions.DCalculator(α, β, γ, ℓₘₐₓ), m′ ∈ -ℓ:ℓ, m ∈ -ℓ:ℓ
         @test LALSuite.XLALWignerDMatrix(ℓ, m′, m, α, β, γ) ≈
-            ConventionsUtilities.D(ℓ, m′, m, α, β, γ) atol=ϵₐ rtol=ϵᵣ
+            𝔇ˡ[m′, m] atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+

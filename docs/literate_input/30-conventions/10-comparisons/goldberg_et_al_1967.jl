@@ -66,7 +66,7 @@ K_{\pm} = \pm e^{\mp i \gamma} \left(
 \right),
 ```
 where the corrections are to flip the sign in the exponent and in the middle term in
-parentheses.  We those corrections, we still have some strange disagreement.  With ``R`` as
+parentheses.  With those corrections, we still have some strange disagreement.  With ``R`` as
 [our right-Lie derivative](@ref euler_R_S3), we have
 ```math
 K_z = R_z, \qquad K_{\pm} = -R_{\pm}.
@@ -155,7 +155,7 @@ Comparing to our ``𝔇``, we find (and test below) that
 D^{j}_{m',m}(α, β, γ)\big|_{\text{Goldberg}}
 = \overline{𝔇^{(j)}_{m',m}(γ, β, α)}
 = (-1)^{m+m'}\, \overline{𝔇^{(j)}_{m,m'}(α, β, γ)}
-= 𝔇^{(j)}_{m,m'}(-γ, -β, -α),
+= (-1)^{m+m'}\, 𝔇^{(j)}_{m',m}(-γ, -β, -α),
 ```
 where the second and third forms follow from [the symmetries of ``𝔇``](@ref
 summary_wigner_D).  That is, their ``D`` is the complex conjugate of ours with the roles of
@@ -195,6 +195,7 @@ the formulas in a module so that we can test them against the `SphericalFunction
 
 using TestItems: @testitem  #hide
 @testitem "Goldberg et al. conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
+import .Utilities: sℓmrange, αβγrange, θϕrange  #hide
 
 module GoldbergEtAl
 #+
@@ -279,8 +280,8 @@ sₘₐₓ = 2
 # reason we use modest grids of points.  Because Goldberg et al.'s expressions involve
 # ``\cot(θ/2)`` and ``\cot(β/2)``, they are singular at ``θ = 0`` and ``β = 0`` (where the
 # limits are finite), so we avoid the poles by a small amount:
-θϕs = θϕrange(Float64, 7; avoid_poles=1e-3)
-αβγs = αβγrange(Float64, 5; avoid_poles=1e-3)
+θϕs = θϕrange(rng, Float64, 7; avoid_poles=1e-3)
+αβγs = αβγrange(rng, Float64, 5; avoid_poles=1e-3)
 #+
 
 # First, the internal consistency of Goldberg et al.'s own expressions: the conjugation
@@ -298,21 +299,26 @@ end
 # Next, we compare their spin-weighted spherical harmonics to ours, and find the factor of
 # ``(-1)^m``:
 for (θ, ϕ) ∈ θϕs
-    for (s, ℓ, m) ∈ sℓmrange(ℓₘₐₓ, sₘₐₓ)
-        @test GoldbergEtAl.ₛYₗₘ(s, ℓ, m, θ, ϕ) ≈
-            (-1)^m * ConventionsUtilities.Y(s, ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+    for (ℓ, Yˡ) ∈ SphericalFunctions.sYlmCalculator(θ, ϕ, ℓₘₐₓ, -sₘₐₓ:sₘₐₓ)
+        for s ∈ -min(ℓ, sₘₐₓ):min(ℓ, sₘₐₓ), m ∈ -ℓ:ℓ
+            @test GoldbergEtAl.ₛYₗₘ(s, ℓ, m, θ, ϕ) ≈ (-1)^m * Yˡ[s, m] atol=ϵₐ rtol=ϵᵣ
+        end
     end
 end
 #+
 
-# Now the ``D`` matrix.  We test both forms of the relation given above: the conjugate of
-# ours with ``α`` and ``γ`` swapped, and ``(-1)^{m+m'}`` times the conjugate transpose.
+# Now the ``D`` matrix.  We test every form of the relation given above: the conjugate of
+# ours with ``α`` and ``γ`` swapped, ``(-1)^{m+m'}`` times the conjugate transpose, and
+# ``(-1)^{m+m'}`` times ours evaluated at the inverse rotation.
 for (α, β, γ) ∈ αβγs
-    for (j, m′, m) ∈ ℓm′mrange(ℓₘₐₓ)
+    𝔇 = SphericalFunctions.DCalculator(α, β, γ, ℓₘₐₓ)
+    𝔇ˢʷᵃᵖ = SphericalFunctions.DCalculator(γ, β, α, ℓₘₐₓ)  # α and γ swapped
+    𝔇⁻¹ = SphericalFunctions.DCalculator(-γ, -β, -α, ℓₘₐₓ)  # the inverse rotation
+    for ((j, 𝔇ʲ), (_, 𝔇ʲˢʷᵃᵖ), (_, 𝔇ʲ⁻¹)) ∈ zip(𝔇, 𝔇ˢʷᵃᵖ, 𝔇⁻¹), m′ ∈ -j:j, m ∈ -j:j
+        @test GoldbergEtAl.D(j, m′, m, α, β, γ) ≈ conj(𝔇ʲˢʷᵃᵖ[m′, m]) atol=ϵₐ rtol=ϵᵣ
         @test GoldbergEtAl.D(j, m′, m, α, β, γ) ≈
-            conj(ConventionsUtilities.D(j, m′, m, γ, β, α)) atol=ϵₐ rtol=ϵᵣ
-        @test GoldbergEtAl.D(j, m′, m, α, β, γ) ≈
-            (-1)^(m+m′) * conj(ConventionsUtilities.D(j, m, m′, α, β, γ)) atol=ϵₐ rtol=ϵᵣ
+            (-1)^(m+m′) * conj(𝔇ʲ[m, m′]) atol=ϵₐ rtol=ϵᵣ
+        @test GoldbergEtAl.D(j, m′, m, α, β, γ) ≈ (-1)^(m+m′) * 𝔇ʲ⁻¹[m′, m] atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
@@ -332,7 +338,7 @@ end
 # page — evaluate in `BigFloat` arithmetic to keep the rounding errors amplified by
 # ``\sin^{-s} θ`` below `Float64` precision.  When the raised or lowered spin weight would
 # exceed ``ℓ`` in magnitude, the result must vanish.
-for (θ, ϕ) ∈ ((big(θ), big(ϕ)) for (θ, ϕ) ∈ θϕrange(Float64, 5; avoid_poles=1e-3))
+for (θ, ϕ) ∈ ((big(θ), big(ϕ)) for (θ, ϕ) ∈ θϕrange(rng, Float64, 5; avoid_poles=1e-3))
     for (s, ℓ, m) ∈ sℓmrange(ℓₘₐₓ, sₘₐₓ)
         Y(θ, ϕ) = GoldbergEtAl.ₛYₗₘ(s, ℓ, m, θ, ϕ)
         ðY = GoldbergEtAl.ð(Y, s)(θ, ϕ)

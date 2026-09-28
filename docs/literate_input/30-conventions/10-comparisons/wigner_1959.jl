@@ -80,6 +80,7 @@ formulas in a module so that we can test them against the `SphericalFunctions` p
 
 using TestItems: @testitem  #hide
 @testitem "Wigner conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
+import .Utilities: αβγrange, θϕrange  #hide
 
 module Wigner
 #+
@@ -120,27 +121,27 @@ end  # module Wigner
 # because the formulas are slow, and this will be sufficient to sort out any sign or
 # normalization differences, which are the most likely source of error.  For the same reason
 # we use a modest grid of Euler angles.
-αβγs = αβγrange(Float64, 5)
+αβγs = αβγrange(rng, Float64, 5)
 #+
 
 # Wigner's ``𝔇`` is ``(-1)^{\mu'-\mu}`` times the complex conjugate of ours, or equivalently
 # ours with both indices negated:
 for (α, β, γ) ∈ αβγs
-    for (j, μ′, μ) ∈ ℓm′mrange(ℓₘₐₓ)
+    for (j, 𝔇ʲ) ∈ SphericalFunctions.DCalculator(α, β, γ, ℓₘₐₓ), μ′ ∈ -j:j, μ ∈ -j:j
         @test Wigner.𝔇(j, μ′, μ, α, β, γ) ≈
-            (-1)^(μ′-μ) * conj(ConventionsUtilities.D(j, μ′, μ, α, β, γ)) atol=ϵₐ rtol=ϵᵣ
+            (-1)^(μ′-μ) * conj(𝔇ʲ[μ′, μ]) atol=ϵₐ rtol=ϵᵣ
         @test Wigner.𝔇(j, μ′, μ, α, β, γ) ≈
-            ConventionsUtilities.D(j, -μ′, -μ, α, β, γ) atol=ϵₐ rtol=ϵᵣ
+            𝔇ʲ[-μ′, -μ] atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
 
 # And Wigner's Eq. (A.11) reproduces the standard spherical harmonics (with ``c =
 # \sqrt{(2ℓ+1)/4π}``):
-for (θ, ϕ) ∈ θϕrange()
-    for (ℓ, m) ∈ ℓmrange(ℓₘₐₓ)
+for (θ, ϕ) ∈ θϕrange(rng)
+    for (ℓ, Yˡ) ∈ SphericalFunctions.YlmCalculator(θ, ϕ, ℓₘₐₓ), m ∈ -ℓ:ℓ
         @test √((2ℓ+1) / (4π)) * (-1)^m * Wigner.𝔇(ℓ, m, 0, ϕ, θ, zero(θ)) ≈
-            ConventionsUtilities.Y(ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+            Yˡ[m] atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+

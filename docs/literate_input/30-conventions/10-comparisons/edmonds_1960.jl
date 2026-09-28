@@ -129,7 +129,7 @@ d^{(j)}_{m'm}(β)
 Compared with [our ``U(𝐑_{α,β,γ}) = e^{-iαL_z} e^{-iβL_y} e^{-iγL_z}``](@ref
 summary_wigner_D), Edmonds' operator is exactly ``U(𝐑_{α,β,γ}^{-1}) = U(𝐑_{-γ,-β,-α})``:
 the signs in the exponents are reversed *and* the order of the angles is reversed.  This is
-the natural consequence of his "active" description, in which the Euler angles carry the
+the natural consequence of his "active" description, in which the Euler angles move the
 *frame of axes* to its new position — that is, the rotation of the coordinates rather than
 of the field.  Since ``𝔇(𝐑^{-1}) = 𝔇(𝐑)^\dagger``, we expect
 ```math
@@ -151,12 +151,20 @@ formulas in a module so that we can test them against the `SphericalFunctions` p
 
 using TestItems: @testitem  #hide
 @testitem "Edmonds conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
+import .Utilities: ℓm′mrange, βrange, αβγrange, θϕrange  #hide
 
 module Edmonds
 #+
 
-# We'll use some predefined utilities to make the code look more like the equations.
+# We'll use some predefined utilities to make the code look more like the equations, and
+# `ForwardDiff` to evaluate the derivatives in the angular-momentum operators.
 import ..ConventionsUtilities: 𝒾, ❗, dʲsin²ᵏθdcosθʲ
+import ForwardDiff
+#+
+
+# Edmonds includes ``\hbar``, so we will include it in the expressions, but we will
+# set it to 1 to match the conventions of the `SphericalFunctions` package.
+const ħ = 1
 #+
 
 # Equation (2.5.5).  We capture the floating-point type `T` to ensure that we don't lose
@@ -186,6 +194,17 @@ function 𝒟(j, m′, m, α, β, γ)
 end
 #+
 
+# Equation (2.2.2), the angular-momentum operators in Euler angles.  Note that we defined
+# ``\hbar = 1`` above.  Each operator takes a function `f(α, β, γ)` and returns a new
+# function, with the derivatives evaluated by forward-mode automatic differentiation.
+∂α(f) = (α, β, γ) -> ForwardDiff.derivative(α′ -> f(α′, β, γ), α)
+∂β(f) = (α, β, γ) -> ForwardDiff.derivative(β′ -> f(α, β′, γ), β)
+∂γ(f) = (α, β, γ) -> ForwardDiff.derivative(γ′ -> f(α, β, γ′), γ)
+L_x(f) = (α, β, γ) -> -𝒾 * ħ * (-cos(α)*cot(β) * ∂α(f)(α, β, γ) - sin(α) * ∂β(f)(α, β, γ) + cos(α)/sin(β) * ∂γ(f)(α, β, γ))
+L_y(f) = (α, β, γ) -> -𝒾 * ħ * (-sin(α)*cot(β) * ∂α(f)(α, β, γ) + cos(α) * ∂β(f)(α, β, γ) + sin(α)/sin(β) * ∂γ(f)(α, β, γ))
+L_z(f) = (α, β, γ) -> -𝒾 * ħ * ∂α(f)(α, β, γ)
+#+
+
 end  # module Edmonds
 #+
 
@@ -204,22 +223,25 @@ end  # module Edmonds
 # because the formulas are slow, and this will be sufficient to sort out any sign or
 # normalization differences, which are the most likely source of error.  For the same reason
 # we use modest grids of points.
-αβγs = αβγrange(Float64, 5)
+αβγs = αβγrange(rng, Float64, 5)
 #+
 
 # First, the spherical harmonics agree with ours.  The formula involves ``\sin^m θ`` with
-# ``m`` possibly negative, so we avoid the poles.
-for (θ, ϕ) ∈ θϕrange(Float64, 7; avoid_poles=ϵₐ/40)
-    for (ℓ, m) ∈ ℓmrange(ℓₘₐₓ)
-        @test Edmonds.Y(ℓ, m, θ, ϕ) ≈ ConventionsUtilities.Y(ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+# ``m`` possibly negative, so we avoid the poles.  Close to them, the formula divides a nearly
+# vanishing derivative by a power of the small quantity ``\sin θ``, which amplifies its
+# rounding errors enormously — in `Float64` arithmetic at ``θ ≈ 10^{-8}``, to an absolute
+# error of about ``2 × 10^{-8}`` — so we evaluate it in `BigFloat` arithmetic.
+for (θ, ϕ) ∈ θϕrange(rng, Float64, 7; avoid_poles=ϵₐ/40)
+    for (ℓ, Yˡ) ∈ SphericalFunctions.YlmCalculator(θ, ϕ, ℓₘₐₓ), m ∈ -ℓ:ℓ
+        @test Edmonds.Y(ℓ, m, big(θ), big(ϕ)) ≈ Yˡ[m] atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
 
 # Edmonds' ``d`` is the transpose of ours:
-for β ∈ βrange()
-    for (j, m′, m) ∈ ℓm′mrange(ℓₘₐₓ)
-        @test Edmonds.d(j, m′, m, β) ≈ ConventionsUtilities.d(j, m, m′, β) atol=ϵₐ rtol=ϵᵣ
+for β ∈ βrange(rng)
+    for (j, dʲ) ∈ SphericalFunctions.dCalculator(β, ℓₘₐₓ), m′ ∈ -j:j, m ∈ -j:j
+        @test Edmonds.d(j, m′, m, β) ≈ dʲ[m, m′] atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
@@ -227,17 +249,38 @@ end
 # And Edmonds' ``𝒟`` is our ``𝔇`` of the inverse rotation — equivalently, the Hermitian
 # conjugate of ours:
 for (α, β, γ) ∈ αβγs
-    for (j, m′, m) ∈ ℓm′mrange(ℓₘₐₓ)
-        @test Edmonds.𝒟(j, m′, m, α, β, γ) ≈
-            ConventionsUtilities.D(j, m′, m, -γ, -β, -α) atol=ϵₐ rtol=ϵᵣ
-        @test Edmonds.𝒟(j, m′, m, α, β, γ) ≈
-            conj(ConventionsUtilities.D(j, m, m′, α, β, γ)) atol=ϵₐ rtol=ϵᵣ
+    𝔇 = SphericalFunctions.DCalculator(α, β, γ, ℓₘₐₓ)
+    𝔇⁻¹ = SphericalFunctions.DCalculator(-γ, -β, -α, ℓₘₐₓ)  # the inverse rotation
+    for ((j, 𝔇ʲ), (_, 𝔇ʲ⁻¹)) ∈ zip(𝔇, 𝔇⁻¹), m′ ∈ -j:j, m ∈ -j:j
+        @test Edmonds.𝒟(j, m′, m, α, β, γ) ≈ 𝔇ʲ⁻¹[m′, m] atol=ϵₐ rtol=ϵᵣ
+        @test Edmonds.𝒟(j, m′, m, α, β, γ) ≈ conj(𝔇ʲ[m, m′]) atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
 
-# These successful tests show that Edmonds' spherical harmonics agree with ours, while his
-# rotation matrices are those of the inverse rotation: the Hermitian conjugates of the
-# ``𝔇`` matrices defined by the `SphericalFunctions` package.
+# Finally, his operators (2.2.2) agree with ours if they act on our ``𝔇`` as [our summary
+# page](@ref summary_wigner_D) says ours do: ``L_z 𝔇^{(j)}_{m',m} = -m' 𝔇^{(j)}_{m',m}`` and
+# ``(L_x \pm i L_y) 𝔇^{(j)}_{m',m} = -\sqrt{(j \pm m')(j \mp m' + 1)}\, 𝔇^{(j)}_{m' \mp
+# 1,m}``, where the lowered or raised function vanishes at the edges.  We apply them to our
+# ``𝔇`` in the form ``\overline{𝒟^{(j)}_{m m'}}`` just established, which automatic
+# differentiation can evaluate.  The operators involve ``1/\sin β``, so we use a few
+# generic Euler-angle triples away from the poles.
+𝔇(j, m′, m, α, β, γ) = conj(Edmonds.𝒟(j, m, m′, α, β, γ))
+for (α, β, γ) ∈ [(0.7, 1.1, 2.3), (2.9, 0.4, 5.1), (4.0, 2.2, 0.3), (1.3, 2.9, 4.7)]
+    for (j, m′, m) ∈ ℓm′mrange(3)
+        f = (α, β, γ) -> 𝔇(j, m′, m, α, β, γ)
+        L₊f = Edmonds.L_x(f)(α, β, γ) + im * Edmonds.L_y(f)(α, β, γ)
+        L₋f = Edmonds.L_x(f)(α, β, γ) - im * Edmonds.L_y(f)(α, β, γ)
+        @test Edmonds.L_z(f)(α, β, γ) ≈ -m′ * f(α, β, γ) atol=ϵₐ rtol=ϵᵣ
+        @test L₊f ≈ (m′ > -j ? -√((j+m′) * (j-m′+1)) * 𝔇(j, m′-1, m, α, β, γ) : 0) atol=ϵₐ rtol=ϵᵣ
+        @test L₋f ≈ (m′ < j ? -√((j-m′) * (j+m′+1)) * 𝔇(j, m′+1, m, α, β, γ) : 0) atol=ϵₐ rtol=ϵᵣ
+    end
+end
+#+
+
+# These successful tests show that Edmonds' spherical harmonics and angular-momentum
+# operators agree with ours, while his rotation matrices are those of the inverse rotation:
+# the Hermitian conjugates of the ``𝔇`` matrices defined by the `SphericalFunctions`
+# package.
 
 end  #hide

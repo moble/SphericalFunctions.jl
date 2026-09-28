@@ -10,17 +10,20 @@ harmonics up to 2011.  [Reinecke_2013](@citet) (RS) outlined one of
 the more efficient and accurate implementations of spin-weighted
 spherical harmonic transforms (``s``SHT) currently available as
 `libsharp`, but their algorithm is ``∼4L²``, whereas McEwen and
-Wiaux's is``∼2L²``, while [Elahi_2018](@citet) (EKKM) have obtained
+Wiaux's is ``∼2L²``, while [Elahi_2018](@citet) (EKKM) have obtained
 the optimal result that scales as ``∼L²``.
 
 The downside of the EKKM algorithm is that the ``θ`` values at which
 to sample have to be obtained by iteratively minimizing the condition
 numbers of various matrices (which are involved in the computation
 itself).  This expensive step only has to be performed once per choice
-of spin ``s`` and maximum ``ℓ`` value ``L``.  Otherwise, the results
-of this algorithm seem to be relatively good — at least for ``L`` up
-to 64.  This does not compare favorably with the MW algorithm, which
-has slowly growing errors through ``L = 4096``.
+of spin ``s`` and maximum ``ℓ`` value ``L``.  Otherwise, the algorithm
+is accurate at small ``L``, but its sample points become badly
+conditioned as ``L`` grows: in double precision, a round trip loses
+about 3.5 digits by ``L = 32``, 6 by ``L = 48`` and 8 by ``L = 64`` for
+``s = 0``, and about 9 by ``L = 32`` for ``s = 2``.  This does not
+compare favorably with the MW algorithm, which has slowly growing
+errors through ``L = 4096``.
 
 ## EKKM analysis
 
@@ -35,8 +38,10 @@ We will denote the vector of these quantities for all values of
 performing the integration using orthogonality of complex
 exponentials, we can find that
 ```math
-  {}_{s}\tilde{f}_{θ}(m) = (-1)^s\, 2π \sum_{ℓ=\Delta}^L \sqrt{\frac{2ℓ+1}{4π}}\, d_{m,-s}^{ℓ}(θ)\, {}_sf_{ℓ,m}.
+  {}_{s}\tilde{f}_{θ}(m) = (-1)^s\, 2π \sum_{ℓ=\Delta}^L \sqrt{\frac{2ℓ+1}{4π}}\, d_{m,-s}^{ℓ}(θ)\, {}_sf_{ℓ,m},
 ```
+where ``\Delta = \max(|m|, |s|)`` is the smallest ``ℓ`` that has a
+mode with this ``m`` and spin weight ``s``.
 Now, denoting the vector of ``{}_sf_{ℓ,m}`` for all values of
 ``ℓ`` as ``{}_s𝐟_m``, we can write this as a matrix-vector
 equation:
@@ -191,9 +196,9 @@ however large ``L`` is, so the cost remains ``O(L^3)``.
 
 Even so, the sample points become badly conditioned as ``L`` grows, for
 every spin weight — the error of a round trip in double precision is
-about ``10^{-11}`` at ``L = 32`` and ``10^{-6}`` at ``L = 48`` for ``s =
-0``, and grows faster for larger ``|s|`` — which is the limitation
-mentioned at the top of this page.
+about ``10^{-12}`` at ``L = 32``, ``10^{-10}`` at ``L = 48`` and
+``10^{-8}`` at ``L = 64`` for ``s = 0``, and grows faster for larger
+``|s|`` — which is the limitation mentioned at the top of this page.
 
 
 ## Implementation
@@ -205,10 +210,9 @@ decomposition of the matrix of each.  A group's matrix couples its
 modes to the Fourier coefficients that measure its ``m`` values on
 every ring whose window includes them; a mode enters a coefficient
 whenever its ``m`` is congruent, modulo the size of the ring, to the
-frequency that coefficient measures.  (Earlier versions of the package
-evaluated the ``{}_{s}λ_{ℓ,m}`` on the fly with a `λ_iterator`;
-recomputing the recursion once per ring per ``m`` cost more than
-storing it.)
+frequency that coefficient measures.  (Evaluating the
+``{}_{s}λ_{ℓ,m}`` on the fly instead, recomputing the recursion once
+per ring per ``m``, costs more than storing them.)
 
 The following pseudo-code summarizes the analysis algorithm:
 ```julia

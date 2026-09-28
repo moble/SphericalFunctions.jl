@@ -503,7 +503,7 @@ Julia, and tests them numerically against this package.  They are
 written with
 [Literate.jl](https://fredrikekre.github.io/Literate.jl/), so the very
 same files are also part of [this package's test
-suite](https://github.com/moble/SphericalFunctions.jl/tree/main/docs/literate_input/conventions/comparisons).
+suite](https://github.com/moble/SphericalFunctions.jl/tree/main/docs/literate_input/30-conventions/10-comparisons).
 
 Among the items that would be good to compare are the following, when
 actually used by any of these sources:

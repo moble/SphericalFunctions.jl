@@ -17,13 +17,13 @@ generally, the spin group ``𝐒𝐩𝐢𝐧(3) \cong 𝐒𝐔(2)`` that covers 
 given as `Rotor`s from
 [`Quaternionic.jl`](https://github.com/moble/Quaternionic.jl), which
 also provides conversions from spherical coordinates and Euler
-angles.[^1] Among other applications, those
-functions permit "synthesis" (evaluation of the spin-weighted
-spherical functions) of spin-weighted spherical harmonic coefficients
-on regular or distorted grids.  This package also includes functions
-enabling efficient and accurate "analysis" (decomposition into mode
-coefficients) of functions evaluated on regular grids to high order,
-or arbitrary grids to intermediate order.
+angles.[^1] Among other applications, those functions permit
+"synthesis" (evaluation of the spin-weighted spherical functions) of
+spin-weighted spherical harmonic coefficients on regular or distorted
+grids.  This package also includes functions enabling efficient and
+accurate "analysis" (decomposition into mode coefficients) of
+functions evaluated on regular grids to high order, or arbitrary grids
+to intermediate order.
 
 ## Outline of capabilities
 
@@ -31,15 +31,18 @@ or arbitrary grids to intermediate order.
   [`Ylm`](@ref)
   - Evaluate all terms up to a given ``ℓₘₐₓ`` at once
   - Half-integer indices are supported throughout (except by `Ylm`,
-    which is integer by definition), passed as `Rational` arguments
-    with denominator 2
+    which is integer by definition), passed as a `Rational{Int}` with
+    denominator 2 or as a `HalfOddInteger`
   - Optional restricted ranges of ``m'``,  ``m``, and/or ``s``
-  - Functions of a single rotation or of a vector of them
+  - Functions of a single rotation (and, for `sYlm` and `Ylm`, of a
+    vector of them)
   - Return objects indexed directly by ``ℓ``, ``m``, etc., even for
     negative or half-integer indices
 - Iterative calculators [`DCalculator`](@ref), [`dCalculator`](@ref),
   [`sYlmCalculator`](@ref), and [`YlmCalculator`](@ref)
-  - Take the same arguments as the basic functions
+  - Take the same positional arguments as the basic functions, and
+    also accept a vector of rotors; a harmonic calculator always
+    starts at ``ℓ = 0``
   - Calculate one ``ℓ`` at a time, returning a view into the storage
   - Dramatically reduced memory footprint
   - Can be reused for multiple rotations with `set_R!`, etc.
@@ -51,7 +54,8 @@ or arbitrary grids to intermediate order.
   - Can be called as functions or multiplied as operators, without
     building a matrix, or applied with `mul!` with no allocation at
     all
-  - Can be called to return a matrix form
+  - Can be called to return a matrix form, which acts on the plain
+    vector [`array_view`](@ref)`(w)`
 - [`ModeWeights`](@ref) objects
   - Hold the coefficients of a spin-weighted function in the
     ``{}_{s}Y_{ℓ,m}`` basis, with the spin weight and ``ℓ`` range
@@ -64,10 +68,14 @@ or arbitrary grids to intermediate order.
   - Transform between a function's mode weights and values on a grid
   - Support fast and exact transforms on
     equiangular grids to very high ``ℓ`` with [`SSHTRS`](@ref)
-  - Support fast and exact transforms on arbitrary *minimal* grids for
-    ``ℓₘₐₓ ≲ 32`` with  [`SSHTMatrix`](@ref)
+  - Support transforms with optimal dimensionality on well-conditioned
+    grids (Leja points by default) for moderate ``ℓₘₐₓ`` — best below
+    about 24, and usable to about 64 — with [`SSHTMatrix`](@ref)
   - Support transforms on freely chosen points for moderate ``ℓₘₐₓ``
     with [`SSHTMatrix`](@ref)
+  - Support fast transforms with optimal dimensionality on special
+    ring grids for small ``ℓₘₐₓ`` with [`SSHTMinimal`](@ref), whose
+    accuracy falls off rapidly as ``ℓₘₐₓ`` and ``|s|`` grow
   - Simple functional forms [`map2salm`](@ref) and [`salm2map`](@ref)
 
 ## Quick start
@@ -96,7 +104,7 @@ julia> size(𝔇[3])  # each block is (2ℓ+1)×(2ℓ+1)
 (7, 7)
 
 julia> axes(𝔇[3])  # and is indexed as 𝔇[ℓ][m′, m], with m′, m ∈ -ℓ:ℓ
-(-3:1:3, -3:1:3)
+(-3:3, -3:3)
 
 julia> 𝔇[1][0, 0] ≈ cos(π/3)  # for m′ = m = 0 the phases drop out, leaving d = cos β
 true
@@ -135,10 +143,10 @@ enough to have its own name, [`Ylm`](@ref):
 julia> Y = sYlm(R, ℓₘₐₓ, -2);  # spin weight -2, so ℓ starts at 2
 
 julia> repr(Y)
-"HarmonicValues{ComplexF64} for ℓ ∈ 2:8, s = -2"
+"HarmonicValues{ComplexF64} for ℓ ∈ 2:8, s=-2"
 
 julia> axes(Y[3])  # one ℓ, indexed by m ∈ -ℓ:ℓ
-(-3:1:3,)
+(-3:3,)
 
 julia> sum(abs2, array_view(Y[3])) ≈ 7 / (4π)  # Σₘ |ₛYₗₘ|² = (2ℓ+1)/4π
 true
@@ -273,7 +281,7 @@ julia> w′(Q) ≈ w(inv(R) * Q)
 true
 ```
 
-Here, `w'` is the version of `w` obtained by *actively* rotating `w`
+Here, `w′` is the version of `w` obtained by *actively* rotating `w`
 by `R`.
 
 The [differential operators](@ref interface_differential_operators)
@@ -297,13 +305,26 @@ true
 No matrix is built for any of this: the operator is applied by a loop,
 so the only allocation is the result, and using
 [`LinearAlgebra.mul!`](@extref) with an existing container allocates
-nothing at all — though you have to preallocate the result, and set
-the correct spin weight for it.  The rest of what a `ModeWeights`
-supports is described under [rotating and evaluating mode
-weights](@ref mode_weight_operations), and the full list of operators
-— along with the matrix forms of them, which act on a plain vector
-instead — is on the [differential operators](@ref
-interface_differential_operators) page.
+nothing at all.  The container has to be allocated beforehand with the
+labels of the result: the spin weight the operator produces, and the
+same range of ``ℓ`` as the input, which the operators never change.
+
+```jldoctest quickstart
+julia> using LinearAlgebra: mul!
+
+julia> w₊ = ModeWeights{ComplexF64}(undef, -1, 2, 4);  # s+1 = -1, and ℓ ∈ 2:4 as for w
+
+julia> mul!(w₊, ð, w) == ð(w)
+true
+```
+
+A result requested over another range of ``ℓ`` is copied into it
+afterwards, with `ModeWeights(w₊; ℓₘᵢₙ, ℓₘₐₓ)`.  The rest of what a
+`ModeWeights` supports is described under [rotating and evaluating
+mode weights](@ref mode_weight_operations), and the full list of
+operators — along with the matrix forms of them, which act on the
+plain vector `array_view(w)` instead — is on the [differential
+operators](@ref interface_differential_operators) page.
 
 The last piece connects mode weights to the values of the function on
 a grid of points.  An [`SSHT`](@ref) object is constructed for a given
@@ -351,8 +372,15 @@ Half-integer ``ℓ, m', m`` — the representations of ``𝐒𝐩𝐢𝐧(3)``
 that do not descend to ``𝐒𝐎(3)`` — are supported throughout: by
 ``𝔇``, ``d`` and the spin-weighted harmonics, by the mode weights and
 the operators on them, and by the transforms, at the same accuracy and
-essentially the same speed as integer indices.  Pass a `Rational` with
-denominator 2, as in `D(R, 7//2)` or `SSHT(1//2, 7//2)`.  See
+essentially the same speed as integer indices.  Pass a `Rational{Int}`
+with denominator 2, as in `D(R, 7//2)` or `SSHT(1//2, 7//2)`, or a
+[`HalfOddInteger`](@ref SphericalFunctions.HalfOddInteger).  An
+integer index is an `Int`; narrower, unsigned and wider integer types
+are refused with an explanation, because the index arithmetic is not
+closed under them.  The exceptions are [`recurrence!`](@ref) and
+[`wedge_value`](@ref SphericalFunctions.wedge_value), which convert an
+index of any integer type to that of the calculator or wedge they are
+given.  See
 [Half-integer indices](@ref interface_half_integers), and the
 [half-integer section of the transforms page](@ref
 transformations_half_integer) for what a function of half-integer spin
@@ -371,8 +399,8 @@ versions of this package, as well as its predecessors found
 renaming functions alone will run without complaint, but will give the
 complex conjugate of the intended result.  Two other changes affect
 most code: every rotation is given as a `Rotor`, and the element type
-of every result is that of its input, rather than being chosen by an
-argument.  The
+of every result computed from a rotation is that of the rotation,
+rather than being chosen by an argument.  The
 [changelog](https://github.com/moble/SphericalFunctions.jl/blob/main/CHANGELOG.md)
 lists all the changes, with a table giving the replacement for each
 function of version 2.
@@ -388,7 +416,7 @@ twenty-four sources whose formulas can be evaluated, those formulas
 are checked numerically against this package, and the checks run as
 tests with each change to this code.
 
-## Other packages
+## Related packages
 
 Note that numerous other packages cover some of these use cases,
 including
@@ -406,14 +434,21 @@ higher-precision numbers, which are what this package provides.
     known functions.)  Almost universally, it is best to use
     quaternions when computing with rotations.  All the computations
     done within this package use quaternions, so spherical coordinates
-    and Euler angles must be converted first, with
-    `from_spherical_coordinates(θ, ϕ)` or `from_euler_angles(α, β,
-    γ)`.  While the calculations needed for those conversions would
-    still need to be done if this package used Euler angles internally
-    — meaning that this approach is as efficient as any — that work
-    can be avoided entirely if you work with quaternions directly.
+    and Euler angles are converted first, with
+    `from_spherical_coordinates(θ, ϕ)` or `from_euler_angles(α, β, γ)`
+    — which is what the functions that accept angles in place of a
+    rotor do themselves.  While the calculations needed for those
+    conversions would still need to be done if this package used Euler
+    angles internally — meaning that this approach is as efficient as
+    any — that work can be avoided entirely if you work with
+    quaternions directly.
 
-[^2]: The in-place form of multiplication `mul!` also works.
+[^2]: The in-place form of multiplication `mul!` also works — for
+    which `similar` is very helpful in creating the output object.
     Alternatively, they can be called as in `ð(s, ℓₘᵢₙ, ℓₘₐₓ,
-    FloatType)` to return a matrix subtype — though this will be
-    relatively inefficient.  The `ℓₘᵢₙ` and `FloatType` are optional.
+    FloatType)` to return a matrix — though this will be relatively
+    inefficient.  The `ℓₘᵢₙ` and `FloatType` are optional.  Such a
+    matrix acts on the plain vector `array_view(w)`, and gives a plain
+    vector back; its product with the `ModeWeights` itself is refused,
+    because a plain matrix has no labels to check against those of the
+    weights.

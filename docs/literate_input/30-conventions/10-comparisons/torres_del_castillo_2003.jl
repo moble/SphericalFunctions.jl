@@ -78,6 +78,7 @@ encapsulate the formulas in a module so that we can test them against the
 
 using TestItems: @testitem  #hide
 @testitem "Torres del Castillo conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
+import .Utilities: βrange, αβγrange, θϕrange  #hide
 
 module TorresDelCastillo
 #+
@@ -132,26 +133,28 @@ sₘₐₓ = 2
 # because the formulas are slow, and this will be sufficient to sort out any sign or
 # normalization differences, which are the most likely source of error.  For the same reason
 # we use a modest grid of Euler angles.
-αβγs = αβγrange(Float64, 5)
+αβγs = αβγrange(rng, Float64, 5)
 #+
 
 # The ``d`` and ``D`` matrices agree with ours:
-for β ∈ βrange()
-    for (l, m′, m) ∈ ℓm′mrange(ℓₘₐₓ)
-        @test TorresDelCastillo.d(l, m′, m, β) ≈ ConventionsUtilities.d(l, m′, m, β) atol=ϵₐ rtol=ϵᵣ
+for β ∈ βrange(rng)
+    for (l, dˡ) ∈ SphericalFunctions.dCalculator(β, ℓₘₐₓ), m′ ∈ -l:l, m ∈ -l:l
+        @test TorresDelCastillo.d(l, m′, m, β) ≈ dˡ[m′, m] atol=ϵₐ rtol=ϵᵣ
     end
 end
 for (α, β, γ) ∈ αβγs
-    for (l, m′, m) ∈ ℓm′mrange(ℓₘₐₓ)
-        @test TorresDelCastillo.D(l, m′, m, α, β, γ) ≈ ConventionsUtilities.D(l, m′, m, α, β, γ) atol=ϵₐ rtol=ϵᵣ
+    for (l, 𝔇ˡ) ∈ SphericalFunctions.DCalculator(α, β, γ, ℓₘₐₓ), m′ ∈ -l:l, m ∈ -l:l
+        @test TorresDelCastillo.D(l, m′, m, α, β, γ) ≈ 𝔇ˡ[m′, m] atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
 
 # And the spin-weighted spherical harmonics agree with ours:
-for (θ, ϕ) ∈ θϕrange()
-    for (s, ℓ, m) ∈ sℓmrange(ℓₘₐₓ, sₘₐₓ)
-        @test TorresDelCastillo.Y(s, ℓ, m, θ, ϕ) ≈ ConventionsUtilities.Y(s, ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+for (θ, ϕ) ∈ θϕrange(rng)
+    for (ℓ, Yˡ) ∈ SphericalFunctions.sYlmCalculator(θ, ϕ, ℓₘₐₓ, -sₘₐₓ:sₘₐₓ)
+        for s ∈ -min(ℓ, sₘₐₓ):min(ℓ, sₘₐₓ), m ∈ -ℓ:ℓ
+            @test TorresDelCastillo.Y(s, ℓ, m, θ, ϕ) ≈ Yˡ[s, m] atol=ϵₐ rtol=ϵᵣ
+        end
     end
 end
 #+

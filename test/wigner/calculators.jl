@@ -1,6 +1,6 @@
-# Tests for the v3 Wigner-matrix calculators: `DCalculator`, `dCalculator`, the
-# the blocks `recurrence!` returns, the four block limits, batched rotors, and the convenience functions `D`
-# and `d`.  The oracles are independent closed forms — Varshalovich Eq. 4.3.1(2) for `d`,
+# Tests for the Wigner-matrix calculators: `DCalculator`, `dCalculator`, the blocks
+# `recurrence!` returns, the four block limits, batched rotors, and the convenience functions
+# `D` and `d`.  The oracles are independent closed forms — Varshalovich Eq. 4.3.1(2) for `d`,
 # the settled Euler factorization for `𝔇`, and the quaternionic form of Boyle (2016), all
 # transcribed in the `HalfIntegerOracle` setup module — together with the explicit and
 # formulaic matrices in `ExplicitWignerMatrices` and a set of metamorphic identities.
@@ -8,11 +8,12 @@
 @testitem "DCalculator vs closed forms" setup=[HalfIntegerOracle, Utilities] begin
     import SphericalFunctions: DCalculator, recurrence!
     import .HalfIntegerOracle: d_oracle, D_oracle
+    import .Utilities: Rrange
     using Quaternionic: Rotor, Quaternion, components, 𝐢, 𝐣, 𝐤
     using DoubleFloats: Double64
     using Random
 
-    Random.seed!(1234)  # `Rrange` draws from the default RNG
+    rng = Random.Xoshiro(1234)
 
     # Euler angles of a (possibly unnormalized) quaternion, in high precision.  Writing
     # R = exp(α𝐤/2) exp(β𝐣/2) exp(γ𝐤/2) and splitting it into the two complex parts
@@ -53,12 +54,12 @@
     # is therefore computed in Float64 whatever the element type, which is why it is used
     # only for Float64 and with a looser tolerance.
     @testset "$T" for T in (Float64, Double64)
-        # Measured worst errors at ℓ ≤ 8: 7.5 eps (Float64) and 2.1 eps (Double64) against
-        # reference 1, and 15.6 eps against reference 2.
+        # Measured worst errors at ℓ ≤ 8: 7.1 eps (Float64) and 2.3 eps (Double64) against
+        # reference 1, and 16.2 eps against reference 2.
         atol = 32 * eps(T)
         atolᵇ = 64 * eps(T)
         for ℓₘₐₓ in (0, 1, 2, 4, 8)
-            rotors = Rrange(T, 6)
+            rotors = Rrange(rng, T, 6)
             calc = DCalculator(first(rotors), ℓₘₐₓ)
             for R in rotors
                 worst = zero(T)
@@ -99,11 +100,11 @@ end
 @testitem "dCalculator vs closed form" setup=[HalfIntegerOracle, Utilities] begin
     import SphericalFunctions: dCalculator, recurrence!
     import .HalfIntegerOracle: d_oracle
+    import .Utilities: βrange
     using Quaternionic: Rotor, from_euler_angles
     using DoubleFloats: Double64
     using Random
 
-    Random.seed!(2345)  # `βrange` draws from the default RNG
     rng = Random.Xoshiro(2345)
 
     # Reference, category 1 (a closed-form formula): Varshalovich Eq. 4.3.1(2), whose index
@@ -119,16 +120,11 @@ end
         [T.(b) for b in blocks]  # `blocks[ℓ+1][m′+ℓ+1, m+ℓ+1]`
     end
 
-    # `βrange(Double64, n)` overflows while building its step range, so for other types we
-    # convert the Float64 values and add the exact endpoints of the type itself.
-    βvalues(::Type{Float64}, n) = βrange(Float64, n)
-    βvalues(::Type{T}, n) where {T} = T[T(0); T.(βrange(Float64, n)); T(π)]
-
     @testset "$T" for T in (Float64, Double64)
-        # Measured worst error at ℓ ≤ 8: 3.0 eps (Float64) and 1.8 eps (Double64).
+        # Measured worst error at ℓ ≤ 8: 3.8 eps (Float64) and 2.2 eps (Double64).
         atol = 20 * eps(T)
         for ℓₘₐₓ in (0, 1, 2, 4, 8)
-            βs = βvalues(T, 6)
+            βs = βrange(rng, T, 6)
             calc = dCalculator(first(βs), ℓₘₐₓ)
             for β in βs
                 eⁱᵝ = cis(β)
@@ -161,16 +157,19 @@ end
 
 @testitem "Wigner calculators vs explicit formulas" setup=[ExplicitWignerMatrices, Utilities] begin
     import SphericalFunctions: DCalculator, dCalculator, recurrence!
+    import .Utilities: Rrange
     using Quaternionic: Rotor, 𝐢, 𝐣, 𝐤, to_euler_phases
     using Random
 
-    Random.seed!(3456)  # `Rrange` draws from the default RNG
+    rng = Random.Xoshiro(3456)
     ℓₘₐₓ = 3
 
     @testset "$T" for T in (Float64, BigFloat)
-        # The naive closed-form sum loses digits in Float64; BigFloat has ~77 digits to spare
-        atol = T === BigFloat ? big"1e-60" : 1e-13
-        rotors = Rrange(T, 6)
+        # At ℓ ≤ 3 the closed forms lose nothing measurable: the worst errors measured here
+        # are 4.7 eps for 𝔇, 3.0 eps for the d formula and 2.2 eps for the explicit d, in
+        # both types.
+        atol = 20 * eps(T)
+        rotors = Rrange(rng, T, 6)
         calcD = DCalculator(first(rotors), ℓₘₐₓ)
         calcd = dCalculator(first(rotors), ℓₘₐₓ)
         for R in rotors
@@ -194,7 +193,7 @@ end
 end
 
 
-@testitem "Wigner calculator block limits" begin
+@testitem "Wigner calculator block limits" setup=[RefusalChecks] begin
     import SphericalFunctions
     import SphericalFunctions: DCalculator, dCalculator, recurrence!
     using Quaternionic: Rotor
@@ -258,26 +257,42 @@ end
             end
 
             # Invalid limits are rejected at construction
-            @test_throws ErrorException Ctor(R, ℓₘₐₓ; m′ₘᵢₙ=1)  # m′ₘᵢₙ > 0
-            @test_throws ErrorException Ctor(R, ℓₘₐₓ; mₘᵢₙ=1)  # mₘᵢₙ > 0
-            @test_throws ErrorException Ctor(R, ℓₘₐₓ; m′ₘₐₓ=-1)  # m′ₘₐₓ < 0
-            @test_throws ErrorException Ctor(R, ℓₘₐₓ; mₘₐₓ=-1)  # mₘₐₓ < 0
-            @test_throws ErrorException Ctor(R, ℓₘₐₓ; m′ₘₐₓ=ℓₘₐₓ+1)  # |limit| > ℓₘₐₓ
-            @test_throws ErrorException Ctor(R, ℓₘₐₓ; m′ₘₐₓ=ℓₘₐₓ+1, m′ₘᵢₙ=0)
-            @test_throws ErrorException Ctor(R, ℓₘₐₓ; m′ₘₐₓ=0, m′ₘᵢₙ=-(ℓₘₐₓ+1))
-            @test_throws ErrorException Ctor(R, ℓₘₐₓ; mₘₐₓ=ℓₘₐₓ+1, mₘᵢₙ=0)
-            @test_throws ErrorException Ctor(R, ℓₘₐₓ; mₘₐₓ=0, mₘᵢₙ=-(ℓₘₐₓ+1))
-            @test_throws ErrorException Ctor(R, ℓₘₐₓ; m′ₘₐₓ=1, m′ₘᵢₙ=2)  # max < min
-            @test_throws ErrorException Ctor(R, ℓₘₐₓ; mₘₐₓ=1, mₘᵢₙ=2)
-            @test_throws ErrorException Ctor(R, -1)
+            limits(; kw...) = () -> Ctor(R, ℓₘₐₓ; kw...)
+            small, large = "is too large for this index type", "is too large for ℓₘₐₓ"
+            @test refuses(limits(m′ₘᵢₙ=1), ArgumentError, "m′ₘᵢₙ=1 $small")  # m′ₘᵢₙ > 0
+            @test refuses(limits(mₘᵢₙ=1), ArgumentError, "mₘᵢₙ=1 $small")  # mₘᵢₙ > 0
+            @test refuses(limits(m′ₘₐₓ=-1), ArgumentError, "m′ₘₐₓ=-1 is less than")
+            @test refuses(limits(mₘₐₓ=-1), ArgumentError, "mₘₐₓ=-1 is less than")
+            @test refuses(limits(m′ₘₐₓ=ℓₘₐₓ+1), ArgumentError, large)  # |limit| > ℓₘₐₓ
+            @test refuses(limits(m′ₘₐₓ=ℓₘₐₓ+1, m′ₘᵢₙ=0), ArgumentError, large)
+            @test refuses(limits(m′ₘₐₓ=0, m′ₘᵢₙ=-(ℓₘₐₓ+1)), ArgumentError, large)
+            @test refuses(limits(mₘₐₓ=ℓₘₐₓ+1, mₘᵢₙ=0), ArgumentError, large)
+            @test refuses(limits(mₘₐₓ=0, mₘᵢₙ=-(ℓₘₐₓ+1)), ArgumentError, large)
+            @test refuses(limits(m′ₘₐₓ=1, m′ₘᵢₙ=2), ArgumentError, "is less than")  # max < min
+            @test refuses(limits(mₘₐₓ=1, mₘᵢₙ=2), ArgumentError, "is less than")
+            @test refuses(() -> Ctor(R, -1), ArgumentError, "must be non-negative")
+            # The limits are indices of the kind of ℓₘₐₓ, and of type `Int`
+            @test refuses(limits(m′ₘₐₓ=3//2), ArgumentError, "keyword argument `m′ₘₐₓ`")
+            @test refuses(limits(mₘᵢₙ=Int8(-1)), ArgumentError, "narrower than `Int`")
             # The defaults themselves are valid at every ℓₘₐₓ, including 0
             @test SphericalFunctions.m′ₘₐₓ(Ctor(R, 0)) == 0
+
+            # Each limit may also be spelled in ASCII, and the Unicode spelling wins where both
+            # are given
+            ascii = Ctor(R, ℓₘₐₓ; mp_max=3, mp_min=-2, m_max=4, m_min=-1)
+            unicode = Ctor(R, ℓₘₐₓ; m′ₘₐₓ=3, m′ₘᵢₙ=-2, mₘₐₓ=4, mₘᵢₙ=-1)
+            @test typeof(ascii) === typeof(unicode)
+            @test copy(recurrence!(ascii, R, ℓₘₐₓ)) == copy(recurrence!(unicode, R, ℓₘₐₓ))
+            @test SphericalFunctions.m′ₘₐₓ(Ctor(R, ℓₘₐₓ; mp_max=1, m′ₘₐₓ=2)) == 2
+            # The default of each lower limit follows the upper limit, in either spelling
+            @test SphericalFunctions.m′ₘᵢₙ(Ctor(R, ℓₘₐₓ; mp_max=2)) == -2
+            @test SphericalFunctions.mₘᵢₙ(Ctor(R, ℓₘₐₓ; m_max=3)) == -3
         end
     end
 end
 
 
-@testitem "Wigner calculators batched rotors" begin
+@testitem "Wigner calculators batched rotors" setup=[RefusalChecks] begin
     import SphericalFunctions: DCalculator, dCalculator, recurrence!
     import SphericalFunctions: Nᵣ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ
     using Quaternionic: Rotor, to_euler_phases
@@ -342,9 +357,16 @@ end
         check_order(DCalculator(rotors, ℓₘₐₓ), rotors)
         # Wrong number of rotors
         batched = DCalculator(rotors, ℓₘₐₓ)
-        @test_throws ErrorException recurrence!(batched, rotors[1:N-1], 0)
-        @test_throws ErrorException recurrence!(batched, rotors[1], 0)
-        @test_throws ErrorException recurrence!(DCalculator(first(rotors), ℓₘₐₓ), rotors, 0)
+        @test refuses(
+            () -> recurrence!(batched, rotors[1:N-1], 0), DimensionMismatch, "Expected 5 rotors"
+        )
+        @test refuses(
+            () -> recurrence!(batched, rotors[1], 0), DimensionMismatch, "expects Nᵣ=5 rotors"
+        )
+        @test refuses(
+            () -> recurrence!(DCalculator(first(rotors), ℓₘₐₓ), rotors, 0), DimensionMismatch,
+            "Expected 1 rotors"
+        )
     end
 
     @testset "dCalculator" begin
@@ -361,9 +383,16 @@ end
         )
         # Wrong number of angles
         batched = dCalculator(βs, ℓₘₐₓ)
-        @test_throws ErrorException recurrence!(batched, βs[1:2], 0)
-        @test_throws ErrorException recurrence!(batched, βs[1], 0)
-        @test_throws ErrorException recurrence!(dCalculator(first(βs), ℓₘₐₓ), βs, 0)
+        @test refuses(
+            () -> recurrence!(batched, βs[1:2], 0), DimensionMismatch, "Expected 5 rotors"
+        )
+        @test refuses(
+            () -> recurrence!(batched, βs[1], 0), DimensionMismatch, "expects Nᵣ=5 rotors"
+        )
+        @test refuses(
+            () -> recurrence!(dCalculator(first(βs), ℓₘₐₓ), βs, 0), DimensionMismatch,
+            "Expected 1 rotors"
+        )
     end
 end
 
@@ -377,7 +406,7 @@ end
     # The payoff, measured the way a user's inner loop sees it: inside a function, where the
     # calculator's type is known, a step allocates nothing.  Measuring at top level instead
     # would report the boxing of a dynamically dispatched call and prove nothing.  This
-    # covers the recurrence and the block together, since one call now does both; a block
+    # covers the recurrence and the block together, since one call does both; a block
     # whose type were not concrete would show up here as the union split's allocation.
     blockallocs(c, ℓ) = (recurrence!(c, ℓ); @allocated recurrence!(c, ℓ))
 
@@ -458,7 +487,7 @@ end
     end
 end
 
-@testitem "Wigner calculators range errors" begin
+@testitem "Wigner calculators range errors" setup=[RefusalChecks] begin
     import SphericalFunctions
     import SphericalFunctions: DCalculator, dCalculator, recurrence!, WignerMatrix
     using Quaternionic: Rotor
@@ -478,10 +507,12 @@ end
             blk = recurrence!(calc, R, 2)
             @test SphericalFunctions.ℓ(calc) == 2
             @test size(blk) == (5, 5)
-            # ℓ out of range for this calculator; the failed call leaves the current block
-            # in place
-            @test_throws ErrorException recurrence!(calc, ℓₘₐₓ + 1)
-            @test_throws ErrorException recurrence!(calc, -1)
+            # ℓ out of range for this calculator, or not an integer at all; the failed call
+            # leaves the current block in place
+            @test refuses(() -> recurrence!(calc, ℓₘₐₓ + 1), ArgumentError, "out of bounds")
+            @test refuses(() -> recurrence!(calc, -1), ArgumentError, "out of bounds")
+            @test refuses(() -> recurrence!(calc, 2.0), ArgumentError, "so ℓ must be one too")
+            @test refuses(() -> recurrence!(calc, 5//2), ArgumentError, "so ℓ must be one too")
             @test SphericalFunctions.ℓ(calc) == 2
             reference = copy(blk)
             # Recomputing from NaN-filled storage reproduces the result exactly, so no
@@ -490,16 +521,19 @@ end
             blk = recurrence!(calc, R, 2)
             @test blk == reference
             @test !any(isnan, blk)
-            @test_throws ErrorException recurrence!(calc, R, ℓₘₐₓ + 1)
+            @test refuses(() -> recurrence!(calc, R, ℓₘₐₓ + 1), ArgumentError, "out of bounds")
         end
     end
 
     # A DCalculator needs the full rotor, not just β, and says what to use instead.  (Matching
     # "Rotor" alone would not do: a bare `MethodError` lists candidates that mention it.)
     calcD = DCalculator(R, ℓₘₐₓ)
-    @test_throws "use a dCalculator if only β is available" recurrence!(calcD, 0.3, 0)
-    @test_throws "use a dCalculator if only β is available" recurrence!(calcD, cis(0.3), 0)
-    @test_throws "use a dCalculator if only β is available" recurrence!(calcD, [0.3], 0)
+    for β ∈ (0.3, cis(0.3), [0.3])
+        @test refuses(
+            () -> recurrence!(calcD, β, 0), ArgumentError,
+            "use a dCalculator if only β is available"
+        )
+    end
     # ... whereas a dCalculator accepts any of the three forms
     calcd = dCalculator(R, ℓₘₐₓ)
     for input in (0.3, cis(0.3), R)
@@ -510,7 +544,7 @@ end
 end
 
 
-@testitem "D and d convenience functions" begin
+@testitem "D and d convenience functions" setup=[RefusalChecks] begin
     import SphericalFunctions: DCalculator, dCalculator, recurrence!, D, d
     using Quaternionic: Rotor, to_euler_phases
     import SphericalFunctions: WignerSeries, WignerMatrix
@@ -551,6 +585,12 @@ end
             @test axes(𝔇ₗ[ℓ]) == (m′r, mr)
             @test all(𝔇ₗ[ℓ][m′, m] == 𝔇[ℓ][m′, m] for m′ in m′r, m in mr)
         end
+        # ... in either spelling of the keywords
+        𝔇ₐ = D(R, ℓₘₐₓ; mp_max=2, mp_min=-1, m_max=3, m_min=0)
+        @test all(𝔇ₐ[ℓ] == 𝔇ₗ[ℓ] for ℓ in 0:ℓₘₐₓ)
+        # `D` takes one rotor; a vector of them is what `DCalculator` is for
+        @test refuses(() -> D([R, R₂], ℓₘₐₓ), ArgumentError, "DCalculator(R⃗, ℓₘₐₓ)")
+        @test refuses(() -> D([R], ℓₘₐₓ; m′ₘₐₓ=1), ArgumentError, "takes a single rotor")
         # The element type follows the rotor's type
         @test eltype(D(Rotor{Float32}(R), 2)[2]) === ComplexF32
         @test eltype(D(R, 2)[2]) === ComplexF64
@@ -592,7 +632,15 @@ end
                 @test maximum(abs, dᵢ[ℓ] .- dβ[ℓ]) ≤ atol
             end
         end
-        # Block limits
+        # `d` takes one angle, phase or rotor; a vector of them is what `dCalculator` is for
+        for input in ([β, β / 3], cis.([β]), [R, R₂])
+            @test refuses(() -> d(input, ℓₘₐₓ), ArgumentError, "dCalculator(β⃗, ℓₘₐₓ)")
+        end
+        # Block limits, in either spelling
+        @test all(
+            d(β, ℓₘₐₓ; mp_max=2, mp_min=-1, m_max=3, m_min=0)[ℓ] == d(β, ℓₘₐₓ; limits...)[ℓ]
+            for ℓ in 0:ℓₘₐₓ
+        )
         for input in (β, eⁱᵝ, R)
             dₗ = d(input, ℓₘₐₓ; limits...)
             @test axes(dₗ) == (0:ℓₘₐₓ,)
@@ -626,12 +674,9 @@ end
     using LinearAlgebra: I, opnorm
     using Random
 
-    # This item used to compare both calculators with `DenseWignerCalculator`, the older
-    # single-rotor implementation kept as an internal oracle while the v3 engine was
-    # written; that oracle has been deleted, and comparing the package to itself was never
-    # an independent check anyway.  What it covered — every element of 𝔇ˡ and dˡ, for
-    # several generic rotors, at every ℓ up to 6 — is covered here by two closed forms and
-    # by identities the recurrence cannot satisfy by accident.
+    # Every element of 𝔇ˡ and dˡ, for several generic rotors, at every ℓ up to 6, is compared
+    # here with two closed forms that owe nothing to the package, and checked against
+    # identities that the recurrence cannot satisfy by accident.
 
     rng = Random.Xoshiro(8901)
     ℓₘₐₓ = 6
@@ -724,25 +769,36 @@ end
 end
 
 
-@testitem "Wigner calculators with narrow integer indices" begin
+@testitem "Wigner calculators refuse integer indices of other types" setup=[RefusalChecks] begin
     import SphericalFunctions: DCalculator, dCalculator, recurrence!, D, d
     using Quaternionic: Rotor
     using Random
 
-    # Indices all of one narrower integer type are kept as that type, all the way into the
-    # calculator — whose `ℓ` reference must then be of that type too — and give the `Int`
-    # result exactly.
+    # Index arithmetic is not closed under the other integer types — ℓ² overflows a narrow
+    # one, and -m wraps around in an unsigned one — so an index of any integer type but `Int`
+    # is refused, whether it is ℓₘₐₓ or a keyword limit, with a sentence saying why.
     rng = Random.Xoshiro(20260917)
     R = randn(rng, Rotor{Float64})
-    for IT in (Int8, Int16, Int32)
-        @test D(R, IT(3)) == D(R, 3)
-        @test d(R, IT(3)) == d(R, 3)
+    for (IT, sentence) ∈ (
+        (Int8, "narrower than `Int`"), (Int16, "narrower than `Int`"),
+        (Int32, "narrower than `Int`"), (UInt, "is unsigned"), (Int128, "wider than `Int`"),
+        (BigInt, "wider than `Int`"), (Bool, "A `Bool` is not an index"),
+    )
+        n = IT === Bool ? true : IT(3)
+        @test refuses(() -> D(R, n), ArgumentError, sentence)
+        @test refuses(() -> d(R, n), ArgumentError, sentence)
         for Ctor in (DCalculator, dCalculator)
-            calc = Ctor(R, IT(3))
-            @test calc.ℓ isa Base.RefValue{IT}
-            @test recurrence!(calc, IT(2)) == recurrence!(Ctor(R, 3), 2)
+            @test refuses(() -> Ctor(R, n), ArgumentError, sentence)
+            @test refuses(() -> Ctor(R, 4; m′ₘₐₓ=n), ArgumentError, sentence)
+            @test refuses(() -> Ctor(R, 4; mp_max=n), ArgumentError, sentence)
         end
     end
+    # A `Rational` that is not a half-odd-integer of `Int`s is refused as well
+    @test refuses(() -> D(R, 3//1), ArgumentError, "is a whole number")
+    @test refuses(() -> D(R, big(7)//2), ArgumentError, "is not `Rational{Int}`")
+    # ... while an index that the calculator converts, such as the ℓ of `recurrence!`, may be
+    # of any integer type, because it is compared with the calculator's own limits
+    @test recurrence!(DCalculator(R, 3), Int8(2)) == recurrence!(DCalculator(R, 3), 2)
 end
 
 @testitem "Calculators: a vector of rotor data is a batch, however short" begin
@@ -752,10 +808,9 @@ end
     using Quaternionic: from_euler_angles
     using Test: @inferred
 
-    # Whether the blocks carry a rotor index is decided by whether the data is a vector, not by
-    # its length.  A one-element vector was once unbatched, so that a loop written for a batch
-    # failed only for batches of one, and `isbatched` of an `sYlm` result disagreed with the
-    # type of its blocks.
+    # Whether the blocks have a rotor index is decided by whether the data is a vector, not by
+    # its length, so that a loop written for a batch works for a batch of one, and `isbatched`
+    # of an `sYlm` result agrees with the type of its blocks.
     R = from_euler_angles(0.3, 0.7, 1.1)
     @test !isbatched(DCalculator(R, 2)) && isbatched(DCalculator([R], 2))
     @test recurrence!(DCalculator(R, 2), 2) isa WignerMatrix
@@ -773,9 +828,164 @@ end
     @test !isbatched(sYlm(R, 2, 0)) && sYlm(R, 2, 0)[2] isa DegreeBlock
     @test isbatched(sYlm([R], 2, -1:1)) && !isbatched(sYlm(R, 2, -1:1))
 
-    # The batchedness is now known from the type of the argument, so construction is
-    # inferrable, and so is the block
+    # ... and a batched calculator says so when shown, since its blocks are indexed differently
+    @test occursin("batched", sprint(show, DCalculator([R], 2)))
+    @test !occursin("batched", sprint(show, DCalculator(R, 2)))
+    @test occursin("batched", sprint(show, sYlmCalculator([R], 2, 0)))
+    @test !occursin("batched", sprint(show, sYlmCalculator(R, 2, 0)))
+
+    # The batchedness is known from the type of the argument, so construction is inferrable,
+    # and so is the block
     @inferred DCalculator([R], 2)
     @inferred DCalculator(R, 2)
     @inferred recurrence!(DCalculator([R], 2), 2)
+    @inferred DCalculator(R, 7//2; m′ₘₐₓ=1//2)
+    @inferred DCalculator(R, 4; mp_max=2)
+end
+
+
+@testitem "Wigner calculators: each block element is the wedge element `wedge_value` reads" begin
+    import SphericalFunctions
+    import SphericalFunctions: DCalculator, dCalculator, recurrence!, wedge_value, zpower, ϵ,
+        HalfOddInteger, Nᵣ, isbatched, ℓₘᵢₙ, ℓₘₐₓ
+    using Quaternionic: Rotor
+    import Random
+
+    # `materialize!` reads the wedge in runs along its rows, resolving the symmetries of H once
+    # for each run rather than once for each element, as `wedge_source` does.  Each element of
+    # every block is compared here, bit for bit, with the value built from `wedge_value`, which
+    # applies the symmetries one element at a time, and from the same power tables: the ϵ
+    # signs of d, and for 𝔇 the phase e^{-i(m′α+mγ)} = conj(z₊^(m′+m) z₋^(m′-m)).  The
+    # restrictions include rows or columns narrower than the other range, so that the wedge
+    # is narrowed too, and asymmetric ranges; the calculators are single and batched.
+    rng = Random.Xoshiro(20260924)
+    R⃗ = randn(rng, Rotor{Float64}, 5)
+    β⃗ = [0.0, 0.4, 1.9, π, 2.7]
+    function expected(calc, H, iᵣ, m′, m)
+        RT = SphericalFunctions.floattype(calc)
+        dᵐ′ᵐ = convert(RT, ϵ(m′) * ϵ(-m)) * wedge_value(H, iᵣ, m′, m)
+        if eltype(calc.Wˡ) <: Complex
+            dᵐ′ᵐ * conj(zpower(calc.Z₊, iᵣ, m′ + m) * zpower(calc.Z₋, iᵣ, m′ - m))
+        else
+            dᵐ′ᵐ
+        end
+    end
+    integer_limits = [
+        (;), (m′ₘₐₓ=2, m′ₘᵢₙ=-1, mₘₐₓ=3, mₘᵢₙ=-3), (mₘₐₓ=2, mₘᵢₙ=-2), (m′ₘₐₓ=2,),
+        (mₘₐₓ=3, mₘᵢₙ=0, m′ₘₐₓ=7, m′ₘᵢₙ=-5), (mₘₐₓ=0, mₘᵢₙ=0), (m′ₘₐₓ=0, m′ₘᵢₙ=0),
+        (m′ₘₐₓ=9, m′ₘᵢₙ=0, mₘₐₓ=1, mₘᵢₙ=-4), (mₘₐₓ=9, mₘᵢₙ=-1, m′ₘₐₓ=1, m′ₘᵢₙ=-2),
+    ]
+    half_limits = [
+        (;), (m′ₘₐₓ=5//2, m′ₘᵢₙ=-3//2), (mₘₐₓ=3//2, mₘᵢₙ=-1//2), (mₘₐₓ=1//2,),
+        (m′ₘₐₓ=17//2, m′ₘᵢₙ=-1//2, mₘₐₓ=3//2, mₘᵢₙ=-5//2), (m′ₘₐₓ=1//2, m′ₘᵢₙ=-1//2),
+    ]
+    count = Ref(0)
+    for (ℓmax, limits) ∈ ((9, integer_limits), (17//2, half_limits)), lim ∈ limits,
+            data ∈ (R⃗, R⃗[1], β⃗, β⃗[2])
+        Ctor = eltype(data) <: Rotor ? DCalculator : dCalculator
+        calc = Ctor(data, ℓmax; lim...)
+        for ℓ ∈ ℓₘᵢₙ(calc):ℓₘₐₓ(calc)
+            blk = recurrence!(calc, ℓ)
+            H = calc.H.Hˡ
+            good = true
+            for m′ ∈ axes(blk, isbatched(calc) ? 2 : 1), m ∈ axes(blk, isbatched(calc) ? 3 : 2),
+                    iᵣ ∈ 1:Nᵣ(calc)
+                value = isbatched(calc) ? blk[iᵣ, m′, m] : blk[m′, m]
+                good &= isequal(value, expected(calc, H, iᵣ, m′, m))
+                count[] += 1
+            end
+            @test good
+        end
+    end
+    @test count[] > 50_000  # every element of every block of every case was compared
+end
+
+
+@testitem "Wigner calculators: restricting m narrows the wedge as restricting m′ does" begin
+    import SphericalFunctions
+    import SphericalFunctions: DCalculator, dCalculator, recurrence!, maxm′ₘₐₓ
+    using Quaternionic: Rotor
+    import Random
+
+    # The wedge holds the rows |m′| ≤ W for every m, and an element of the block whose |m′|
+    # exceeds W is read from its transpose, so W need only be the narrower of the widest m′
+    # and the widest m.  A calculator restricted to a few columns then runs the recurrence of
+    # one restricted to as many rows, rather than the whole of it, and its blocks are the
+    # restriction of the full ones, bit for bit.
+    rng = Random.Xoshiro(3)
+    R⃗ = randn(rng, Rotor{Float64}, 3)
+    for (ℓmax, narrow, wide) ∈ ((24, 2, 24), (47//2, 3//2, 47//2))
+        full = DCalculator(R⃗, ℓmax)
+        by_columns = DCalculator(R⃗, ℓmax; mₘₐₓ=narrow)
+        by_rows = DCalculator(R⃗, ℓmax; m′ₘₐₓ=narrow)
+        @test maxm′ₘₐₓ(by_columns.H.Hˡ) == maxm′ₘₐₓ(by_rows.H.Hˡ) == narrow
+        @test maxm′ₘₐₓ(full.H.Hˡ) == wide
+        @test length(parent(by_columns.H.Hˡ)) == length(parent(by_rows.H.Hˡ))
+        @test length(parent(by_columns.H.Hˡ)) < length(parent(full.H.Hˡ)) ÷ 5
+        # `similar` builds the same narrow wedge
+        @test maxm′ₘₐₓ(similar(by_columns).H.Hˡ) == narrow
+        # An asymmetric range is as wide as its larger end, and the narrower of the two
+        # ranges decides; a lower limit alone narrows nothing
+        @test maxm′ₘₐₓ(DCalculator(R⃗, ℓmax; mₘₐₓ=narrow, mₘᵢₙ=-narrow - 2).H.Hˡ) == narrow + 2
+        @test maxm′ₘₐₓ(DCalculator(R⃗, ℓmax; mₘₐₓ=narrow + 2, m′ₘₐₓ=narrow).H.Hˡ) == narrow
+        @test maxm′ₘₐₓ(DCalculator(R⃗, ℓmax; mₘᵢₙ=-narrow).H.Hˡ) == wide
+        for (ℓ, blk) ∈ by_columns
+            ref = recurrence!(full, ℓ)
+            @test all(
+                isequal(blk[iᵣ, m′, m], ref[iᵣ, m′, m])
+                for iᵣ ∈ 1:3, m′ ∈ axes(blk, 2), m ∈ axes(blk, 3)
+            )
+        end
+        cβ = dCalculator([0.3, 2.1], ℓmax; mₘₐₓ=narrow, mₘᵢₙ=-narrow)
+        fβ = dCalculator([0.3, 2.1], ℓmax)
+        @test maxm′ₘₐₓ(cβ.H.Hˡ) == narrow
+        for (ℓ, blk) ∈ cβ
+            ref = recurrence!(fβ, ℓ)
+            @test all(
+                isequal(blk[iᵣ, m′, m], ref[iᵣ, m′, m])
+                for iᵣ ∈ 1:2, m′ ∈ axes(blk, 2), m ∈ axes(blk, 3)
+            )
+        end
+    end
+end
+
+
+@testitem "Calculators: one rotor gives bit for bit the values it has in a batch" begin
+    import SphericalFunctions: DCalculator, dCalculator, HCalculator, sYlmCalculator,
+        sλlmCalculator, recurrence!, ℓₘₐₓ
+    using Quaternionic: Rotor
+    import Random
+
+    # With one rotor there is nothing to vectorize, so the innermost loops of the recurrence
+    # and of the assembly of the blocks write that case out as a single statement.  It is the
+    # loop's own expression, so the values of a rotor are the same alone as in a batch.
+    rng = Random.Xoshiro(11)
+    R⃗ = randn(rng, Rotor{Float64}, 2)
+    β⃗ = [0.4, 2.2]
+    first_rotor(blk) = (a = Array(copy(blk)); a[1, ntuple(_ -> :, ndims(a) - 1)...])
+    for ℓmax ∈ (13, 25//2)
+        s = ℓmax isa Integer ? (-2:2) : (-3//2:1//2)
+        narrow = ℓmax isa Integer ? 1 : 1//2
+        for (batch, single) ∈ (
+            (DCalculator(R⃗, ℓmax), DCalculator(R⃗[1], ℓmax)),
+            (dCalculator(β⃗, ℓmax), dCalculator(β⃗[1], ℓmax)),
+            (DCalculator(R⃗, ℓmax; mₘₐₓ=narrow), DCalculator(R⃗[1], ℓmax; mₘₐₓ=narrow)),
+            (sYlmCalculator(R⃗, ℓmax, s), sYlmCalculator(R⃗[1], ℓmax, s)),
+            (sYlmCalculator(R⃗, ℓmax, last(s)), sYlmCalculator(R⃗[1], ℓmax, last(s))),
+            (sYlmCalculator(β⃗, ℓmax, s), sYlmCalculator(β⃗[1], ℓmax, s)),
+            (sλlmCalculator(β⃗, ℓmax, s), sλlmCalculator(β⃗[1], ℓmax, s)),
+        )
+            @test all(
+                isequal(first_rotor(b), Array(copy(a))) for ((_, b), (_, a)) ∈ zip(batch, single)
+            )
+        end
+        batch, single = HCalculator(β⃗, ℓmax), HCalculator(β⃗[1], ℓmax)
+        for ℓ ∈ (ℓₘₐₓ(batch) - 2):ℓₘₐₓ(batch)
+            Hb, H₁ = recurrence!(batch, ℓ), recurrence!(single, ℓ)
+            @test all(
+                isequal(Hb[1, m′, m], H₁[1, m′, m])
+                for m′ ∈ -Hb.m′ₘₐₓ:Hb.m′ₘₐₓ for m ∈ abs(m′):ℓ
+            )
+        end
+    end
 end

@@ -22,7 +22,7 @@ f(𝐑) = \sum_{ℓ = |s|}^{ℓₘₐₓ} \sum_{m = -ℓ}^{ℓ} f̃_{ℓ, m}
 ```
 where ``(θ, ϕ)`` are spherical coordinates on 𝕊², and we use the
 rotor ``𝐑`` to describe a point on 𝕊³.  The upper limit ``ℓₘₐₓ`` is
-— in principle — infinite, but because we are finite ``ℓₘₐₓ`` will
+— in principle — infinite, but because we are finite, ``ℓₘₐₓ`` will
 also be finite in all applications here.  Similarly, the set of points
 on which we evaluate the function will also be finite.  A little
 terminology will be helpful:
@@ -69,8 +69,8 @@ transformation will be performed repeatedly, it can be very efficient
 to pre-compute the matrix ``𝒯``, and capitalize on the impressive
 efficiency of linear-algebra libraries to perform the transformation.
 And indeed, this is the approach taken by the [`SSHTMatrix`](@ref)
-method (called `"Direct"` before version 3.0; that name is still
-accepted, with a deprecation warning).
+method (`method="Direct"` is also accepted for it, with a deprecation
+warning).
 
 However, we must consider the memory requirements of this approach.
 The number of nonzero mode weights is ``M = (ℓₘₐₓ+1)^2 - s^2``.  If
@@ -102,16 +102,20 @@ series of rings, each of which is at a constant ``θ`` and has pixels
 equally spaced in ``ϕ``, then we can use Fast Fourier Transforms
 (FFTs) to perform the azimuthal integration very quickly.
 
-# Analysis
+## Analysis
 
 Analytically, we use orthogonality of the spin-weighted spherical
 harmonics to compute the mode weights from the function values as
 ```math
 \begin{gathered}
 f̃_{ℓ, m} = \int_{𝕊²} f(θ, ϕ)\, {}_{s}Ȳ_{ℓ, m}(θ, ϕ) \, d^2Ω, \\
-f̃_{ℓ, m} = \int_{𝕊³} f(𝐑)\, {}_{s}Ȳ_{ℓ, m}(𝐑) \, d^3Ω.
+f̃_{ℓ, m} = \frac{2}{π} \int_{\mathrm{Spin}(3)} f(𝐑)\, {}_{s}Ȳ_{ℓ, m}(𝐑) \, d^3Ω,
 \end{gathered}
 ```
+where the factor ``2/π`` in the second form reflects the normalization
+of the invariant measure on ``\mathrm{Spin}(3)``, whose total volume
+is ``2π^2`` (see [Invariant measure](@ref conv_haar_measure)), and
+in which ``\int_{\mathrm{Spin}(3)} |{}_{s}Y_{ℓ, m}|^2 \, d^3Ω = π/2``.
 But — again because we are finite — we will only be able to evaluate
 the function at a finite number of points, and so we will need to use
 discrete quadrature to evaluate the integrals.
@@ -144,7 +148,74 @@ f̃ = 𝒯 \ f
 ```
 Both also accept any number of trailing dimensions, which are
 transformed independently — so a whole time series of functions can be
-transformed in one call.
+transformed in one call.  The element type of a transform is chosen
+when it is constructed, as a positional argument following ``ℓₘₐₓ``,
+and defaults to `Float64`: `SSHT(s, ℓₘₐₓ, BigFloat)` transforms in
+`BigFloat`, and so do `SSHTRS(s, ℓₘₐₓ, BigFloat)` and the other types
+below.  The data given to a transform may be real or complex, and the
+results are complex numbers of that type; a transform that acts in
+place, as described below, needs complex data, whose storage can hold
+its complex results.
+
+Mode weights may be given as a [`ModeWeights`](@ref) or as a plain
+vector in the canonical ordering, and analysis of one function returns
+a `ModeWeights`, labelled with the transform's spin weight and the
+range ``|s| ≤ ℓ ≤ ℓₘₐₓ``.  Analysis of several functions at once, as
+the columns of a matrix, returns a plain matrix, whose columns are the
+mode weights; `ModeWeights(view(f̃, :, j), s)` labels one column
+without copying it, which is how an operator or a rotation is applied
+column by column.  Synthesis checks the labels of a `ModeWeights`
+against the transform: the spin weight must be the transform's, while
+the range of ``ℓ`` need only lie within ``ℓₘₐₓ``, the modes that the
+weights lack being zero.  So the result of a differential operator,
+which keeps the range of ``ℓ`` of its input, may be synthesized
+directly, and analysis in the new spin weight then gives the weights
+over its own range:
+```julia
+𝒯₁, 𝒯₂ = SSHT(1, ℓₘₐₓ), SSHT(2, ℓₘₐₓ)
+w₁ = 𝒯₁ \ f                  # spin weight 1, ℓ ∈ 1:ℓₘₐₓ
+g = 𝒯₂ * (ð * w₁)             # spin weight 2; the ℓ = 1 entries of ð * w₁ are ignored
+w₂ = ModeWeights(ð * w₁)      # spin weight 2, ℓ ∈ 2:ℓₘₐₓ, the range that 𝒯₂ \ g gives
+```
+`ModeWeights(w; ℓₘᵢₙ, ℓₘₐₓ)` copies weights into any other range of
+``ℓ``, which is what the outputs of analysis and the destinations of
+`mul!` and `ldiv!` need, since they must have exactly the transform's
+labels.
+
+The two operations may also act in place, overwriting their argument,
+but whether they do depends on the method, as described in the
+[`SSHT`](@ref) docstring.  The `"RS"` method never does.  The
+`"Matrix"` method, by default, overwrites the function values with the
+mode weights in analysis, but always allocates the result of
+synthesis.  The `"Minimal"` method, by default, acts in place in both
+directions.  Passing `inplace=false` to either of the last two makes
+them leave their arguments alone, as `"RS"` does.
+
+Each transform runs on the thread of the task that calls it, and the
+`"RS"` and `"Minimal"` objects hold workspace that each transform
+overwrites, so one of those objects must never be used by two tasks at
+the same time.  To transform in parallel, give each task its own
+`copy(𝒯)`, which shares the read-only tables and FFT plans of `𝒯` and
+allocates new workspace, at a small fraction of the cost of a new
+transform.  This is also the way to use several threads for element
+types other than `Float32` and `Float64`, whose ring FFTs are
+computed by generic code and, for `BigFloat`, are most of the cost of
+an `"RS"` transform.  One way to do that is to divide the data into
+chunks and to spawn one task for each:
+```julia
+chunks = Iterators.partition(maps, cld(length(maps), Threads.nthreads()))
+tasks = [Threads.@spawn(let 𝒯ₖ = copy(𝒯); [𝒯ₖ \ f for f ∈ chunk]; end) for chunk ∈ chunks]
+mode_weights = reduce(vcat, fetch.(tasks))
+```
+A vector of transforms indexed by `Threads.threadid()` is no
+substitute, because a task may move to another thread whenever it
+yields, leaving the same object to a second task.  An
+[`SSHTMatrix`](@ref) holds no workspace, so one object may be shared
+by any number of tasks, and its `copy` is the object itself.  A
+`deepcopy` of any transform is independent as well, and a transform
+may be serialized — for example, to send it to another process with
+`Distributed` — in which case its FFT plans are made again where it
+arrives.
 
 Currently, there are three algorithms implemented, each having
 different advantages and disadvantages:
@@ -157,23 +228,30 @@ different advantages and disadvantages:
      does not achieve optimal dimensionality.  However, it is very
      fast, and its accuracy is excellent at extremely high
      ``ℓ_\mathrm{max}``.
-  2. The "Matrix" algorithm (introduced here for the first time;
-     called "Direct" before version 3.0), which should only be used up
-     to ``ℓ_\mathrm{max} \lesssim 50`` because its intermediate
-     storage requirements scale as ``ℓ_\mathrm{max}^4``.  This
-     algorithm is the fastest for small ``ℓ_\mathrm{max}``, it can be
-     used with arbitrary (non-degenerate) pixelizations, and achieves
-     optimal dimensionality.
+  2. The "Matrix" algorithm (introduced here for the first time),
+     which stores the matrix of harmonics and a decomposition of it.
+     This algorithm is the fastest for ``ℓ_\mathrm{max} \lesssim 24``,
+     where its round-trip errors are about ``10^{-14}``, it can be used
+     with arbitrary (non-degenerate) pixelizations, and it achieves
+     optimal dimensionality.  Its accuracy is then limited by the
+     conditioning of the points: on its default Leja points, a round
+     trip loses about 2.5 digits at ``ℓ_\mathrm{max} = 32`` and 3 at
+     ``ℓ_\mathrm{max} = 64``.  Its storage requirements scale as
+     ``ℓ_\mathrm{max}^4``, and exceed 1 GiB at about
+     ``ℓ_\mathrm{max} = 90``.  The constructor warns above about
+     ``ℓ_\mathrm{max} = 64``, where this method is unlikely to be the
+     most efficient or the most accurate choice.
   3. The "Minimal" algorithm due to [Elahi_2018](@citet), with some
      minor improvements.  This algorithm is fast and — as the name
      implies — also achieves optimal dimensionality, and its storage
      scales as ``ℓ_\mathrm{max}^3``.  However, its pixelization is
      restricted, and its sample points become badly conditioned as
      ``ℓ_\mathrm{max}`` grows: in `Float64`, a round trip loses about
-     5 digits by ``ℓ_\mathrm{max}=32`` and 10 by
-     ``ℓ_\mathrm{max}=48`` at ``s=0``, and more at larger ``|s|`` —
-     about 10 by ``ℓ_\mathrm{max}=32`` at ``s=2`` (the constructor
-     warns when fewer than half the digits survive).  The "RS"
+     3.5 digits by ``ℓ_\mathrm{max}=32``, 5.5 by
+     ``ℓ_\mathrm{max}=48`` and 8 by ``ℓ_\mathrm{max}=64`` at
+     ``s=0``, and more at larger ``|s|`` — about 9 by
+     ``ℓ_\mathrm{max}=32`` at ``s=2`` (the constructor warns when
+     fewer than half the digits survive).  The "RS"
      algorithm has no such limitation.  For ``s ≠ 0`` the rings are
      not arranged as they are for ``s=0``, an arrangement that is far
      worse conditioned for any other spin weight; see
@@ -189,9 +267,10 @@ Everything above extends to half-integer spin weights, and the `"RS"`
 and `"Matrix"` methods accept them; only the `"Minimal"` method does
 not, because its bookkeeping of rings and aliased modes is written for
 integer indices, and it says so when asked.  As elsewhere in this
-package, a half-integer is passed as a `Rational` with denominator 2,
-and the mode weights are then indexed by half-odd ``ℓ`` and ``m`` in
-the same canonical ordering:
+package, a half-integer is passed as a `Rational{Int}` with
+denominator 2, or as a [`HalfOddInteger`](@ref
+SphericalFunctions.HalfOddInteger), and the mode weights are then
+indexed by half-odd ``ℓ`` and ``m`` in the same canonical ordering:
 ```julia
 𝒯 = SSHT(1//2, 7//2)          # spin weight 1/2, with ℓ = 1/2, 3/2, 5/2, 7/2
 f̃ = ModeWeights(randn(ComplexF64, Ysize(1//2, 7//2)), 1//2)
@@ -228,11 +307,16 @@ with the real functions and restores the constant phase once per ring.
 And ``e^{imϕ}`` for half-odd ``m`` is ``e^{iϕ/2}`` times an ordinary
 Fourier mode of integer frequency ``m - 1/2``, so the FFT along each
 ring runs at integer frequencies, with each sample multiplied by
-``e^{±iϕ/2}``.  The sampling requirements are unchanged in form — at
-least ``2ℓₘₐₓ+1`` rings and ``2ℓₘₐₓ+1`` points per ring for an exact
-analysis of a band-limited function — and both are even numbers when
-``ℓₘₐₓ`` is a half-odd-integer.  The same holds for [`map2salm`](@ref)
-and [`salm2map`](@ref), which are built on the `"RS"` transform.
+``e^{±iϕ/2}``.  The sampling requirements are unchanged in form.
+Each ring needs at least ``2ℓₘₐₓ+1`` points, as for an integer
+``ℓₘₐₓ``, which is an even number when ``ℓₘₐₓ`` is a
+half-odd-integer.  The default grid also has ``2ℓₘₐₓ+1`` rings, but a
+quadrature rule symmetric about the equator, such as Fejér's or
+Clenshaw–Curtis, needs only ``2⌊ℓₘₐₓ⌋+1`` of them for an exact
+analysis of a band-limited function: ``2ℓₘₐₓ+1`` for an integer
+``ℓₘₐₓ``, and ``2ℓₘₐₓ``, one fewer, for a half-odd one.  The same
+holds for [`map2salm`](@ref) and [`salm2map`](@ref), which are built
+on the `"RS"` transform.
 
 
 ## `SSHT` objects

@@ -90,6 +90,7 @@ formulas in a module so that we can test them against the `SphericalFunctions` p
 
 using TestItems: @testitem  #hide
 @testitem "Sakurai conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
+import .Utilities: βrange, αβγrange, θϕrange  #hide
 
 module Sakurai
 #+
@@ -155,12 +156,12 @@ end  # module Sakurai
 # because the formulas are slow, and this will be sufficient to sort out any sign or
 # normalization differences, which are the most likely source of error.  For the same reason
 # we use a modest grid of Euler angles.
-αβγs = αβγrange(Float64, 5)
+αβγs = αβγrange(rng, Float64, 5)
 #+
 
 # First, Sakurai's own explicit spherical harmonics and conjugation relation are consistent
 # with his general expression via ``𝒟``:
-for (θ, ϕ) ∈ θϕrange()
+for (θ, ϕ) ∈ θϕrange(rng)
     @test Sakurai.Y₀⁰(θ, ϕ) ≈ Sakurai.Y(0, 0, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
     @test Sakurai.Y₁⁻¹(θ, ϕ) ≈ Sakurai.Y(1, -1, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
     @test Sakurai.Y₁⁰(θ, ϕ) ≈ Sakurai.Y(1, 0, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
@@ -177,17 +178,17 @@ end
 #+
 
 # Now the spherical harmonics agree with ours:
-for (θ, ϕ) ∈ θϕrange()
-    for (ℓ, m) ∈ ℓmrange(ℓₘₐₓ)
-        @test Sakurai.Y(ℓ, m, θ, ϕ) ≈ ConventionsUtilities.Y(ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+for (θ, ϕ) ∈ θϕrange(rng)
+    for (ℓ, Yˡ) ∈ SphericalFunctions.YlmCalculator(θ, ϕ, ℓₘₐₓ), m ∈ -ℓ:ℓ
+        @test Sakurai.Y(ℓ, m, θ, ϕ) ≈ Yˡ[m] atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
 
 # The ``d`` matrix agrees with ours:
-for β ∈ βrange()
-    for (j, m′, m) ∈ ℓm′mrange(ℓₘₐₓ)
-        @test Sakurai.d(j, m′, m, β) ≈ ConventionsUtilities.d(j, m′, m, β) atol=ϵₐ rtol=ϵᵣ
+for β ∈ βrange(rng)
+    for (j, dʲ) ∈ SphericalFunctions.dCalculator(β, ℓₘₐₓ), m′ ∈ -j:j, m ∈ -j:j
+        @test Sakurai.d(j, m′, m, β) ≈ dʲ[m′, m] atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
@@ -195,8 +196,8 @@ end
 # And the ``𝒟`` matrix agrees with ours — with no complex conjugation, transposition, or
 # reordering of the Euler angles:
 for (α, β, γ) ∈ αβγs
-    for (j, m′, m) ∈ ℓm′mrange(ℓₘₐₓ)
-        @test Sakurai.𝒟(j, m′, m, α, β, γ) ≈ ConventionsUtilities.D(j, m′, m, α, β, γ) atol=ϵₐ rtol=ϵᵣ
+    for (j, 𝔇ʲ) ∈ SphericalFunctions.DCalculator(α, β, γ, ℓₘₐₓ), m′ ∈ -j:j, m ∈ -j:j
+        @test Sakurai.𝒟(j, m′, m, α, β, γ) ≈ 𝔇ʲ[m′, m] atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+

@@ -73,9 +73,9 @@ makedocs(
         edit_link = "main",  # Link out to "main" branch on github
         canonical = "https://moble.github.io/SphericalFunctions.jl/stable/",
         assets = String["assets/citations.css", "assets/extras.css"],
-        size_threshold = 300 * 2^10, # 300 KiB
-        size_threshold_warn = 200 * 2^10, # 200 KiB
-        search_size_threshold_warn = 1 * 2^20, # 1 MiB
+        size_threshold = 400 * 2^10, # 400 KiB
+        size_threshold_warn = 300 * 2^10, # 300 KiB
+        search_size_threshold_warn = 2 * 2^20, # 2 MiB
     ),
     pages = [
         "index.md",
@@ -109,7 +109,6 @@ makedocs(
             "60-development/01-index.md",
             "60-development/02-literate_testitems.md",
         ],
-        "index_of_docstrings.md",
         "References" => "references.md",
         notes_pages...,
     ],

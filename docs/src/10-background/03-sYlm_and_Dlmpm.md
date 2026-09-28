@@ -49,9 +49,9 @@ respect to some chosen component of ``R`` — which again is
 conventionally chosen to be ``R_z``.  We might also expect to be able
 to diagonalize with respect to ``R²``, but that turns out to equal
 ``L²``, so while it is true that the spin-weighted spherical harmonics
-are also eigenvalues of ``R²``, that statement contains no additional
-information.  Thus, we select the spin-weighted spherical harmonics as
-functions satisfying
+are also eigenfunctions of ``R²``, that statement contains no
+additional information.  Thus, we select the spin-weighted spherical
+harmonics as functions satisfying
 ```math
 \begin{aligned}
 L² \left\{ {}_{s}Y_{ℓ,m} \right\}(𝐐)

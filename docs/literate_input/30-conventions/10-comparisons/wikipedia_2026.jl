@@ -155,6 +155,7 @@ formulas in a module so that we can test them against the `SphericalFunctions` p
 
 using TestItems: @testitem  #hide
 @testitem "Wikipedia conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
+import .Utilities: ℓm′mrange, βrange, αβγrange, θϕrange  #hide
 
 module Wikipedia
 #+
@@ -271,17 +272,18 @@ end  # module Wikipedia
 #+
 
 # We only test up to
-ℓₘₐₓ = 4
+ℓₘₐₓ = 6
 #+
 # and
 sₘₐₓ = 2
 #+
-# because the formulas are slow, and this will be sufficient to sort out any sign or
-# normalization differences, which are the most likely source of error.  For the same reason
-# we use modest grids of points.  The explicit formula for ``{}_sY_{ℓm}`` involves
-# ``\cot(θ/2)``, so we avoid the poles by a small amount.
-θϕs = θϕrange(Float64, 7; avoid_poles=1e-3)
-αβγs = αβγrange(Float64, 5)
+# because the symbolic derivatives in the formulas become expensive to compute at higher
+# orders, and this will be sufficient to sort out any sign or normalization differences,
+# which are the most likely source of error.  To keep the running time down, we also use
+# modest grids of points.  The explicit formula for ``{}_sY_{ℓm}`` involves ``\cot(θ/2)``,
+# so we avoid the poles by a small amount.
+θϕs = θϕrange(rng, Float64, 7; avoid_poles=1e-3)
+αβγs = αβγrange(rng, Float64, 5)
 #+
 
 # We will also need the imaginary unit from the utilities module.
@@ -290,30 +292,30 @@ import .ConventionsUtilities: 𝒾
 
 # First, Wikipedia's explicit ``d`` elements agree with Wikipedia's general formula, and
 # both agree with ours:
-for β ∈ βrange(Float64, 15)
+for β ∈ βrange(rng, Float64, 15)
     for (j, m′, m) ∈ ℓm′mrange(2)
         j == 0 && continue  # the article lists no j=0 element (it is just 1)
         @test Wikipedia.d_explicit(j, m′, m, β) ≈ Wikipedia.d(j, m′, m, β) atol=ϵₐ rtol=ϵᵣ
     end
-    for (j, m′, m) ∈ ℓm′mrange(ℓₘₐₓ)
-        @test Wikipedia.d(j, m′, m, β) ≈ ConventionsUtilities.d(j, m′, m, β) atol=ϵₐ rtol=ϵᵣ
+    for (j, dʲ) ∈ SphericalFunctions.dCalculator(β, ℓₘₐₓ), m′ ∈ -j:j, m ∈ -j:j
+        @test Wikipedia.d(j, m′, m, β) ≈ dʲ[m′, m] atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
 
 # The ``D``-matrix agrees with ours, and satisfies the conjugation symmetry quoted above:
 for (α, β, γ) ∈ αβγs
-    for (j, m′, m) ∈ ℓm′mrange(ℓₘₐₓ)
-        @test Wikipedia.D(j, m′, m, α, β, γ) ≈ ConventionsUtilities.D(j, m′, m, α, β, γ) atol=ϵₐ rtol=ϵᵣ
+    for (j, 𝔇ʲ) ∈ SphericalFunctions.DCalculator(α, β, γ, ℓₘₐₓ), m′ ∈ -j:j, m ∈ -j:j
+        @test Wikipedia.D(j, m′, m, α, β, γ) ≈ 𝔇ʲ[m′, m] atol=ϵₐ rtol=ϵᵣ
         @test Wikipedia.D(j, m′, m, α, β, γ) ≈ (-1)^(m′-m) * conj(Wikipedia.D(j, -m′, -m, α, β, γ)) atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
 
 # The spherical harmonics agree with ours, and satisfy Wikipedia's relation to ``D``:
-for (θ, ϕ) ∈ θϕrange(Float64, 7)
-    for (ℓ, m) ∈ ℓmrange(ℓₘₐₓ)
-        @test Wikipedia.Y(ℓ, m, θ, ϕ) ≈ ConventionsUtilities.Y(ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+for (θ, ϕ) ∈ θϕrange(rng, Float64, 7)
+    for (ℓ, Yˡ) ∈ SphericalFunctions.YlmCalculator(θ, ϕ, ℓₘₐₓ), m ∈ -ℓ:ℓ
+        @test Wikipedia.Y(ℓ, m, θ, ϕ) ≈ Yˡ[m] atol=ϵₐ rtol=ϵᵣ
         @test Wikipedia.D(ℓ, m, 0, ϕ, θ, zero(θ)) ≈ √(4π/(2ℓ+1)) * conj(Wikipedia.Y(ℓ, m, θ, ϕ)) atol=ϵₐ rtol=ϵᵣ
     end
 end
@@ -322,12 +324,14 @@ end
 # Finally, the spin-weighted spherical harmonics agree with ours, and satisfy Wikipedia's
 # relation to the ``D``-matrix and its conjugation symmetry:
 for (θ, ϕ) ∈ θϕs
-    for (s, ℓ, m) ∈ sℓmrange(ℓₘₐₓ, sₘₐₓ)
-        @test Wikipedia.ₛYₗₘ(s, ℓ, m, θ, ϕ) ≈ ConventionsUtilities.Y(s, ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
-        @test conj(Wikipedia.ₛYₗₘ(s, ℓ, m, θ, ϕ)) ≈ (-1)^(s+m) * Wikipedia.ₛYₗₘ(-s, ℓ, -m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
-        for ψ ∈ (0.0, 0.7, 2.9)
-            @test Wikipedia.D(ℓ, -m, s, ϕ, θ, -ψ) ≈
-                (-1)^m * √(4π/(2ℓ+1)) * Wikipedia.ₛYₗₘ(s, ℓ, m, θ, ϕ) * exp(𝒾 * s * ψ) atol=ϵₐ rtol=ϵᵣ
+    for (ℓ, Yˡ) ∈ SphericalFunctions.sYlmCalculator(θ, ϕ, ℓₘₐₓ, -sₘₐₓ:sₘₐₓ)
+        for s ∈ -min(ℓ, sₘₐₓ):min(ℓ, sₘₐₓ), m ∈ -ℓ:ℓ
+            @test Wikipedia.ₛYₗₘ(s, ℓ, m, θ, ϕ) ≈ Yˡ[s, m] atol=ϵₐ rtol=ϵᵣ
+            @test conj(Wikipedia.ₛYₗₘ(s, ℓ, m, θ, ϕ)) ≈ (-1)^(s+m) * Wikipedia.ₛYₗₘ(-s, ℓ, -m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+            for ψ ∈ (0.0, 0.7, 2.9)
+                @test Wikipedia.D(ℓ, -m, s, ϕ, θ, -ψ) ≈
+                    (-1)^m * √(4π/(2ℓ+1)) * Wikipedia.ₛYₗₘ(s, ℓ, m, θ, ϕ) * exp(𝒾 * s * ψ) atol=ϵₐ rtol=ϵᵣ
+            end
         end
     end
 end

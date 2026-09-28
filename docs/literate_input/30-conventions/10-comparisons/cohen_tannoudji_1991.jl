@@ -3,7 +3,7 @@ md"""
 
 !!! info "Summary"
     Cohen-Tannoudji's angular-momentum operators and definition of the spherical harmonics
-    agrees with the definition used in the `SphericalFunctions` package.
+    agree with the definition used in the `SphericalFunctions` package.
 
 [CohenTannoudji_1991](@citet), by a Nobel-prize winner and collaborators, is an extensive
 two-volume set on quantum mechanics that is widely used in graduate courses.
@@ -50,12 +50,20 @@ the formulas in a module so that we can test them against the `SphericalFunction
 
 using TestItems: @testitem  #hide
 @testitem "Cohen-Tannoudji conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
+import .Utilities: ℓmrange, θϕrange  #hide
 
 module CohenTannoudji
 #+
 
-# We'll also use some predefined utilities to make the code look more like the equations.
+# We'll also use some predefined utilities to make the code look more like the equations,
+# and `ForwardDiff` to evaluate the derivatives in the angular-momentum operators.
 import ..ConventionsUtilities: 𝒾, ❗, dʲsin²ᵏθdcosθʲ
+import ForwardDiff
+#+
+
+# Cohen-Tannoudji include ``\hbar``, so we will include it in the expressions, but we will
+# set it to 1 to match the conventions of the `SphericalFunctions` package.
+const ħ = 1
 #+
 
 # They derive the spherical harmonics in two ways and get two different, but equivalent,
@@ -95,6 +103,16 @@ function Y₂(l, m, θ::T, ϕ::T) where {T<:Real}
 end
 #+
 
+# Eqs. (D-5) and (D-6) give the angular-momentum operators.  Each operator takes a function
+# `f(θ, ϕ)` and returns a new function, with the derivatives evaluated by forward-mode
+# automatic differentiation.
+∂θ(f) = (θ, ϕ) -> ForwardDiff.derivative(θ′ -> f(θ′, ϕ), θ)
+∂ϕ(f) = (θ, ϕ) -> ForwardDiff.derivative(ϕ′ -> f(θ, ϕ′), ϕ)
+L_z(f) = (θ, ϕ) -> ħ / 𝒾 * ∂ϕ(f)(θ, ϕ)
+L₊(f) = (θ, ϕ) -> ħ * exp(𝒾 * ϕ) * (∂θ(f)(θ, ϕ) + 𝒾 * cot(θ) * ∂ϕ(f)(θ, ϕ))
+L₋(f) = (θ, ϕ) -> ħ * exp(-𝒾 * ϕ) * (-∂θ(f)(θ, ϕ) + 𝒾 * cot(θ) * ∂ϕ(f)(θ, ϕ))
+#+
+
 # Cohen-Tannoudji do not give an expression for the Wigner D-matrices, but the comparisons
 # of the definitions of the angular-momentum operators and the rotation operator are also
 # useful for comparison, and comparing the spherical harmonics is also important.
@@ -112,22 +130,50 @@ end  # module CohenTannoudji
 #+
 
 # We will only test up to
-ℓₘₐₓ = 2
+ℓₘₐₓ = 6
 #+
 #
-# because the formulas are very slow, and this will be sufficient to sort out any sign or
-# normalization differences, which are the most likely source of error.  Also, the formulas
-# are singular at the poles, so we avoid evaluating there.
-for (θ, ϕ) ∈ θϕrange(; avoid_poles=ϵₐ/40)
-    for (ℓ, m) ∈ ℓmrange(ℓₘₐₓ)
-        @test CohenTannoudji.Y₁(ℓ, m, θ, ϕ) ≈ ConventionsUtilities.Y(ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
-        @test CohenTannoudji.Y₂(ℓ, m, θ, ϕ) ≈ ConventionsUtilities.Y(ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+# because the symbolic derivatives in the formulas become expensive to compute at higher
+# orders, and this will be sufficient to sort out any sign or normalization differences,
+# which are the most likely source of error.  Also, the formulas are singular at the poles,
+# so we avoid evaluating there.
+for (θ, ϕ) ∈ θϕrange(rng; avoid_poles=ϵₐ/40)
+    for (ℓ, Yˡ) ∈ SphericalFunctions.YlmCalculator(θ, ϕ, ℓₘₐₓ), m ∈ -ℓ:ℓ
+        @test CohenTannoudji.Y₁(ℓ, m, θ, ϕ) ≈ Yˡ[m] atol=ϵₐ rtol=ϵᵣ
+        @test CohenTannoudji.Y₂(ℓ, m, θ, ϕ) ≈ Yˡ[m] atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
 
-# This successful test shows that both versions of the spherical harmonics given by
+# Their operators (D-5) agree with ours if they act on the spherical harmonics as [our
+# summary page](@ref summary_swsh) says ours do (with ``s = 0``): ``L_z Y_{ℓ,m} = m
+# Y_{ℓ,m}`` and ``(L_x \pm i L_y) Y_{ℓ,m} = \sqrt{(ℓ \mp m)(ℓ \pm m + 1)}\, Y_{ℓ,m \pm 1}``,
+# where the raised or lowered function vanishes at the edges ``m = ±ℓ``.  We apply them to
+# the spherical harmonics of Eq. (26), which we have just shown to be ours.  The operators
+# involve ``\cot θ``, so we avoid the poles, and we evaluate in `BigFloat` arithmetic to
+# keep the rounding errors amplified near the poles below `Float64` precision.
+for (θ, ϕ) ∈ ((big(θ), big(ϕ)) for (θ, ϕ) ∈ θϕrange(rng, Float64, 5; avoid_poles=1e-3))
+    for (ℓ, m) ∈ ℓmrange(4)
+        Y = (θ, ϕ) -> CohenTannoudji.Y₁(ℓ, m, promote(θ, ϕ)...)
+        L₊Y = CohenTannoudji.L₊(Y)(θ, ϕ)
+        L₋Y = CohenTannoudji.L₋(Y)(θ, ϕ)
+        @test CohenTannoudji.L_z(Y)(θ, ϕ) ≈ m * Y(θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+        if m < ℓ
+            @test L₊Y ≈ √((ℓ-m) * (ℓ+m+1)) * CohenTannoudji.Y₁(ℓ, m+1, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+        else
+            @test L₊Y ≈ 0 atol=ϵₐ
+        end
+        if m > -ℓ
+            @test L₋Y ≈ √((ℓ+m) * (ℓ-m+1)) * CohenTannoudji.Y₁(ℓ, m-1, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+        else
+            @test L₋Y ≈ 0 atol=ϵₐ
+        end
+    end
+end
+#+
+
+# These successful tests show that both versions of the spherical harmonics given by
 # Cohen-Tannoudji agree with the spherical harmonics defined by the `SphericalFunctions`
-# package.
+# package, and that their angular-momentum operators agree with ours.
 
 end  #hide

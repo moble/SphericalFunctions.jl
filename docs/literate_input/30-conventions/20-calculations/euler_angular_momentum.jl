@@ -128,6 +128,12 @@ const expand_trig = sympy.expand_trig
 const Derivative = sympy.Derivative
 const π = sympy.pi
 const I = sympy.I
+## Each `checked` returns its argument after checking it, so that a hidden line  #hide
+## can check a displayed result without changing what the page displays; a  #hide
+## failed check fails the docs build.  #hide
+checked(x; equals) = (sympy.simplify((x - equals).rewrite(sympy.exp)) == 0 || error("Expected $equals; found $x"); x)  #hide
+checked(x::AbstractArray; equals) = (foreach(xᵢ -> checked(xᵢ; equals), x); x)  #hide
+checked(x::Tuple; equals) = (foreach((xᵢ, eᵢ) -> checked(xᵢ; equals=eᵢ), x, equals); x)  #hide
 nothing  #hide
 
 # Define symbols we will use throughout
@@ -223,7 +229,6 @@ macro display2(expr)
     op = string(expr.args[1])
     element = expr.args[2]
     arg = Dict(:𝐢 => "x", :𝐣 => "y", :𝐤 => "z", :+ => "+", :- => "-")[element]
-    @info element
     if op == "L" && arg ∈ ("+", "-")
         quote
             ∂φ′∂ϵ, ∂ϑ′∂ϵ, ∂γ′∂ϵ = (
@@ -236,8 +241,8 @@ macro display2(expr)
             expr = $op * "_" * $arg  # Standard form of the operator
             expsign = ($arg=="+" ? "" : "-")
             L"""%$expr = e^{%$expsign i ϕ} \left[
-                %$(∂ϑ′∂ϵ) \frac{\partial}{\partial θ}
-                + %$(∂φ′∂ϵ) \frac{\partial}{\partial ϕ}
+                %$(latex(∂ϑ′∂ϵ)) \frac{\partial}{\partial θ}
+                + %$(latex(∂φ′∂ϵ)) \frac{\partial}{\partial ϕ}
             \right]"""  # Display the result in LaTeX form
         end
     elseif op == "L"
@@ -271,17 +276,23 @@ nothing  #hide
 # Finally, we can actually compute the Euler components of the angular momentum operators.
 
 #md # ### [``L`` operators in terms of Euler angles](@id euler_L_S3)
+checked(L(𝐢); equals=(cos(α)/tan(β), sin(α), -cos(α)/sin(β)))  #hide
 @display L(𝐢)
 #-
+checked(L(𝐣); equals=(sin(α)/tan(β), -cos(α), -sin(α)/sin(β)))  #hide
 @display L(𝐣)
 #-
+checked(L(𝐤); equals=(-1, 0, 0))  #hide
 @display L(𝐤)
 #-
 #md # ### [``R`` operators in terms of Euler angles](@id euler_R_S3)
+checked(R(𝐢); equals=(cos(γ)/sin(β), -sin(γ), -cos(γ)/tan(β)))  #hide
 @display R(𝐢)
 #-
+checked(R(𝐣); equals=(-sin(γ)/sin(β), -cos(γ), sin(γ)/tan(β)))  #hide
 @display R(𝐣)
 #-
+checked(R(𝐤); equals=(0, 0, -1))  #hide
 @display R(𝐤)
 
 # In their description of the Wigner 𝔇 functions as wave functions of a rigid symmetric
@@ -356,27 +367,41 @@ nothing  #hide
 # permutations:
 
 #md # ### ``L`` commutators in Euler angles
+checked(  #hide
 commutator(Lx, Ly)
+; equals=I * Lz(f, α, β, γ))  #hide
 # which equals ``i L_z``,
+checked(  #hide
 commutator(Ly, Lz)
+; equals=I * Lx(f, α, β, γ))  #hide
 # which equals ``i L_x``, and
+checked(  #hide
 commutator(Lz, Lx)
+; equals=I * Ly(f, α, β, γ))  #hide
 # which equals ``i L_y``.  Similarly, we expect ``[R_x, R_y] = i R_z`` and cyclic
 # permutations:
 
 #md # ### ``R`` commutators in Euler angles
+checked(  #hide
 commutator(Rx, Ry)
+; equals=I * Rz(f, α, β, γ))  #hide
 # which equals ``i R_z``,
+checked(  #hide
 commutator(Ry, Rz)
+; equals=I * Rx(f, α, β, γ))  #hide
 # which equals ``i R_x``, and
+checked(  #hide
 commutator(Rz, Rx)
+; equals=I * Ry(f, α, β, γ))  #hide
 # which equals ``i R_y`` — all as expected.
 
 # Just for completeness, let's evaluate the commutators of the left and right operators,
 # which should all be zero.
 
 #md # ### ``L,R`` commutators in Euler angles
+checked(  #hide
 [commutator(L, R) for L ∈ (Lx, Ly, Lz), R ∈ (Rx, Ry, Rz)]
+; equals=0)  #hide
 # This completes independent commutator results, which are all as we expect them to be.
 
 
@@ -385,18 +410,23 @@ commutator(Rz, Rx)
 # angular momentum operators on the 2-sphere.
 
 #md # ### ``L`` operators in spherical coordinates
+checked(conversion.(L(𝐢))[1:2]; equals=(cos(ϕ)/tan(θ), sin(ϕ)))  #hide
 @display2 L(𝐢)
 #-
+checked(conversion.(L(𝐣))[1:2]; equals=(sin(ϕ)/tan(θ), -cos(ϕ)))  #hide
 @display2 L(𝐣)
 #-
+checked(conversion.(L(𝐤))[1:2]; equals=(-1, 0))  #hide
 @display2 L(𝐤)
 
 # We can also provide the usual expressions for the raising and lowering operators in terms
 # of spherical coordinates with ``L_{\pm} = L_x \pm i L_y``:
 
 #md # ### ``L_{\pm}`` operators in spherical coordinates
+checked(I .* (conversion.(L(𝐢))[1:2] .+ I .* conversion.(L(𝐣))[1:2]); equals=(exp(I*ϕ) * I/tan(θ), exp(I*ϕ)))  #hide
 @display2 L(+)
 #-
+checked(I .* (conversion.(L(𝐢))[1:2] .- I .* conversion.(L(𝐣))[1:2]); equals=(exp(-I*ϕ) * I/tan(θ), -exp(-I*ϕ)))  #hide
 @display2 L(-)
 
 # These are all indeed the standard expressions for the angular-momentum operators on the
@@ -448,7 +478,7 @@ commutator(Rz, Rx)
 # \\
 # \bar{\eth}\eta
 # = -\left[
-#     i \frac{1}{\sin θ} \frac{\partial}{\partial ϕ}
+#     -i \frac{1}{\sin θ} \frac{\partial}{\partial ϕ}
 #     + \frac{s}{\tan θ}
 #     + \frac{\partial}{\partial θ}
 #   \right] \eta

@@ -2,17 +2,15 @@
 # — `recurrence_step1!` … `recurrence_step6!`, `convert_H_to_d!` and `convert_H_to_D!`, the
 # functions documented on `docs/src/40-api/01-internal.md`.
 #
-# Why this exists.  These functions take an `AbstractWignerMatrix` holding one whole `Hˡ` for
-# one rotor; the engine that the package actually runs (`HCalculator`) has its own,
+# Why this exists.  These functions take an `AbstractWignerMatrix` holding one whole `Hˡ`
+# for one rotor; the engine that the package actually runs (`HCalculator`) has its own,
 # separate methods of the same names in `src/wigner/wigner_H_calculator.jl`, which work on a
-# batched quarter-wedge.  Until 2026-09-11 the single-matrix path was driven by the internal
-# `DenseWignerCalculator`, and the item "Wigner calculators vs DenseWignerCalculator"
-# compared the two; that calculator was deleted along with `Deprecated`, leaving this path
-# with no caller and no test.  This item restores the cross-check directly: it is a genuinely
+# batched quarter-wedge.  Nothing in the package calls the single-matrix path, so this item
+# is its test, and it cross-checks the two directly: the single-matrix path is a truly
 # independent second implementation of the same recurrence (different loop structure,
-# different storage, no batching), and it is what caught bug B1 of the v3 design memo.
+# different storage, no batching), so that an error in either shows up as a disagreement.
 
-@testitem "Dense H recurrence vs the batched engine" begin
+@testitem "Dense H recurrence vs the batched engine" setup=[RefusalChecks] begin
     import SphericalFunctions as SF
     import SphericalFunctions: WignerMatrix, D, d
     import SphericalFunctions:
@@ -98,6 +96,17 @@
         end
     end
 
-    # Step 1 only initializes ℓ=0.
-    @test_throws ErrorException recurrence_step1!(WignerMatrix(zeros(3, 3), 1))
+    # Step 1 only initializes ℓ=0, and steps 2 and 3 combine blocks of consecutive orders.
+    @test refuses(
+        () -> recurrence_step1!(WignerMatrix(zeros(3, 3), 1)), ArgumentError,
+        "only ℓ=0 is supported"
+    )
+    let H⁰ = WignerMatrix(zeros(1, 1), 0), H² = WignerMatrix(zeros(5, 5), 2)
+        @test refuses(
+            () -> recurrence_step2!(H², H⁰, 0.1, 0.9), ArgumentError, "consecutive orders"
+        )
+        @test refuses(
+            () -> recurrence_step3!(H⁰, H², 0.1, 0.9), ArgumentError, "consecutive orders"
+        )
+    end
 end

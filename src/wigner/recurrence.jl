@@ -17,6 +17,17 @@ function check_dense_block(Hˡ::WignerMatrix, name::Symbol)
     nothing
 end
 
+# Steps 2 and 3 combine blocks of two consecutive orders, the lower one first.
+function check_consecutive_orders(lower::WignerMatrix, upper::WignerMatrix, name::Symbol)
+    if ℓ(upper) != ℓ(lower) + 1
+        throw(ArgumentError(
+            "`$name` needs blocks of consecutive orders ℓ and ℓ+1; these have ℓ=$(ℓ(lower)) "
+            * "and ℓ=$(ℓ(upper))."
+        ))
+    end
+    nothing
+end
+
 
 @doc raw"""
     recurrence_step1!(H⁰)
@@ -25,8 +36,8 @@ Initialize the Wigner matrix `H⁰` for the recurrence relations.  This only set
 `H⁰[0,0]=1`.
 
 Note that `H⁰` can be any `WignerMatrix` with integer indices — the only container indexed
-by `(m′, m)`.  In particular, it can be a `D` matrix or a `d` matrix.  As for the other dense
-reference functions (`recurrence_step2!` to `recurrence_step6!`, `convert_H_to_d!` and
+by `(m′, m)`.  In particular, it can be a `D` matrix or a `d` matrix.  As for the other
+dense reference functions (`recurrence_step2!` to `recurrence_step6!`, `convert_H_to_d!` and
 `convert_H_to_D!`), the block must have the full range of ``m`` and a symmetric range of
 ``m′``.
 """
@@ -36,7 +47,7 @@ function recurrence_step1!(H⁰::WignerMatrix{IT, NT}) where {IT<:Signed, NT}
         if ℓ == 0
             H⁰[0, 0] = 1
         else
-            error("Trying to initialize ℓ=$ℓ; only ℓ=0 is supported.")
+            throw(ArgumentError("Trying to initialize ℓ=$ℓ; only ℓ=0 is supported."))
         end
     end
     H⁰
@@ -54,7 +65,7 @@ function recurrence_step2!(
 ) where {IT<:Signed, NT, NT2, T}
     check_dense_block(Hˡ, :recurrence_step2!)
     check_dense_block(Hˡ⁻¹, :recurrence_step2!)
-    @assert ℓ(Hˡ⁻¹) == ℓ(Hˡ) - 1
+    check_consecutive_orders(Hˡ⁻¹, Hˡ, :recurrence_step2!)
     # Note that in this step only, we use notation derived from Xing et al., denoting the
     # coefficients as b̄ₗ, c̄ₗₘ, d̄ₗₘ, ēₗₘ.  In the following steps, we will use notation
     # from Gumerov and Duraiswami, who denote their different coefficients aₗᵐ, etc.
@@ -93,7 +104,9 @@ function recurrence_step2!(
                 )
             end
         else
-            error("Tried to recurse with ℓ=$ℓ; only integer ℓ ≥ 1 is supported.")
+            throw(ArgumentError(
+                "Tried to recurse with ℓ=$ℓ; only integer ℓ ≥ 1 is supported."
+            ))
         end
     end
     Hˡ
@@ -111,7 +124,7 @@ function recurrence_step3!(
 ) where {IT<:Signed, NT, NT2, T}
     check_dense_block(Hˡ, :recurrence_step3!)
     check_dense_block(Hˡ⁺¹, :recurrence_step3!)
-    @assert ℓ(Hˡ⁺¹) == ℓ(Hˡ) + 1
+    check_consecutive_orders(Hˡ, Hˡ⁺¹, :recurrence_step3!)
     @inbounds let √=sqrt∘T, ℓ=ℓ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
         if ℓ > 0 && m′ₘₐₓ ≥ 1
             c = 1 / √(ℓ*(ℓ+1))
@@ -134,7 +147,8 @@ end
     recurrence_step4!(Hˡ, sinβ, cosβ)
 
 Compute the values of ``H^{ℓ}_{m'+1,m}``, from the values of ``H^{ℓ}_{m',m-1}``,
-``H^{ℓ}_{m'-1,m}``, and  ``H^{ℓ}_{m',m+1}``, for all ``m' > 1`` and ``m \geq m'``.
+``H^{ℓ}_{m'-1,m}``, and  ``H^{ℓ}_{m',m+1}``, for all ``1 \leq m' < m'_{\mathrm{max}}`` and
+``m \geq m'+1``.
 
 """
 function recurrence_step4!(
@@ -145,9 +159,9 @@ function recurrence_step4!(
         for m′ ∈ 1:min(ℓ, m′ₘₐₓ)-1
             # Note that the signs of m′ and m are always +1 for *integer* indices, so we
             # leave them out of the calculations of d̄ in this function.  They are not for
-            # half-integer indices, where sgn(m′-1) = -1 at m′ = 1/2 (see the v3 design
-            # memo, §5.2); this function is integer-only, and the batched engine's
-            # `recurrence_step4!` applies the sign.
+            # half-integer indices, where sgn(m′-1) = -1 at m′ = 1/2 (see step 4 of the
+            # notes on the H recursion); this function is integer-only, and the batched
+            # engine's `recurrence_step4!` applies the sign.
             d̄ₗᵐ′ = √((ℓ-m′)*(ℓ+m′+1))
             d̄ₗᵐ′⁻¹ = √((ℓ-m′+1)*(ℓ+m′))
             for m ∈ (m′+1):ℓ-1
@@ -246,10 +260,10 @@ function recurrence_step6!(Hˡ::WignerMatrix{IT, NT}) where {IT<:Signed, NT}
                 Hˡ[-m′, -m] = Hˡ[m′, m]
             end
             # Rows ±m of the transposed region exist only when |m| ≤ m′ₘₐₓ.  Without this
-            # guard, a matrix with 0 < m′ₘₐₓ < ℓ writes past the end of its own block — and
-            # the enclosing `@inbounds` turns that into silent corruption rather than a
-            # `BoundsError` (the v3 design memo, bug B2, which was fixed in the batched
-            # engine by always computing the symmetric wedge).
+            # guard, a matrix with 0 < m′ₘₐₓ < ℓ would write past the end of its own block,
+            # and the enclosing `@inbounds` would turn that into silent corruption rather
+            # than a `BoundsError`.  (The batched engine never runs this step: it reads
+            # every element outside its symmetric wedge through `wedge_source`.)
             if m ≤ m′ₘₐₓ
                 for m′ ∈ -min(m′ₘₐₓ, m-1):min(m′ₘₐₓ, m-1)
                     Hˡ[m, m′] = Hˡ[-m, -m′] = Hˡ[m′, m]
@@ -282,18 +296,18 @@ end
 
 
 """
-    convert_H_to_D!(Hˡ)
+    convert_H_to_D!(Hˡ, eⁱᵅ, eⁱᵞ)
 
-Convert the Wigner matrix `Hˡ` to the D matrix `Dˡ`, which just involves multiplying by
-complex phases related to the `m′` and `m` indices.
+Convert the Wigner matrix `Hˡ` to the D matrix `Dˡ`, which just involves multiplying by the
+complex phases ``e^{-im′α}`` and ``e^{-imγ}``, given the phases `eⁱᵅ` and `eⁱᵞ`.
 
 """
 function convert_H_to_D!(Hˡ::WignerMatrix{IT, NT}, eⁱᵅ::NT, eⁱᵞ::NT) where {IT<:Signed, NT<:Complex}
     # For half-integer indices this form does not apply, because e^{-im′α} and e^{-imγ} are
-    # not integer powers of eⁱᵅ and eⁱᵞ.  No square roots are needed to fix that, though:
-    # m′ ± m *are* integers, so e^{i(m′α+mγ)} = z₊^{m′+m} z₋^{m′-m} with
-    # z₊ = e^{i(α+γ)/2}, z₋ = e^{i(α-γ)/2} (the v3 design memo, §5.4).  That is what the
-    # batched `materialize!` implements, for both index types at once.
+    # not integer powers of eⁱᵅ and eⁱᵞ.  No square roots are needed to fix that, though: m′
+    # ± m *are* integers, so e^{i(m′α+mγ)} = z₊^{m′+m} z₋^{m′-m} with z₊ = e^{i(α+γ)/2}, z₋
+    # = e^{i(α-γ)/2} (see step 7 of the notes on the H recursion).  That is what the batched
+    # `materialize!` implements, for both index types at once.
     check_dense_block(Hˡ, :convert_H_to_D!)
     @inbounds let ℓ=ℓ(Hˡ), ℓₘᵢₙ=ℓₘᵢₙ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
         ϕᵞ = ComplexPowers(eⁱᵞ)

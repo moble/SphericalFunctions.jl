@@ -4,18 +4,16 @@
 #
 #     L_𝐮 f(𝐑) =  i d/dϵ f(e^{-ϵ𝐮/2} 𝐑),        R_𝐮 f(𝐑) = -i d/dϵ f(𝐑 e^{-ϵ𝐮/2}),
 #
-# by automatic differentiation, for testing purposes.  Writing e^{-ϵ𝐮/2} = e^{θ𝐮} with θ = -ϵ/2
-# gives L_𝐮 f = -(i/2) d/dθ f(e^{θ𝐮} 𝐑) and R_𝐮 f = +(i/2) d/dθ f(𝐑 e^{θ𝐮}), which is what is
-# coded below.
+# by automatic differentiation, for testing purposes.  Writing e^{-ϵ𝐮/2} = e^{θ𝐮} with θ =
+# -ϵ/2 gives L_𝐮 f = -(i/2) d/dθ f(e^{θ𝐮} 𝐑) and R_𝐮 f = +(i/2) d/dθ f(𝐑 e^{θ𝐮}),
+# which is what is coded below.
 #
-# This used to spell `exp(θ*g)` out as `cos(θ) + sin(θ)*g`, because `exp` once had a special
-# case at zero that returned a constant and so flattened the ForwardDiff derivative there.
-# Quaternionic's `exp(::QuatVec)` now expands that branch as a series instead — its comment says
-# "to obtain accurate ForwardDiff derivative" — so the workaround is no longer needed, and the
-# two agree to 6e-17 where it was used.  Writing `exp` is worth the change beyond tidiness: it
-# returns a `Rotor`, whereas `cos(θ) + sin(θ)*g` is a `Quaternion` that is not of unit magnitude
-# unless `g` is, which made these tests the one thing in the package that needed the harmonics
-# to accept a quaternion that does not denote a rotation on its face.
+# The derivative of `exp(θ*g)` at θ = 0 is taken through Quaternionic's `exp(::QuatVec)`,
+# which expands its small-argument branch as a series rather than returning a constant
+# there, so that ForwardDiff sees the true derivative.  `exp` is used rather than `cos(θ) +
+# sin(θ)*g` because it returns a `Rotor`, whereas the other form is a `Quaternion` that is
+# not of unit magnitude unless `g` is, and the package's harmonics are defined only on
+# quaternions that denote rotations.
 @testmodule ExplicitOperators begin
     using Quaternionic
     import ForwardDiff

@@ -8,8 +8,9 @@ Wigner's ``𝔇`` matrices — and to a lesser extent, the related ``d``
 matrices — are extremely important in the theory of rotations.  Each
 element is, itself, a special function of the rotation group: in
 particular, an eigenfunction of [the left- and right-Lie
-derivatives](@ref "Differential operators"), and thus a spin-weighted
-spherical function.  See the "Background" section, and particularly
+derivatives](@ref background_differential_operators), and thus a
+spin-weighted spherical function.  See the "Background" section, and
+particularly
 [this page](@ref sYlm_and_Dlmpm), for details.  Collectively, they
 describe how spin-weighted spherical functions transform under
 rotation.  But their accurate and efficient computation is
@@ -50,10 +51,10 @@ single columns of Wigner's ``𝔇`` matrices:
 ```
 (See the [conventions summary](@ref summary_swsh) for this and the
 related definitions.)  They are therefore computed by the same
-recursion, and because only the single column ``m' = -s`` is needed,
-both the storage and the work are much smaller than for the full
-matrices.  The standard (scalar) spherical harmonics are the special
-case of spin weight ``s = 0``,
+recursion, and because only the single column ``m = -s`` is needed —
+the second index of ``𝔇`` — both the storage and the work are much
+smaller than for the full matrices.  The standard (scalar) spherical
+harmonics are the special case of spin weight ``s = 0``,
 ```math
 Y_{ℓ,m}(𝐑) = {}_{0}Y_{ℓ,m}(𝐑),
 ```
@@ -92,6 +93,14 @@ create a `Rotor`:
   - From an angle `θ` and unit vector `v` as `exp(θ*QuatVec(v)/2)`,
     which is the right-handed rotation by `θ` about `v`.
 
+For the most common of these, the conversion is built in: `D`,
+`DCalculator`, `sYlm`, `Ylm`, `sYlmCalculator` and `YlmCalculator`
+also accept Euler angles or spherical coordinates in place of a single
+rotor.  So `D(α, β, γ, ℓₘₐₓ)` is `D(from_euler_angles(α, β, γ),
+ℓₘₐₓ)`, and `sYlm(θ, ϕ, ℓₘₐₓ, s)` is
+`sYlm(from_spherical_coordinates(θ, ϕ), ℓₘₐₓ, s)`, with exactly the
+same values.
+
 The result is indexed by ``ℓ`` and then by the two matrix indices,
 each with its natural range:
 ```julia
@@ -107,8 +116,8 @@ does not apply to it directly; [`array_view`](@ref) gives a 1-based
 `StridedArray` view of the same storage, which BLAS takes at full
 speed, and [`relabel`](@ref) puts the natural indices back on the
 result.  `Matrix(𝔇[ℓ])` gives an independent copy.  The reasons for
-that arrangement, which is new in version 3, are set out under
-[Containers](@ref interface_containers) below.
+that arrangement are set out under [Containers](@ref
+interface_containers) below.
 
 For the ``d`` matrices the interface is the same, except that the
 argument is the angle ``β`` rather than a rotor, and the values are
@@ -123,10 +132,18 @@ useful when that is what you have, and a rotor, from which it takes
 the equivalent of the ``β`` angle.
 
 Both `D` and `d` accept four keyword arguments — `m′ₘₐₓ`, `m′ₘᵢₙ`,
-`mₘₐₓ`, and `mₘᵢₙ` — restricting the block of each matrix that is
-returned.  Restricting `m′` is the common case: the spin-weighted
-spherical harmonics need only one column, and asking for fewer columns
-makes the whole calculation cheaper as well as smaller.
+`mₘₐₓ`, and `mₘᵢₙ`, which may also be passed as `mp_max`, `mp_min`,
+`m_max` and `m_min` — restricting the block of each matrix that is
+returned; each lower limit defaults to minus the corresponding upper
+one, so that `D(R, ℓₘₐₓ; m′ₘₐₓ=2)` has the rows ``-2 ≤ m' ≤ 2``.
+Restricting either `m′` (the rows) or `m` (the columns) to a narrow
+band makes the calculation cheaper as well as smaller, because the
+recurrence at each ``ℓ`` costs in proportion to the narrower of the
+two ranges.  Each range must contain 0 — or both ``±1/2``, for
+half-integer indices — because that is where the recurrence starts;
+a single row or column elsewhere, such as ``m = 2``, is read from the
+block afterwards.  (The spin-weighted spherical harmonics need a
+single column, and are computed most cheaply by `sYlm`, below.)
 
 For those spin-weighted spherical harmonics, a more direct and
 efficient method is provided by [`sYlm`](@ref), taking the spin weight
@@ -141,12 +158,32 @@ efficient than calling `sYlm` repeatedly for each spin weight:
 sY = sYlm(R, ℓₘₐₓ, -2:2)
 ```
 
+The order of these arguments follows one rule throughout the package.
+A function evaluated at a rotor takes the rotor first (or the angles
+that stand in for it), then ``ℓₘₐₓ``, and then the spin weight when
+there is one: `D(R, ℓₘₐₓ)`,
+`sYlm(R, ℓₘₐₓ, s)`, `sYlm_matrix(R⃗, ℓₘₐₓ, s)`,
+`sYlmCalculator(R, ℓₘₐₓ, s)` and the rest of that family, with ``ℓₘᵢₙ``
+as a keyword.  An object labelled by a spin weight takes the spin
+weight first, then ``ℓₘᵢₙ`` where it may be given, and then ``ℓₘₐₓ``:
+`ModeWeights{T}(undef, s, ℓₘᵢₙ, ℓₘₐₓ)`, `SSHT(s, ℓₘₐₓ)`, the
+differential operators `op(s, ℓₘᵢₙ, ℓₘₐₓ)`, and the pixelizations such
+as `leja_rotors(s, ℓₘₐₓ)`.  Exchanging the arguments of one family
+for those of the other asks for a spin weight larger than ``ℓₘₐₓ``,
+unless the two are equal, and is usually refused for that reason.  The
+exception is a spin weight larger by exactly one, for which the
+operators and the `ModeWeights` constructors return an empty result,
+since the range ``|s| ≤ ℓ ≤ ℓₘₐₓ`` is then empty rather than invalid.
+
 A harmonic has only one index besides ``ℓ``, so a block is a vector
 rather than a matrix, but the result is indexed the same way as
 ``𝔇``: by ``ℓ`` first, then naturally.  It is a
-[`HarmonicValues`](@ref), and `sY[ℓ][m]` is one value.  A whole
-collection of rotors may be given instead of one, and the spin weight
-may be a range, which between them give a block four possible shapes:
+[`HarmonicValues`](@ref), and `sY[ℓ][m]` is one value; `sY[ℓ, :]` is
+equivalent to the block `sY[ℓ]`.  As for ``𝔇``, iterating over the
+result gives `ℓ => block` pairs, while `first`, `last` and `only` give
+blocks.  A whole collection of rotors may be given instead of one, and
+the spin weight may be a range, which between them give a block four
+possible shapes:
 
 | built for | `sY[ℓ]` is indexed |
 |---|---|
@@ -164,19 +201,21 @@ rotors and spin weights.  [`array_view`](@ref) hands that array back:
 array_view(sY)[Yindex(ℓ, m, abs(s))] == sY[ℓ][m]
 ```
 
-That flat form is what a product with a vector of mode weights takes,
-to synthesize a function at the rotors; [`sYlm_matrix`](@ref) is the
-direct name for it, for those who want the bare array, and
-[`ModeWeights`](@ref) is the container for the weights themselves.
+That flat form is what a product with the plain vector of mode weights
+takes, to synthesize a function at the rotors; [`sYlm_matrix`](@ref)
+is the direct name for it, for those who want the bare array.  The
+weights themselves are held in a [`ModeWeights`](@ref), which the
+labelled `sY` multiplies directly, as described [below](@ref
+mode_weight_operations).
 
 Modes with ``ℓ < |s|`` do not exist (or are inherently zero), so by
-default ``ℓ`` starts at ``|s|``.  Pass `ℓₘᵢₙ=0` to start at ``ℓ = 0``
-instead, with zeros in the nonexistent modes; this is the layout that
-some downstream packages use for every spin weight at once.  For ``s =
-0`` these are the ordinary scalar spherical harmonics ``Y_{ℓ,m}``,
-which [`Ylm`](@ref) gives without the redundant argument: `Ylm(R,
-ℓₘₐₓ)` is exactly `sYlm(R, ℓₘₐₓ, 0)`, and starts at ``ℓ = 0`` because
-no modes are missing there.
+default ``ℓ`` starts at ``|s|``.  Pass `ℓₘᵢₙ=0` (or `ell_min=0`) to
+start at ``ℓ = 0`` instead, with zeros in the nonexistent modes; this
+is the layout that some downstream packages use for every spin weight
+at once.  For ``s = 0`` these are the ordinary scalar spherical
+harmonics ``Y_{ℓ,m}``, which [`Ylm`](@ref) gives without the redundant
+argument: `Ylm(R, ℓₘₐₓ)` is exactly `sYlm(R, ℓₘₐₓ, 0)`, and starts at
+``ℓ = 0`` because no modes are missing there.
 
 
 ## Iterating over ``ℓ`` and reusing the storage
@@ -200,11 +239,12 @@ for (ℓ, ₛYₗ) ∈ calculator
     # ₛYₗ[m] is available for m ∈ -ℓ:ℓ
 end
 ```
-The blocks for ``ℓ < |s|``, whose modes do not exist, come back full
-of zeros rather than being skipped.
+A calculator always starts at ``ℓ = 0`` (or ``1/2``), and takes no
+`ℓₘᵢₙ` keyword; the blocks for ``ℓ < |s|``, whose modes do not exist,
+come back full of zeros rather than being skipped.
 
-The `m′` keywords have their counterpart in the spin weight.  Because
-``{}_{s}Y_{ℓ,m}`` is the ``m' = -s`` column of ``𝔇``, a range of spin
+The `m` keywords have their counterpart in the spin weight.  Because
+``{}_{s}Y_{ℓ,m}`` is the ``m = -s`` column of ``𝔇``, a range of spin
 weights is a range of columns of one recursion, and an `sYlmCalculator`
 will serve several of them at once, giving its blocks a spin axis
 indexed by the spin weight itself:
@@ -239,29 +279,16 @@ these constructors — so computing in a wider type means building the
 rotor in that type, as in `sYlmCalculator(Rotor{BigFloat}(R), ℓₘₐₓ,
 s)`.
 
-!!! warning "Derivatives at β = 0 and β = π"
-    Derivatives taken with `ForwardDiff` come out as `NaN` exactly at
-    rotors with ``β = 0`` or ``β = π`` — the identity, rotations about
-    the ``z`` axis, and the harmonics at the poles — although ``𝔇``
-    is a smooth function of the rotor there.  For example,
-    `ForwardDiff.derivative(α -> imag(D(from_euler_angles(α, 0.0,
-    0.0), 2)[2][1, 1]), 0.3)` is `NaN`, where the true value is about
-    ``-0.955``.  The recurrence works with the half-angles
-    ``\cos(β/2)`` and ``\sin(β/2)`` and the phases of ``α ± γ``, which
-    are computed from the rotor's components with square roots; at
-    those points one of the square roots is taken of an exact zero,
-    whose derivative is infinite, and the resulting `NaN` spreads to
-    every element.  The decomposition is singular there even though
-    its products are not, so the derivative cannot be recovered
-    locally: ForwardDiff's "NaN-safe" mode replaces the `NaN` with a
-    *wrong* number (for example, 0 for the derivative of
-    ``𝔇^{(1)}_{1,0}`` at the identity along ``x``, where the true
-    value is ``-i/\sqrt{2}``), and should not be used to hide it.
-    Differentiate at a nearby point instead, or use the analytic
-    operators of [Differential operators](@ref
-    interface_differential_operators) where they apply.  Version 2 had
-    the same limitation; see [issue
-    #67](https://github.com/moble/SphericalFunctions.jl/issues/67).
+!!! note "Derivatives at the poles"
+    ``𝔇`` and the harmonics may be differentiated with respect to the
+    rotor by automatic differentiation everywhere, including at rotors
+    with ``β = 0`` or ``β = π``.  The same is not true of ``d`` and
+    ``H`` *of a rotor*: some of their elements, such as
+    ``d^{(1)}_{1,0}``, have no derivative at the poles as functions of
+    the rotor, because ``β`` itself has none, and those derivatives
+    are returned as `NaN`.  To differentiate ``d`` at the poles, give
+    it the angle ``β`` or the phase ``e^{iβ}`` instead.  [This
+    note](@ref automatic_differentiation) explains the details.
 
 !!! danger
     Each `𝔇ˡ` block is a *view* into the storage kept in the
@@ -295,16 +322,21 @@ For the same reason, two loops over one calculator cannot be
 interleaved.  Each step of either loop overwrites what the other is
 looking at.  There is no way to warn about this behavior; the answers
 will simply be wrong if you try this.  A simple way to get a second
-calculator of the same type is `similar(calculator)`.
+calculator of the same type is `similar(calculator)`, or
+`similar(calculator, R)` to give it other rotors.  The same holds for
+tasks: a calculator is a mutable workspace, so one calculator must
+never be used by two tasks at the same time, and each task that
+computes in parallel with the others needs a calculator of its own.
 
 To reset the calculator to the beginning of the loop over ``ℓ``, and
 change the `R` value, call [`set_R!`](@ref) on a `DCalculator`
-or an `sYlmCalculator`, or [`set_β!`](@ref) on a `dCalculator`.
+or an `sYlmCalculator`, or [`set_β!`](@ref) (also available as
+`set_beta!`) on a `dCalculator`.
 For example, given a collection of rotors, you can iterate over them
 all like this:
 ```julia
-calculator = DCalculator(first(rotors), ℓₘₐₓ)
-for R ∈ rotors
+calculator = DCalculator(first(R⃗), ℓₘₐₓ)
+for R ∈ R⃗
     set_R!(calculator, R)
     for (ℓ, 𝔇ˡ) ∈ calculator
         # 𝔇ˡ[m′, m] is available for m′, m ∈ -ℓ:ℓ with this value of R
@@ -319,9 +351,9 @@ all of them at once — which can be significantly faster than looping
 over them one at a time.  This would not be accessible to the user by
 external looping as above.  For example,
 ```julia
-calculator = DCalculator(rotors, ℓₘₐₓ)
+calculator = DCalculator(R⃗, ℓₘₐₓ)
 for (ℓ, 𝔇ˡ) ∈ calculator
-    # 𝔇ˡ[iᵣ, m′, m] is available for iᵣ ∈ 1:length(rotors) and m′, m ∈ -ℓ:ℓ
+    # 𝔇ˡ[iᵣ, m′, m] is available for iᵣ ∈ 1:length(R⃗) and m′, m ∈ -ℓ:ℓ
 end
 ```
 The type *and number* of rotors are fixed when the calculator is
@@ -329,27 +361,35 @@ built, but you can still use `set_R!` and `set_β!` to adjust their
 values and restart the loop over ``ℓ``.  Each block of an
 `sYlmCalculator` built this way gains the same leading rotor index, so
 that it is `ₛYₗ[iᵣ, m]`, or `ₛYₗ[iᵣ, s, m]` for a range of spin
-weights.
+weights.  What decides this is that the rotors came as a vector, not
+how many there are: a calculator built from a vector of one rotor is
+still a batch, with a rotor index of length one, and
+[`isbatched`](@ref SphericalFunctions.isbatched) says which kind a
+calculator is.  The operations that need a single rotor — rotating a
+`ModeWeights`, for example — refuse a batch of one, rather than
+guessing which was meant.
 
 ## [The real harmonics ``{}_sλ_{ℓ,m}(θ)``](@id interface_real_harmonics)
 
 A calculator also accepts real angles ``θ`` in place of rotors, either
-at construction or later through [`set_θ!`](@ref), and then evaluates
-the harmonics at ``(θ, ϕ=0)``.  That is the
-``{}_{s}λ_{ℓ,m}(θ)`` the ring-based transforms need — one ring of the
+at construction or later through [`set_θ!`](@ref) (also available as
+`set_theta!`), and then evaluates the harmonics at ``(θ, ϕ=0)``.  That
+is the ``{}_{s}λ_{ℓ,m}(θ)`` the ring-based transforms need — one ring of the
 sphere for each angle, which is why a whole vector of them is the
 natural input:
 ```julia
-calculator = sλlmCalculator(θ⃗, ℓₘₐₓ, -2)      # a vector of angles, or one θ
+calculator = SphericalFunctions.sλlmCalculator(θ⃗, ℓₘₐₓ, -2)  # a vector of angles, or one θ
 for (ℓ, ₛλₗ) ∈ calculator
     # ₛλₗ[iᵣ, m] for iᵣ ∈ 1:length(θ⃗), m ∈ -ℓ:ℓ
 end
 ```
 An [`sλlmCalculator`](@ref) stores its values as *real* numbers, and
 [`sλlm`](@ref), [`sλlm!`](@ref) and [`sλlm_matrix`](@ref) are the flat
-forms of it.  Everything else is as it is for the complex family: the
-same blocks, the same iteration, the same half-integer types, and
-the same containers, which are generic in the number type.
+forms of it.  These names are public but not exported, and each has an
+ASCII alias, `slambdalmCalculator`, `slambdalm`, `slambdalm!` and
+`slambdalm_matrix`.  Everything else is as it is for the complex
+family: the same blocks, the same iteration, the same half-integer
+types, and the same containers, which are generic in the number type.
 
 The two flavors share one struct, [`HarmonicCalculator`](@ref),
 exactly as [`DCalculator`](@ref) and [`dCalculator`](@ref) do — and
@@ -378,12 +418,13 @@ constant phase out is what leaves a real function behind.  (Dividing
 by ``i^{2s}`` in both cases would give the wrong sign for odd integer
 ``s``, where ``i^{2s} = -1``.)
 
-A `Rotor` is refused, by the constructor and by [`set_R!`](@ref)
+A `Rotor` is refused, by the constructor and by [`set_θ!`](@ref)
 alike: it specifies the angles ``α`` and ``γ``, whose phases a real
 calculator has nowhere to put.  Use an `sYlmCalculator` for that.
-Angles fix the element type exactly as rotors do, and `set_θ!`
-requires the same agreement as `set_R!`, so a `BigFloat` calculator
-wants `big(θ)` rather than a bare literal.
+Conversely, [`set_R!`](@ref) takes only rotors, and refuses an angle
+with a message naming `set_θ!`.  Angles fix the element type exactly
+as rotors do, and `set_θ!` requires the same agreement as `set_R!`, so
+a `BigFloat` calculator takes `big(θ)` rather than a bare literal.
 
 ## The underlying ``H`` recursion
 
@@ -401,23 +442,27 @@ end
 ```
 This one is intentionally not iterable, and is the exception to
 everything said above about blocks: the wedge is a single mutable
-object handed back by identity rather than a view, so a `copy` of it
-still shares the numbers it wraps.  Read the values out before
-stepping on, or copy `parent(Hˡ)`.
+object, the calculator's own workspace, handed back by identity rather
+than as a view.  The next step overwrites it, and its `ℓ` must not be
+reassigned by hand.  Read the values out before stepping on, or keep
+`copy(Hˡ)`, which is an independent wedge holding the same numbers.
 
 The wedge is stored as an [`HWedge`](@ref) (and, during the recursion,
-an [`HAxis`](@ref)); the symmetries that relate the rest of the matrix
-to the stored wedge are described in the notes on the [``H``
-recursion](@ref "Algorithm for computing ``H``").  Most users should
-prefer the ``𝔇``, ``d`` and ``{}_{s}Y_{ℓ,m}`` calculators above,
-which apply the symmetries and the phases for you.
+an [`HAxis`](@ref SphericalFunctions.HAxis), which is internal); the
+symmetries that relate the rest of the matrix to the stored wedge are
+described in the notes on the [``H`` recursion](@ref "Algorithm for
+computing ``H``"), and [`wedge_value`](@ref) reads any element of the
+matrix through them.  Most users should prefer the ``𝔇``, ``d`` and
+``{}_{s}Y_{ℓ,m}`` calculators above, which apply the symmetries and
+the phases for you.
 
 
 ## Half-integer indices
 
 Everything on this page works for half-integer ``ℓ, m', m`` and spin
-weight ``s`` as well.  Ask for them by giving `Rational`s whose
-denominator is exactly 2:
+weight ``s`` as well.  Ask for them by giving `Rational{Int}`s whose
+denominator is exactly 2, or [`HalfOddInteger`](@ref
+SphericalFunctions.HalfOddInteger)s:
 ```julia
 𝔇 = D(R, 7//2)                                # ℓ = 1//2, 3//2, 5//2, 7//2
 𝔡 = d(β, 7//2)
@@ -425,7 +470,7 @@ calculator = sYlmCalculator(R, 7//2, -3//2:3//2)
 ```
 The containers that come back are the same ones as for integer
 indices.  The index type behind them, and the handful of places where
-the half-integer case genuinely differs, are described on the
+the half-integer case actually differs, are described on the
 [half-integer page](@ref interface_half_integers).
 
 
@@ -444,6 +489,19 @@ f⃗  = sYlm(R⃗, ℓₘₐₓ, s) * w        # ... and at each of many rotors
 The calculator forms, `DCalculator(R, ℓₘₐₓ) * w` and
 `sYlmCalculator(R, ℓₘₐₓ, s) * w`, compute the same things one ``ℓ`` at a
 time rather than materializing every block.
+
+Evaluation reads only the weights that belong to a function of spin
+weight ``s``, those with ``ℓ ≥ \max(ℓₘᵢₙ(w), |s|)``, so the harmonics
+need to cover only that range, and weights that hold nothing at or
+above ``|s|`` evaluate to zero.  The flat [`sYlm_matrix`](@ref) is a
+plain matrix, which has no labels to check, so its product with a
+`ModeWeights` is refused rather than trusted.  The same synthesis is
+written either with the labelled harmonics, as `sYlm(R⃗, ℓₘₐₓ, s) * f̃`,
+which checks the spin weight and the range of ``ℓ``, or with the
+matrix and the raw numbers, as `Y * array_view(f̃)`, for weights stored
+from the matrix's own ``ℓₘᵢₙ``.  Weights over some other range of
+``ℓ`` are copied into the one wanted with `ModeWeights(f̃; ℓₘᵢₙ,
+ℓₘₐₓ)`, which fills the modes that `f̃` lacks with zeros.
 
 Rotation is an ordinary matrix–vector product on each ``ℓ`` block, with
 **no complex conjugate** — see [Rotation of mode
@@ -503,14 +561,19 @@ either kind of index, and the abstract types they share with the workspaces belo
 These containers are deliberately **not** `AbstractArray`s.  Half-odd
 indices cannot satisfy that interface at all — `axes` must be integer
 ranges, and `-3//2:3//2` is not one — but the reason they are not
-arrays on the integer path either is a sharper one.  Through version
-2 the integer path returned `OffsetArray`s, and an `OffsetArray` with
-non-trivial offsets *accepts* `*` and `mul!` and returns silently
-wrong answers: a product of two blocks comes back as a 1-based
-`Matrix` of mostly zeros, and an adjoint product comes back holding
-uninitialized memory.  Refusing to be an `AbstractMatrix` turns that
-silence into a `MethodError` at the call site, and [`array_view`](@ref)
-is what a caller reaches for once they actually mean it.
+arrays on the integer path either is a sharper one.  There the natural
+array would be an `OffsetArray`, and an `OffsetArray` with non-trivial
+offsets *accepts* `*` and `mul!` and returns silently wrong answers:
+a product of two blocks comes back as a 1-based `Matrix` of mostly
+zeros, and an adjoint product comes back holding uninitialized memory.
+
+!!! note "How to get results as `Array`s"
+    The package provides [`array_view`](@ref) to get a 1-based
+    `StridedArray` *view* of the storage, and [`relabel`](@ref) to put
+    the natural indices back on the result.  `Matrix(𝔇[ℓ])` gives an
+    independent *copy* of the storage.  The reason for that
+    arrangement is discussed in the [Containers](@ref
+    interface_containers) section.
 
 ```@docs
 array_view
@@ -533,9 +596,16 @@ WignerCalculator
 
 ## Workspaces
 
+The wedge that an [`HCalculator`](@ref) returns is an `HWedge`, and
+[`wedge_value`](@ref) reads any element of ``H^ℓ`` from it, applying
+the symmetries described in the notes on the [``H`` recursion](@ref
+"Algorithm for computing ``H``").  The axis that seeds the wedge
+during the recursion is an internal type, described on the [internal
+page](@ref "Internal functions").
+
 ```@docs
 HWedge
-HAxis
+wedge_value
 ```
 
 
@@ -557,9 +627,19 @@ Base.Matrix
 
 ## Accessors
 
-The same handful of names reports the index ranges of every container and calculator in the
-package.  Each has an ASCII alias, given in its docstring, for use where the subscripted
-Unicode names are inconvenient.
+The same handful of names reports the index ranges of every container
+and calculator in the package.  Each has an ASCII alias, given in its
+docstring, for use where the subscripted Unicode names are
+inconvenient: `ell`, `ell_min`, `ell_max`, `mp_max`, `mp_min`,
+`m_max`, `m_min`, `s_max`, `s_min` and `Nr`.  The keyword arguments of
+the same names are spelled the same way in ASCII, so that `D(R, ℓₘₐₓ;
+mp_max=2)` is `D(R, ℓₘₐₓ; m′ₘₐₓ=2)` and `sYlm(R, ℓₘₐₓ, s; ell_min=0)`
+is `sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ=0)`.  The functions whose names are not
+ASCII have aliases too — `set_beta!`, `set_theta!`, `slambdalm`,
+`slambdalm!`, `slambdalm_matrix` and `slambdalmCalculator` here, and
+those of the [differential operators](@ref
+interface_differential_operators) — which are public but not exported,
+and are mentioned in the docstrings of the functions they name.
 
 ```@docs
 SphericalFunctions.ℓ

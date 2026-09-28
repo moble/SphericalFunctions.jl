@@ -81,6 +81,7 @@ formulas in a module so that we can test them against the `SphericalFunctions` p
 
 using TestItems: @testitem  #hide
 @testitem "Griffiths conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
+import .Utilities: θϕrange  #hide
 
 module Griffiths
 #+
@@ -143,13 +144,14 @@ end  # module Griffiths
 #+
 
 # We only test up to
-ℓₘₐₓ = 4
+ℓₘₐₓ = 6
 #+
-# because the formulas are slow, and this will be sufficient to sort out any sign or
-# normalization differences, which are the most likely source of error.
+# because the symbolic derivatives in the formulas become expensive to compute at higher
+# orders, and this will be sufficient to sort out any sign or normalization differences,
+# which are the most likely source of error.
 
 # First, Griffiths' Table 4.2 agrees with his general formula (4.32):
-for (θ, ϕ) ∈ θϕrange(Float64, 7)
+for (θ, ϕ) ∈ θϕrange(rng, Float64, 7)
     @test Griffiths.Y₀⁰(θ, ϕ) ≈ Griffiths.Y(0, 0, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
     @test Griffiths.Y₁⁰(θ, ϕ) ≈ Griffiths.Y(1, 0, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
     @test Griffiths.Y₁⁺¹(θ, ϕ) ≈ Griffiths.Y(1, 1, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
@@ -170,9 +172,9 @@ end
 #+
 
 # Now, the general formula agrees with ours:
-for (θ, ϕ) ∈ θϕrange(Float64, 7)
-    for (ℓ, m) ∈ ℓmrange(ℓₘₐₓ)
-        @test Griffiths.Y(ℓ, m, θ, ϕ) ≈ ConventionsUtilities.Y(ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+for (θ, ϕ) ∈ θϕrange(rng, Float64, 7)
+    for (ℓ, Yˡ) ∈ SphericalFunctions.YlmCalculator(θ, ϕ, ℓₘₐₓ), m ∈ -ℓ:ℓ
+        @test Griffiths.Y(ℓ, m, θ, ϕ) ≈ Yˡ[m] atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+

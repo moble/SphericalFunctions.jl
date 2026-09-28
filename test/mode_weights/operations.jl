@@ -3,27 +3,44 @@
 #     𝔇 * w   rotates mode weights
 #     Y * w   evaluates the function at the rotor(s)
 #
-# Both are bilinear — neither conjugates — which is the single most consequential detail here,
-# and is what the "does not conjugate" item below pins against a future "fix".
+# Both are bilinear — neither conjugates — which is the single most consequential detail
+# here, and is what the "does not conjugate" item below pins against a future "fix".
 
 @testitem "Rotating mode weights: the defining property" begin
     using Quaternionic: Rotor, RotorF64
+    import DoubleFloats: Double64
+    import SphericalFunctions: HalfOddInteger
     using Random
 
     rng = Random.Xoshiro(20260920)
-    # `w(R)` is already pinned against the closed-form harmonics elsewhere, so it serves as an
-    # independent oracle here: no new reference is needed.
-    for T ∈ (Float64,), s ∈ (-2, 0, 1), ℓₘᵢₙ ∈ (abs(s), 0)
-        ℓₘₐₓ = 4
+    # `w(R)` is already pinned against the closed-form harmonics elsewhere, so it serves as
+    # an independent oracle here: no new reference is needed.  The half-integer cases matter
+    # because the group structure checked in the next item holds for the conjugate of 𝔇 as
+    # well, so only this property distinguishes 𝔇 from it; for the same reason each case is
+    # also compared with the rotation the other way, `w(R * Q)`, which must differ.
+    h = HalfOddInteger
+    cases = [
+        [(s, ℓₘᵢₙ, 4) for s ∈ (-2, 0, 1) for ℓₘᵢₙ ∈ unique((abs(s), 0))];
+        [(h(1//2), h(1//2), h(7//2)), (h(-3//2), h(3//2), h(9//2)), (h(3//2), h(1//2), h(3//2))]
+    ]
+    for T ∈ (Float32, Float64, Double64), (s, ℓₘᵢₙ, ℓₘₐₓ) ∈ cases
         w = ModeWeights(randn(rng, Complex{T}, Ysize(ℓₘᵢₙ, ℓₘₐₓ)), s, ℓₘᵢₙ, ℓₘₐₓ)
-        R = randn(rng, Rotor{T}); Q = randn(rng, Rotor{T})
-        # measured worst case 3e-15 over this sweep; 1e-10 is a wide safety margin
-        ϵ = 1e-10
-        @test isapprox((D(R, ℓₘₐₓ) * w)(Q), w(inv(R) * Q); atol=ϵ, rtol=ϵ)
-        # the rotation changes neither the spin weight nor the range of ℓ
+        R = randn(rng, Rotor{T})
+        # Measured: at most 15 eps(T) over thirty seeds of this sweep, against 150 to 450
+        # eps(T) allowed, while the rotation the other way differs by at least 260ϵ (in
+        # Float32, and by more than 10¹⁰ϵ in the other types)
+        ϵ = 100ℓₘₐₓ * eps(T)
         rot = D(R, ℓₘₐₓ) * w
-        @test rot isa ModeWeights
-        @test spin(rot) == s
+        wrong_way = zero(T)
+        for Q ∈ randn(rng, Rotor{T}, 3)
+            @test isapprox(rot(Q), w(inv(R) * Q); atol=ϵ, rtol=ϵ)
+            wrong_way = max(wrong_way, abs(rot(Q) - w(R * Q)))
+        end
+        @test wrong_way > 100ϵ
+        # the rotation changes neither the spin weight nor the range of ℓ, and computes in
+        # the precision of the rotor and the weights
+        @test rot isa ModeWeights{Complex{T}}
+        @test spin(rot) === s
         @test SphericalFunctions.ℓₘᵢₙ(rot) === ℓₘᵢₙ && SphericalFunctions.ℓₘₐₓ(rot) === ℓₘₐₓ
     end
 end
@@ -34,8 +51,9 @@ end
     using Random
 
     rng = Random.Xoshiro(77)
-    ϵ = 1e-10
     for ℓₘₐₓ ∈ (4, 7//2)
+        # Measured: at most 17 eps over thirty seeds, against 350 or 400 eps allowed
+        ϵ = 100ℓₘₐₓ * eps()
         s = ℓₘₐₓ isa Rational ? 1//2 : -2
         ℓₘᵢₙ = abs(s)
         w = ModeWeights(randn(rng, ComplexF64, Ysize(ℓₘᵢₙ, ℓₘₐₓ)), s, ℓₘᵢₙ, ℓₘₐₓ)
@@ -61,7 +79,7 @@ end
 end
 
 @testitem "Rotating mode weights: refusals and the calculator" begin
-    import SphericalFunctions: spin
+    import SphericalFunctions: spin, Nᵣ
     using Quaternionic: Rotor, RotorF64
     using LinearAlgebra: mul!
     using Random
@@ -80,8 +98,19 @@ end
     # Kinds may not be mixed
     wh = ModeWeights(randn(rng, ComplexF64, Ysize(1//2, 7//2)), 1//2)
     @test_throws "must be of one kind" D(R, ℓₘₐₓ) * wh
-    # A batched calculator rotates by one rotor, not many
-    @test_throws "Nᵣ=" DCalculator(randn(rng, RotorF64, 3), ℓₘₐₓ) * w
+    # A batched calculator rotates by one rotor, not many, and a batch of one is still a
+    # batch, whose blocks have a rotor axis, so it is refused in the same way, with the
+    # reason, rather than failing inside the product
+    for calc ∈ (DCalculator(randn(rng, RotorF64, 3), ℓₘₐₓ), DCalculator([R], ℓₘₐₓ),
+                dCalculator([0.3], ℓₘₐₓ))
+        @test_throws ArgumentError calc * w
+        @test_throws "built for a batch of $(Nᵣ(calc)) rotor" calc * w
+        @test_throws "even of length one" mul!(similar(w), calc, w)
+    end
+    # A destination with other labels is refused, with the way to allocate one and the way
+    # to copy weights into another range of ℓ
+    @test_throws ArgumentError mul!(ModeWeights(zeros(ComplexF64, Ysize(0, ℓₘₐₓ)), -2, 0, ℓₘₐₓ), D(R, ℓₘₐₓ), w)
+    @test_throws "`ModeWeights(w; ℓₘᵢₙ, ℓₘₐₓ)` copies" mul!(ModeWeights(zeros(ComplexF64, Ysize(0, ℓₘₐₓ)), -2, 0, ℓₘₐₓ), D(R, ℓₘₐₓ), w)
 
     # The calculator streams, and agrees with the series exactly: `D` copies the same blocks
     @test array_view(DCalculator(R, ℓₘₐₓ) * w) == array_view(D(R, ℓₘₐₓ) * w)
@@ -93,8 +122,8 @@ end
     @test_throws "changes neither" mul!(ModeWeights(zeros(ComplexF64, Ysize(2, ℓₘₐₓ)), 1, 2, ℓₘₐₓ),
                                         D(R, ℓₘₐₓ), w)
     @test_throws "aliases the input" mul!(w, D(R, ℓₘₐₓ), w)
-    # A bare vector, at least as long as the result, is accepted too, and the result comes back
-    # labelled, as a ModeWeights over its first entries; a shorter one is refused
+    # A bare vector, at least as long as the result, is accepted too, and the result comes
+    # back labelled, as a ModeWeights over its first entries; a shorter one is refused
     for calc ∈ (D(R, ℓₘₐₓ), DCalculator(R, ℓₘₐₓ))
         out = zeros(ComplexF64, length(array_view(w)) + 2)
         w′ = mul!(out, calc, w)
@@ -109,13 +138,15 @@ end
 
 @testitem "Evaluating mode weights: the four shapes" begin
     using Quaternionic: Rotor, RotorF64
+    import DoubleFloats: Double64
     using Random
 
     rng = Random.Xoshiro(123)
     s, ℓₘₐₓ = -2, 4
     w = ModeWeights(randn(rng, ComplexF64, Ysize(abs(s), ℓₘₐₓ)), s)
     R = randn(rng, RotorF64); R⃗ = randn(rng, RotorF64, 3)
-    ϵ = 1e-10
+    # Measured: at most 7 eps over thirty seeds, against 400 eps allowed
+    ϵ = 100ℓₘₐₓ * eps()
 
     # One rotor, one spin: bit-exact against `w(R)`, which uses the same reduction
     @test sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ=abs(s)) * w == w(R)
@@ -129,15 +160,55 @@ end
     # The calculator streams; its per-ℓ partial sums associate differently, hence ≈
     @test isapprox(sYlmCalculator(R, ℓₘₐₓ, s) * w, w(R); atol=ϵ, rtol=ϵ)
     @test isapprox(sYlmCalculator(R⃗, ℓₘₐₓ, s) * w, [w(r) for r ∈ R⃗]; atol=ϵ, rtol=ϵ)
-    # And it is the same product `sYlm_matrix` documents as `f = Y * f̃`
-    @test isapprox(sYlm_matrix(R⃗, ℓₘₐₓ, s; ℓₘᵢₙ=abs(s)) * array_view(w),
-                   sYlm(R⃗, ℓₘₐₓ, s; ℓₘᵢₙ=abs(s)) * w; atol=ϵ, rtol=ϵ)
+    # And it is the labelled form of the product `sYlm_matrix` documents as
+    # `f = Y * array_view(f̃)`, which is the same arithmetic (measured: exactly)
+    @test sYlm_matrix(R⃗, ℓₘₐₓ, s; ℓₘᵢₙ=abs(s)) * array_view(w) == sYlm(R⃗, ℓₘₐₓ, s; ℓₘᵢₙ=abs(s)) * w
+    # ... while the product of the plain matrix with the labelled weights is refused, since it
+    # could not check them
+    @test_throws "sYlm(R⃗, ℓₘₐₓ, s) * w" sYlm_matrix(R⃗, ℓₘₐₓ, s; ℓₘᵢₙ=abs(s)) * w
 
     # Refusals
     # same ℓ range, so only the spin weight differs and only that check can fire
     w1 = ModeWeights(randn(rng, ComplexF64, Ysize(abs(s), ℓₘₐₓ)), 1, abs(s), ℓₘₐₓ)
-    @test_throws "spin weight" sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ=abs(s)) * w1
+    @test_throws ArgumentError sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ=abs(s)) * w1
+    @test_throws "spin weight s=1, but these harmonic values serve only s=-2." sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ=abs(s)) * w1
+    @test_throws "but these harmonic values serve only s ∈ -1:0." sYlm(R, ℓₘₐₓ, -1:0) * w1
     @test_throws "ℓ range of" sYlm(R, 3, s; ℓₘᵢₙ=abs(s)) * w
+
+    # Weights stored from ℓ = 0 < |s| need harmonics only from |s| up, since the entries below
+    # belong to no harmonic; those entries are not read by any of the shapes, so a
+    # non-finite value there leaves every result exactly as it was
+    w0 = ModeWeights(randn(rng, ComplexF64, Ysize(0, ℓₘₐₓ)), s, 0, ℓₘₐₓ)
+    products = (
+        () -> sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ=abs(s)) * w0, () -> sYlm(R⃗, ℓₘₐₓ, s) * w0,
+        () -> sYlm(R, ℓₘₐₓ, -2:2) * w0, () -> sYlm(R⃗, ℓₘₐₓ, -2:2) * w0,
+        () -> sYlmCalculator(R, ℓₘₐₓ, s) * w0, () -> sYlmCalculator(R⃗, ℓₘₐₓ, s) * w0,
+        () -> w0(R), () -> w0(R⃗),
+    )
+    before = map(f -> f(), products)
+    @test isapprox(before[1], w0(R); atol=ϵ, rtol=ϵ)
+    @test isapprox(before[2], [w0(r) for r ∈ R⃗]; atol=ϵ, rtol=ϵ)
+    for ℓ ∈ 0:1, m ∈ -ℓ:ℓ
+        w0[ℓ, m] = NaN
+    end
+    @test map(f -> f(), products) == before
+    @test_throws "of which ℓ ∈ 2:4 are needed" sYlm(R, 3, s; ℓₘᵢₙ=abs(s)) * w0
+
+    # The same shapes in other precisions, where the harmonics and the result are of the
+    # precision of the rotor
+    for T ∈ (Float32, Double64)
+        wT = ModeWeights(randn(rng, Complex{T}, Ysize(abs(s), ℓₘₐₓ)), s)
+        RT, R⃗T = randn(rng, Rotor{T}), randn(rng, Rotor{T}, 3)
+        # Measured: at most 5.2 eps(T) over thirty seeds, against 400 eps(T) allowed
+        ϵT = 100ℓₘₐₓ * eps(T)
+        @test wT(RT) isa Complex{T}
+        @test sYlm(RT, ℓₘₐₓ, s; ℓₘᵢₙ=abs(s)) * wT == wT(RT)
+        @test isapprox(sYlm(R⃗T, ℓₘₐₓ, s) * wT, [wT(r) for r ∈ R⃗T]; atol=ϵT, rtol=ϵT)
+        @test isapprox(sYlm(RT, ℓₘₐₓ, -2:2) * wT, wT(RT); atol=ϵT, rtol=ϵT)
+        @test isapprox(sYlm(R⃗T, ℓₘₐₓ, -2:2) * wT, [wT(r) for r ∈ R⃗T]; atol=ϵT, rtol=ϵT)
+        @test isapprox(sYlmCalculator(RT, ℓₘₐₓ, s) * wT, wT(RT); atol=ϵT, rtol=ϵT)
+        @test isapprox(sYlmCalculator(R⃗T, ℓₘₐₓ, s) * wT, [wT(r) for r ∈ R⃗T]; atol=ϵT, rtol=ϵT)
+    end
 end
 
 @testitem "Evaluating mode weights does not conjugate" begin
@@ -156,9 +227,10 @@ end
     # ... and the conjugating one is demonstrably different, by far more than any tolerance
     @test abs(dot(array_view(Y), array_view(w)) - w(R)) > 1e-6
     # ... so `dot` on these types errors rather than quietly answering with the wrong phase.
-    # This is the tombstone: it stops a future maintainer "fixing" a MethodError by adding the
-    # harmful non-conjugating method.
+    # This is the tombstone: it stops a future maintainer "fixing" a MethodError by adding
+    # the harmful non-conjugating method.  The message points to the labelled product.
     @test_throws "conjugates its first argument" dot(Y, w)
+    @test_throws "Use `Y * w`, the bilinear product" dot(Y, w)
     @test_throws "conjugates its first argument" dot(w, Y)
     @test_throws "conjugates its first argument" dot(sYlmCalculator(R, ℓₘₐₓ, s), w)
     # The conjugating inner product of two sets of weights is still available and unchanged
@@ -172,8 +244,8 @@ end
     import Quaternionic: Rotor
     import Random
 
-    # Measured inside functions, as a user's inner loop sees it; at top level the boxing of a
-    # dynamically dispatched call would be counted and would prove nothing.
+    # Measured inside functions, as a user's inner loop sees it; at top level the boxing of
+    # a dynamically dispatched call would be counted and would prove nothing.
     inplace(dst, A, src) = (mul!(dst, A, src); @allocated mul!(dst, A, src))
     product(A, src) = (A * src; @allocated A * src)
 
@@ -182,9 +254,9 @@ end
     s, ℓₘₐₓ = -2, 8
     w = ModeWeights(randn(rng, ComplexF64, SphericalFunctions.Ysize(abs(s), ℓₘₐₓ)), s)
 
-    # Rotation: `mul!` into a correctly labelled destination writes only into it.  These were
-    # ~350 bytes each until the hint message in `check_ℓ_covers` was made lazy — it named
-    # `ℓₘₐₓ(w)`, so it was built on every call whether or not the check failed.
+    # Rotation: `mul!` into a correctly labelled destination writes only into it.  The hint
+    # of the message in `check_ℓ_covers` names `ℓₘₐₓ(w)`, so it is built only when the check
+    # fails; built on every call, it would be some 350 bytes.
     w′ = similar(w)
     @test inplace(w′, D(R, ℓₘₐₓ), w) == 0
     @test inplace(w′, DCalculator(R, ℓₘₐₓ), w) == 0
@@ -205,7 +277,7 @@ end
 
 @testitem "Evaluating mode weights: many rotors, and the refusals" begin
     using Quaternionic: Rotor, RotorF64
-    import SphericalFunctions: half_integer
+    import SphericalFunctions: HalfOddInteger
     using Random
 
     rng = Random.Xoshiro(2026)
@@ -230,21 +302,118 @@ end
     @test_throws "Build it with ℓₘₐₓ=4" sYlmCalculator(R, 2, s) * w
 
     # A calculator that does not serve this spin weight says which ones it does
-    @test_throws "spin weight" sYlmCalculator(R, ℓₘₐₓ, 1) * w
+    @test_throws ArgumentError sYlmCalculator(R, ℓₘₐₓ, 1) * w
+    @test_throws "spin weight s=-2, but this calculator serves only s=1." sYlmCalculator(R, ℓₘₐₓ, 1) * w
+    @test_throws "this calculator serves only s ∈ -1:1." sYlmCalculator(R, ℓₘₐₓ, -1:1) * w
 
     # Mixing the two kinds of index is refused, and the message names the kind the container
     # actually holds, which is what `index_kind_name` is for
     wh = ModeWeights(randn(rng, ComplexF64, Ysize(1//2, 7//2)), 1//2)
     @test_throws "must be of one kind" sYlmCalculator(R, ℓₘₐₓ, s) * wh
     @test_throws "integers" sYlmCalculator(R, ℓₘₐₓ, s) * wh
-    @test_throws "half-odd-integers" sYlmCalculator(R, half_integer(7//2), half_integer(1//2)) * w
+    @test_throws "half-odd-integers" sYlmCalculator(R, HalfOddInteger(7//2), HalfOddInteger(1//2)) * w
 
-    # The real harmonics are refused, whether flat or as a calculator, and for either kind of
-    # index: they omit the phase i^{2s}, and depend on θ alone.  (For a half-odd spin weight
-    # they once returned f(θ, 0) times a constant ±i.)
+    # The real harmonics are refused, whether flat or as a calculator, and for either kind
+    # of index: they omit the phase i^{2s}, and depend on θ alone.  (For a half-odd spin
+    # weight they would give f(θ, 0) times a constant ±i.)
     import SphericalFunctions: sλlm, sλlmCalculator
     @test_throws "real harmonics" sλlm(0.9, ℓₘₐₓ, s; ℓₘᵢₙ) * w
     @test_throws "real harmonics" sλlmCalculator(0.9, ℓₘₐₓ, s) * w
     @test_throws "real harmonics" sλlm(0.9, 7//2, 1//2) * wh
     @test_throws "real harmonics" sλlmCalculator(0.9, 7//2, 1//2) * wh
+end
+
+# The units composed as a user composes them: analysis, a differential operator, a change of
+# the range of ℓ, and synthesis; the same transform applied to several functions at once,
+# one column at a time; and a rotation followed by synthesis, analysis and evaluation.  Each
+# result is compared with an evaluation of the weights at the transform's own rotors, which
+# goes through none of the transform's code.
+
+@testitem "Pipelines: analysis, operators and synthesis compose" begin
+    import SphericalFunctions: ModeWeights, SSHT, D, ð, ð̄, R₊, spin, Ysize, rotors
+    import LinearAlgebra: mul!
+    using Quaternionic: Rotor
+    using Random
+
+    rng = Random.Xoshiro(20260930)
+
+    # Analysis → operator → the range of ℓ of the new spin weight → synthesis, for the cases
+    # that truncate the range (ð for s ≥ 0, ð̄ for s ≤ 0), that pad it with zeros (ð̄ for s
+    # > 0, ð for s < 0), and that leave it alone (ð for s = -1/2).  Measured: at most 37 eps
+    # relative to the largest value, against 100ℓₘₐₓ eps allowed.
+    for method ∈ ("RS", "Matrix"), (s, op, Δ) ∈ (
+        (1, ð, 1), (1, ð̄, -1), (0, R₊, 1), (-2, ð, 1), (-2, ð̄, -1),
+        (1//2, ð, 1), (3//2, ð̄, -1), (-1//2, ð, 1),
+    )
+        L = s isa Rational ? 11//2 : 6
+        ϵ = 100L * eps()
+        𝒯, 𝒯′ = SSHT(s, L; method), SSHT(s + Δ, L; method)
+        w = ModeWeights(randn(rng, ComplexF64, Ysize(abs(s), L)), s)
+        w₁ = 𝒯 \ (𝒯 * w)
+        @test maximum(abs, array_view(w₁) - array_view(w)) ≤ ϵ * maximum(abs, array_view(w))
+        ow = op * w₁
+        @test spin(ow) == s + Δ && SphericalFunctions.ℓₘᵢₙ(ow) == abs(s)
+        w₂ = ModeWeights(ow)
+        @test SphericalFunctions.ℓₘᵢₙ(w₂) == abs(s + Δ)
+        g = 𝒯′ * w₂
+        @test maximum(abs, g - (op * w)(rotors(𝒯′))) ≤ ϵ * maximum(abs, g)
+        # ... and the copy of the result into the range of the new spin weight has the
+        # labels of the new transform's analysis, so the two can be compared and subtracted
+        g̃ = 𝒯′ \ g
+        @test g̃ ≈ w₂ rtol=ϵ
+        @test (g̃ - w₂) isa ModeWeights
+    end
+end
+
+@testitem "Pipelines: several functions at once, one column at a time" begin
+    import SphericalFunctions: ModeWeights, SSHT, D, ð, Ysize
+    import LinearAlgebra: mul!
+    using Quaternionic: Rotor
+    using Random
+
+    rng = Random.Xoshiro(20260931)
+    for method ∈ ("RS", "Matrix"), s ∈ (1, 3//2)
+        L = s isa Rational ? 9//2 : 5
+        𝒯 = SSHT(s, L; method)
+        f = 𝒯 * ModeWeights(randn(rng, ComplexF64, Ysize(abs(s), L)), s)
+        # A multi-column analysis is a plain array, whose columns are labelled one at a time
+        # without copying, so an operator or a rotation applies to each with no allocation,
+        # and exactly as it applies to a copy of the column
+        W = 𝒯 \ hcat(f, 2f, 3f)
+        @test W isa Matrix{ComplexF64}
+        @test_throws "ModeWeights(view(data, :, j), s)" ModeWeights(W, s)
+        R = randn(rng, Rotor{Float64})
+        W′, W″ = similar(W), similar(W)
+        for j ∈ axes(W, 2)
+            mul!(view(W′, :, j), ð, ModeWeights(view(W, :, j), s))
+            mul!(view(W″, :, j), D(R, L), ModeWeights(view(W, :, j), s))
+        end
+        for j ∈ axes(W, 2)
+            @test W′[:, j] == array_view(ð * ModeWeights(W[:, j], s))
+            @test W″[:, j] == array_view(D(R, L) * ModeWeights(W[:, j], s))
+        end
+    end
+end
+
+@testitem "Pipelines: rotation, synthesis, analysis and evaluation" begin
+    import SphericalFunctions: ModeWeights, SSHT, D, Ysize, rotors
+    using Quaternionic: Rotor
+    using Random
+
+    rng = Random.Xoshiro(20260932)
+    # Measured: at most 34 eps against 100ℓₘₐₓ eps allowed
+    for method ∈ ("RS", "Matrix"), s ∈ (1, -2, 1//2, -3//2)
+        L = s isa Rational ? 9//2 : 5
+        ϵ = 100L * eps()
+        𝒯 = SSHT(s, L; method)
+        w = ModeWeights(randn(rng, ComplexF64, Ysize(abs(s), L)), s)
+        R = randn(rng, Rotor{Float64})
+        w′ = D(R, L) * w
+        g = 𝒯 * w′
+        @test maximum(abs, g - w′(rotors(𝒯))) ≤ ϵ * maximum(abs, g)
+        w″ = 𝒯 \ g
+        @test maximum(abs, array_view(w″) - array_view(w′)) ≤ ϵ * maximum(abs, array_view(w′))
+        Q = randn(rng, Rotor{Float64}, 4)
+        @test maximum(abs, w″(Q) - w(inv(R) .* Q)) ≤ ϵ * maximum(abs, w(inv(R) .* Q))
+    end
 end

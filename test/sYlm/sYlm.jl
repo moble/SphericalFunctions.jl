@@ -3,20 +3,20 @@
 # to the Wigner 𝔇 matrices.
 
 @testitem "sYlm vs the closed form, for arbitrary rotors" setup=[Utilities] begin
-    # (The Utilities snippet defines a closed-form `sYlm`, so the package function is qualified.)
     import SphericalFunctions
-    import SphericalFunctions: Yindex, Ysize
+    import SphericalFunctions: sYlm, Yindex, Ysize
+    import .Utilities: Rrange, sYlm_closed_form
     using Quaternionic: Quaternion, Rotor, components, 𝐢, 𝐣, 𝐤
     using DoubleFloats: Double64
     using Random
 
-    Random.seed!(17)  # `Rrange` draws from the default RNG
+    rng = Random.Xoshiro(17)
 
-    # Reference, category 1 (a closed-form formula, from the conventions pages).  The
-    # `Utilities` snippet's `sYlm(s, ℓ, m, θ, ϕ)` is the explicit sum of Ajith et al.,
-    # Eqs. (II.7)-(II.8), evaluated on the sphere — that is, at the rotor
-    # `from_spherical_coordinates(θ, ϕ)`, whose Euler angles are (ϕ, θ, 0).  A general
-    # rotor has a third angle, and ₛYₗₘ depends on it through the spin weight alone:
+    # Reference, category 1 (a closed-form formula, from the conventions pages).
+    # `sYlm_closed_form(s, ℓ, m, θ, ϕ)` from the `Utilities` module is the explicit sum of
+    # Ajith et al., Eqs. (II.7)-(II.8), evaluated on the sphere — that is, at the rotor
+    # `from_spherical_coordinates(θ, ϕ)`, whose Euler angles are (ϕ, θ, 0).  A general rotor
+    # has a third angle, and ₛYₗₘ depends on it through the spin weight alone:
     #
     #     ₛYₗₘ(R_{αβγ}) = (-1)^s √((2ℓ+1)/4π) conj(𝔇ˡ_{m,-s}) = ₛYₗₘ(θ=β, ϕ=α) e^{-i s γ}.
     #
@@ -33,7 +33,7 @@
         v = setprecision(BigFloat, 4 * precision(T) + 64) do
             α, β, γ = euler_angles(R)
             [
-                sYlm(s, ℓ, m, β, α) * cis(-s * γ)
+                sYlm_closed_form(s, ℓ, m, β, α) * cis(-s * γ)
                 for ℓ in abs(s):ℓₘₐₓ for m in -ℓ:ℓ
             ]
         end
@@ -41,19 +41,19 @@
     end
 
     for T ∈ (Float64, Double64)
-        # Measured worst error over everything below: 5.0 eps (Float64), 2.4 eps (Double64).
+        # Measured worst error over everything below: 5.2 eps (Float64), 2.9 eps (Double64).
         ϵ = 20 * eps(T)
         for ℓₘₐₓ ∈ (0, 1, 2, 5, 9)
             for s ∈ -min(3, ℓₘₐₓ):min(3, ℓₘₐₓ)
-                for R ∈ Rrange(T, 8)
-                    Y = array_view(SphericalFunctions.sYlm(R, ℓₘₐₓ, s))
+                for R ∈ Rrange(rng, T, 8)
+                    Y = array_view(sYlm(R, ℓₘₐₓ, s))
                     @test eltype(Y) === Complex{T}
                     @test length(Y) == Ysize(abs(s), ℓₘₐₓ)
                     # Accumulated and asserted once per rotor: an engine that is wrong
                     # everywhere would otherwise print one failure per (ℓ, m).
                     errY = maximum(abs, Y .- Yref(T, R, s, ℓₘₐₓ))
                     @test errY ≤ ϵ
-                    Y₀ = array_view(SphericalFunctions.sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ=0))
+                    Y₀ = array_view(sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ=0))
                     @test length(Y₀) == Ysize(0, ℓₘₐₓ)
                     @test all(iszero, Y₀[1:s^2])
                     @test Y₀[s^2+1:end] == Y
@@ -64,21 +64,20 @@
 end
 
 @testitem "sYlm vs closed form and definition" setup=[Utilities] begin
-    # (The Utilities snippet defines a closed-form `sYlm`, so the package function is qualified.)
     import SphericalFunctions
-    import SphericalFunctions: Yindex, D
+    import SphericalFunctions: sYlm, Yindex, D
+    import .Utilities: θϕrange, sYlm_closed_form
     using Quaternionic
     using Random
     rng = Random.Xoshiro(42)
-    Random.seed!(42)  # `θϕrange` draws from the default RNG; seeded so a failure can be rerun
     ℓₘₐₓ = 5
-    for (θ, ϕ) ∈ θϕrange(Float64, 6)
+    for (θ, ϕ) ∈ θϕrange(rng, Float64, 6)
         R = Rotor(from_spherical_coordinates(θ, ϕ))
         for s ∈ -2:2
-            Y = array_view(SphericalFunctions.sYlm(R, ℓₘₐₓ, s))
+            Y = array_view(sYlm(R, ℓₘₐₓ, s))
             for ℓ ∈ abs(s):ℓₘₐₓ, m ∈ -ℓ:ℓ
-                # Closed form on the sphere (from the Utilities snippet)
-                @test Y[Yindex(ℓ, m, abs(s))] ≈ sYlm(s, ℓ, m, θ, ϕ) atol=1e-13 rtol=1e-13
+                # Closed form on the sphere
+                @test Y[Yindex(ℓ, m, abs(s))] ≈ sYlm_closed_form(s, ℓ, m, θ, ϕ) atol=1e-13 rtol=1e-13
             end
         end
     end
@@ -86,7 +85,7 @@ end
     for R ∈ randn(rng, Rotor{Float64}, 5)
         𝔇 = D(R, ℓₘₐₓ)
         for s ∈ -2:2
-            Y = array_view(SphericalFunctions.sYlm(R, ℓₘₐₓ, s))
+            Y = array_view(sYlm(R, ℓₘₐₓ, s))
             for ℓ ∈ abs(s):ℓₘₐₓ, m ∈ -ℓ:ℓ
                 @test Y[Yindex(ℓ, m, abs(s))] ≈ (-1)^s * √((2ℓ+1)/(4π)) * conj(𝔇[ℓ][m, -s]) atol=1e-14
             end
@@ -94,18 +93,18 @@ end
     end
 end
 
-@testitem "sYlm_matrix" setup=[Utilities] begin
-    # (The Utilities snippet defines a closed-form `sYlm`, so the package function is qualified.)
+@testitem "sYlm_matrix" setup=[Utilities, RefusalChecks] begin
     import SphericalFunctions
-    import SphericalFunctions: sYlm_matrix, Ysize
+    import SphericalFunctions: sYlm, sYlm_matrix, Ysize
+    import .Utilities: sYlm_closed_form
     using Quaternionic: Rotor, Quaternion, components
     using DoubleFloats: Double64
     using Random
     rng = Random.Xoshiro(7)
 
     # Reference, category 1 (a closed-form formula, from the conventions pages): the same
-    # closed form and the same Euler-angle bookkeeping as the "sYlm vs the closed form"
-    # item above, evaluated at four times the working precision and rounded.
+    # closed form and the same Euler-angle bookkeeping as the "sYlm vs the closed form" item
+    # above, evaluated at four times the working precision and rounded.
     function euler_angles(R)
         w, x, y, z = BigFloat.(components(Quaternion(R)))
         ϕₛ, ϕₐ = angle(Complex(w, z)), angle(Complex(y, x))
@@ -115,7 +114,7 @@ end
         rows = setprecision(BigFloat, 4 * precision(T) + 64) do
             map(Rs) do R
                 α, β, γ = euler_angles(R)
-                [sYlm(s, ℓ, m, β, α) * cis(-s * γ) for ℓ in abs(s):ℓₘₐₓ for m in -ℓ:ℓ]
+                [sYlm_closed_form(s, ℓ, m, β, α) * cis(-s * γ) for ℓ in abs(s):ℓₘₐₓ for m in -ℓ:ℓ]
             end
         end
         Complex{T}[rows[i][j] for i in eachindex(rows), j in eachindex(first(rows))]
@@ -130,7 +129,7 @@ end
             @test M isa Matrix{Complex{T}}
             @test size(M) == (7, Ysize(abs(s), ℓₘₐₓ))
             for (i, R) ∈ enumerate(Rs)
-                @test M[i, :] == array_view(SphericalFunctions.sYlm(R, ℓₘₐₓ, s))
+                @test M[i, :] == array_view(sYlm(R, ℓₘₐₓ, s))
             end
             errM = maximum(abs, M .- Yref(T, Rs, s, ℓₘₐₓ))
             @test errM ≤ ϵ
@@ -151,8 +150,11 @@ end
         @test errMD ≤ 8 * eps(Double64)
     end
     # Errors
-    @test_throws "exceeds ℓₘₐₓ" sYlm_matrix(randn(rng, Rotor{Float64}, 3), 2, 3)
-    @test_throws "exceeds ℓₘₐₓ" SphericalFunctions.sYlm(randn(rng, Rotor{Float64}), 2, 3)
+    Rs = randn(rng, Rotor{Float64}, 3)
+    @test refuses(() -> sYlm_matrix(Rs, 2, 3), ArgumentError, "exceeds ℓₘₐₓ")
+    @test refuses(() -> sYlm(Rs[1], 2, 3), ArgumentError, "exceeds ℓₘₐₓ")
+    # The keyword may also be spelled `ell_min`
+    @test sYlm_matrix(Rs, 4, 1; ell_min=0) == sYlm_matrix(Rs, 4, 1; ℓₘᵢₙ=0)
 end
 
 @testitem "sYlmCalculator all spins and batches" begin
@@ -226,49 +228,96 @@ end
     @test c2.Yˡ !== calc.Yˡ
     str = sprint(show, calc)
     @test occursin("sYlmCalculator", str) && occursin("ℓₘₐₓ=$ℓₘₐₓ", str) && occursin("Nᵣ=$Nᵣ", str)
-    @test sprint(show, MIME("text/plain"), c2) isa String
+    @test occursin("batched", str)
+    str2 = sprint(show, MIME("text/plain"), c2)
+    @test occursin("sYlmCalculator", str2) && occursin("ℓₘₐₓ=$ℓₘₐₓ", str2)
+    @test occursin("nothing computed yet", str2)
 end
 
-@testitem "sYlmCalculator errors" begin
-    import SphericalFunctions: sYlmCalculator, sYlm, sYlm!, recurrence!
+@testitem "sYlmCalculator errors" setup=[RefusalChecks] begin
+    import SphericalFunctions: sYlmCalculator, sYlm, sYlm!, sYlm_matrix, recurrence!
     using Quaternionic: Rotor
     using Random
     rng = Random.Xoshiro(3)
     R = randn(rng, Rotor{Float64})
-    @test_throws "|s| ≤ ℓₘₐₓ" sYlmCalculator(R, 3, 4)
-    @test_throws "|s| ≤ ℓₘₐₓ" sYlmCalculator(R, 3, -4:4)
+    @test refuses(() -> sYlmCalculator(R, 3, 4), ArgumentError, "|s|=4, which exceeds ℓₘₐₓ=3")
+    @test refuses(() -> sYlmCalculator(R, 3, -4:4), ArgumentError, "exceeds ℓₘₐₓ")
     # A negative spin weight is an ordinary one; what is refused is a range that is not a
-    # consecutive run from low to high.
+    # consecutive run from low to high, with a note saying how to write one
     @test SphericalFunctions.spin(sYlmCalculator(R, 3, -1)) == -1
-    @test_throws "step must be 1" sYlmCalculator(R, 3, -2:2:2)
-    @test_throws "runs downward or is empty" sYlmCalculator(R, 3, 2:-2)
-    @test_throws "runs downward or is empty" sYlmCalculator(R, 3, 2:-1:-2)
-    @test_throws "runs downward or is empty" sYlmCalculator(R, 7//2, 3//2:-1:-3//2)
+    unit = "A range of indices must be a unit range, running upward in steps of 1"
+    @test refuses(() -> sYlmCalculator(R, 3, -2:2:2), ArgumentError, unit)
+    @test refuses(() -> sYlmCalculator(R, 3, 2:-1:-2), ArgumentError, unit)
+    @test refuses(() -> sYlmCalculator(R, 7//2, 3//2:-1:-3//2), ArgumentError, unit)
+    @test refuses(() -> sYlmCalculator(R, 3, 0:1:2), ArgumentError, "may be written 0:2")
+    @test refuses(() -> sYlmCalculator(R, 3, Base.OneTo(2)), ArgumentError, "as 1:2")
+    # A unit range written downward is empty, and that is refused as well, by the flat
+    # functions too
+    for f ∈ (
+        () -> sYlmCalculator(R, 3, 2:-2), () -> sYlmCalculator(R, 7//2, 3//2:-3//2),
+        () -> sYlm(R, 3, 2:1), () -> sYlm_matrix([R], 3, 2:1),
+        () -> sYlm!(zeros(ComplexF64, 2, 16), R, 3, 2:1),
+    )
+        @test refuses(f, ArgumentError, "runs downward or is empty")
+    end
     calc = sYlmCalculator(R, 4, -2:2)
     # A spin weight the calculator does not serve is out of bounds of the block it returns
     @test_throws BoundsError recurrence!(calc, 2)[3, :]
-    @test_throws "out of bounds" recurrence!(calc, 5)
-    @test_throws "out of bounds" recurrence!(calc, R, -1)
+    @test refuses(() -> recurrence!(calc, 5), ArgumentError, "out of bounds")
+    @test refuses(() -> recurrence!(calc, R, -1), ArgumentError, "out of bounds")
+    @test refuses(() -> recurrence!(calc, 2.0), ArgumentError, "so ℓ must be one too")
     # A complex "phase" is not a valid rotor for an sYlmCalculator
-    @test_throws "rotors" recurrence!(calc, cis(0.3), 2)
-    @test_throws "rotors" recurrence!(calc, [cis(0.3)], 2)
-    @test_throws "Expected 1 rotors" recurrence!(calc, [R, R], 2)
+    @test refuses(() -> recurrence!(calc, cis(0.3), 2), ArgumentError, "rotors")
+    @test refuses(() -> recurrence!(calc, [cis(0.3)], 2), ArgumentError, "rotors")
+    @test refuses(() -> recurrence!(calc, [R, R], 2), DimensionMismatch, "Expected 1 rotors")
     batched = sYlmCalculator([R, R, R], 4, -2:2)
-    @test_throws "expects Nᵣ=3" recurrence!(batched, R, 2)
-    @test_throws "Expected 3 rotors" recurrence!(batched, [R, R], 2)
-    @test_throws "exceeds ℓₘₐₓ" array_view(sYlm(R, 2, 3))
-    # The message about ℓₘᵢₙ names the floor of the integer kind
-    @test_throws "ℓₘᵢₙ=-1 must satisfy 0 ≤ ℓₘᵢₙ ≤ max(|s|, ℓₘₐₓ)." array_view(sYlm(R, 2, 0; ℓₘᵢₙ=-1))
-    @test_throws "0 ≤ ℓₘᵢₙ" array_view(sYlm(R, 2, 1; ℓₘᵢₙ=3))
+    @test refuses(() -> recurrence!(batched, R, 2), DimensionMismatch, "expects Nᵣ=3")
+    @test refuses(() -> recurrence!(batched, [R, R], 2), DimensionMismatch, "Expected 3 rotors")
+    @test refuses(() -> sYlm(R, 2, 3), ArgumentError, "|s|=3 exceeds ℓₘₐₓ=2")
+    # A negative ℓₘₐₓ is named as such, rather than as a spin weight too large for it
+    @test refuses(() -> sYlm(R, -1, 0), ArgumentError, "ℓₘₐₓ=-1 must be at least 0")
+    # The message about ℓₘᵢₙ names the floor of the integer kind, and the bound ℓₘₐₓ
+    @test refuses(
+        () -> sYlm(R, 2, 0; ℓₘᵢₙ=-1), ArgumentError,
+        "ℓₘᵢₙ=-1 must satisfy 0 ≤ ℓₘᵢₙ ≤ ℓₘₐₓ=2."
+    )
+    @test refuses(() -> sYlm(R, 2, 1; ℓₘᵢₙ=3), ArgumentError, "0 ≤ ℓₘᵢₙ ≤ ℓₘₐₓ=2")
     Y = zeros(ComplexF64, 5)
-    @test_throws "Output vector has length" sYlm!(Y, R, 3, 0)
-    @test_throws "not among them" sYlm!(zeros(ComplexF64, 25), sYlmCalculator(R, 4, 1), R, 2)
-    @test_throws "Nᵣ=1" sYlm!(zeros(ComplexF64, 25), batched, R, 1)
-    # The output's element type must be the calculator's own; it no longer decides the type
-    @test_throws "element type must be Complex{Float64}" sYlm!(zeros(ComplexF32, 25), calc, R, 1; ℓₘᵢₙ=0)
-    @test_throws "element type must be Complex{Float64}" sYlm!(zeros(ComplexF32, 25), R, 4, 1; ℓₘᵢₙ=0)
-    # ... and a rotor of another float type cannot be pushed through a calculator
+    @test refuses(() -> sYlm!(Y, R, 3, 0), DimensionMismatch, "Output vector has length")
+    @test refuses(
+        () -> sYlm!(zeros(ComplexF64, 25), sYlmCalculator(R, 4, 1), R, 2), ArgumentError,
+        "not among them"
+    )
+    # A calculator built from a vector of rotors, even of one, has blocks with a rotor index,
+    # so it cannot fill the vector of one rotor's values
+    for c ∈ (batched, sYlmCalculator([R], 4, -2:2))
+        @test refuses(
+            () -> sYlm!(zeros(ComplexF64, 25), c, R, 1), ArgumentError,
+            "`sYlm!` needs a calculator built for a single rotor"
+        )
+    end
+    # The output's element type must be the calculator's own; it does not decide the type
+    @test refuses(
+        () -> sYlm!(zeros(ComplexF32, 25), calc, R, 1; ℓₘᵢₙ=0), ArgumentError,
+        "element type must be Complex{Float64}"
+    )
+    @test refuses(
+        () -> sYlm!(zeros(ComplexF32, 25), R, 4, 1; ℓₘᵢₙ=0), ArgumentError,
+        "element type must be Complex{Float64}"
+    )
+    # ... and a rotor of another float type cannot be pushed through a calculator.
+    # (`check_rotor_type` owns this message.)
     @test_throws "given data would give Float32" sYlm!(zeros(ComplexF64, 25), calc, Rotor{Float32}(R), 1; ℓₘᵢₙ=0)
+    # An output whose shape does not suit the spin argument is refused, saying what is needed:
+    # a vector for one spin weight, and a matrix for a range of them
+    shape = "fills a vector for one spin weight, and a matrix with length(s) rows"
+    @test refuses(() -> sYlm!(zeros(ComplexF64, 2, 25), R, 4, 0), ArgumentError, shape)
+    @test refuses(() -> sYlm!(zeros(ComplexF64, 125), R, 4, -2:2), ArgumentError, shape)
+    @test refuses(
+        () -> sYlm!(zeros(ComplexF64, 2, 25), sYlmCalculator(R, 4, 0), R), ArgumentError, shape
+    )
+    @test refuses(() -> sYlm!(zeros(ComplexF64, 125), calc, R), ArgumentError, shape)
+    @test refuses(() -> sYlm!(zeros(ComplexF64, 5, 25), calc, R, 1), ArgumentError, shape)
 end
 
 @testitem "sYlm! reuses a calculator" begin
@@ -296,7 +345,9 @@ end
     use_result!(Y, calc, R) = sum(abs2, array_view(sYlm!(Y, calc, R, 1; ℓₘᵢₙ=0)))
     ignore_result!(Y, calc, R); use_result!(Y, calc, R)
     @test @allocated(ignore_result!(Y, calc, R)) == 0
-    @test @allocated(use_result!(Y, calc, R)) == 0
+    # Before Julia 1.12 the labelled result is not elided once it is used, and costs one small
+    # allocation (measured 16 bytes on 1.10 and 1.11); from 1.12 on it costs nothing.
+    @test @allocated(use_result!(Y, calc, R)) ≤ (VERSION ≥ v"1.12" ? 0 : 16)
 end
 
 @testitem "sYlm generic types" begin
@@ -318,9 +369,9 @@ end
     YB = array_view(sYlm(Rotor{BigFloat}(R64), 4, 2))
     YD = array_view(sYlm(Rotor{Double64}(R64), 4, 2))
     @test maximum(abs, YB .- YD) < 1e-30
-    # ForwardDiff through the rotor.  ϕ = 0 is included deliberately: there the spinor
-    # phase `z₊` is exactly 1, and a `sqrt` of an exact zero inside `complex_powers!` used
-    # to make every derivative NaN.  It is also the case the ring-based transforms use.
+    # ForwardDiff through the rotor.  ϕ = 0 is included deliberately: there the spinor phase
+    # `z₊` is exactly 1, and a `sqrt` of an exact zero inside `complex_powers!` used to make
+    # every derivative NaN.  It is also the case the ring-based transforms use.
     θ₀ = 0.8
     for ϕ ∈ (0.0, 0.3)
         f(θ) = real(array_view(sYlm(Rotor(from_spherical_coordinates(θ, ϕ)), 3, 1))[Yindex(3, 2, 1)])
@@ -343,14 +394,17 @@ end
     # `MathChecker.Checked` with only the NaN check enabled throws as soon as a NaN takes
     # part in an operation, which is what turns an unwritten entry into a test failure.
     NC = checked(Float64; precision=false, nan=true, inf=false)
-    for (ℓₘₐₓ, sₘₐₓ, Nᵣ) ∈ ((0, 0, 1), (2, 1, 1), (5, 2, 3), (9, 3, 2))
+    # The half-integer cases reach the half-angle buffers and the seed of the rows m′ =
+    # ±1/2, which only they use.
+    for (ℓₘₐₓ, sₘₐₓ, Nᵣ) ∈ ((0, 0, 1), (2, 1, 1), (5, 2, 3), (9, 3, 2), (7//2, 3//2, 2), (1//2, 1//2, 1))
         Rs = randn(rng, Rotor{Float64}, Nᵣ)
         # A calculator works in the float type of its rotors, so the checked type is applied
         # to them; `ref` keeps the plain-Float64 rotors and is the value to compare against.
         calc = sYlmCalculator(Rotor{NC}.(Rs), ℓₘₐₓ, -sₘₐₓ:sₘₐₓ)
         fill!(calc, NaN)  # after construction, which stores the rotor data `fill!` preserves
         ref = sYlmCalculator(Rs, ℓₘₐₓ, -sₘₐₓ:sₘₐₓ)
-        for ℓ ∈ [0:ℓₘₐₓ; ℓₘₐₓ ÷ 2]
+        lo = ℓₘₐₓ isa Integer ? 0 : 1//2
+        for ℓ ∈ [collect(lo:1:ℓₘₐₓ); lo + (ℓₘₐₓ - lo) ÷ 2]
             blk = recurrence!(calc, ℓ)
             refblk = recurrence!(ref, ℓ)
             for s ∈ -sₘₐₓ:sₘₐₓ
@@ -400,14 +454,14 @@ end
     import SphericalFunctions: sYlm, sYlmCalculator, sλlm, recurrence!
     using Quaternionic: to_spherical_coordinates, from_spherical_coordinates
 
-    # The documented definition, ₛYₗₘ(R) = i^{2s} √((2ℓ+1)/4π) conj(𝔇ˡ_{m,-s}(R)), evaluated
-    # with the oracle's 𝔇 — a verbatim copy of Boyle (2016), cross-checked against
-    # Varshalovich et al. — rather than with this package's `D`.  Nothing else in the suite
-    # compares half-integer harmonics with an independent reference: orthonormality,
-    # antiperiodicity, round trips and comparisons between the package's own functions are
-    # all blind to a sign or phase error, and a flipped sign for s = ±3/2 once passed them
-    # all.  Measured worst case 9.8e-16; 1e-13 is asserted.
-    # i^{2s} is the principal branch e^{iπs} the documentation settles on
+    # The documented definition, ₛYₗₘ(R) = i^{2s} √((2ℓ+1)/4π) conj(𝔇ˡ_{m,-s}(R)),
+    # evaluated with the oracle's 𝔇 — a verbatim copy of Boyle (2016), cross-checked
+    # against Varshalovich et al. — rather than with this package's `D`.  Nothing else in
+    # the suite compares half-integer harmonics with an independent reference:
+    # orthonormality, antiperiodicity, round trips and comparisons between the package's own
+    # functions are all blind to a sign or phase error, such as a flipped sign for s = ±3/2.
+    # Measured worst case 4.4 eps, and 2.5 eps for the real flavor below; 20 eps is
+    # asserted.  i^{2s} is the principal branch e^{iπs} the documentation settles on
     oracle(R, ℓ, m, s) = cispi(Float64(s)) * √((2ℓ + 1) / 4π) * conj(HalfIntegerOracle.D_oracle(R, ℓ, m, -s))
     ℓₘₐₓ = 9//2
     for R ∈ HalfIntegerOracle.rotors(), s ∈ (-5//2, -3//2, -1//2, 1//2, 3//2, 5//2)
@@ -417,8 +471,8 @@ end
             block = recurrence!(calc, ℓ)
             for m ∈ -ℓ:ℓ
                 expected = oracle(R, ℓ, m, s)
-                @test Y[ℓ][m] ≈ expected atol=1e-13
-                @test block[m] ≈ expected atol=1e-13
+                @test Y[ℓ][m] ≈ expected atol=20eps()
+                @test block[m] ≈ expected atol=20eps()
             end
         end
     end
@@ -429,7 +483,7 @@ end
         R = from_spherical_coordinates(θ, 0.0)
         Λ = sλlm(θ, ℓₘₐₓ, s)
         for ℓ ∈ abs(s):ℓₘₐₓ, m ∈ -ℓ:ℓ
-            @test Λ[ℓ][m] ≈ oracle(R, ℓ, m, s) / cispi(Float64(s)) atol=1e-13
+            @test Λ[ℓ][m] ≈ oracle(R, ℓ, m, s) / cispi(Float64(s)) atol=20eps()
         end
     end
 end
@@ -459,8 +513,8 @@ end
         @test array_view(sYlm(R, ℓₘₐₓ, 3//2)) == array_view(sYlm(R, ℓₘₐₓ, 3//2; ℓₘᵢₙ=3//2))
         @test length(array_view(sYlm(R, ℓₘₐₓ, 3//2))) == Ysize(3//2, ℓₘₐₓ)
     end
-    # For half-integer s the values include the phase i^{2s} = ±i: the ϕ = γ = 0 values, which
-    # are real for integer s, are here purely imaginary.
+    # For half-integer s the values include the phase i^{2s} = ±i: the ϕ = γ = 0 values,
+    # which are real for integer s, are here purely imaginary.
     Rθ = Rotor(from_euler_angles(0.0, 1.1, 0.0))
     for s ∈ (-1//2, 1//2, 3//2)
         Yθ = array_view(sYlm(Rθ, ℓₘₐₓ, s))
@@ -469,7 +523,7 @@ end
     end
 end
 
-@testitem "sYlm half-integer ℓₘᵢₙ = 1//2 gives zeros below |s|" begin
+@testitem "sYlm half-integer ℓₘᵢₙ = 1//2 gives zeros below |s|" setup=[RefusalChecks] begin
     import SphericalFunctions: sYlm, sYlm_matrix, Ysize, Yindex
     using Quaternionic: Rotor, from_spherical_coordinates
 
@@ -488,16 +542,22 @@ end
         @test all(iszero, M₀[:, 1:n₀])
         @test M₀[:, n₀+1:end] == sYlm_matrix([R, -R], ℓₘₐₓ, s)
     end
-    # The floor of ℓₘᵢₙ is 1/2; anything below it, or above max(|s|, ℓₘₐₓ), is refused, with
-    # a message that names the floor of this kind of index rather than the integer one.
-    @test_throws "must satisfy" array_view(sYlm(R, ℓₘₐₓ, 1//2; ℓₘᵢₙ=-1//2))
-    @test_throws "must satisfy" array_view(sYlm(R, ℓₘₐₓ, 1//2; ℓₘᵢₙ=11//2))
-    @test_throws "ℓₘᵢₙ=-1//2 must satisfy 1//2 ≤ ℓₘᵢₙ ≤ max(|s|, ℓₘₐₓ)." array_view(sYlm(R, ℓₘₐₓ, 1//2; ℓₘᵢₙ=-1//2))
-    @test_throws "1//2 ≤ ℓₘᵢₙ" sYlm_matrix([R, -R], ℓₘₐₓ, 3//2; ℓₘᵢₙ=11//2)
-    @test_throws "exceeds ℓₘₐₓ" array_view(sYlm(R, 1//2, 3//2))
+    # The floor of ℓₘᵢₙ is 1/2; anything below it, or above ℓₘₐₓ, is refused, with a message
+    # that names the floor of this kind of index rather than the integer one.
+    @test refuses(() -> sYlm(R, ℓₘₐₓ, 1//2; ℓₘᵢₙ=-1//2), ArgumentError, "must satisfy")
+    @test refuses(() -> sYlm(R, ℓₘₐₓ, 1//2; ℓₘᵢₙ=11//2), ArgumentError, "must satisfy")
+    @test refuses(
+        () -> sYlm(R, ℓₘₐₓ, 1//2; ℓₘᵢₙ=-1//2), ArgumentError,
+        "ℓₘᵢₙ=-1//2 must satisfy 1//2 ≤ ℓₘᵢₙ ≤ ℓₘₐₓ=9//2."
+    )
+    @test refuses(
+        () -> sYlm_matrix([R, -R], ℓₘₐₓ, 3//2; ℓₘᵢₙ=11//2), ArgumentError, "1//2 ≤ ℓₘᵢₙ"
+    )
+    @test refuses(() -> sYlm(R, 1//2, 3//2), ArgumentError, "exceeds ℓₘₐₓ")
+    @test refuses(() -> sYlm(R, -1//2, 1//2), ArgumentError, "ℓₘₐₓ=-1//2 must be at least 1//2")
 end
 
-@testitem "sYlm! half-integer, both forms, equals sYlm" begin
+@testitem "sYlm! half-integer, both forms, equals sYlm" setup=[RefusalChecks] begin
     import SphericalFunctions: sYlm, sYlm!, sYlmCalculator, Ysize
     using Quaternionic: Rotor, from_spherical_coordinates
 
@@ -521,21 +581,43 @@ end
     R = Rs[2]
     reuse!(Y, calc, R) = sum(abs2, array_view(sYlm!(Y, calc, R, 1//2; ℓₘᵢₙ=1//2)))
     reuse!(Y, calc, R)
-    @test @allocated(reuse!(Y, calc, R)) == 0
+    @test @allocated(reuse!(Y, calc, R)) ≤ (VERSION ≥ v"1.12" ? 0 : 16)
     # Errors: a spin weight the calculator does not serve, the output length, and a spin
-    # weight or ℓₘᵢₙ of the wrong
-    # kind for the calculator, which is refused with a message naming the calculator's kind
-    # rather than with a bare conversion error.
-    @test_throws "not among them" sYlm!(Y, calc, R, 5//2)
-    @test_throws "Output vector has length" sYlm!(zeros(ComplexF64, 3), calc, R, 1//2)
-    @test_throws "indices are half-odd-integers, like 7//2, so the spin weight s" sYlm!(Y, calc, R, 1)
-    @test_throws "indices are half-odd-integers, like 7//2, so ℓₘᵢₙ" sYlm!(Y, calc, R, 1//2; ℓₘᵢₙ=0)
+    # weight or ℓₘᵢₙ of the wrong kind, which is refused with a message naming the kind of
+    # the calculator, or that of the spin weight, rather than with a bare conversion error.
+    @test refuses(() -> sYlm!(Y, calc, R, 5//2), ArgumentError, "not among them")
+    @test refuses(
+        () -> sYlm!(zeros(ComplexF64, 3), calc, R, 1//2), DimensionMismatch,
+        "Output vector has length"
+    )
+    @test refuses(
+        () -> sYlm!(Y, calc, R, 1), ArgumentError,
+        "indices are half-odd-integers, like 7//2, so the spin weight s must be one too"
+    )
+    @test refuses(
+        () -> sYlm!(Y, calc, R, 1//2; ℓₘᵢₙ=0), ArgumentError, "keyword argument `ℓₘᵢₙ`"
+    )
+    # Without a spin weight the calculator alone fixes the kind of ℓₘᵢₙ
+    @test refuses(
+        () -> sYlm!(zeros(ComplexF64, 4, Ysize(1//2, ℓₘₐₓ)), calc, R; ℓₘᵢₙ=0), ArgumentError,
+        "The indices of this `sYlmCalculator` are half-odd-integers"
+    )
     icalc = sYlmCalculator(R, 4, 1)
-    @test_throws "indices are integers, like 3, so the spin weight s" sYlm!(zeros(ComplexF64, 25), icalc, R, 1//2)
-    @test_throws "indices are integers, like 3, so ℓₘᵢₙ" sYlm!(zeros(ComplexF64, 25), icalc, R, 1; ℓₘᵢₙ=1//2)
+    @test refuses(
+        () -> sYlm!(zeros(ComplexF64, 25), icalc, R, 1//2), ArgumentError,
+        "indices are integers, like 3, so the spin weight s must be one too"
+    )
+    @test refuses(
+        () -> sYlm!(zeros(ComplexF64, 25), icalc, R, 1; ℓₘᵢₙ=1//2), ArgumentError,
+        "keyword argument `ℓₘᵢₙ`"
+    )
+    @test refuses(
+        () -> sYlm!(zeros(ComplexF64, 25), icalc, R; ell_min=1//2), ArgumentError,
+        "The indices of this `sYlmCalculator` are integers of type `Int`, like 3; got ell_min"
+    )
 end
 
-@testitem "sYlm_matrix half-integer rows equal sYlm" begin
+@testitem "sYlm_matrix half-integer rows equal sYlm" setup=[RefusalChecks] begin
     import SphericalFunctions: sYlm, sYlm_matrix, Ysize
     using Quaternionic: Rotor, from_spherical_coordinates
 
@@ -549,10 +631,10 @@ end
             @test M[i, :] == array_view(sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ))
         end
     end
-    @test_throws "exceeds ℓₘₐₓ" sYlm_matrix(Rs, 1//2, 3//2)
+    @test refuses(() -> sYlm_matrix(Rs, 1//2, 3//2), ArgumentError, "exceeds ℓₘₐₓ")
 end
 
-@testitem "sYlm half-integer spellings and mixed kinds" begin
+@testitem "sYlm half-integer spellings and mixed kinds" setup=[RefusalChecks] begin
     import SphericalFunctions: sYlm, sYlm!, sYlm_matrix, sYlmCalculator, Ysize, HalfOddInteger
     using Quaternionic: Rotor, from_spherical_coordinates
 
@@ -572,41 +654,96 @@ end
     calc = sYlmCalculator(R, 7//2, 1//2)
     @test array_view(sYlm!(similar(Yr), calc, R, 1//2; ℓₘᵢₙ=1//2)) ==
         array_view(sYlm!(similar(Yr), calc, R, s; ℓₘᵢₙ))
-    # A mixture of the two kinds of index is refused with a message naming both spellings.
-    msg = "must all be integers, like 3, or all be half-odd-integers, like 7//2"
-    @test_throws msg array_view(sYlm(R, 7//2, 1))
-    @test_throws msg array_view(sYlm(R, 4, 1//2))
-    @test_throws msg array_view(sYlm(R, 7//2, 1//2; ℓₘᵢₙ=0))
-    @test_throws msg array_view(sYlm(R, 4, 1; ℓₘᵢₙ=1//2))  # the keyword alone of the other kind
-    @test_throws msg array_view(sYlm(R, 4, HalfOddInteger(1//2)))
-    @test_throws msg sYlm_matrix(Rs, 7//2, 1)
-    @test_throws msg sYlm_matrix(Rs, 4, 1//2)
-    @test_throws msg sYlm!(similar(Yr), R, 7//2, 1)
-    @test_throws msg sYlm!(similar(Yr), R, 4, 1//2)
-    # A `Rational` that is not a half-odd-integer is refused as such.
-    @test_throws "must have denominator 2" array_view(sYlm(R, 7//3, 1//3))
-    @test_throws "must have denominator 2" array_view(sYlm(R, 4//1, 1//1))
-    # Integer indices of differing concrete types are unified, and give the `Int` result.
-    @test array_view(sYlm(R, 4, Int8(1))) == array_view(sYlm(R, 4, 1))
-    @test array_view(sYlm(R, Int8(4), 1; ℓₘᵢₙ=Int16(0))) == array_view(sYlm(R, 4, 1; ℓₘᵢₙ=0))
-    @test sYlm_matrix(Rs, 4, Int8(1)) == sYlm_matrix(Rs, 4, 1)
-    # Indices all of one narrower integer type are kept as that type, all the way into the
-    # calculator, and give the `Int` result exactly.
-    for IT in (Int8, Int16, Int32)
-        @test array_view(sYlm(R, IT(4), IT(1))) == array_view(sYlm(R, 4, 1))
-        @test array_view(sYlm(R, IT(4), IT(-1); ℓₘᵢₙ=IT(2))) == array_view(sYlm(R, 4, -1; ℓₘᵢₙ=2))
-        @test array_view(sYlm!(Vector{ComplexF64}(undef, Ysize(1, 4)), R, IT(4), IT(1))) == array_view(sYlm(R, 4, 1))
-        @test sYlm_matrix(Rs, IT(4), IT(1)) == sYlm_matrix(Rs, 4, 1)
-        narrowcalc = sYlmCalculator(R, IT(4), IT(1))
-        @test narrowcalc isa sYlmCalculator{IT}
-        @test narrowcalc.ℓ isa Base.RefValue{IT}
-        @test array_view(sYlm!(Vector{ComplexF64}(undef, Ysize(1, 4)), narrowcalc, R, IT(1))) ==
-            array_view(sYlm(R, 4, 1))
+    # ... as are the keyword's ASCII spelling and the calculator form's
+    @test array_view(sYlm(R, 7//2, 3//2; ell_min=1//2)) ==
+        array_view(sYlm(R, ℓₘₐₓ, HalfOddInteger(3//2); ℓₘᵢₙ))
+    @test array_view(sYlm!(similar(Yr), calc, R, 1//2; ell_min=1//2)) ==
+        array_view(sYlm!(similar(Yr), calc, R, s; ℓₘᵢₙ))
+
+    # A mixture of the two kinds of positional index is refused with a message that lists
+    # the indices, names both spellings of a half-odd-integer, and says which kind each
+    # index is
+    mixed = "must all be integers of type `Int`, like 3, or all be half-odd-integers"
+    for f ∈ (
+        () -> sYlm(R, 7//2, 1), () -> sYlm(R, 4, 1//2), () -> sYlm(R, 4, HalfOddInteger(1//2)),
+        () -> sYlm_matrix(Rs, 7//2, 1), () -> sYlm_matrix(Rs, 4, 1//2),
+        () -> sYlm!(similar(Yr), R, 7//2, 1), () -> sYlm!(similar(Yr), R, 4, 1//2),
+    )
+        @test refuses(f, ArgumentError, mixed)
     end
-    # A half-odd-integer spelled as a `Rational` of another integer type is the same index.
-    @test array_view(sYlm(R, big(7)//2, big(1)//2)) == array_view(sYlm(R, ℓₘₐₓ, s))
-    @test array_view(sYlm(R, Int8(7)//Int8(2), Int8(1)//Int8(2))) == array_view(sYlm(R, ℓₘₐₓ, s))
-    @test sYlm_matrix(Rs, Int8(7)//Int8(2), Int8(1)//Int8(2)) == sYlm_matrix(Rs, ℓₘₐₓ, s)
+    @test refuses(
+        () -> sYlm(R, 7//2, 1), ArgumentError,
+        "and so mixes integers (s) with half-odd-integers (ℓₘₐₓ)"
+    )
+    # A keyword of the other kind is refused by name, in either spelling
+    @test refuses(() -> sYlm(R, 7//2, 1//2; ℓₘᵢₙ=0), ArgumentError, "keyword argument `ℓₘᵢₙ`")
+    @test refuses(() -> sYlm(R, 4, 1; ℓₘᵢₙ=1//2), ArgumentError, "keyword argument `ℓₘᵢₙ`")
+    @test refuses(() -> sYlm(R, 4, 1; ell_min=1//2), ArgumentError, "keyword argument `ell_min`")
+    # A `Rational` that is not a half-odd-integer is refused as such
+    @test refuses(() -> sYlm(R, 7//3, 1//3), ArgumentError, "7//3 is neither an integer nor")
+    @test refuses(() -> sYlm(R, 4//1, 1//1), ArgumentError, "4//1 is a whole number")
+
+    # An integer index of any type but `Int` is refused, because the index arithmetic is not
+    # closed under it: ℓ² overflows a narrow type, and -m wraps around in an unsigned one.
+    for (IT, sentence) ∈ (
+        (Int8, "narrower than `Int`"), (Int16, "narrower than `Int`"),
+        (Int32, "narrower than `Int`"), (UInt8, "is unsigned"), (BigInt, "wider than `Int`"),
+    )
+        for f ∈ (
+            () -> sYlm(R, IT(4), IT(1)), () -> sYlm(R, 4, IT(1)),
+            () -> sYlm(R, IT(4), 1; ℓₘᵢₙ=2), () -> sYlm_matrix(Rs, IT(4), IT(1)),
+            () -> sYlm!(Vector{ComplexF64}(undef, Ysize(1, 4)), R, IT(4), IT(1)),
+            () -> sYlmCalculator(R, IT(4), IT(1)), () -> sYlmCalculator(R, IT(4), -1:1),
+        )
+            @test refuses(f, ArgumentError, sentence)
+        end
+        @test refuses(() -> sYlm(R, 4, 1; ℓₘᵢₙ=IT(2)), ArgumentError, "keyword argument `ℓₘᵢₙ`")
+        @test refuses(() -> sYlm(R, 4, 1; ℓₘᵢₙ=IT(2)), ArgumentError, sentence)
+    end
+    # ... in the calculator forms as well, whether or not a spin weight is given, and for a
+    # `HarmonicValues` output too; each spelling of the keyword is named as it was written
+    icalc = sYlmCalculator(R, 4, -1:1)
+    @test refuses(
+        () -> sYlm!(Vector{ComplexF64}(undef, Ysize(1, 4)), icalc, R, Int8(1)), ArgumentError,
+        "narrower than `Int`"
+    )
+    let calc1 = sYlmCalculator(R, 4, 1), Y = Vector{ComplexF64}(undef, Ysize(1, 4))
+        Yv, Ym = sYlm(R, 4, 1), sYlm(R, 4, -1:1)
+        Ymat = Matrix{ComplexF64}(undef, 3, Ysize(1, 4))
+        for (f, name) ∈ (
+            (() -> sYlm!(Y, calc1, R; ℓₘᵢₙ=Int32(1)), "ℓₘᵢₙ"),
+            (() -> sYlm!(Y, calc1, R; ell_min=Int32(1)), "ell_min"),
+            (() -> sYlm!(Ymat, icalc, R; ℓₘᵢₙ=Int32(1)), "ℓₘᵢₙ"),
+            (() -> sYlm!(Y, calc1, R, 1; ℓₘᵢₙ=Int32(1)), "ℓₘᵢₙ"),
+            (() -> sYlm!(Yv, calc1, R; ell_min=Int32(1)), "ell_min"),
+            (() -> sYlm!(Ym, icalc, R; ℓₘᵢₙ=Int16(1)), "ℓₘᵢₙ"),
+            (() -> sYlm!(Yv, calc1, R, 1; ell_min=Int32(1)), "ell_min"),
+        )
+            @test refuses(f, ArgumentError, "got $name = 1::")
+            @test refuses(f, ArgumentError, "convert it with `Int`")
+        end
+        @test refuses(
+            () -> sYlm!(Y, calc1, R; ℓₘᵢₙ=Int32(1)), ArgumentError,
+            "The indices of this `sYlmCalculator` are integers of type `Int`"
+        )
+        @test refuses(
+            () -> sYlm!(Y, calc1, R; ℓₘᵢₙ=1//2), ArgumentError,
+            "The indices of this `sYlmCalculator` are integers of type `Int`"
+        )
+        # An `Int` is accepted, as it is everywhere
+        @test array_view(sYlm!(Y, calc1, R; ℓₘᵢₙ=1)) == array_view(Yv)
+        @test sYlm!(Yv, calc1, R; ell_min=1) === Yv
+    end
+    # A half-odd-integer spelled as a `Rational` of another integer type than `Int` is
+    # refused, and says how to write it
+    @test refuses(
+        () -> sYlm(R, big(7)//2, big(1)//2), ArgumentError,
+        "`Rational{BigInt}` is not `Rational{Int}`; write the value with `Int`s, as 7//2"
+    )
+    @test refuses(
+        () -> sYlm_matrix(Rs, Int8(7)//Int8(2), Int8(1)//Int8(2)), ArgumentError,
+        "`Rational{Int8}` is not `Rational{Int}`"
+    )
 end
 
 @testitem "sYlm half-integer orthonormality on the sphere" begin
@@ -614,11 +751,11 @@ end
     using Quaternionic: Rotor, from_spherical_coordinates
     using LinearAlgebra: Diagonal, I
 
-    # ∫ ₛYₗₘ conj(ₛYₗ′ₘ′) sinθ dθ dϕ = δ δ, by quadrature: Clenshaw–Curtis in θ with
-    # N = 2ℓₘₐₓ+1 rings (whose weights include the sinθ), and Nϕ = 2ℓₘₐₓ+1 equally spaced ϕ,
+    # ∫ ₛYₗₘ conj(ₛYₗ′ₘ′) sinθ dθ dϕ = δ δ, by quadrature: Clenshaw–Curtis in θ with N =
+    # 2ℓₘₐₓ+1 rings (whose weights include the sinθ), and Nϕ = 2ℓₘₐₓ+1 equally spaced ϕ,
     # both of which are exact at this band limit.  The sample points are the rotors
-    # `from_spherical_coordinates(θ, ϕ)`, with ϕ running once around [0, 2π).  Measured worst
-    # case over this grid: 1.6e-15 at ℓₘₐₓ = 9/2, so 1e-14 leaves a factor of ≳ 6.
+    # `from_spherical_coordinates(θ, ϕ)`, with ϕ running once around [0, 2π).  Measured
+    # worst case over this grid: 1.6e-15 at ℓₘₐₓ = 9/2, so 1e-14 leaves a factor of ≳ 6.
     for ℓₘₐₓ ∈ (1//2, 3//2, 7//2, 9//2)
         N = Int(2ℓₘₐₓ + 1)
         θs, wθ = clenshaw_curtis_rings(N), clenshaw_curtis(N)
@@ -638,11 +775,11 @@ end
     import SphericalFunctions: sYlm
     using Quaternionic: Rotor, from_spherical_coordinates
 
-    # A circuit in ϕ returns to the antipodal rotor, so for half-integer s the harmonics change
-    # sign: ₛY(θ, ϕ+2π) = -ₛY(θ, ϕ).  For integer s they do not.  Both are only reproduced to
-    # rounding, because the phases are recomputed from a rotor whose half-angle differs by
-    # rounding.  Measured worst case at these angles: 7.8e-16 for the half-integer kind and
-    # 8.4e-16 for the integer kind, so 1e-14 leaves a factor of ≳ 12.
+    # A circuit in ϕ returns to the antipodal rotor, so for half-integer s the harmonics
+    # change sign: ₛY(θ, ϕ+2π) = -ₛY(θ, ϕ).  For integer s they do not.  Both are only
+    # reproduced to rounding, because the phases are recomputed from a rotor whose
+    # half-angle differs by rounding.  Measured worst case at these angles: 7.8e-16 for the
+    # half-integer kind and 8.4e-16 for the integer kind, so 1e-14 leaves a factor of ≳ 12.
     for (θ, ϕ) ∈ ((0.7, 1.2), (2.2, 4.0), (1.0, 0.0), (0.3, 5.9))
         R, R′ = from_spherical_coordinates(θ, ϕ), from_spherical_coordinates(θ, ϕ + 2π)
         for s ∈ (-3//2, -1//2, 1//2, 3//2)
@@ -681,12 +818,12 @@ end
 ### Ranges of spin weights.
 #
 # The calculator is built for the spin weights it will serve, and those may be given either
-# singly or as an ascending range.  The items below check that the two spellings are accepted
-# in every form the indices take, that a range and the single spin weights composing it agree
-# bit for bit — the point being that the change of interface moved no arithmetic — and that
-# the flat functions lay a range out the way their docstrings say.
+# singly or as an ascending range.  The items below check that the two spellings are
+# accepted in every form the indices take, that a range and the single spin weights
+# composing it agree bit for bit — serving several spin weights from one calculator changes
+# no arithmetic — and that the flat functions lay a range out the way their docstrings say.
 
-@testitem "sYlmCalculator spin weights, however spelled" begin
+@testitem "sYlmCalculator spin weights, however spelled" setup=[RefusalChecks] begin
     import SphericalFunctions
     import SphericalFunctions: sYlmCalculator, spins, spin, HalfOddInteger
     using Quaternionic: Rotor
@@ -720,19 +857,20 @@ end
         @test_throws MethodError spin(calc)
     end
 
-    # Narrow integer types survive into the calculator, as they do for a single spin weight
+    # A range of an integer type other than `Int` is refused, as a single index of one is,
+    # with the spelling to use instead
     for IT ∈ (Int8, Int16, Int32)
-        calc = sYlmCalculator(R, IT(4), IT(-1):IT(1))
-        @test calc isa sYlmCalculator{IT}
-        @test spins(calc) == -1:1 && eltype(spins(calc)) === IT
+        @test refuses(
+            () -> sYlmCalculator(R, 4, IT(-1):IT(1)), ArgumentError, "write it with `Int`s, as -1:1"
+        )
     end
 
     # Refusals: a mixture of the two kinds of index, on either side of the colon
-    msg = "must all be integers, like 3, or all be half-odd-integers, like 7//2"
-    @test_throws msg sYlmCalculator(R, 4, -3//2:3//2)
-    @test_throws msg sYlmCalculator(R, 9//2, -1:1)
-    @test_throws "|s| ≤ ℓₘₐₓ" sYlmCalculator(R, 4, -5:5)
-    @test_throws "|s| ≤ ℓₘₐₓ" sYlmCalculator(R, 9//2, -11//2:11//2)
+    mixed = "must all be integers of type `Int`, like 3, or all be half-odd-integers"
+    @test refuses(() -> sYlmCalculator(R, 4, -3//2:3//2), ArgumentError, mixed)
+    @test refuses(() -> sYlmCalculator(R, 9//2, -1:1), ArgumentError, mixed)
+    @test refuses(() -> sYlmCalculator(R, 4, -5:5), ArgumentError, "exceeds ℓₘₐₓ")
+    @test refuses(() -> sYlmCalculator(R, 9//2, -11//2:11//2), ArgumentError, "exceeds ℓₘₐₓ")
 end
 
 @testitem "sYlmCalculator ranges agree with single spin weights" begin
@@ -744,10 +882,10 @@ end
     rotors = randn(rng, Rotor{Float64}, 3)
     θs = [0.0, 0.8, 2.6]
 
-    # The whole point of the change is that it moved no arithmetic: a calculator built for a
-    # range gives, for each spin weight in it, exactly the bits a calculator built for that
-    # one spin weight gives.  Checked for both kinds of index, both shapes of rotor data, and
-    # batched as well as single.
+    # Serving a range of spin weights changes no arithmetic: a calculator built for a range
+    # gives, for each spin weight in it, exactly the bits a calculator built for that one spin
+    # weight gives.  Checked for both kinds of index, both shapes of rotor data, and batched
+    # as well as single.
     for (ℓₘₐₓ, srange) ∈ ((5, -2:2), (5, 1:2), (9//2, -3//2:3//2), (9//2, 1//2:3//2))
         for data ∈ (rotors[1], rotors, θs[2], θs)
             ranged = sYlmCalculator(data, ℓₘₐₓ, srange)
@@ -875,15 +1013,16 @@ end
     batched = YlmCalculator(Rs, ℓₘₐₓ)
     @test axes(recurrence!(batched, 3)) == (1:3, -3:3)
 
-    # Half-integer ℓ has no spin-weight-zero analogue
-    @test_throws MethodError YlmCalculator(R, 7//2)
+    # Half-integer ℓ has no spin-weight-zero analogue, and says where to look instead
+    @test_throws ArgumentError YlmCalculator(R, 7//2)
+    @test_throws "`sYlm` and `sYlmCalculator` accept half-integer indices" YlmCalculator(R, 7//2)
 end
 
 # The items above check the values.  These cover the entry points and refusals around them:
-# the unweighted `Ylm` wrapper in its vector form, reusing a calculator for a different set of
-# rotors, and the three ways a call is turned away.
+# the unweighted `Ylm` wrapper in its vector form, reusing a calculator for a different set
+# of rotors, and the three ways a call is turned away.
 
-@testitem "sYlm: the `Ylm` wrapper and the calculator refusals" begin
+@testitem "sYlm: the `Ylm` wrapper and the calculator refusals" setup=[RefusalChecks] begin
     using Quaternionic: Rotor, RotorF64
     import SphericalFunctions: Nᵣ, spins
     using Random
@@ -906,22 +1045,32 @@ end
     # number of rotors it was built to hold
     c1 = sYlmCalculator(R, ℓₘₐₓ, 0)
     @test Nᵣ(similar(c1, randn(rng, RotorF64))) == 1
-    @test_throws "handles Nᵣ=1" similar(c1, randn(rng, RotorF64, 3))
+    @test refuses(
+        () -> similar(c1, randn(rng, RotorF64, 3)), DimensionMismatch, "handles Nᵣ=1"
+    )
     c4 = sYlmCalculator(R⃗, ℓₘₐₓ, 0)
     @test Nᵣ(similar(c4, randn(rng, RotorF64, 4))) == 4
-    @test_throws "handles Nᵣ=4" similar(c4, randn(rng, RotorF64, 2))
+    @test refuses(
+        () -> similar(c4, randn(rng, RotorF64, 2)), DimensionMismatch, "handles Nᵣ=4"
+    )
 
     # A calculator built for one spin weight refuses another, and names the ones it serves
     cs = sYlmCalculator(R, ℓₘₐₓ, -2)
     @test spins(cs) == -2:-2
-    @test_throws "not among them" sYlm!(zeros(ComplexF64, Ysize(1, ℓₘₐₓ)), cs, R, 1)
+    @test refuses(
+        () -> sYlm!(zeros(ComplexF64, Ysize(1, ℓₘₐₓ)), cs, R, 1), ArgumentError,
+        "serves the spin weights -2, so s=1 is not among them"
+    )
 
     crange = sYlmCalculator(R, ℓₘₐₓ, -2:2)
     @test spins(crange) == -2:2
     # a spin weight inside the range is served, and agrees with computing it afresh
     Y1 = sYlm!(zeros(ComplexF64, Ysize(1, ℓₘₐₓ)), crange, R, 1)
     @test array_view(Y1) ≈ array_view(sYlm(R, ℓₘₐₓ, 1))
-    @test_throws "not among them" sYlm!(zeros(ComplexF64, Ysize(3, ℓₘₐₓ)), crange, R, 3)
+    @test refuses(
+        () -> sYlm!(zeros(ComplexF64, Ysize(3, ℓₘₐₓ)), crange, R, 3), ArgumentError,
+        "not among them"
+    )
 
     # An output vector shorter than the modes it must hold is refused rather than truncated,
     # and one that is longer is labelled over just the modes written
@@ -931,6 +1080,153 @@ end
     Y0 = sYlm!(longer, c1, R, 0)
     @test length(array_view(Y0)) == needed && parent(array_view(Y0)) === longer
     @test array_view(Y0) == array_view(sYlm(R, ℓₘₐₓ, 0)) && all(iszero, longer[needed+1:end])
-    @test_throws "is needed" sYlm!(zeros(ComplexF64, needed - 1), c1, R, 0)
-    @test_throws "Output vector has length" sYlm!(zeros(ComplexF64, 3), c1, R, 0)
+    @test refuses(() -> sYlm!(zeros(ComplexF64, needed - 1), c1, R, 0), DimensionMismatch, "is needed")
+    @test refuses(
+        () -> sYlm!(zeros(ComplexF64, 3), c1, R, 0), DimensionMismatch, "Output vector has length"
+    )
+
+    # A `HarmonicValues` computed for a vector of rotors cannot be refilled from a single
+    # rotor, even when the vector held only one, since its storage has a rotor axis
+    for Y ∈ (sYlm([R], ℓₘₐₓ, 0), sYlm([R], ℓₘₐₓ, -1:1), sYlm(R⃗, ℓₘₐₓ, 0))
+        spin = Y.s
+        @test refuses(() -> sYlm!(Y, R, ℓₘₐₓ, spin), ArgumentError, "built for one rotor")
+    end
+    @test refuses(() -> sYlm!(sYlm([R], ℓₘₐₓ, 0), c1, R), ArgumentError, "built for one rotor")
+end
+
+
+@testitem "sYlmCalculator: each block element is the wedge element `wedge_value` reads" begin
+    import SphericalFunctions
+    import SphericalFunctions: sYlmCalculator, sλlmCalculator, recurrence!, wedge_value,
+        zpower, sYlm_coefficient, spins, Nᵣ, ℓₘᵢₙ, ℓₘₐₓ, floattype, number_type
+    using Quaternionic: Rotor
+    import Random
+
+    # As for the Wigner calculators, the elements H[m, -s] are read in runs along the rows
+    # of the wedge, and in one of two orders according to the numbers of rotors and of spin
+    # weights.  Each value is compared here, bit for bit, with the one built from
+    # `wedge_value` and the same power tables, and each row below ℓ < |s| is zero.
+    rng = Random.Xoshiro(20260924)
+    R⃗ = randn(rng, Rotor{Float64}, 4)
+    θ⃗ = [0.0, 0.7, 2.2, π]
+    function expected(calc, H, iᵣ, s, m, ℓ)
+        NT, RT = number_type(calc), floattype(calc)
+        abs(s) > ℓ && return zero(NT)
+        prefactor = √((2ℓ + 1) / (4 * RT(π)))
+        value = sYlm_coefficient(NT, RT, 1, m, s, prefactor) * wedge_value(H, iᵣ, m, -s)
+        if NT <: Complex && calc.phases[]
+            value * (zpower(calc.Z₊, iᵣ, m - s) * zpower(calc.Z₋, iᵣ, m + s))
+        else
+            value
+        end
+    end
+    count = Ref(0)
+    for (ℓmax, spinsets) ∈ ((9, (0, 2, -3, -2:2, 0:3, -9:9)), (17//2, (1//2, -5//2, -3//2:1//2)))
+        for s ∈ spinsets, (Ctor, data) ∈ (
+            (sYlmCalculator, R⃗), (sYlmCalculator, R⃗[1]), (sYlmCalculator, θ⃗),
+            (sλlmCalculator, θ⃗), (sλlmCalculator, θ⃗[2]),
+        )
+            calc = Ctor(data, ℓmax, s)
+            for ℓ ∈ ℓₘᵢₙ(calc):ℓₘₐₓ(calc)
+                recurrence!(calc, ℓ)
+                H = calc.H.Hˡ
+                good = true
+                for (i, sᵢ) ∈ enumerate(spins(calc)), m ∈ -ℓ:ℓ, iᵣ ∈ 1:Nᵣ(calc)
+                    value = calc.Yˡ[iᵣ, i, Int(m + ℓ) + 1]
+                    good &= isequal(value, expected(calc, H, iᵣ, sᵢ, m, ℓ))
+                    count[] += 1
+                end
+                @test good
+            end
+        end
+    end
+    @test count[] > 20_000
+end
+
+
+@testitem "sYlm!: one spin weight read from a calculator built for several" begin
+    import SphericalFunctions
+    import SphericalFunctions: sYlmCalculator, sλlmCalculator, sYlm, sλlm, sYlm!, sλlm!,
+        recurrence!, spin_row!, Ysize, ℓ, ℓₘᵢₙ, ℓₘₐₓ
+    using Quaternionic: Rotor
+    import Random
+
+    # Reading one spin weight out of a calculator built for a range assembles only that spin
+    # weight's values at each ℓ.  They are the values the calculator would otherwise have
+    # given, bit for bit; the calculator then holds no complete block, and says so, and the
+    # next full step gives the whole block again.
+    rng = Random.Xoshiro(8)
+    R, R₂ = randn(rng, Rotor{Float64}, 2)
+    for (ℓmax, range, ℓlow) ∈ ((7, -3:3, 0), (15//2, -5//2:3//2, 1//2))
+        calc = sYlmCalculator(R, ℓmax, range)
+        for s ∈ range
+            Y = zeros(ComplexF64, Ysize(ℓlow, ℓmax))
+            sYlm!(Y, calc, R₂, s; ℓₘᵢₙ=ℓlow)
+            @test isequal(Y, array_view(sYlm(R₂, ℓmax, s; ℓₘᵢₙ=ℓlow)))
+            @test ℓ(calc) < ℓₘᵢₙ(calc)
+            @test occursin("nothing computed yet", sprint(show, calc))
+        end
+        fresh = sYlmCalculator(R₂, ℓmax, range)
+        @test all(isequal(Array(copy(b)), Array(copy(f))) for ((_, b), (_, f)) ∈ zip(calc, fresh))
+        # The matrix form writes every spin weight, so the block of ℓₘₐₓ is held afterwards
+        Ym = zeros(ComplexF64, length(range), Ysize(ℓlow, ℓmax))
+        sYlm!(Ym, calc, R; ℓₘᵢₙ=ℓlow)
+        @test ℓ(calc) == ℓₘₐₓ(calc)
+        @test isequal(Ym, array_view(sYlm(R, ℓmax, range; ℓₘᵢₙ=ℓlow)))
+
+        # The same for the real flavor
+        cλ = sλlmCalculator(0.4, ℓmax, range)
+        for s ∈ range
+            Y = zeros(Float64, Ysize(ℓlow, ℓmax))
+            sλlm!(Y, cλ, 1.3, s; ℓₘᵢₙ=ℓlow)
+            @test isequal(Y, array_view(sλlm(1.3, ℓmax, s; ℓₘᵢₙ=ℓlow)))
+        end
+
+        # `spin_row!` steps the calculator and returns the one row, as a block of the shape
+        # `recurrence!` would give for that spin weight alone, batched or not
+        for data ∈ (R₂, [R, R₂])
+            c = sYlmCalculator(data, ℓmax, range)
+            f = sYlmCalculator(data, ℓmax, range)
+            for ℓ′ ∈ ℓₘᵢₙ(c):ℓₘₐₓ(c), (i, s) ∈ enumerate(range)
+                row = spin_row!(c, ℓ′, i)
+                ref = recurrence!(f, ℓ′)
+                expected = data isa Rotor ? Array(ref)[i, :] : Array(ref)[:, i, :]
+                @test isequal(Array(row), expected)
+            end
+        end
+    end
+end
+
+
+@testitem "sYlm_matrix: the rows are sYlm, bit for bit" begin
+    import SphericalFunctions: sYlm_matrix, sλlm_matrix, sYlm, sλlm
+    using Quaternionic: Rotor
+    import Random
+
+    # The values of each ℓ are written straight into the result, for one spin weight or for
+    # a range of them, and so are the zeros below |s| of a range that straddles zero.
+    rng = Random.Xoshiro(9)
+    R⃗ = randn(rng, Rotor{Float64}, 5)
+    θ⃗ = [0.1, 0.9, 2.5]
+    for (ℓmax, spinsets) ∈ ((8, (0, -2, 3, -2:2, 1:3)), (15//2, (1//2, -3//2, -3//2:5//2)))
+        for s ∈ spinsets
+            Y = sYlm_matrix(R⃗, ℓmax, s)
+            Λ = sλlm_matrix(θ⃗, ℓmax, s)
+            if s isa AbstractUnitRange
+                @test Y isa Array{ComplexF64, 3} && Λ isa Array{Float64, 3}
+                @test all(isequal(Y[i, :, :], array_view(sYlm(R⃗[i], ℓmax, s))) for i ∈ 1:5)
+                @test all(isequal(Λ[i, :, :], array_view(sλlm(θ⃗[i], ℓmax, s))) for i ∈ 1:3)
+            else
+                @test Y isa Matrix{ComplexF64} && Λ isa Matrix{Float64}
+                @test all(isequal(Y[i, :], array_view(sYlm(R⃗[i], ℓmax, s))) for i ∈ 1:5)
+                @test all(isequal(Λ[i, :], array_view(sλlm(θ⃗[i], ℓmax, s))) for i ∈ 1:3)
+            end
+            ℓlow = ℓmax isa Integer ? 0 : 1//2
+            Y₀ = sYlm_matrix(R⃗, ℓmax, s; ℓₘᵢₙ=ℓlow)
+            @test isequal(
+                s isa AbstractUnitRange ? Y₀[2, :, :] : Y₀[2, :],
+                array_view(sYlm(R⃗[2], ℓmax, s; ℓₘᵢₙ=ℓlow))
+            )
+        end
+    end
 end

@@ -1,57 +1,48 @@
 @testitem "weights" begin
-    @testset "$T" for T in [BigFloat, Float64, Float32]
-        ϵ = 50eps(T)
+    using DoubleFloats: Double64
 
-        ϑ(k, n) = k * (π / T(n))  # k ∈ 0:n
-        x(n, N) = cospi(n / T(N))  # = cos(ϑ(n, N))
+    # The closed forms of the weights given by Waldvogel, evaluated in `BigFloat` once for
+    # each `n`, are the reference for every type.  They share no code with the package,
+    # which computes the weights by a Fourier transform.
+    ϑ(k, n) = k * (big(π) / n)  # k ∈ 0:n
+    b(j, n) = j==n/2 ? 1 : 2
+    c(k, n) = k%n==0 ? 1 : 2
+    Σ(f, r) = sum(f, r; init=zero(BigFloat))
+    wᶠ¹(k, n) = (2/big(n)) * (1 - 2Σ(j -> cos(j*ϑ(2k+1, n))/big(4j^2-1), 1:(n÷2)))  # Eq. (2.3a) of Waldvogel; k ∈ 0:n-1
+    wᶠ²(k, n) = (4/big(n)) * sin(ϑ(k, n)) * Σ(j -> sin((2j-1)*ϑ(k, n))/big(2j-1), 1:(n÷2))  # Eq. (2.3b) of Waldvogel; k ∈ 0:n
+    wᶜᶜ(k, n) = (c(k, n)/big(n)) * (1 - Σ(j -> b(j, n) * cos(2j*ϑ(k, n))/big(4j^2-1), 1:(n÷2)))  # Eq. (4) of Waldvogel; k ∈ 0:n
 
-        b(j, n) = j==n/2 ? 1 : 2
-        c(k, n) = k%n==0 ? 1 : 2
-
-        wᶠ¹(k, n) = (2/T(n)) * (1 - 2sum(cos(j*ϑ(2k+1, n))/T(4j^2-1) for j ∈ 1:(n÷2)))  # Eq. (2.3a) of Waldvogel; k ∈ 0:n-1
-        wᶠ²(k, n) = (4/T(n)) * sin(ϑ(k, n)) * sum(sin((2j-1)*ϑ(k, n))/T(2j-1) for j ∈ 1:(n÷2))  # Eq. (2.3b) of Waldvogel; k ∈ 0:n
-        wᶜᶜ(k, n) = (c(k, n)/T(n)) * (1 - sum(b(j, n) * cos(2j*ϑ(k, n))/T(4j^2-1) for j ∈ 1:(n÷2)))  # Eq. (4) of Waldvogel; k ∈ 0:n
-
-        for n in [3, 10, 11, 12, 13, 170, 171, 1070, 1071]
-            @test size(fejer1(n)) == (n,)
-            @test size(fejer1(n, T)) == (n,)
-            @test eltype(fejer1(n)) === Float64
-            @test eltype(fejer1(n, T)) === T
-            @test fejer1(n) ≈ fejer1(n, T) rtol=2max(eps(Float64), eps(T))
-            # v1, v2 = fejer1(n, T), wᶠ¹.(0:n, n)
-            # if ≉(v1, v2, rtol=ϵ, atol=ϵ)
-            #     println("atol: ", maximum(abs, v1 .- v2) / ϵ)
-            #     println("rtol: ", maximum(abs.(v1 .- v2) ./ abs.(v1)) / ϵ)
-            #     println()
-            # end
-            @test fejer1(n, T) ≈ wᶠ¹.(0:n-1, n) rtol=ϵ atol=ϵ
-
-            @test size(fejer2(n)) == (n,)
-            @test size(fejer2(n, T)) == (n,)
-            @test eltype(fejer2(n)) === Float64
-            @test eltype(fejer2(n, T)) === T
-            @test fejer2(n) ≈ fejer2(n, T) rtol=2max(eps(Float64), eps(T))
-            # v1, v2 = fejer2(n, T), wᶠ².(1:n-1, n)
-            # if ≉(v1, v2, rtol=ϵ, atol=ϵ)
-            #     println("atol: ", maximum(abs, v1 .- v2) / ϵ)
-            #     println("rtol: ", maximum(abs.(v1 .- v2) ./ abs.(v1)) / ϵ)
-            #     println()
-            # end
-            @test fejer2(n, T) ≈ wᶠ².(1:n, n+1) rtol=ϵ atol=ϵ
-
-            @test size(clenshaw_curtis(n)) == (n,)
-            @test size(clenshaw_curtis(n, T)) == (n,)
-            @test eltype(clenshaw_curtis(n)) === Float64
-            @test eltype(clenshaw_curtis(n, T)) === T
-            @test clenshaw_curtis(n) ≈ clenshaw_curtis(n, T) rtol=2max(eps(Float64), eps(T))
-            # v1, v2 = clenshaw_curtis(n, T), wᶜᶜ.(0:n, n)
-            # if ≉(v1, v2, rtol=ϵ, atol=ϵ)
-            #     println("atol: ", maximum(abs, v1 .- v2) / ϵ)
-            #     println("rtol: ", maximum(abs.(v1 .- v2) ./ abs.(v1)) / ϵ)
-            #     println()
-            # end
-            @test clenshaw_curtis(n, T) ≈ wᶜᶜ.(0:n-1, n-1) rtol=ϵ atol=ϵ
+    for n in [1, 2, 3, 10, 11, 12, 13, 170, 171, 1070, 1071]
+        ref¹ = wᶠ¹.(0:n-1, n)
+        ref² = wᶠ².(1:n, n+1)
+        refᶜᶜ = n ≥ 2 ? wᶜᶜ.(0:n-1, n-1) : nothing
+        @testset "$T, n=$n" for T in (Float16, Float32, Float64, Double64, BigFloat)
+            # The worst errors measured over these n, in units of eps(T), are 1.2 (Float16),
+            # 0.7 (Float32 and Float64), 0.8 (Double64) and 3.5 (BigFloat, where the
+            # rounding of the reference itself, at the same precision, is part of the
+            # difference).
+            ϵ = 10eps(T)
+            # `fejer1` transforms a `Float16` vector with GenericFFT, whose `Float16`
+            # arithmetic overflows in forming k² for n above 256, so there it is checked
+            # only up to that size.
+            if !(T === Float16 && n > 256)
+                w = fejer1(n, T)
+                @test w isa Vector{T} && length(w) == n
+                @test maximum(abs, w .- ref¹) < ϵ
+            end
+            w = fejer2(n, T)
+            @test w isa Vector{T} && length(w) == n
+            @test maximum(abs, w .- ref²) < ϵ
+            if n ≥ 2
+                w = clenshaw_curtis(n, T)
+                @test w isa Vector{T} && length(w) == n
+                @test maximum(abs, w .- refᶜᶜ) < ϵ
+            end
         end
+        # The default type is `Float64`
+        @test fejer1(n) == fejer1(n, Float64)
+        @test fejer2(n) == fejer2(n, Float64)
+        n ≥ 2 && @test clenshaw_curtis(n) == clenshaw_curtis(n, Float64)
     end
 end
 
@@ -76,18 +67,20 @@ end
     import DoubleFloats: Double64
 
     # Each rule needs at least one node, and the Clenshaw–Curtis rule, whose nodes include
-    # both poles, at least two.  (The node counts for which a rule's buffer would be empty,
-    # which differ between the machine floats and the other types, are the subject of the
-    # items in `test/bounds.jl`.)
-    for T ∈ (Float64, Float32, Double64, BigFloat)
+    # both poles, at least two.  (The node counts for which a rule's buffer would be empty
+    # are also the subject of the items in `test/bounds.jl`.)
+    for T ∈ (Float16, Float32, Float64, Double64, BigFloat)
         for n ∈ (0, -1, -2)
             @test_throws ArgumentError fejer1(n, T)
+            @test_throws "`fejer1` needs at least one node; got n=$n." fejer1(n, T)
         end
-        for n ∈ (0, -2)
+        for n ∈ (0, -1, -2)
             @test_throws ArgumentError fejer2(n, T)
+            @test_throws "`fejer2` needs at least one node; got n=$n." fejer2(n, T)
         end
-        for n ∈ (0, -3)
+        for n ∈ (1, 0, -3)
             @test_throws ArgumentError clenshaw_curtis(n, T)
+            @test_throws "`clenshaw_curtis` needs at least two nodes" clenshaw_curtis(n, T)
         end
     end
     @test_throws ArgumentError fejer1(0)
@@ -95,20 +88,28 @@ end
     @test_throws ArgumentError fejer2(-1)
     @test_throws ArgumentError clenshaw_curtis(1)
     @test_throws ArgumentError clenshaw_curtis(0)
-    # The refusal names the rule
-    @test_throws "fejer1" fejer1(0)
-    @test_throws "fejer2" fejer2(0)
-    @test_throws "clenshaw_curtis" clenshaw_curtis(1)
 
     # The smallest rules are exact for the polynomials they can integrate: with one node at
-    # the equator, and with two nodes placed symmetrically, every weight is the same, and the
-    # weights sum to ∫ d(cos θ) = 2
-    for T ∈ (Float64, Float32, Double64, BigFloat)
+    # the equator, and with two nodes placed symmetrically, every weight is the same, and
+    # the weights sum to ∫ d(cos θ) = 2
+    for T ∈ (Float16, Float32, Float64, Double64, BigFloat)
         ϵ = 10eps(T)
         @test fejer1(1, T) ≈ [2] atol=ϵ
         @test fejer2(1, T) ≈ [2] atol=ϵ
         @test fejer1(2, T) ≈ [1, 1] atol=ϵ
         @test fejer2(2, T) ≈ [1, 1] atol=ϵ
         @test clenshaw_curtis(2, T) ≈ [1, 1] atol=ϵ
+        @test eltype(fejer1(2, T)) === eltype(fejer2(2, T)) === eltype(clenshaw_curtis(2, T)) === T
+    end
+
+    # The weights are those of ∫₀^π f(θ) sin θ dθ = ∫₋₁¹ f(x) dx, so they sum to 2, and the
+    # rules integrate low-degree polynomials in x = cos θ exactly
+    for (w, θ) ∈ (
+        (fejer1(9), fejer1_rings(9)), (fejer2(9), fejer2_rings(9)),
+        (clenshaw_curtis(9), clenshaw_curtis_rings(9)),
+    )
+        @test sum(w) ≈ 2 atol=10eps()
+        @test sum(w .* cos.(θ).^2) ≈ 2/3 atol=10eps()
+        @test sum(w .* cos.(θ).^3) ≈ 0 atol=10eps()
     end
 end

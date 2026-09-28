@@ -5,7 +5,10 @@ name: keepalive
 # longer than that.  Enabling a workflow through the API restarts that count
 # even when the workflow is already enabled, so this workflow does that once a
 # month for every scheduled workflow here, itself included.  It makes no
-# commits.
+# commits.  Dependabot is configured in `.github/dependabot.yml` rather than
+# by a workflow, so that rule does not apply to it; Dependabot pauses itself
+# instead when none of its pull requests has been merged, closed or otherwise
+# answered for 90 days, and resumes when one of them is.
 
 on:
   schedule:
@@ -23,7 +26,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          for workflow in keepalive.yml scheduled.yml CompatHelper.yml; do
+          for workflow in keepalive.yml scheduled.yml; do
             gh api --method PUT \
               "repos/${{ github.repository }}/actions/workflows/${workflow}/enable"
           done

@@ -27,6 +27,7 @@ encapsulate the formulas in a module so that we can test them against the
 """
 using TestItems: @testitem  #hide
 @testitem "Blanchet conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
+import .Utilities: θrange, θϕrange  #hide
 
 module Blanchet
 #+
@@ -111,9 +112,9 @@ s = -2
 
 # This loose relative tolerance is necessary because the numerical errors in Blanchet's
 # explicit expressions grow rapidly with ``ℓ``.
-for (θ, ϕ) ∈ θϕrange()
-    for (ℓ, m) ∈ ℓmrange(abs(s), ℓₘₐₓ)
-        @test Blanchet.Yˡᵐ₋₂(ℓ, m, θ, ϕ) ≈ ConventionsUtilities.Y(s, ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+for (θ, ϕ) ∈ θϕrange(rng)
+    for (ℓ, Yˡ) ∈ SphericalFunctions.sYlm(θ, ϕ, ℓₘₐₓ, s), m ∈ -ℓ:ℓ
+        @test Blanchet.Yˡᵐ₋₂(ℓ, m, θ, ϕ) ≈ Yˡ[m] atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
@@ -128,9 +129,12 @@ end
 # ```
 # at ``s = -2`` — where ``(-1)^s = 1`` — identifies his ``d^{ℓm}`` as the single column ``m'
 # = m``, ``m = 2`` of ours.  We can check that directly:
-for θ ∈ θrange()
-    for (ℓ, m) ∈ ℓmrange(abs(s), ℓₘₐₓ)
-        @test Blanchet.d(ℓ, m, θ) ≈ ConventionsUtilities.d(ℓ, m, -s, θ) atol=ϵₐ rtol=ϵᵣ
+for θ ∈ θrange(rng)
+    for (ℓ, dˡ) ∈ SphericalFunctions.dCalculator(θ, ℓₘₐₓ)
+        ℓ < abs(s) && continue  # the column m = -s exists only for ℓ ≥ |s|
+        for m ∈ -ℓ:ℓ
+            @test Blanchet.d(ℓ, m, θ) ≈ dˡ[m, -s] atol=ϵₐ rtol=ϵᵣ
+        end
     end
 end
 #+

@@ -96,8 +96,11 @@ end
     import SphericalFunctions: SSHT
 
     # `?SSHT` shows the constructor's docstring beside the abstract type's, and the
-    # constructor's is the one that describes its keywords
-    @test occursin(r"method\s*=", string(@doc SSHT))
+    # constructor's is the one that describes its keywords.  The docstrings are read from
+    # the package's metadata, because `@doc SSHT` returns only the abstract type's docstring
+    # when the REPL is not loaded, as under `Pkg.test` from Julia 1.12 on.
+    SSHT_docs = Base.Docs.meta(SphericalFunctions)[Base.Docs.Binding(SphericalFunctions, :SSHT)]
+    @test any(d -> occursin(r"method\s*=", join(string.(d.text))), values(SSHT_docs.docs))
 
     # The block accessor of `ModeWeights` is one of the `getindex` methods documented by the
     # package, each under a header naming its call

@@ -26,6 +26,11 @@ Base.exp(x::PythonCall.Py) = x.exp()
 Base.:*(x::SymPyPythonCall.Sym{PythonCall.Py}, q::PythonCall.Py) = x.o * q
 (⋅)(a::PythonCall.Py, b::Int) = sympy.S(a.scalar() * b).simplify()
 (⋅)(a::PythonCall.Py, b::PythonCall.Py) = sympy.S((a | b.rev()).scalar()).simplify()
+## Each `checked` returns its argument after checking it, so that a hidden line  #hide
+## can check a displayed result without changing what the page displays; a  #hide
+## failed check fails the docs build.  #hide
+checked(x::Bool) = (x || error("An identity displayed on this page is false"); x)  #hide
+checked(x; equals) = (sympy.simplify(x - equals) == 0 || error("Expected $equals; found $x"); x)  #hide
 nothing  #hide
 
 # ## Three-dimensional space
@@ -63,9 +68,9 @@ metric_spherical = sympy.simplify((jacobian_3.T * metric_cartesian_3 * jacobian_
 
 # Recall that there is also an associated *orthonormal* basis, which we can obtain by
 # normalizing each of the coordinate basis vectors, which just involves dividing ``𝐫``,
-# ``\mathbb{θ}``, and ``\mathbb{ϕ}`` by ``1``, ``r``, and ``r \sin θ`` respectively.  But
-# that is not the basis we are implicitly using when — say — integrating with spherical
-# coordinates, so we must use the above metric.
+# ``\boldsymbol{θ}``, and ``\boldsymbol{ϕ}`` by ``1``, ``r``, and ``r \sin θ``
+# respectively.  But that is not the basis we are implicitly using when — say — integrating
+# with spherical coordinates, so we must use the above metric.
 #
 # The volume-form factor is given by the square root of the determinant of the metric:
 three_volume_form_factor = sympy.simplify(sympy.sqrt(metric_spherical.det()))
@@ -73,6 +78,7 @@ three_volume_form_factor = sympy.simplify(sympy.sqrt(metric_spherical.det()))
 # Note that SymPy correctly includes the absolute value of the ``\sin θ`` factor, but we
 # can drop the absolute value since ``θ`` is in ``(0, π)``:
 three_volume_form_factor = three_volume_form_factor.subs(abs(sympy.sin(θ)), sympy.sin(θ))
+checked(three_volume_form_factor; equals=r^2 * sympy.sin(θ))  #hide
 
 # Restricting to the unit sphere (``r=1``), we integrate naively to find the surface area:
 S2_surface_area = sympy.integrate(
@@ -82,6 +88,7 @@ S2_surface_area = sympy.integrate(
     ),
     (θ, 0, π),
 )
+checked(S2_surface_area; equals=4π)  #hide
 
 # Therefore, the normalized volume-form factor on the unit sphere 𝕊² is
 S2_normalized_volume_form_factor = sympy.simplify(
@@ -112,6 +119,7 @@ nothing  #hide
 nothing  #hide
 
 # Now we check some basic identities related to these definitions:
+checked(  #hide
 PythonCall.pyall([
     𝐢 == 𝐳*𝐲,
     𝐣 == 𝐱*𝐳,
@@ -126,21 +134,26 @@ PythonCall.pyall([
     𝐈 == -𝐲*𝐱*𝐳,
     𝐈 == -𝐳*𝐲*𝐱,
 ])
+)  #hide
 
 # Next the basic quaternion relations:
+checked(  #hide
 PythonCall.pyall([
     𝐢*𝐣 == 𝐤,
     𝐣*𝐤 == 𝐢,
     𝐤*𝐢 == 𝐣,
     𝐢*𝐣*𝐤 == -1,
 ])
+)  #hide
 
 # And the duality relations:
+checked(  #hide
 PythonCall.pyall([
     𝐢 == 𝐈.inv() * 𝐱,
     𝐣 == 𝐈.inv() * 𝐲,
     𝐤 == 𝐈.inv() * 𝐳,
 ])
+)  #hide
 
 
 # ### Extended-Euler coordinates
@@ -175,6 +188,7 @@ metric_extended_euler = sympy.simplify((jacobian_4.T * metric_cartesian_4 * jaco
 # And again, the volume-form factor is given by the square root of the determinant of the
 # metric:
 four_volume_form_factor = sympy.simplify(sympy.sqrt(metric_extended_euler.det()))
+checked(four_volume_form_factor; equals=R^3 * abs(sympy.sin(β)) / 8)  #hide
 
 # Again, SymPy correctly includes the absolute value of the ``\sin β`` factor.  However,
 # with our chosen Euler-angle ranges for ``\mathrm{Spin}(3)`` we take ``β ∈ [0, π]``, so
@@ -191,6 +205,7 @@ S3_surface_area = sympy.integrate(
     ),
     (α, 0, 2π)
 )
+checked(S3_surface_area; equals=2π^2)  #hide
 
 # This is the volume of the unit 3-sphere, which confirms the normalization of the
 # invariant measure on ``\mathrm{Spin}(3)`` quoted on the [Details](@ref conv_haar_measure)
@@ -208,5 +223,6 @@ SO3_volume = sympy.integrate(
     ),
     (α, 0, 2π)
 )
+checked(SO3_volume; equals=π^2)  #hide
 
 # which is half the volume of ``\mathrm{Spin}(3)``, as expected for the double cover.

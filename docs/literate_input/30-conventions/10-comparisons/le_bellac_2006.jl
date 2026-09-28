@@ -51,6 +51,7 @@ formulas in a module so that we can test them against the `SphericalFunctions` p
 
 using TestItems: @testitem  #hide
 @testitem "Le Bellac conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
+import .Utilities: αβγrange, θϕrange  #hide
 
 module LeBellac
 #+
@@ -75,11 +76,20 @@ J₋(j) = J₊(j)'
 Jy(j) = (J₊(j) - J₋(j)) / 2𝒾
 #+
 
-# The matrix element of Eq. (10.32), extended by ``e^{-iψJ_z}`` on the right:
-function D(j, m′, m, ϕ, θ, ψ)
-    U = exp(-𝒾 * ϕ * Matrix(Jz(j))) * exp(-𝒾 * θ * Matrix(Jy(j))) * exp(-𝒾 * ψ * Matrix(Jz(j)))
-    U[m′ + j + 1, m + j + 1]
+# The matrix of the rotation operator ``e^{-iϕ J_z} e^{-iθ J_y} e^{-iψ J_z}`` in the same
+# basis.  The first and last tests below use every element of each matrix, so each matrix is
+# computed only once for each set of arguments, and is kept in `U_matrices` for the later
+# elements; the three matrix exponentials cost far more than looking the result up.
+const U_matrices = Dict{Any, Any}()
+function U(j, ϕ, θ, ψ)
+    get!(U_matrices, (j, ϕ, θ, ψ)) do
+        exp(-𝒾 * ϕ * Matrix(Jz(j))) * exp(-𝒾 * θ * Matrix(Jy(j))) * exp(-𝒾 * ψ * Matrix(Jz(j)))
+    end
 end
+#+
+
+# The matrix element of Eq. (10.32), extended by ``e^{-iψJ_z}`` on the right:
+D(j, m′, m, ϕ, θ, ψ) = U(j, ϕ, θ, ψ)[m′ + j + 1, m + j + 1]
 D(j, m′, m, θ, ϕ) = D(j, m′, m, ϕ, θ, zero(θ))
 #+
 
@@ -101,21 +111,21 @@ end  # module LeBellac
 # because the formulas are slow, and this will be sufficient to sort out any sign or
 # normalization differences, which are the most likely source of error.  For the same reason
 # we use a modest grid of Euler angles.
-αβγs = αβγrange(Float64, 5)
+αβγs = αβγrange(rng, Float64, 5)
 #+
 
 # First, Le Bellac's ``D`` agrees with ours:
 for (ϕ, θ, ψ) ∈ αβγs
-    for (j, m′, m) ∈ ℓm′mrange(ℓₘₐₓ)
-        @test LeBellac.D(j, m′, m, ϕ, θ, ψ) ≈ ConventionsUtilities.D(j, m′, m, ϕ, θ, ψ) atol=ϵₐ rtol=ϵᵣ
+    for (j, 𝔇ʲ) ∈ SphericalFunctions.DCalculator(ϕ, θ, ψ, ℓₘₐₓ), m′ ∈ -j:j, m ∈ -j:j
+        @test LeBellac.D(j, m′, m, ϕ, θ, ψ) ≈ 𝔇ʲ[m′, m] atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
 
 # Equation (10.66) holds with our spherical harmonics:
-for (θ, ϕ) ∈ θϕrange(Float64, 7)
-    for (ℓ, m) ∈ ℓmrange(ℓₘₐₓ)
-        @test LeBellac.D(ℓ, m, 0, θ, ϕ) ≈ √(4π/(2ℓ+1)) * conj(ConventionsUtilities.Y(ℓ, m, θ, ϕ)) atol=ϵₐ rtol=ϵᵣ
+for (θ, ϕ) ∈ θϕrange(rng, Float64, 7)
+    for (ℓ, Yˡ) ∈ SphericalFunctions.YlmCalculator(θ, ϕ, ℓₘₐₓ), m ∈ -ℓ:ℓ
+        @test LeBellac.D(ℓ, m, 0, θ, ϕ) ≈ √(4π/(2ℓ+1)) * conj(Yˡ[m]) atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
@@ -123,19 +133,23 @@ end
 # Finally, the rotation law of Eq. (10.65).  We rotate the unit vector ``\hat{r}(θ, ϕ)`` by
 # the *inverse* of the rotor ``𝐑_{α,β,γ}``, compute the spherical coordinates ``(θ', ϕ')``
 # of the result, and check that our spherical harmonics there are given by the stated
-# combination of the harmonics at the original point.  We avoid the poles so that ``ϕ'`` is
-# well defined.
+# combination of the harmonics at the original point.  The original points avoid the poles
+# only to keep the grid generic; the two-argument `atan` below computes ``(θ', ϕ')`` stably
+# wherever the rotated point lands.  Two calculators, one at each point, are iterated in
+# step, so that the harmonics of each ``ℓ`` at both points are at hand together.
 import Quaternionic: from_euler_angles, from_spherical_coordinates, imz, components
-for (α, β, γ) ∈ αβγrange(Float64, 3)
+for (α, β, γ) ∈ αβγrange(rng, Float64, 3)
     R = from_euler_angles(α, β, γ)
-    for (θ, ϕ) ∈ θϕrange(Float64, 3; avoid_poles=1e-3)
+    for (θ, ϕ) ∈ θϕrange(rng, Float64, 3; avoid_poles=1e-3)
         r̂ = from_spherical_coordinates(θ, ϕ) * imz * conj(from_spherical_coordinates(θ, ϕ))
         r̂′ = conj(R) * r̂ * R  # ℛ⁻¹ r̂
         _, x, y, z = components(r̂′)
         θ′, ϕ′ = atan(hypot(x, y), z), atan(y, x)  # well conditioned near the poles
-        for (ℓ, m) ∈ ℓmrange(ℓₘₐₓ)
-            @test ConventionsUtilities.Y(ℓ, m, θ′, ϕ′) ≈ sum(
-                LeBellac.D(ℓ, m′, m, α, β, γ) * ConventionsUtilities.Y(ℓ, m′, θ, ϕ)
+        Y = SphericalFunctions.YlmCalculator(θ, ϕ, ℓₘₐₓ)
+        Y′ = SphericalFunctions.YlmCalculator(θ′, ϕ′, ℓₘₐₓ)
+        for ((ℓ, Yˡ), (_, Y′ˡ)) ∈ zip(Y, Y′), m ∈ -ℓ:ℓ
+            @test Y′ˡ[m] ≈ sum(
+                LeBellac.D(ℓ, m′, m, α, β, γ) * Yˡ[m′]
                 for m′ ∈ -ℓ:ℓ
             ) atol=ϵₐ rtol=ϵᵣ
         end

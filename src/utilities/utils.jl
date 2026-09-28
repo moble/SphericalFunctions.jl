@@ -1,9 +1,9 @@
-# `loggamma` and `logbinomial` exist to support `sqrtbinomial`.  As of 3.0 nothing inside
-# the package calls any of the three — `Deprecated`, deleted in 3.0, was the last caller —
-# but `sqrtbinomial` is documented on `docs/src/20-interface/05-utilities.md` and §9 of the v3
-# design memo directs callers to it in preference to `binomial`, so they are kept and
-# tested (the "Combinatorics: sqrtbinomial and logbinomial" test item).
-loggamma(a, ::Type{T}) where T = SpecialFunctions.loggamma(T(a))
+# The logarithm of `binomial(n, k)`, computed in the float type `S`, which is what
+# `sqrtbinomial` exponentiates.  The general case is `-log(n+1) - log B(n-k+1, k+1)`, where
+# B is the beta function, as in `SpecialFunctions.logabsbinomial`.  In `Float64` this is
+# several times more accurate at large `n` than the difference of three `loggamma`s, which
+# are large and nearly cancel, and unlike `logabsbinomial` it accepts any float type.  The
+# coefficient is symmetric in `k ↔ n - k`, so the smaller of the two is used.
 function logbinomial(n::T, k::T, S=float(T)) where {T<:Integer}
     if k == 0 || k == n
         return zero(S)
@@ -14,26 +14,26 @@ function logbinomial(n::T, k::T, S=float(T)) where {T<:Integer}
     if k == 1
         return log(S(n))
     else
-        return (
-            -log1p(S(n)) - loggamma(n - k + one(T), S)
-            - loggamma(k + one(T), S) + loggamma(n + 2one(T), S)
-        )
+        return -log1p(S(n)) - SpecialFunctions.logbeta(S(n - k + 1), S(k + 1))
     end
 end
 
 """
-    sqrtbinomial(n, k, [T])
+    sqrtbinomial(n, k, [T=Float64])
 
-Evaluate the square-root of the binomial coefficient `binomial(n,k)` for large coefficients.
+The square root of the binomial coefficient `binomial(n, k)`, computed in the float type `T`
+from its logarithm, so that it is finite where the coefficient itself would overflow.
 
-Ordinarily, when `n` and `k` are standard `Int` arguments, the built-in `binomial` function
-will overflow around `n=66`, because it results in `Int`s.  We need much larger values.
-This function, which is based on [`a related one in
-SpecialFunctions.jl`](https://specialfunctions.juliamath.org/latest/functions_list/#SpecialFunctions.logabsbinomial),
-returns reasonably accurate results up to `n ≈ 1026` when `k ≈ n/2` (which is the case of
-interest in many applications in this package).
-
-Computations are carried out (and returned) in type `T`, which defaults to `Float64`.
+For `Int` arguments, `binomial` overflows at about `n = 66` when `k ≈ n/2`, but the square
+root of the coefficient, which is what many normalization constants need, is representable
+in `Float64` up to about `n = 2050`.  The logarithm is computed through the beta function,
+as it is by [`logabsbinomial` in
+SpecialFunctions.jl](https://specialfunctions.juliamath.org/latest/functions_list/#SpecialFunctions.logabsbinomial),
+but in any float type `T` that `SpecialFunctions.logbeta` accepts, including `BigFloat` and
+`Double64`.  Exponentiating the logarithm magnifies its rounding error in proportion to its
+size, so the relative error is a few ulp for small coefficients and grows with their
+logarithm, to about a thousand ulp near `n = 2050` in `Float64`.  `n` and `k` are integers
+of one type, and the result is zero when `k` is negative or greater than `n`.
 """
 function sqrtbinomial(n, k, ::Type{T}=Float64) where T
     exp(logbinomial(n, k, T)/2)
@@ -48,11 +48,11 @@ end
 # runtime reduction over a vector would infer only as `Type`, which would make the element
 # type a runtime value and cost the calculators their type stability.
 
-const _rotor_input_forms = (
-    "the accepted forms are a Rotor, the angle β::Real, or the "
-    * "phase e^{iβ}::Complex — or, for Nᵣ > 1, an AbstractVector of length Nᵣ of any one of "
-    * "those, whose element type must say which (a `Vector{Any}`, or one with a `Union` "
-    * "element type, does not, and should be converted before it is passed)"
+const rotor_input_forms = (
+    "the accepted forms are a Rotor, the angle β::Real, or the phase e^{iβ}::Complex — or, "
+    * "for a batch, a non-empty AbstractVector of any one of those, which makes a batch "
+    * "however short, and whose element type must say which (a `Vector{Any}`, or one with a "
+    * "`Union` element type, does not, and should be converted before it is passed)"
 )
 
 """
@@ -64,38 +64,49 @@ in, so that a `Rotor{Float32}` gives a `Float32` calculator and a `Rotor{Double6
 `Double64` one.  To compute in some other type, convert the rotor data — which is also the
 honest way to say it, since the type of the data is the claim being made about the points.
 
-The rotor data must therefore commit to a type to go on: a vector whose element type is abstract
-or a `Union` is rejected rather than guessed at.
+The rotor data must therefore commit to a type to go on: data whose component type is
+abstract, such as a `Complex{Real}` or a `Vector{Rotor{Real}}`, or a vector whose element
+type is abstract or a `Union`, is refused with an `ArgumentError` rather than guessed at.
 """
-rotor_basetype(R::Rotor) = float(Quaternionic.basetype(R))
+rotor_basetype(R::Rotor) = concrete_float(Quaternionic.basetype(R), R)
 rotor_basetype(β::Real) = float(typeof(β))
-rotor_basetype(::Complex{T}) where {T<:Real} = float(T)
-rotor_basetype(::AbstractVector{<:Rotor{T}}) where {T<:Real} = float(T)
-function rotor_basetype(R::AbstractVector{T}) where {T<:Real}
-    # `float(Real)` is `Float64`, so without this an abstractly-typed vector of angles would
-    # be answered with a guess — the one thing this function is not allowed to do.  A
-    # concrete element type is fine even when it is not itself a float: `float(Int)` is a
-    # derivation, exactly as it is for a single `Int` angle.
-    if !isconcretetype(T)
-        error(
-            "The element type of the given angles is $T, which does not say what "
-            * "floating-point type to work in; convert them to a concrete type first."
-        )
-    end
-    float(T)
-end
-rotor_basetype(::AbstractVector{<:Complex{T}}) where {T<:Real} = float(T)
+rotor_basetype(z::Complex{T}) where {T<:Real} = concrete_float(T, z)
+rotor_basetype(R::AbstractVector{<:Rotor{T}}) where {T<:Real} = concrete_float(T, R)
+rotor_basetype(β::AbstractVector{T}) where {T<:Real} = concrete_float(T, β)
+rotor_basetype(z::AbstractVector{<:Complex{T}}) where {T<:Real} = concrete_float(T, z)
 function rotor_basetype(R)
-    error("Cannot build a calculator from rotor data of type $(typeof(R)); $_rotor_input_forms.")
+    throw(ArgumentError(
+        "Cannot build a calculator from rotor data of type $(typeof(R)); $rotor_input_forms."
+    ))
 end
 # `Vector{Rotor}` and `Vector{Rotor{<:Real}}` hold rotations, but their element type does not
 # say in what precision, so they get the message above rather than the one below.
 function rotor_basetype(R::AbstractVector{<:Rotor})
-    error("Cannot build a calculator from rotor data of type $(typeof(R)); $_rotor_input_forms.")
+    throw(ArgumentError(
+        "Cannot build a calculator from rotor data of type $(typeof(R)); $rotor_input_forms."
+    ))
 end
-# A quaternion that is not a `Rotor` is refused here, which is where the calculators catch it:
-# the constructors call this directly, and the setters through `check_rotor_type`.
-rotor_basetype(R::Union{AbstractQuaternion, AbstractVector{<:AbstractQuaternion}}) = error(not_a_rotor(R))
+# A quaternion that is not a `Rotor` is refused here, which is where the calculators catch
+# it: the constructors call this directly, and the setters through `check_rotor_type`.
+rotor_basetype(R::Union{AbstractQuaternion, AbstractVector{<:AbstractQuaternion}}) =
+    throw(ArgumentError(not_a_rotor(R)))
+
+# The float type of rotor data `R` whose components are of type `T`.  `float(Real)` is
+# `Float64`, so without the check data of an abstract component type would be answered with
+# a guess — the one thing `rotor_basetype` is not allowed to do.  A concrete `T` is fine
+# even when it is not itself a float: `float(Int)` is a derivation, exactly as it is for a
+# single `Int` angle.  The check is on a type known when the method is compiled, so it folds
+# away.
+@inline function concrete_float(::Type{T}, R) where {T}
+    isconcretetype(T) || throw(abstract_components_error(T, R))
+    float(T)
+end
+@noinline function abstract_components_error(T, R)
+    ArgumentError(
+        "The rotor data, of type $(typeof(R)), has components of type $T, which does not say "
+        * "what floating-point type to work in; convert the data to a concrete type first."
+    )
+end
 
 # Quaternions that are not `Rotor`s, singly or in a vector.  The functions that take only
 # `Rotor`s — `D`, `d`, `sYlm`, `Ylm`, `sYlm_matrix`, `w(R)` and the transforms — never reach
@@ -114,8 +125,9 @@ These functions are defined on the rotation group, so a rotation is what they ta
 `Rotor` is the type that says a quaternion is one.  A general `Quaternion` has a magnitude
 that the recurrence would simply divide out; `rotor(q)` normalizes it into the rotation it
 denotes, and says so at the call site.  A `QuatVec` is further still from a rotation — it
-represents a vector, and reading one as a rotation by ``π`` about its own direction would be a
-category error rather than a convenience; `exp(v/2)` gives the rotation a vector generates.
+represents a vector, and reading one as a rotation by ``π`` about its own direction would be
+a category error rather than a convenience; `exp(v/2)` gives the rotation a vector
+generates.
 """
 function not_a_rotor(R)
     T = R isa AbstractVector ? eltype(R) : typeof(R)
@@ -130,22 +142,26 @@ end
 """
     nrotors(R)
 
-The number of rotors `Nᵣ` that the rotor data `R` describes: one for a single rotor, angle or
-phase, and `length(R)` for a vector of them.  This is how a calculator learns its batch size,
-which is why there is no `Nᵣ` keyword argument on any constructor.
+The number of rotors `Nᵣ` that the rotor data `R` describes: one for a single rotor, angle
+or phase, and `length(R)` for a vector of them.  This is how a calculator learns its batch
+size, which is why there is no `Nᵣ` keyword argument on any constructor.
 """
 nrotors(::Number) = 1  # `AbstractQuaternion <: Number`, so this covers a single rotor too
 function nrotors(R::AbstractVector)
     if isempty(R)
-        error("A calculator needs at least one rotor, but got an empty $(typeof(R)).")
+        throw(ArgumentError(
+            "A calculator needs at least one rotor, but got an empty $(typeof(R))."
+        ))
     end
     length(R)
 end
 function nrotors(R)
-    error("Cannot build a calculator from rotor data of type $(typeof(R)); $_rotor_input_forms.")
+    throw(ArgumentError(
+        "Cannot build a calculator from rotor data of type $(typeof(R)); $rotor_input_forms."
+    ))
 end
 
-# Whether a calculator built from the rotor data `R` is batched, with blocks that carry a
+# Whether a calculator built from the rotor data `R` is batched, with blocks that have a
 # leading rotor index: exactly when `R` is a vector, however long.  A `Val`, so that the
 # calculator's type — and with it the type of its blocks — is known at compile time.
 batched_data(::AbstractVector) = Val(true)
@@ -167,23 +183,23 @@ function floattype end
 """
     check_rotor_type(calc, data)
 
-Throw unless `data` would give the element type `calc` already works in.
+Throw an `ArgumentError` unless `data` would give the element type `calc` already works in.
 
 A calculator's element type is fixed by the data it was constructed from, so replacing that
-data later — through [`set_R!`](@ref), [`set_β!`](@ref), [`set_θ!`](@ref) or
-`similar(calc, data)` — cannot change it.  Rather than convert silently, which is how
-precision gets lost without anyone choosing to lose it, the mismatch is an error and the
-caller converts whichever side they meant.  `floattype` is defined alongside each calculator.
+data later — through [`set_R!`](@ref), [`set_β!`](@ref), [`set_θ!`](@ref) or `similar(calc,
+data)` — cannot change it.  Rather than convert silently, which is how precision gets lost
+without anyone choosing to lose it, the mismatch is an error and the caller converts
+whichever side they meant.  `floattype` is defined alongside each calculator.
 """
 function check_rotor_type(calc, data)
     RT = rotor_basetype(data)
     if RT !== floattype(calc)
-        error(
+        throw(ArgumentError(
             "This calculator works in $(floattype(calc)), but the given data would give "
             * "$RT.  A calculator's element type is fixed by the data it was built from; "
             * "convert the data to $(floattype(calc)), or build a calculator from data of "
             * "the type you want."
-        )
+        ))
     end
     nothing
 end

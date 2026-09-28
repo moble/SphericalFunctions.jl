@@ -1,24 +1,25 @@
-# Tests for the v3 spin-weighted spherical-harmonic transforms: the `SSHT` constructor and the
+# Tests for the spin-weighted spherical-harmonic transforms: the `SSHT` constructor and the
 # three concrete types `SSHTRS`, `SSHTMinimal` and `SSHTMatrix`, their `pixels`/`rotors`,
-# synthesis (`𝒯 * f̃`, `mul!`), analysis (`𝒯 \ f`, `ldiv!`), in-place semantics, `ModeWeights`
-# input and output, the `SSHTRS` quadrature options, and use from several tasks.
+# synthesis (`𝒯 * f̃`, `mul!`), analysis (`𝒯 \ f`, `ldiv!`), in-place semantics,
+# `ModeWeights` input and output, the `SSHTRS` quadrature options, and use from several
+# tasks, with `copy`, `deepcopy` and serialization.
 #
-# The oracle is the closed-form ₛYₗₘ of the `Utilities` snippet — the explicit sum over
+# The oracle is the closed-form ₛYₗₘ of the `Utilities` module — the explicit sum over
 # factorials from the conventions pages, which owes nothing to this package.  The items here
-# use `sYlm_pixels`, also from that snippet: the same formula with the pixel-independent
-# factorials hoisted out of the loop (≈ 40 times faster, and checked against `sYlm` itself in
-# "SSHT synthesis").  They compare synthesis against it pixel by pixel, analysis against the
-# mode it came from, and round trips against their input.  The pixelizations are compared against the formulas in their own
-# docstrings.  Cross-checks that stay inside the package — `sYlm_matrix`, the evaluation
-# `w(R)` of a `ModeWeights`, and the agreement of the three algorithms on a shared grid — are
-# labelled as such where they appear.
+# use `sYlm_closed_form_pixels`, also from that module: the same formula with the
+# pixel-independent factorials hoisted out of the loop (≈ 40 times faster, and checked
+# against `sYlm_closed_form` itself in "SSHT synthesis").  They compare synthesis against it
+# pixel by pixel, analysis against the mode it came from, and round trips against their
+# input.  The pixelizations are compared against the formulas in their own docstrings.
+# Cross-checks that stay inside the package — `sYlm_matrix`, the evaluation `w(R)` of a
+# `ModeWeights`, and the agreement of the three algorithms on a shared grid — are labelled
+# as such where they appear.
 #
 # Tolerances are set from measurement; the numbers quoted in the comments are the largest
 # errors seen over every method, T, ℓₘₐₓ and s that the item covers, in units of eps(T).
 #
-# This file mirrors the intent of the v2 `test/deprecated/ssht.jl` (deleted in 3.0) against
-# the v3 API.  The item names here all begin with "SSHT", which is what kept them from
-# colliding with the v2 items while both existed.
+# The item names all begin with "SSHT", so that they can be picked out together — by a human
+# reading a results list, and by the name filters of `juliati` and the MCP runner.
 
 
 @testitem "SSHT construction" begin
@@ -26,18 +27,19 @@
     import SphericalFunctions: nmodes, npixels  # unexported
     import SphericalFunctions: golden_ratio_spiral_rotors
     using DoubleFloats: Double64
+    using LinearAlgebra: lu
     using Logging: NullLogger, with_logger
     using Quaternionic: Rotor
 
     types = (("RS", SSHTRS), ("Minimal", SSHTMinimal), ("Matrix", SSHTMatrix))
 
-    # Every method and type, including the edge cases s = ℓₘₐₓ and ℓₘₐₓ = 1
-    for T in (Float64, Double64, Float32), (s, ℓₘₐₓ) in ((-2, 6), (0, 3), (1, 1), (3, 3), (-3, 4))
+    # Every method and type, including the edge cases s = ℓₘₐₓ, ℓₘₐₓ = 1 and ℓₘₐₓ = 0
+    for T in (Float64, Double64, Float32), (s, ℓₘₐₓ) in ((-2, 6), (0, 3), (1, 1), (3, 3), (-3, 4), (0, 0))
         for (method, Type) in types
-            𝒯 = SSHT(s, ℓₘₐₓ; method, T)
+            𝒯 = SSHT(s, ℓₘₐₓ, T; method)
             @test 𝒯 isa Type{T}
             @test 𝒯 isa SSHT{T}
-            @test typeof(Type(s, ℓₘₐₓ; T)) === typeof(𝒯)  # the concrete constructor agrees
+            @test typeof(Type(s, ℓₘₐₓ, T)) === typeof(𝒯)  # the concrete constructor agrees
             @test spin(𝒯) == s
             @test SphericalFunctions.ℓₘₐₓ(𝒯) == ℓₘₐₓ
             @test SphericalFunctions.ℓₘᵢₙ(𝒯) == abs(s)
@@ -58,9 +60,9 @@
         end
         # Default pixelizations: RS has (2ℓₘₐₓ+1) rings of (2ℓₘₐₓ+1) points; the others are
         # optimal, with exactly as many points as modes
-        @test npixels(SSHT(s, ℓₘₐₓ; method="RS", T)) == (2ℓₘₐₓ + 1)^2
-        @test npixels(SSHT(s, ℓₘₐₓ; method="Minimal", T)) == Ysize(abs(s), ℓₘₐₓ)
-        @test npixels(SSHT(s, ℓₘₐₓ; method="Matrix", T)) == Ysize(abs(s), ℓₘₐₓ)
+        @test npixels(SSHT(s, ℓₘₐₓ, T; method="RS")) == (2ℓₘₐₓ + 1)^2
+        @test npixels(SSHT(s, ℓₘₐₓ, T; method="Minimal")) == Ysize(abs(s), ℓₘₐₓ)
+        @test npixels(SSHT(s, ℓₘₐₓ, T; method="Matrix")) == Ysize(abs(s), ℓₘₐₓ)
     end
 
     # Defaults: method "RS", T Float64
@@ -68,13 +70,29 @@
     @test SSHT(1, 4; method="Minimal") isa SSHTMinimal{Float64}
     @test SSHT(1, 4; method="Matrix") isa SSHTMatrix{Float64}
 
-    # The `inplace` option is part of the type of the in-place-capable methods (default true)
+    # The element type is the third positional argument, of every constructor; there is no
+    # keyword for it
+    for (method, Type) in types
+        @test SSHT(1, 4, Float32; method) isa Type{Float32}
+        @test_throws MethodError SSHT(1, 4; method, T=Float32)
+        @test_throws MethodError Type(1, 4; T=Float32)
+        # ... and it must be a floating-point type, which it computes in
+        @test_throws ArgumentError SSHT(1, 4, Int; method)
+        @test_throws "T=$Int is not one" Type(1, 4, Int)
+    end
+
+    # The `inplace` option is part of the type of the in-place-capable methods (default
+    # true), and so must be a `Bool`
     @test SSHT(1, 4; method="Minimal") isa SSHTMinimal{Float64, true}
     @test SSHT(1, 4; method="Minimal", inplace=false) isa SSHTMinimal{Float64, false}
     @test SSHT(1, 4; method="Matrix") isa SSHTMatrix{Float64, true}
     @test SSHT(1, 4; method="Matrix", inplace=false) isa SSHTMatrix{Float64, false}
-    @test SSHTMinimal(1, 4; T=Float32, inplace=false) isa SSHTMinimal{Float32, false}
-    @test SSHTMatrix(1, 4; T=Float32, inplace=false) isa SSHTMatrix{Float32, false}
+    @test SSHTMinimal(1, 4, Float32; inplace=false) isa SSHTMinimal{Float32, false}
+    @test SSHTMatrix(1, 4, Float32; inplace=false) isa SSHTMatrix{Float32, false}
+    for Type in (SSHTMinimal, SSHTMatrix)
+        @test_throws ArgumentError Type(0, 2; inplace=1)
+        @test_throws "inplace=1 must be `true` or `false`" Type(0, 2; inplace=1)
+    end
 
     # "Direct" is a deprecated alias of "Matrix"
     @test_deprecated r"renamed \"Matrix\"" SSHT(0, 3; method="Direct")
@@ -86,42 +104,69 @@
         @test rotors(𝒯) == rotors(SSHT(0, 3; method="Matrix"))
     end
 
-    # A nonsense method is an error naming the offending string; the names are case-sensitive
-    @test_throws ErrorException SSHT(-2, 8; method="NonsenseGarbage")
-    @test_throws "NonsenseGarbage" SSHT(-2, 8; method="NonsenseGarbage")
-    @test_throws "Unrecognized" SSHT(-2, 8; method="NonsenseGarbage")
-    @test_throws ErrorException SSHT(-2, 8; method="rs")
-    @test_throws ErrorException SSHT(-2, 8; method="matrix")
-
-    # |s| > ℓₘₐₓ is an error for every method (there are no such modes) — including inside
-    # the default `Rθϕ=leja_rotors(s, ℓₘₐₓ, T)` of the "Matrix" method, which is evaluated
-    # before the constructor body runs its own check.
-    for method in ("RS", "Minimal", "Matrix"), (s, ℓₘₐₓ) in ((3, 2), (-3, 2), (1, 0))
-        @test_throws "exceeds ℓₘₐₓ" SSHT(s, ℓₘₐₓ; method)
+    # The method may be a `Symbol` as well as a string
+    for (method, Type) in types
+        @test SSHT(1, 4; method=Symbol(method)) isa Type{Float64}
     end
-    # The Matrix check itself is reached when the rotors are supplied explicitly
+    # A nonsense method is an error naming the offending value as it was written; the names
+    # are case-sensitive
+    @test_throws ArgumentError SSHT(-2, 8; method="NonsenseGarbage")
+    @test_throws "Unrecognized s-SHT method \"NonsenseGarbage\"" SSHT(-2, 8; method="NonsenseGarbage")
+    @test_throws "Unrecognized s-SHT method :rs;" SSHT(-2, 8; method=:rs)
+    @test_throws ArgumentError SSHT(-2, 8; method="rs")
+    @test_throws ArgumentError SSHT(-2, 8; method="matrix")
+
+    # |s| > ℓₘₐₓ is an error for every method (there are no such modes), including every s
+    # when ℓₘₐₓ is negative, and it is reached before the default `Rθϕ=leja_rotors(s, ℓₘₐₓ,
+    # T)` of the "Matrix" method is computed.
+    for method in ("RS", "Minimal", "Matrix"), (s, ℓₘₐₓ) in ((3, 2), (-3, 2), (1, 0), (0, -1))
+        @test_throws ArgumentError SSHT(s, ℓₘₐₓ; method)
+        @test_throws "|s|=$(abs(s)) exceeds ℓₘₐₓ=$ℓₘₐₓ" SSHT(s, ℓₘₐₓ; method)
+    end
     @test_throws "exceeds ℓₘₐₓ" SSHTMatrix(3, 2; Rθϕ=golden_ratio_spiral_rotors(0, 3))
     @test_throws "exceeds ℓₘₐₓ" SSHTMinimal(3, 2; θ=Float64[])
     @test_throws "exceeds ℓₘₐₓ" SSHTRS(3, 2)
 
-    # "Matrix" warns when the dense matrix gets large (Ysize² > 65⁴, i.e. ℓₘₐₓ ≥ 65 for s = 0)
-    @test_logs (:warn, r"\"Matrix\" method for s-SHT is only") match_mode=:any SSHTMatrix(0, 65)
+    # "Matrix" warns when the dense matrix gets large (Ysize² > 65⁴, i.e. ℓₘₐₓ ≥ 65 for s =
+    # 0).  The warning comes before the count of the points is checked, so a single point
+    # shows it without the cost of building the transform.
+    @test_logs (:warn, r"\"Matrix\" method for s-SHT is only") match_mode=:any (
+        @test_throws "underdetermined" SSHTMatrix(0, 65; Rθϕ=[Rotor(1.0, 0.0, 0.0, 0.0)])
+    )
     # ... and is quiet otherwise, as are the other methods
     @test_logs SSHTMatrix(0, 8)
     @test_logs SSHT(0, 8; method="RS")
     @test_logs SSHT(0, 8; method="Minimal")
+    # Too few points are refused, and so is an LU decomposition of more points than modes,
+    # which could not solve the least-squares problem
+    @test_throws DimensionMismatch SSHTMatrix(0, 2; Rθϕ=golden_ratio_spiral_rotors(0, 1))
+    @test_throws ArgumentError SSHTMatrix(0, 2; Rθϕ=golden_ratio_spiral_rotors(0, 3), decomposition=lu, inplace=false)
+    @test_throws "LU decomposition cannot solve the least-squares problem" SSHTMatrix(
+        0, 2; Rθϕ=golden_ratio_spiral_rotors(0, 3), decomposition=lu, inplace=false
+    )
 
-    # "Minimal" warns when its sample points are too badly conditioned for half the digits of
-    # T to survive a round trip, which happens at large ℓₘₐₓ — sooner for s ≠ 0 — and is quiet
-    # below.  (With the rings of `sorted_rings` rather than `minimal_rings`, s = 2 warned
-    # already at ℓₘₐₓ = 10, and was garbage by ℓₘₐₓ = 14.)
+    # "Minimal" and "Matrix" warn when their sample points are too badly conditioned for
+    # half the digits of T to survive a round trip, which for "Minimal" happens at large
+    # ℓₘₐₓ — sooner for s ≠ 0 — and is quiet below.  (With the rings of `sorted_rings`
+    # rather than `minimal_rings`, s = 2 warned already at ℓₘₐₓ = 10, and was garbage by
+    # ℓₘₐₓ = 14.  At s = 0, measured: 1.3e-8 at ℓₘₐₓ = 64, 1.7e-8 at 66, and 1.6e-6 at 80.)
     @test_logs (:warn, r"\"Minimal\" s-SHT with s=2, ℓₘₐₓ=32 and T=Float64 is inaccurate") SSHT(2, 32; method="Minimal")
-    @test_logs (:warn, r"is inaccurate") SSHT(0, 48; method="Minimal", inplace=false)
-    @test_logs (:warn, r"T=Float32 is inaccurate") SSHT(2, 24; method="Minimal", T=Float32)
+    @test_logs (:warn, r"is inaccurate") SSHT(0, 80; method="Minimal", inplace=false)
+    @test_logs SSHT(0, 64; method="Minimal", inplace=false)
+    @test_logs (:warn, r"T=Float32 is inaccurate") SSHT(2, 24, Float32; method="Minimal")
     @test_logs SSHT(2, 16; method="Minimal")
     @test_logs SSHT(-2, 24; method="Minimal")
     @test_logs SSHT(0, 32; method="Minimal")
-    @test_logs SSHT(2, 16; method="Minimal", T=Float32)
+    @test_logs SSHT(2, 16, Float32; method="Minimal")
+    # For "Matrix" the points are the caller's to choose, and the golden-ratio spiral, which
+    # spreads its points evenly, is badly conditioned by ℓₘₐₓ = 48 (a round trip measured
+    # 3.2e-5), while the default Leja points are not (5.6e-13; and 1.4e-4 in Float32 at ℓₘₐₓ
+    # = 32, against √eps(Float32) = 3.5e-4)
+    @test_logs (:warn, r"\"Matrix\" s-SHT with s=0, ℓₘₐₓ=48 and T=Float64 is inaccurate") SSHTMatrix(
+        0, 48; Rθϕ=golden_ratio_spiral_rotors(0, 48), inplace=false
+    )
+    @test_logs SSHTMatrix(0, 48; inplace=false)
+    @test_logs SSHTMatrix(0, 32, Float32; inplace=false)
 end
 
 
@@ -141,7 +186,7 @@ end
     for T in (Float64, Double64, Float32), ℓₘₐₓ in (3, 4, 5, 8, 13), s in -2:2
         # Minimal: the rings of `minimal_rings`, in its order, each of Nϕ equally spaced points
         # starting at ϕ = 0
-        𝒯 = SSHT(s, ℓₘₐₓ; method="Minimal", T)
+        𝒯 = SSHT(s, ℓₘₐₓ, T; method="Minimal")
         p = pixels(𝒯)
         @test eltype(p) === SVector{2, T}
         @test eltype(rotors(𝒯)) === Rotor{T}
@@ -156,9 +201,9 @@ end
 
         # ... and those rings are what `minimal_rings` documents: the interior points of an
         # equally spaced grid on [0, π] (so never a pole); every m has as many rings whose
-        # windows include it as there are modes with that m; a ring centered on the side of -s
-        # lies in the northern hemisphere and one on the side of +s in the southern.  For s = 0
-        # they are the rings of `sorted_rings` and `sorted_ring_pixels`.
+        # windows include it as there are modes with that m; a ring centered on the side of
+        # -s lies in the northern hemisphere and one on the side of +s in the southern.  For
+        # s = 0 they are the rings of `sorted_rings` and `sorted_ring_pixels`.
         @test sort(rings.θ) == collect(LinRange{T}(0, T(π), ℓₘₐₓ - abs(s) + 3))[begin+1:end-1]
         for m in -ℓₘₐₓ:ℓₘₐₓ
             covering = count(abs(m - c) ≤ N ÷ 2 for (N, c) in zip(rings.Nϕ, rings.centers))
@@ -174,9 +219,9 @@ end
         end
 
         # `sorted_rings` itself: the same interior grid, ordered so that each successive
-        # ring — which has one more pair of points than the last — lies at least as close
-        # to the equator as its predecessor.  Measured: the ordering is violated by at most
-        # 1 eps(T), among rings that are exactly equally far from the equator and whose order
+        # ring — which has one more pair of points than the last — lies at least as close to
+        # the equator as its predecessor.  Measured: the ordering is violated by at most 1
+        # eps(T), among rings that are exactly equally far from the equator and whose order
         # is therefore arbitrary.
         θs = sorted_rings(s, ℓₘₐₓ, T)
         @test sort(θs) == collect(LinRange{T}(0, T(π), ℓₘₐₓ - abs(s) + 3))[begin+1:end-1]
@@ -186,7 +231,7 @@ end
         end
 
         # RS: ring-major, ϕₖ = 2πk/Nϕ fastest, on the Fejér-1 rings by default
-        𝒯 = SSHT(s, ℓₘₐₓ; method="RS", T)
+        𝒯 = SSHT(s, ℓₘₐₓ, T; method="RS")
         p = pixels(𝒯)
         @test eltype(p) === SVector{2, T}
         @test eltype(rotors(𝒯)) === Rotor{T}
@@ -203,26 +248,34 @@ end
 
         # Matrix: the Leja points by default, or exactly the rotors given
         R = leja_rotors(s, ℓₘₐₓ, T)
-        𝒯 = SSHT(s, ℓₘₐₓ; method="Matrix", T)
+        𝒯 = SSHT(s, ℓₘₐₓ, T; method="Matrix")
         @test rotors(𝒯) == R
         @test eltype(rotors(𝒯)) === Rotor{T}
         @test pixels(𝒯) == to_spherical_coordinates.(R)
         Rshuffled = R[randperm(rng, length(R))]
-        𝒯 = SSHT(s, ℓₘₐₓ; method="Matrix", T, Rθϕ=Rshuffled)
+        𝒯 = SSHT(s, ℓₘₐₓ, T; method="Matrix", Rθϕ=Rshuffled)
         @test rotors(𝒯) == Rshuffled
         @test pixels(𝒯) == to_spherical_coordinates.(Rshuffled)
+        # ... and the vector returned is the caller's to modify, as it is for the other
+        # methods, which build theirs anew: the transform's own points are not touched
+        let Rᵥ = rotors(𝒯)
+            Rᵥ[1] = Rotor{T}(1, 0, 0, 0)
+            @test rotors(𝒯) == Rshuffled
+            @test pixels(𝒯) == to_spherical_coordinates.(Rshuffled)
+        end
 
         # ... and the golden-ratio spiral, the previous default, is the one its docstring
-        # describes: N = (ℓₘₐₓ+1)² - s² points, successive azimuths separated by exactly
-        # Δϕ = 2π(2-φ), and cos θ at the midpoints of N equal subintervals of [-1, 1] —
-        # "uniformly distributed in cos θ", with no point on either pole.  Measured: ϕ is
-        # reproduced exactly (0 eps(T)) and cos θ to within 2 eps(T), for every (T, ℓₘₐₓ, s)
-        # here.
+        # describes: N = (ℓₘₐₓ+1)² - s² points, successive azimuths separated by Δϕ =
+        # 2π(2-φ) and reduced to [0, 2π), and cos θ at the midpoints of N equal subintervals
+        # of [-1, 1] — "uniformly distributed in cos θ", with no point on either pole.
+        # Measured against a BigFloat reference, for every (T, ℓₘₐₓ, s) here: ϕ to within 5
+        # eps(T) (Double64; half an ulp in the others), and cos θ to within 2 eps(T).
         gp = golden_ratio_spiral_pixels(s, ℓₘₐₓ, T)
         @test golden_ratio_spiral_rotors(s, ℓₘₐₓ, T) == from_spherical_coordinates.(gp)
-        let N = (ℓₘₐₓ + 1)^2 - s^2, Δϕ = 2T(π) * (2 - T(MathConstants.φ))
+        let N = (ℓₘₐₓ + 1)^2 - s^2, ϕ(i) = 2big(π) * mod(i * (2 - big(MathConstants.φ)), 1)
             @test length(gp) == N
-            @test maximum(abs, [gp[i+1][2] - i * Δϕ for i in 0:N-1]) ≤ 4eps(T) * N
+            @test all(0 ≤ gp[i][2] < 2T(π) for i in 1:N)
+            @test maximum(i -> abs(gp[i+1][2] - ϕ(i)), 0:N-1) ≤ 8eps(T)
             @test maximum(abs, [cos(gp[i+1][1]) - (1 - T(2i + 1) / N) for i in 0:N-1]) ≤ 4eps(T)
             @test all(0 < θϕ[1] < T(π) for θϕ in gp)
         end
@@ -259,19 +312,21 @@ end
         end
 
         # The spiral is what its docstring describes, with N = Ysize(|s|, ℓₘₐₓ) points:
-        # successive azimuths separated by exactly Δϕ = 2π(2-φ), and cos θ at the midpoints
-        # of N equal subintervals of [-1, 1], with no point on either pole.  Measured: ϕ is
-        # reproduced exactly and cos θ to within 1.5 eps(T), over every (T, s, ℓₘₐₓ) here.
+        # successive azimuths separated by Δϕ = 2π(2-φ) and reduced to [0, 2π), compared with
+        # a BigFloat reference as in the integer item above, and cos θ at the midpoints of N
+        # equal subintervals of [-1, 1], with no point on either pole.  Measured: cos θ to
+        # within 1.5 eps(T), over every (T, s, ℓₘₐₓ) here.
         gp = golden_ratio_spiral_pixels(s, ℓₘₐₓ, T)
-        let Δϕ = 2T(π) * (2 - T(MathConstants.φ))
-            @test maximum(abs, [gp[i+1][2] - i * Δϕ for i in 0:N-1]) ≤ 4eps(T) * N
+        let ϕ(i) = 2big(π) * mod(i * (2 - big(MathConstants.φ)), 1)
+            @test all(0 ≤ gp[i][2] < 2T(π) for i in 1:N)
+            @test maximum(i -> abs(gp[i+1][2] - ϕ(i)), 0:N-1) ≤ 8eps(T)
             @test maximum(abs, [cos(gp[i+1][1]) - (1 - T(2i + 1) / N) for i in 0:N-1]) ≤ 4eps(T)
             @test all(0 < θϕ[1] < T(π) for θϕ in gp)
         end
     end
 
-    # A spin weight larger than ℓₘₐₓ is refused before any pixel is placed, by both
-    # families and with one message.
+    # A spin weight larger than ℓₘₐₓ is refused before any pixel is placed, by both families
+    # and with one message.
     @test_throws "exceeds ℓₘₐₓ" golden_ratio_spiral_pixels(3//2, 1//2)
     @test_throws "exceeds ℓₘₐₓ" golden_ratio_spiral_rotors(-5//2, 3//2, Float32)
     @test_throws "exceeds ℓₘₐₓ" sorted_ring_pixels(3//2, 1//2)
@@ -291,21 +346,23 @@ end
         @test eltype(θs) === T
         @test all(0 < θⱼ < T(π) for θⱼ in θs)
         # The rings are the interior points of an equally spaced grid on [0, π], ordered so
-        # that each successive ring lies at least as close to the equator as its predecessor.
-        # Measured: the set matches the grid exactly, and the ordering is violated by at most
-        # 1.5 eps(T), among rings that are equally far from the equator up to rounding and
-        # whose order is settled by the ulp shift, s rounded away from zero.
+        # that each successive ring lies at least as close to the equator as its
+        # predecessor.  Measured: the set matches the grid exactly, and the ordering is
+        # violated by at most 1.5 eps(T), among rings that are equally far from the equator
+        # up to rounding and whose order is settled by the ulp shift, s rounded away from
+        # zero.
         @test sort(θs) == collect(LinRange{T}(0, T(π), n + 2))[begin+1:end-1]
         let d = abs.(θs .- T(π) / 2)
             @test all(d[j+1] ≤ d[j] + 4eps(T) for j in 1:length(d)-1)
         end
-        # The order for -s mirrors that for s, ring by ring, as it does for integer s: the
-        # shift keeps the sign of s, where rounding up would send -1/2 to 0 and so give the
-        # order of s = 0.  A shift of one ulp — s = ±1/2, like s = ±1 in the integer case —
-        # can be matched by the rounding of the grid, and measured in Double64 it is, at
-        # ℓₘₐₓ = 11/2 and 15/2 (and at 6 and 8 for s = 1), so there the side is not asserted.
-        if s > 0 && !(T === Double64 && s == 1//2)
-            @test sign.(sorted_rings(-s, ℓₘₐₓ, T) .- T(π) / 2) == -sign.(θs .- T(π) / 2)
+        # The order for -s mirrors that for s, ring by ring, as it does for integer s, in
+        # every T: the side of each ring is decided by the position of its slot in the grid,
+        # and not by rounding.  (The equator itself is a slot when the number of rings is
+        # odd, and holds the largest ring for either sign.)
+        if s > 0
+            mirrored = sorted_rings(-s, ℓₘₐₓ, T)
+            @test [θ == T(π) / 2 ? 0 : sign(θ - T(π) / 2) for θ in mirrored] ==
+                [θ == T(π) / 2 ? 0 : -sign(θ - T(π) / 2) for θ in θs]
         end
     end
     @test sorted_rings(-1//2, 5//2) == Float64(π) .- sorted_rings(1//2, 5//2)
@@ -375,100 +432,107 @@ end
 
     # Mixing the two kinds of index is refused with a message naming both spellings, for
     # every one of the five functions and in either order.
+    mixed = "must all be integers of type `Int`, like 3, or all be half-odd-integers"
     for f in pixelizations
-        @test_throws "all be integers, like 3, or all be half-odd-integers, like 7//2" f(1//2, 3)
-        @test_throws "all be integers, like 3, or all be half-odd-integers, like 7//2" f(0, 7//2)
-        @test_throws "all be integers, like 3, or all be half-odd-integers, like 7//2" f(HalfOddInteger(1//2), 3, Float32)
-        @test_throws "all be integers, like 3, or all be half-odd-integers, like 7//2" f(2, HalfOddInteger(7//2), Float32)
-        # A `Rational` with any other denominator is not an index at all.
-        @test_throws "must have denominator 2" f(1//3, 7//2)
-        @test_throws "must have denominator 2" f(2//1, 6//1)
+        @test_throws ArgumentError f(1//2, 3)
+        @test_throws mixed f(1//2, 3)
+        @test_throws "mixes integers (s) with half-odd-integers (ℓₘₐₓ)" f(0, 7//2)
+        @test_throws mixed f(HalfOddInteger(1//2), 3, Float32)
+        @test_throws mixed f(2, HalfOddInteger(7//2), Float32)
+        # A `Rational` with any other denominator is not an index at all, and one with
+        # denominator 1 is to be written as an integer.
+        @test_throws ArgumentError f(1//3, 7//2)
+        @test_throws "1//3 is neither an integer nor a half-odd-integer" f(1//3, 7//2)
+        @test_throws "2//1 is a whole number; write it as the integer 2" f(2//1, 6//1)
     end
 end
 
-@testitem "SSHT pixelizations: half-integer support leaves the integer path unchanged" begin
+@testitem "SSHT pixelizations: pinned integer values and refused integer types" begin
     import SphericalFunctions: sorted_rings, sorted_ring_pixels, sorted_ring_rotors
     import SphericalFunctions: golden_ratio_spiral_pixels, golden_ratio_spiral_rotors
     using StaticArrays: SVector
 
-    # These literals were recorded from the functions as they stood before half-odd indices
-    # were admitted, in a fresh session, and the comparisons are exact.
+    # These literals pin the points, so that a change of them has to be deliberate; for s =
+    # 0, of each pair of mirror-image slots the larger ring is in the north.
     @test sorted_rings(2, 6) == [
         2.6179938779914944, 0.5235987755982988, 2.0943951023931953, 1.0471975511965976,
         1.5707963267948966
     ]
     @test sorted_rings(-1, 3) == [0.7853981633974483, 2.356194490192345, 1.5707963267948966]
-    @test sorted_rings(0, 3, Float32) == Float32[0.62831855, 2.5132742, 1.2566371, 1.8849556]
+    @test sorted_rings(0, 3, Float32) == Float32[2.5132742, 0.62831855, 1.8849556, 1.2566371]
     @test eltype(sorted_rings(2, 6)) === Float64
 
     g = golden_ratio_spiral_pixels(2, 6)
     @test length(g) == 45
-    @test g[1] == SVector(0.21121088035917845, 0.0)
-    @test g[23] == SVector(1.5707963267948966, 52.799191054030366)
-    @test g[end] == SVector(2.9303817732306148, 105.59838210806073)
+    @test g[1] == SVector(0.2112108803591783, 0.0)
+    @test g[23] == SVector(1.5707963267948966, 2.5337085965936814)
+    @test g[end] == SVector(2.9303817732306148, 5.067417193187363)
 
-    # ... and every pixel agrees exactly with the former inline formula, N = (ℓₘₐₓ+1)² - s²,
-    # evaluated exactly as the former body evaluated it.
+    # ... and every pixel agrees with the formulas of the docstrings, N = (ℓₘₐₓ+1)² - s²
+    # points with cos θ at the midpoints of N equal subintervals of [-1, 1] and the azimuth
+    # 2π frac(k(2-φ)).  The azimuth is correctly rounded, and so is the colatitude in
+    # `Float32`, which is computed in `Float64`; in `Float64` the colatitude is within one
+    # ulp.
     for T in (Float64, Float32), (s, ℓₘₐₓ) in ((2, 6), (-1, 3), (0, 5), (3, 3))
-        expected = let π = T(π), φ = T(MathConstants.φ)
-            N = (ℓₘₐₓ+1)^2 - s^2
-            Δϕ = 2π * (2 - φ)
-            ϕ = (0:N-1) * Δϕ
-            cosθ = LinRange{T}(1, -1, N+1)[begin:end-1] .- 1/T(N)
-            [SVector(acos(cosθ), ϕ) for (cosθ, ϕ) in zip(cosθ, ϕ)]
-        end
-        @test golden_ratio_spiral_pixels(s, ℓₘₐₓ, T) == expected
-        # ... as do the rings, with the spin weight itself as the count of ulps.
-        expected_rings = let πo2 = prevfloat(T(π)/2, s)
-            sort(
-                collect(LinRange{T}(0, π, 2+ℓₘₐₓ-abs(s)+1))[begin+1:end-1],
-                lt=(x,y)->(abs(x-πo2)<abs(y-πo2)),
-                rev=true
-            )
+        N = (ℓₘₐₓ+1)^2 - s^2
+        θ = [T(acos(1 - big(2k-1)/N)) for k in 1:N]
+        ϕ = [T(2big(π) * mod(k * (2 - big(MathConstants.φ)), 1)) for k in 0:N-1]
+        pixels = golden_ratio_spiral_pixels(s, ℓₘₐₓ, T)
+        @test last.(pixels) == ϕ
+        @test all(abs.(first.(pixels) .- θ) .≤ (T === Float64 ? eps.(θ) : 0))
+        # ... as do the rings: slot i of n, counted from the north pole, is |2i - (n+1)| half
+        # spacings from the equator, and the rings fill the slots from the farthest in, the
+        # larger of each mirror-image pair to the north for s ≥ 0 and to the south for s <
+        # 0.
+        expected_rings = let n = ℓₘₐₓ - abs(s) + 1
+            slots = collect(LinRange{T}(0, π, n + 2))[begin+1:end-1]
+            slots[sort(1:n, by=i -> (-abs(2i - (n + 1)), s ≥ 0 ? -i : i))]
         end
         @test sorted_rings(s, ℓₘₐₓ, T) == expected_rings
     end
 
-    # For |s| > ℓₘₐₓ, where the former bodies threw an obscure `LinRange` error or returned an
-    # empty vector, both families now refuse the call with one clear message.  No input with
+    # For |s| > ℓₘₐₓ, both families refuse the call with one clear message.  No input with
     # |s| ≤ ℓₘₐₓ is affected; ℓₘₐₓ = |s| gives one ring and 2|s|+1 pixels.
     for f in (golden_ratio_spiral_pixels, golden_ratio_spiral_rotors, sorted_rings, sorted_ring_pixels, sorted_ring_rotors)
         @test_throws "|s|=3 exceeds ℓₘₐₓ=2; there are no such modes." f(3, 2)
         @test_throws "|s|=4 exceeds ℓₘₐₓ=2; there are no such modes." f(-4, 2, Float32)
         @test length(f(2, 2)) == (f === sorted_rings ? 1 : 5)
-    end
 
-    # Integer indices of a narrower type are promoted, and give the same result.
-    @test sorted_rings(Int8(2), 6) == sorted_rings(2, 6)
-    @test golden_ratio_spiral_pixels(Int8(2), 6) == g
-    @test sorted_ring_pixels(Int8(-1), Int16(3)) == sorted_ring_pixels(-1, 3)
-    @test sorted_ring_rotors(2, 6) == sorted_ring_rotors(Int8(2), 6)
-    @test golden_ratio_spiral_rotors(2, 6) == golden_ratio_spiral_rotors(Int8(2), 6)
+        # Integer indices of another type than `Int` are refused, with the reason
+        @test_throws ArgumentError f(Int8(2), 6)
+        @test_throws "`Int8` is narrower than `Int`" f(Int8(2), 6)
+        @test_throws "`Int16` is narrower than `Int`" f(Int8(-1), Int16(3))
+        @test_throws "is unsigned" f(0, UInt(3))
+    end
 end
 
 @testitem "SSHT synthesis" setup=[Utilities] begin
     import SphericalFunctions: SSHT, pixels, rotors, Ysize, Yindex, sYlm_matrix, ModeWeights
     import SphericalFunctions: npixels  # unexported
+    import .Utilities: sYlm_closed_form, sYlm_closed_form_pixels
     using DoubleFloats: Double64
     using LinearAlgebra: norm
     using StaticArrays: SVector
     using Random
 
-    # `sYlm_pixels` — the `Utilities` closed form with the pixel-independent factorials
-    # hoisted out of the loop, about 40 times faster — really is that closed form.  This is
-    # the one place the shared helper is checked; the other items that use it say so.  The
-    # two are compared over the whole ℓ range the file uses (not just the low ℓ where
-    # cancellation in the alternating sum is mild), at four hand-picked points *and* on a
-    # real pixelization, since they accumulate that sum in different precisions (BigFloat
-    # in `sYlm`, `T` in `sYlm_pixels`).  Measured: ≤ 1.05 eps(T) at the four points and
-    # ≤ 8.3 eps(T) on the pixelization, so 100 eps(T) leaves a factor of ≳ 12.
+    # `sYlm_closed_form_pixels` — the `Utilities` closed form with the pixel-independent
+    # factorials hoisted out of the loop, about 40 times faster — really is that closed
+    # form.  This is the one place the shared helper is checked; the other items that use it
+    # say so.  The two are compared over the whole ℓ range the file uses (not just the low ℓ
+    # where cancellation in the alternating sum is mild), at four hand-picked points *and*
+    # on a real pixelization, since they accumulate that sum in different precisions
+    # (BigFloat in `sYlm_closed_form`, `T` in `sYlm_closed_form_pixels`).  Measured: ≤ 1.05
+    # eps(T) at the four points and ≤ 8.3 eps(T) on the pixelization, so 100 eps(T) leaves a
+    # factor of ≳ 12.
     for T in (Float64, Double64, Float32)
         q = [SVector{2, T}(θ, ϕ) for (θ, ϕ) in ((0.3, 1.1), (2.7, 5.2), (0.0, 0.0), (3.0, 2.0))]
         for s in -2:2
-            qs = vcat(q, pixels(SSHT(s, 6; method="RS", T)))
+            qs = vcat(q, pixels(SSHT(s, 6, T; method="RS")))
             for ℓ in abs(s):6, m in -ℓ:ℓ
                 @test maximum(
-                    abs, sYlm_pixels(s, ℓ, m, qs) .- [sYlm(s, ℓ, m, θϕ[1], θϕ[2]) for θϕ in qs]
+                    abs,
+                    sYlm_closed_form_pixels(s, ℓ, m, qs)
+                    .- [sYlm_closed_form(s, ℓ, m, θϕ[1], θϕ[2]) for θϕ in qs]
                 ) ≤ 100eps(T)
             end
         end
@@ -484,11 +548,13 @@ end
             # and growing roughly linearly with ℓₘₐₓ — so this leaves a factor of ≳ 11.
             ϵ = 50ℓₘₐₓ * eps(T)
             for s in -2:2
-                𝒯 = SSHT(s, ℓₘₐₓ; method, T, kw...)
+                𝒯 = SSHT(s, ℓₘₐₓ, T; method, kw...)
                 n = Ysize(abs(s), ℓₘₐₓ)
                 p = pixels(𝒯)
                 # Column i of `Y` is the closed-form ₛYₗₘ of mode i sampled on the pixels
-                Y = reduce(hcat, [sYlm_pixels(s, ℓ, m, p) for ℓ in abs(s):ℓₘₐₓ for m in -ℓ:ℓ])
+                Y = reduce(
+                    hcat, [sYlm_closed_form_pixels(s, ℓ, m, p) for ℓ in abs(s):ℓₘₐₓ for m in -ℓ:ℓ]
+                )
 
                 # Each single mode synthesizes to the closed-form harmonic on the pixels
                 for ℓ in abs(s):ℓₘₐₓ, m in -ℓ:ℓ
@@ -530,21 +596,22 @@ end
     import SphericalFunctions: SSHT, SSHTMatrix, pixels, rotors, Ysize, Yindex, ModeWeights, spin
     import SphericalFunctions: salm2map, map2salm_plan
     import SphericalFunctions: nmodes, npixels  # unexported
+    import .Utilities: sYlm_closed_form_pixels
     using DoubleFloats: Double64
     using LinearAlgebra: mul!, ldiv!
     using StaticArrays: SVector
     using Random
 
-    # `sYlm_pixels` — the closed-form ₛYₗₘ of the `Utilities` snippet on a list of pixels,
-    # with the pixel-independent factorials hoisted out of the loop — comes from that
-    # snippet; see "SSHT synthesis", where it is checked against `sYlm` itself.
+    # `sYlm_closed_form_pixels` is the closed-form ₛYₗₘ of the `Utilities` module on a list
+    # of pixels, with the pixel-independent factorials hoisted out of the loop; see "SSHT
+    # synthesis", where it is checked against `sYlm_closed_form` itself.
 
     # Analysis tolerance.  Measured over every T, s ∈ -2:2 and single mode, in units of
-    # eps(T): "RS" ≤ 8, "Matrix" ≤ 18, "Minimal" ≤ 50, and round trips of random weights ≤ 37,
-    # all growing only slowly with ℓₘₐₓ at these sizes, so 100ℓₘₐₓ eps(T) leaves a factor of
-    # ≳ 6.  (With the rings of `sorted_rings` rather than `minimal_rings`, "Minimal" was a
-    # different story: the error grew by a factor of about 20 per unit ℓₘₐₓ, to 1.6e5 eps(T)
-    # at ℓₘₐₓ = 6, and Float32 could not be tested beyond ℓₘₐₓ = 5.)
+    # eps(T): "RS" ≤ 8, "Matrix" ≤ 18, "Minimal" ≤ 50, and round trips of random weights ≤
+    # 37, all growing only slowly with ℓₘₐₓ at these sizes, so 100ℓₘₐₓ eps(T) leaves a
+    # factor of ≳ 6.  (On the rings of `sorted_rings` rather than `minimal_rings`, "Minimal"
+    # would be a different story: the error would grow by a factor of about 20 per unit
+    # ℓₘₐₓ, to 1.6e5 eps(T) at ℓₘₐₓ = 6, and Float32 could not be tested beyond ℓₘₐₓ = 5.)
     tolerance(method, ℓₘₐₓ, ::Type{T}) where {T} = 100ℓₘₐₓ * eps(T)
 
     rng = Random.Xoshiro(2718)
@@ -554,14 +621,14 @@ end
         for ℓₘₐₓ in 3:6
             ϵ = tolerance(method, ℓₘₐₓ, T)
             for s in -2:2
-                𝒯 = SSHT(s, ℓₘₐₓ; method, T, kw...)
+                𝒯 = SSHT(s, ℓₘₐₓ, T; method, kw...)
                 n = nmodes(𝒯)
                 p = pixels(𝒯)
 
                 # Single modes evaluated from the closed form come back as unit vectors, as
                 # ModeWeights
                 for ℓ in abs(s):ℓₘₐₓ, m in -ℓ:ℓ
-                    f = sYlm_pixels(s, ℓ, m, p)
+                    f = sYlm_closed_form_pixels(s, ℓ, m, p)
                     f̃ = 𝒯 \ f
                     @test f̃ isa ModeWeights{Complex{T}}
                     @test spin(f̃) == s
@@ -611,8 +678,8 @@ end
         end
     end
 
-    # The three methods are genuinely different algorithms — "RS" takes an FFT along each
-    # ring and applies a quadrature rule across rings, "Minimal" solves a sequence of small
+    # The three methods are very different algorithms — "RS" takes an FFT along each ring
+    # and applies a quadrature rule across rings, "Minimal" solves a sequence of small
     # systems for groups of m values, "Matrix" factors one dense matrix — and they share no
     # code path beyond the harmonics themselves.  Handing the "RS" and "Minimal" sample
     # points to "Matrix" puts all three on a common grid, where they must agree.  (This is a
@@ -623,8 +690,8 @@ end
         f̃ = randn(rng, Complex{T}, n)
         for method in ("RS", "Minimal")
             kw = method == "RS" ? (;) : (; inplace=false)
-            𝒯 = SSHT(s, ℓₘₐₓ; method, T, kw...)
-            𝒯ᴹ = SSHTMatrix(s, ℓₘₐₓ; T, Rθϕ=rotors(𝒯), inplace=false)
+            𝒯 = SSHT(s, ℓₘₐₓ, T; method, kw...)
+            𝒯ᴹ = SSHTMatrix(s, ℓₘₐₓ, T; Rθϕ=rotors(𝒯), inplace=false)
             @test npixels(𝒯ᴹ) == npixels(𝒯)
             # Measured over exactly these cases, in units of eps(T): synthesis ≤ 43, and
             # analysis ≤ 20 against "RS" and ≤ 30 against "Minimal".
@@ -635,28 +702,41 @@ end
         end
     end
 
-    # Inputs of the wrong length, or ModeWeights with the wrong ℓ range, are errors for every
-    # method, in `*`, `\`, `mul!` and `ldiv!`
-    for method in ("RS", "Minimal", "Matrix"), inplace in (true, false)
+    # Inputs of the wrong length are errors for every method, in `*`, `\`, `mul!` and
+    # `ldiv!`, and so are ModeWeights with the wrong labels.  ("RS" has no `inplace`
+    # option.)
+    for method in ("RS", "Minimal", "Matrix"), inplace in (method == "RS" ? (false,) : (true, false))
         s, ℓₘₐₓ = -1, 4
         kw = method == "RS" ? (;) : (; inplace)
         𝒯 = SSHT(s, ℓₘₐₓ; method, kw...)
         n, N = nmodes(𝒯), npixels(𝒯)
-        @test_throws "first dimension of the mode weights" 𝒯 * zeros(ComplexF64, n + 1)
-        @test_throws ErrorException 𝒯 * zeros(ComplexF64, n - 1)
-        @test_throws ErrorException 𝒯 * zeros(ComplexF64, n + 1, 2)
+        @test_throws DimensionMismatch 𝒯 * zeros(ComplexF64, n + 1)
+        @test_throws "first dimension of the mode weights has length $(n + 1)" 𝒯 * zeros(ComplexF64, n + 1)
+        @test_throws DimensionMismatch 𝒯 * zeros(ComplexF64, n - 1)
+        @test_throws DimensionMismatch 𝒯 * zeros(ComplexF64, n + 1, 2)
         if N != n  # for "Minimal" and "Matrix" the two lengths agree, so this is legal
-            @test_throws ErrorException 𝒯 * zeros(ComplexF64, N)
+            @test_throws DimensionMismatch 𝒯 * zeros(ComplexF64, N)
         end
+        @test_throws DimensionMismatch 𝒯 \ zeros(ComplexF64, N + 1)
         @test_throws "first dimension of the function values" 𝒯 \ zeros(ComplexF64, N + 1)
-        @test_throws ErrorException 𝒯 \ zeros(ComplexF64, N - 1)
-        @test_throws ErrorException 𝒯 \ zeros(ComplexF64, N - 1, 2)
-        # ModeWeights with ℓₘᵢₙ = 0 (length Ysize(0, ℓₘₐₓ)) or the wrong ℓₘₐₓ
-        @test_throws "ModeWeights have ℓ ∈ 0:4" 𝒯 * ModeWeights(zeros(ComplexF64, Ysize(0, ℓₘₐₓ)), s; ℓₘᵢₙ=0)
-        @test_throws "ModeWeights have ℓ ∈ 1:5" 𝒯 * ModeWeights(zeros(ComplexF64, Ysize(1, ℓₘₐₓ + 1)), s)
-        @test_throws ErrorException 𝒯 * ModeWeights(zeros(ComplexF64, Ysize(1, ℓₘₐₓ - 1)), s)
-        @test_throws ErrorException mul!(zeros(ComplexF64, N + 1), 𝒯, zeros(ComplexF64, n))
-        @test_throws ErrorException mul!(zeros(ComplexF64, N), 𝒯, zeros(ComplexF64, n + 1))
+        @test_throws DimensionMismatch 𝒯 \ zeros(ComplexF64, N - 1)
+        @test_throws DimensionMismatch 𝒯 \ zeros(ComplexF64, N - 1, 2)
+        @test_throws DimensionMismatch mul!(zeros(ComplexF64, N + 1), 𝒯, zeros(ComplexF64, n))
+        @test_throws DimensionMismatch mul!(zeros(ComplexF64, N), 𝒯, zeros(ComplexF64, n + 1))
+        # ModeWeights with ℓₘᵢₙ = 0 (length Ysize(0, ℓₘₐₓ)) or another ℓₘₐₓ.  Synthesis
+        # takes any range up to the transform's ℓₘₐₓ (see "SSHT synthesis of mode weights of
+        # another range of ℓ"), but not beyond it; `mul!` and the output of analysis need
+        # the transform's range exactly.  Each refusal names the constructor that re-ranges
+        # them.
+        rerange = "`ModeWeights(w; ℓₘᵢₙ=1, ℓₘₐₓ=4)` copies mode weights"
+        w₀ = ModeWeights(zeros(ComplexF64, Ysize(0, ℓₘₐₓ)), s; ℓₘᵢₙ=0)
+        @test 𝒯 * w₀ == zeros(ComplexF64, N)
+        @test_throws ArgumentError 𝒯 * ModeWeights(zeros(ComplexF64, Ysize(1, ℓₘₐₓ + 1)), s)
+        @test_throws "ModeWeights have ℓ ∈ 1:5, but the transform synthesizes ℓ ≤ 4" 𝒯 * ModeWeights(zeros(ComplexF64, Ysize(1, ℓₘₐₓ + 1)), s)
+        @test_throws rerange 𝒯 * ModeWeights(zeros(ComplexF64, Ysize(1, ℓₘₐₓ + 1)), s)
+        @test_throws ArgumentError mul!(zeros(ComplexF64, N), 𝒯, w₀)
+        @test_throws "ModeWeights have ℓ ∈ 0:4, but the transform requires ℓ ∈ 1:4" mul!(zeros(ComplexF64, N), 𝒯, w₀)
+        @test_throws rerange mul!(zeros(ComplexF64, N), 𝒯, ModeWeights(zeros(ComplexF64, Ysize(1, ℓₘₐₓ - 1)), s))
         # (An output vector *longer* than the modes is accepted, and labelled over its first n
         # entries; a shorter one is not.)
         let out = zeros(ComplexF64, n + 1)
@@ -664,8 +744,9 @@ end
             @test w isa ModeWeights && parent(array_view(w)) === out && length(array_view(w)) == n
         end
         @test_throws "at least" ldiv!(zeros(ComplexF64, n - 1), 𝒯, zeros(ComplexF64, N))
-        @test_throws ErrorException ldiv!(zeros(ComplexF64, n), 𝒯, zeros(ComplexF64, N + 1))
-        @test_throws ErrorException ldiv!(ModeWeights(zeros(ComplexF64, Ysize(0, ℓₘₐₓ)), s; ℓₘᵢₙ=0), 𝒯, zeros(ComplexF64, N))
+        @test_throws DimensionMismatch ldiv!(zeros(ComplexF64, n), 𝒯, zeros(ComplexF64, N + 1))
+        @test_throws ArgumentError ldiv!(w₀, 𝒯, zeros(ComplexF64, N))
+        @test_throws rerange ldiv!(w₀, 𝒯, zeros(ComplexF64, N))
         # ModeWeights of the wrong spin weight but the right length: -s, or 0 with ℓₘᵢₙ = |s|.
         # Both synthesis and the output of `ldiv!` refuse them, rather than treating them as
         # (or filling them with) weights of spin s.
@@ -673,6 +754,7 @@ end
             ModeWeights(ones(ComplexF64, n), -s),
             ModeWeights(ones(ComplexF64, n), 0; ℓₘᵢₙ=abs(s)),
         )
+            @test_throws ArgumentError 𝒯 * w
             @test_throws "ModeWeights have spin weight s=$(spin(w)), but the transform is for s=$s" 𝒯 * w
             @test_throws "ModeWeights have spin weight" mul!(zeros(ComplexF64, N), 𝒯, w)
             @test_throws "ModeWeights have spin weight" ldiv!(w, 𝒯, zeros(ComplexF64, N))
@@ -696,12 +778,14 @@ end
 
     for T in (Float64, Double64), (s, ℓₘₐₓ) in ((-1, 4), (2, 5), (0, 3))
         n = Ysize(abs(s), ℓₘₐₓ)
-        ϵ = 500ℓₘₐₓ^3 * eps(T) * 50
+        # Measured over these cases: round trips ≤ 12 eps(T), and the products of several
+        # columns at once within 4 eps(T) of the single products.  This leaves a factor of ≳ 25.
+        ϵ = 100ℓₘₐₓ * eps(T)
         f̃0 = randn(rng, Complex{T}, n)
 
         for method in ("Minimal", "Matrix")
-            𝒯 = SSHT(s, ℓₘₐₓ; method, T)  # inplace=true is the default
-            𝒯n = SSHT(s, ℓₘₐₓ; method, T, inplace=false)
+            𝒯 = SSHT(s, ℓₘₐₓ, T; method)  # inplace=true is the default
+            𝒯n = SSHT(s, ℓₘₐₓ, T; method, inplace=false)
             InplaceType = method == "Minimal" ? SSHTMinimal : SSHTMatrix
             @test 𝒯 isa InplaceType{T, true}
             @test 𝒯n isa InplaceType{T, false}
@@ -720,8 +804,8 @@ end
             @test f̃ref ≈ f̃0 atol=ϵ rtol=ϵ
 
             # In-place synthesis.  SSHTMinimal overwrites and returns its input.  SSHTMatrix's
-            # `*` is a plain matrix-vector product, so it allocates even for the in-place type
-            # (v2's "Direct" did the same); only its `\` acts in place.
+            # `*` is a plain matrix-vector product, so it allocates even for the in-place type;
+            # only its `\` acts in place.
             f̃ = copy(f̃0)
             f = 𝒯 * f̃
             if method == "Minimal"
@@ -735,8 +819,8 @@ end
 
             # In-place analysis: the input array is overwritten with the mode weights, which
             # come back as a ModeWeights wrapping that same storage — so that they are indexed
-            # by (ℓ, m), as from every other analysis.  (Returned as the bare Vector, as they
-            # once were, `(𝒯 \ f)[ℓ, m]` silently read the linear index instead.)
+            # by (ℓ, m), as from every other analysis.  (Returned as the bare Vector, they
+            # would let `(𝒯 \ f)[ℓ, m]` silently read the linear index instead.)
             g = copy(fref)
             g̃ = 𝒯 \ g
             @test g̃ isa ModeWeights{Complex{T}}
@@ -766,8 +850,9 @@ end
             @test parent(wf) == parent(f̃ref)
 
             # Two-argument `ldiv!(𝒯, x)` (and `mul!(𝒯, x)` for Minimal) act in place on the
-            # non-in-place type as well
-            # — and return the mode weights as a ModeWeights over the argument's storage
+            # non-in-place type as well — the first returning the mode weights as a
+            # ModeWeights over the argument's storage, and the second the function values as
+            # that storage, a plain array, even when it came in a ModeWeights
             g = copy(fref)
             g̃ = ldiv!(𝒯n, g)
             @test g̃ isa ModeWeights{Complex{T}} && parent(g̃) === g && spin(g̃) == s
@@ -776,7 +861,26 @@ end
                 g̃ = copy(f̃0)
                 @test mul!(𝒯n, g̃) === g̃
                 @test g̃ == fref
+                wg = ModeWeights(copy(f̃0), s)
+                @test mul!(𝒯n, wg) === parent(wg)
+                @test parent(wg) == fref
+            else
+                @test_throws MethodError mul!(𝒯n, copy(f̃0))
             end
+
+            # Acting in place needs storage that can hold the complex results: real storage
+            # is refused, naming the alternative, and the transform that is not in place
+            # accepts real data
+            r = real.(fref)
+            @test_throws ArgumentError 𝒯 \ copy(r)
+            @test_throws "use `𝒯 \\ f` with a transform constructed with `inplace=false`" 𝒯 \ copy(r)
+            @test_throws "whose element type is $T" ldiv!(𝒯n, copy(r))
+            @test array_view(𝒯n \ r) ≈ array_view(𝒯n \ complex.(r)) atol=ϵ rtol=ϵ
+            if method == "Minimal"
+                @test_throws "use `𝒯 * f̃` with a transform constructed with `inplace=false`" 𝒯 * real.(f̃0)
+                @test_throws ArgumentError mul!(𝒯n, real.(f̃0))
+            end
+            @test 𝒯n * real.(f̃0) ≈ 𝒯n * complex.(real.(f̃0)) atol=ϵ rtol=ϵ
 
             # Several columns, in place
             F̃ = hcat(f̃0, -f̃0)
@@ -790,11 +894,11 @@ end
         # Three-argument `mul!`/`ldiv!` with explicit outputs work for every type (in place
         # or not) and never touch their inputs
         for method in ("RS", "Minimal", "Matrix")
-            objects = method == "RS" ? (SSHT(s, ℓₘₐₓ; method, T),) :
-                (SSHT(s, ℓₘₐₓ; method, T), SSHT(s, ℓₘₐₓ; method, T, inplace=false))
+            objects = method == "RS" ? (SSHT(s, ℓₘₐₓ, T; method),) :
+                (SSHT(s, ℓₘₐₓ, T; method), SSHT(s, ℓₘₐₓ, T; method, inplace=false))
             for 𝒯 in objects
                 N = npixels(𝒯)
-                fref = SSHT(s, ℓₘₐₓ; method, T, (method == "RS" ? (;) : (; inplace=false))...) * f̃0
+                fref = SSHT(s, ℓₘₐₓ, T; method, (method == "RS" ? (;) : (; inplace=false))...) * f̃0
                 f̃ = copy(f̃0)
                 f = zeros(Complex{T}, N)
                 @test mul!(f, 𝒯, f̃) === f
@@ -847,7 +951,11 @@ end
     # The docstring promises that any dimensions after the first are broadcast over.  Two
     # trailing dimensions exercise the reshaping that a matrix input does not.
     for method in ("RS", "Minimal", "Matrix"), (s, ℓₘₐₓ) in ((1, 4), (-2, 3))
-        ϵ = 500ℓₘₐₓ^3 * eps(Float64)
+        # Measured: round trips ≤ 10 eps, and the columns of a product of several at once
+        # within 4 eps of the single products (a matrix-matrix product need not round like a
+        # matrix-vector product).  The three-argument forms and the in-place types run the
+        # same kernels as `*` and `\` on the same data, so they agree exactly.
+        ϵ = 100ℓₘₐₓ * eps(Float64)
         kw = method == "RS" ? (;) : (; inplace=false)
         𝒯 = SSHT(s, ℓₘₐₓ; method, kw...)
         n, N = nmodes(𝒯), npixels(𝒯)
@@ -856,26 +964,26 @@ end
 
         F = 𝒯 * F̃
         @test size(F) == (N, 3, 2)
-        @test all(F[:, j, k] ≈ columns[j, k] for j in 1:3, k in 1:2)
+        @test all(isapprox(F[:, j, k], columns[j, k]; atol=ϵ, rtol=ϵ) for j in 1:3, k in 1:2)
         F̃′ = 𝒯 \ F
         @test size(F̃′) == (n, 3, 2)
         @test F̃′ ≈ F̃ atol=ϵ rtol=ϵ
 
         G = similar(F)
         @test mul!(G, 𝒯, F̃) === G
-        @test G ≈ F
+        @test G == F
         G̃ = similar(F̃)
         @test ldiv!(G̃, 𝒯, F) === G̃
-        @test G̃ ≈ F̃ atol=ϵ rtol=ϵ
+        @test G̃ == F̃′
 
         if method != "RS"  # the in-place types too
             𝒯i = SSHT(s, ℓₘₐₓ; method)
             H = 𝒯i * copy(F̃)
             @test size(H) == (N, 3, 2)
-            @test H ≈ F
+            @test H == F
             H̃ = 𝒯i \ copy(F)
             @test size(H̃) == (n, 3, 2)
-            @test H̃ ≈ F̃ atol=ϵ rtol=ϵ
+            @test H̃ == F̃′
         end
     end
 end
@@ -886,6 +994,7 @@ end
     import SphericalFunctions: nmodes, npixels  # unexported
     import SphericalFunctions: fejer1_rings, fejer2_rings, clenshaw_curtis_rings
     import SphericalFunctions: fejer1, fejer2, clenshaw_curtis
+    import .Utilities: sYlm_closed_form_pixels
     using DoubleFloats: Double64
     using FFTW: FFTW
     using Logging: NullLogger, with_logger
@@ -893,9 +1002,9 @@ end
     using StaticArrays: SVector
     using Random
 
-    # `sYlm_pixels` — the closed-form ₛYₗₘ of the `Utilities` snippet on a list of pixels,
-    # with the pixel-independent factorials hoisted out of the loop — comes from that
-    # snippet; see "SSHT synthesis", where it is checked against `sYlm` itself.
+    # `sYlm_closed_form_pixels` is the closed-form ₛYₗₘ of the `Utilities` module on a list of
+    # pixels, with the pixel-independent factorials hoisted out of the loop; see "SSHT
+    # synthesis", where it is checked against `sYlm_closed_form` itself.
 
     rng = Random.Xoshiro(577)
 
@@ -918,7 +1027,7 @@ end
             # Nϕ as an Int (2ℓₘₐₓ+1, and 2ℓₘₐₓ+2 for a more FFT-friendly count) or a Vector
             # (uniform, or varying from ring to ring)
             for Nϕ in (N, N + 1, fill(N, Nθ), [N + k for k in 0:Nθ-1])
-                𝒯 = SSHT(s, ℓₘₐₓ; method="RS", T, θ, quadrature_weights=w, Nϕ)
+                𝒯 = SSHT(s, ℓₘₐₓ, T; method="RS", θ, quadrature_weights=w, Nϕ)
                 @test 𝒯 isa SSHTRS{T}
                 Nϕs = Nϕ isa Integer ? fill(Nϕ, Nθ) : Nϕ
                 @test 𝒯.Nϕ == Nϕs
@@ -944,7 +1053,7 @@ end
                         g̃ = zeros(Complex{T}, n)
                         g̃[Yindex(ℓ, m, abs(s))] = one(T)
                         g = 𝒯 * g̃
-                        @test g ≈ sYlm_pixels(s, ℓ, m, p) atol=ϵ rtol=ϵ
+                        @test g ≈ sYlm_closed_form_pixels(s, ℓ, m, p) atol=ϵ rtol=ϵ
                         @test 𝒯 \ g ≈ g̃ atol=ϵ rtol=ϵ
                     end
                 end
@@ -953,18 +1062,28 @@ end
     end
 
     # Rings and weights must be given in T; Float64 ones are refused for T=Float32 rather
-    # than rounded, and integer ones, which convert exactly, are accepted
+    # than rounded, and integer ones, which convert exactly, are accepted for every T, while
+    # rational ones, which do not, are refused
+    @test_throws ArgumentError SSHTRS(
+        1, 5, Float32; θ=fejer1_rings(11), quadrature_weights=fejer1(11, Float32)
+    )
     @test_throws "must be a vector of Float32" SSHTRS(
-        1, 5; T=Float32, θ=fejer1_rings(11), quadrature_weights=fejer1(11, Float32)
+        1, 5, Float32; θ=fejer1_rings(11), quadrature_weights=fejer1(11, Float32)
     )
     @test_throws "`quadrature_weights` must be a vector of Float32" SSHTRS(
-        1, 5; T=Float32, θ=fejer1_rings(11, Float32), quadrature_weights=fejer1(11)
+        1, 5, Float32; θ=fejer1_rings(11, Float32), quadrature_weights=fejer1(11)
     )
-    𝒯 = SSHTRS(1, 5; T=Float32, θ=fejer1_rings(11, Float32), quadrature_weights=fejer1(11, Float32))
+    𝒯 = SSHTRS(1, 5, Float32; θ=fejer1_rings(11, Float32), quadrature_weights=fejer1(11, Float32))
     @test 𝒯 isa SSHTRS{Float32}
     @test eltype(pixels(𝒯)) === SVector{2, Float32}
     @test 𝒯.θ == fejer1_rings(11, Float32)
     @test SSHTRS(0, 0; θ=[1], quadrature_weights=[2]).θ == [1.0]
+    for T in (Float32, Double64, BigFloat)
+        local 𝒯 = SSHTRS(0, 0, T; θ=[1], quadrature_weights=[2])
+        @test 𝒯.θ == [1] && 𝒯.θ isa Vector{T}
+        @test_throws "`θ` must be a vector of $T" SSHTRS(0, 0, T; θ=[1//2], quadrature_weights=[2])
+    end
+    @test_throws "`θ` must be a vector of Float64" SSHTRS(0, 0; θ=[1//2], quadrature_weights=[2])
 
     # A single ring is still a batch of rings, as any vector of rotor data is
     𝒯 = SSHTRS(0, 0)
@@ -976,7 +1095,7 @@ end
     𝒯m = SSHTRS(1, 5; plan_fft_flags=FFTW.MEASURE, plan_fft_timelimit=1.0)
     f̃ = randn(rng, ComplexF64, nmodes(𝒯))
     @test 𝒯m * f̃ ≈ 𝒯 * f̃ rtol=100eps()
-    @test 𝒯m \ (𝒯m * f̃) ≈ f̃ rtol=500 * 5^3 * eps()
+    @test 𝒯m \ (𝒯m * f̃) ≈ f̃ rtol=100eps()  # measured: ≤ 3.5 eps over 20 draws
 
     # Too few points on a ring: a warning at construction, and aliasing of the largest |m|
     s, ℓₘₐₓ = 1, 5
@@ -990,17 +1109,20 @@ end
     f̃ = randn(rng, ComplexF64, nmodes(𝒯))
     f̃[Yindex(ℓₘₐₓ, -ℓₘₐₓ, abs(s))] = 0
     f̃[Yindex(ℓₘₐₓ, ℓₘₐₓ, abs(s))] = 0
-    @test 𝒯 \ (𝒯 * f̃) ≈ f̃ atol=500ℓₘₐₓ^3 * eps() rtol=500ℓₘₐₓ^3 * eps()  # |m| < ℓₘₐₓ is fine
+    # |m| < ℓₘₐₓ is fine (measured: ≤ 9.2 eps over 20 draws)
+    @test 𝒯 \ (𝒯 * f̃) ≈ f̃ atol=500eps() rtol=500eps()
     f̃[Yindex(ℓₘₐₓ, ℓₘₐₓ, abs(s))] = 1
     @test !isapprox(𝒯 \ (𝒯 * f̃), f̃; atol=1e-3)  # m = ±ℓₘₐₓ alias onto each other
 
-    # Inconsistent options are errors
+    # Inconsistent options are errors: lengths that disagree, and rings of no points
+    @test_throws DimensionMismatch SSHTRS(s, ℓₘₐₓ; θ=fejer1_rings(11), quadrature_weights=fejer1(12))
     @test_throws "same length" SSHTRS(s, ℓₘₐₓ; θ=fejer1_rings(11), quadrature_weights=fejer1(12))
     @test_throws "same length" SSHTRS(s, ℓₘₐₓ; θ=fejer1_rings(12), quadrature_weights=fejer1(11))
     @test_throws "Nϕ must be a single number or have the same length" SSHTRS(s, ℓₘₐₓ; Nϕ=fill(11, 10))
-    @test_throws ErrorException SSHTRS(s, ℓₘₐₓ; Nϕ=fill(11, 12))
+    @test_throws DimensionMismatch SSHTRS(s, ℓₘₐₓ; Nϕ=fill(11, 12))
+    @test_throws ArgumentError SSHTRS(s, ℓₘₐₓ; Nϕ=0)
     @test_throws "at least one point" SSHTRS(s, ℓₘₐₓ; Nϕ=0)
-    @test_throws ErrorException SSHTRS(s, ℓₘₐₓ; Nϕ=[11, 11, 11, 11, 11, 0, 11, 11, 11, 11, 11])
+    @test_throws "at least one point" SSHTRS(s, ℓₘₐₓ; Nϕ=[11, 11, 11, 11, 11, 0, 11, 11, 11, 11, 11])
 end
 
 
@@ -1016,29 +1138,40 @@ end
     rng = Random.Xoshiro(8128)
 
     for T in (Float64, Double64), (s, ℓₘₐₓ) in ((-2, 5), (1, 4))
-        ϵ = 500ℓₘₐₓ^3 * eps(T)
+        # Measured over these cases: round trips ≤ 18 eps(T) on the default points and with
+        # QR, and least-squares solutions ≤ 6 eps(T).  This leaves a factor of ≳ 20.  On the
+        # sorted rings, which are badly conditioned for s ≠ 0, a round trip measured up to
+        # 7200 eps(T) (s = -2, ℓₘₐₓ = 5).
+        ϵ = 100ℓₘₐₓ * eps(T)
+        ϵ_rings = 3e4 * eps(T)
         n = Ysize(abs(s), ℓₘₐₓ)
         f̃ = randn(rng, Complex{T}, n)
 
         # Any set of rotors may be used; with exactly n of them the default is LU and in place
         R = sorted_ring_rotors(s, ℓₘₐₓ, T)
-        𝒯 = SSHTMatrix(s, ℓₘₐₓ; T, Rθϕ=R)
+        𝒯 = SSHTMatrix(s, ℓₘₐₓ, T; Rθϕ=R)
         @test 𝒯 isa SSHTMatrix{T, true, <:LinearAlgebra.LU}
         @test rotors(𝒯) == R
         @test npixels(𝒯) == n
         f = 𝒯 * f̃
-        @test 𝒯 \ copy(f) ≈ f̃ atol=ϵ rtol=ϵ
+        @test 𝒯 \ copy(f) ≈ f̃ atol=ϵ_rings rtol=ϵ_rings
 
         # An explicit decomposition, e.g. QR, must also solve the problem
-        𝒯qr = SSHTMatrix(s, ℓₘₐₓ; T, decomposition=qr, inplace=false)
+        𝒯qr = SSHTMatrix(s, ℓₘₐₓ, T; decomposition=qr, inplace=false)
         @test 𝒯qr isa SSHTMatrix{T, false}
         @test !(𝒯qr isa SSHTMatrix{T, false, <:LinearAlgebra.LU})
-        @test 𝒯qr * f̃ == SSHTMatrix(s, ℓₘₐₓ; T, decomposition=lu, inplace=false) * f̃
+        @test 𝒯qr * f̃ == SSHTMatrix(s, ℓₘₐₓ, T; decomposition=lu, inplace=false) * f̃
         @test 𝒯qr \ (𝒯qr * f̃) ≈ f̃ atol=ϵ rtol=ϵ
+        # ... but need only solve it with `\`: a decomposition with no in-place `ldiv!`, such
+        # as the matrix itself, serves a transform that does not act in place, and the
+        # constructor's measurement of the round trip does not need one either
+        𝒯id = SSHTMatrix(s, ℓₘₐₓ, T; decomposition=identity, inplace=false)
+        @test 𝒯id isa SSHTMatrix{T, false, Matrix{Complex{T}}}
+        @test 𝒯id \ (𝒯id * f̃) ≈ f̃ atol=ϵ rtol=ϵ
 
         # More points than modes: a least-squares analysis, QR by default, never in place
         Rmore = [golden_ratio_spiral_rotors(s, ℓₘₐₓ, T); sorted_ring_rotors(0, ℓₘₐₓ + 1, T)]
-        𝒯ls = SSHTMatrix(s, ℓₘₐₓ; T, Rθϕ=Rmore)
+        𝒯ls = SSHTMatrix(s, ℓₘₐₓ, T; Rθϕ=Rmore)
         @test 𝒯ls isa SSHTMatrix{T, false}
         @test !(𝒯ls isa SSHTMatrix{T, false, <:LinearAlgebra.LU})
         @test npixels(𝒯ls) == length(Rmore) > nmodes(𝒯ls) == n
@@ -1069,7 +1202,7 @@ end
         # ... which is the use case of the docstring: sample on the grid appropriate to the
         # *lowest* |s| (the most modes, here s = 0) and reuse those points for this spin
         if s != 0
-            𝒯s = SSHTMatrix(s, ℓₘₐₓ; T, Rθϕ=golden_ratio_spiral_rotors(0, ℓₘₐₓ, T))
+            𝒯s = SSHTMatrix(s, ℓₘₐₓ, T; Rθϕ=golden_ratio_spiral_rotors(0, ℓₘₐₓ, T))
             @test 𝒯s isa SSHTMatrix{T, false}
             @test npixels(𝒯s) == Ysize(0, ℓₘₐₓ) > nmodes(𝒯s) == n
             g̃ = randn(rng, Complex{T}, nmodes(𝒯s))
@@ -1077,8 +1210,10 @@ end
         end
 
         # Fewer points than modes is underdetermined, and in place needs exactly n points
-        @test_throws "underdetermined" SSHTMatrix(s, ℓₘₐₓ; T, Rθϕ=R[1:end-1])
-        @test_throws "exactly as many sample points as modes" SSHTMatrix(s, ℓₘₐₓ; T, Rθϕ=Rmore, inplace=true)
+        @test_throws DimensionMismatch SSHTMatrix(s, ℓₘₐₓ, T; Rθϕ=R[1:end-1])
+        @test_throws "underdetermined" SSHTMatrix(s, ℓₘₐₓ, T; Rθϕ=R[1:end-1])
+        @test_throws ArgumentError SSHTMatrix(s, ℓₘₐₓ, T; Rθϕ=Rmore, inplace=true)
+        @test_throws "exactly as many sample points as modes" SSHTMatrix(s, ℓₘₐₓ, T; Rθϕ=Rmore, inplace=true)
     end
 end
 
@@ -1089,8 +1224,9 @@ end
     using Quaternionic: Rotor, Quaternion, QuatVec
 
     # A `QuatVec` is not the rotor of its direction, and an unnormalized `Quaternion` is not a
-    # rotor at all; both used to be converted, the first into the rotor 𝐢 (whose pixel is the
-    # south pole) and the second into a rotor of the wrong norm
+    # rotor at all.  Converted to rotors, the first would become 𝐢 (whose pixel is the south
+    # pole) and the second a rotor of the wrong norm, so both are refused.
+    @test_throws ArgumentError SSHTMatrix(0, 0; Rθϕ=[QuatVec(0.0, 1.0, 0.0, 0.0)])
     @test_throws "Rotations are taken as" SSHTMatrix(0, 0; Rθϕ=[QuatVec(0.0, 1.0, 0.0, 0.0)])
     @test_throws "Rotations are taken as" SSHTMatrix(0, 0; Rθϕ=[2.0 * Quaternion(1.0, 0, 0, 0)])
     @test_throws "Rotations are taken as" SSHT(0, 0; method="Matrix", Rθϕ=[QuatVec(0.0, 1.0, 0.0, 0.0)])
@@ -1098,21 +1234,27 @@ end
     # Data of another precision is refused rather than rounded or widened, for each method
     # and through the `SSHT` front end; asking for its type works
     R = leja_rotors(0, 2, BigFloat)
+    @test_throws ArgumentError SSHTMatrix(0, 2; Rθϕ=R)
     @test_throws "must be a vector of `Rotor{Float64}`s" SSHTMatrix(0, 2; Rθϕ=R)
     @test_throws "must be a vector of `Rotor{Float64}`s" SSHT(0, 2; method="Matrix", Rθϕ=R)
-    @test_throws "must be a vector of `Rotor{BigFloat}`s" SSHTMatrix(0, 2; T=BigFloat, Rθϕ=leja_rotors(0, 2))
-    @test rotors(SSHTMatrix(0, 2; T=BigFloat, Rθϕ=R)) == R
+    @test_throws "must be a vector of `Rotor{BigFloat}`s" SSHTMatrix(0, 2, BigFloat; Rθϕ=leja_rotors(0, 2))
+    @test rotors(SSHTMatrix(0, 2, BigFloat; Rθϕ=R)) == R
     @test_throws "`θ` must be a vector of Float64" SSHTRS(
         0, 2; θ=fejer1_rings(5, BigFloat), quadrature_weights=fejer1(5)
     )
+    @test_throws ArgumentError SSHTMinimal(1, 3; θ=minimal_rings(1, 3, BigFloat).θ)
     @test_throws "`θ` must be a vector of Float64" SSHTMinimal(1, 3; θ=minimal_rings(1, 3, BigFloat).θ)
     @test_throws "`θ` must be a vector of Float64" SSHT(1, 3; method="Minimal", θ=minimal_rings(1, 3, BigFloat).θ)
-    @test_throws "`θ` must be a vector of BigFloat" SSHTMinimal(1, 3; T=BigFloat, θ=minimal_rings(1, 3).θ)
-    @test SSHTMinimal(1, 3; T=BigFloat, θ=minimal_rings(1, 3, BigFloat).θ).θ == minimal_rings(1, 3, BigFloat).θ
+    @test_throws "`θ` must be a vector of BigFloat" SSHTMinimal(1, 3, BigFloat; θ=minimal_rings(1, 3).θ)
+    @test SSHTMinimal(1, 3, BigFloat; θ=minimal_rings(1, 3, BigFloat).θ).θ == minimal_rings(1, 3, BigFloat).θ
 
     # A vector whose element type does not fix a precision is refused too
     @test_throws "must be a vector of `Rotor{Float64}`s" SSHTMatrix(0, 0; Rθϕ=Rotor[Rotor(1.0, 0, 0, 0)])
     @test_throws "`θ` must be a vector of Float64" SSHTMinimal(0, 0; θ=Real[0.5])
+    # ... while integer colatitudes, which convert exactly, are accepted in every type
+    @test SSHTMinimal(0, 0, BigFloat; θ=[1]).θ == [1]
+    @test length(SSHTMinimal(0, 1, Float32; θ=[1, 2]).θ) == 2
+    @test_throws DimensionMismatch SSHTMinimal(0, 1; θ=[1, 2, 3])
 end
 
 @testitem "SSHT thread safety via separate objects" begin
@@ -1124,13 +1266,13 @@ end
     rng = Random.Xoshiro(8675309)
 
     # Each SSHT holds its own workspace, so one object per task gives results identical to a
-    # serial computation (the algorithms are deterministic: no cross-thread reductions).
+    # serial computation (each transform runs on its caller's thread, in a fixed order).
     for method in ("RS", "Minimal", "Matrix"), T in (Float64, Float32)
         s, ℓₘₐₓ = -2, 8
         kw = method == "RS" ? (;) : (; inplace=false)
 
         # Two objects of the same parameters on two tasks, as in the assignment
-        𝒯s = [SSHT(s, ℓₘₐₓ; method, T, kw...) for _ in 1:2]
+        𝒯s = [SSHT(s, ℓₘₐₓ, T; method, kw...) for _ in 1:2]
         F̃s = [randn(rng, Complex{T}, nmodes(𝒯s[1]), 3) for _ in 1:2]
         serial = map(F̃s) do F̃
             F = 𝒯s[1] * F̃
@@ -1147,7 +1289,7 @@ end
 
         # Eight objects on eight tasks, each transforming many inputs (including in-place
         # `mul!`/`ldiv!` and ModeWeights), to raise the odds of overlapping execution
-        𝒯s = [SSHT(s, ℓₘₐₓ; method, T, kw...) for _ in 1:8]
+        𝒯s = [SSHT(s, ℓₘₐₓ, T; method, kw...) for _ in 1:8]
         inputs = [[randn(rng, Complex{T}, nmodes(𝒯s[1])) for _ in 1:12] for _ in 1:8]
         function work(𝒯, f̃s)
             out = Vector{Vector{Complex{T}}}(undef, 3length(f̃s))
@@ -1168,6 +1310,304 @@ end
     end
 end
 
+@testitem "SSHT copies share their tables and have workspace of their own" begin
+    import SphericalFunctions: SSHT
+    import SphericalFunctions: nmodes  # unexported
+    using Random
+
+    rng = Random.Xoshiro(20260926)
+
+    # `copy` of an "RS" or "Minimal" transform shares what no transform modifies — the rings,
+    # weights, FFT plans, phase factors, tables and decompositions — and allocates new
+    # workspace, so that the copy and the original may be used by two tasks at once.  Its
+    # results are those of the original to the last bit.
+    shared = Dict(
+        "RS" => (:θ, :quadrature_weights, :Nϕ, :iθ, :synthesis_phases, :analysis_phases),
+        "Minimal" => (:θ, :Nϕ, :centers, :θindices, :mode_m, :Λ, :blocks),
+    )
+    workspace = Dict("RS" => (:F, :G), "Minimal" => (:F, :f̃, :rhs))
+    for (method, s, ℓₘₐₓ, kw) in (
+        ("RS", -2, 8, (;)), ("RS", 3//2, 13//2, (;)),
+        ("Minimal", 2, 8, (;)), ("Minimal", 0, 6, (; inplace=false)),
+    )
+        𝒯 = SSHT(s, ℓₘₐₓ; method, kw...)
+        𝒯′ = copy(𝒯)
+        @test typeof(𝒯′) === typeof(𝒯)
+        @test all(getfield(𝒯′, name) === getfield(𝒯, name) for name in shared[method])
+        @test 𝒯′.plans.forward === 𝒯.plans.forward && 𝒯′.plans.backward === 𝒯.plans.backward
+        for name in workspace[method]
+            a, b = getfield(𝒯′, name), getfield(𝒯, name)
+            @test a !== b
+            if eltype(a) <: AbstractArray  # a vector of buffers, each of them new
+                @test all(x !== y for (x, y) in zip(a, b))
+            end
+        end
+        if method == "RS"
+            @test 𝒯′.λ !== 𝒯.λ && 𝒯′.λ.Yˡ !== 𝒯.λ.Yˡ
+        end
+        F̃ = randn(rng, ComplexF64, nmodes(𝒯), 3)
+        F = 𝒯 * copy(F̃)
+        @test 𝒯′ * copy(F̃) == F
+        @test 𝒯′ \ copy(F) == 𝒯 \ copy(F)
+    end
+
+    # "Matrix" holds no workspace, so its copy is the object itself
+    𝒯 = SSHT(1, 4; method="Matrix")
+    @test copy(𝒯) === 𝒯
+end
+
+
+@testitem "SSHT use from several tasks: a copy for each task, and one shared SSHTMatrix" begin
+    import SphericalFunctions: SSHT, SSHTMatrix, golden_ratio_spiral_rotors
+    import SphericalFunctions: nmodes, npixels  # unexported
+    using LinearAlgebra: mul!, ldiv!, qr
+    using Random
+
+    rng = Random.Xoshiro(20260927)
+
+    # The pattern the `SSHT` docstring recommends: the data divided into chunks, and one task
+    # spawned for each chunk, with its own copy of the transform.  Every result must be that of
+    # the serial computation, to the last bit.  (Without separate workspace, tasks that share
+    # an "RS" or "Minimal" object produce mode weights wrong by O(1).)  With a single thread
+    # the tasks run one after another, since a transform never yields, so this check would pass
+    # even if the copies shared their workspace; there, the structural checks of "SSHT copies
+    # share their tables and have workspace of their own" are what guard against that.
+    roundtrip(𝒯, f̃) = collect(𝒯 \ (𝒯 * copy(f̃)))
+    function in_tasks(𝒯, inputs, ntasks)
+        chunks = Iterators.partition(inputs, cld(length(inputs), ntasks))
+        tasks = [
+            Threads.@spawn(let 𝒯ₖ = copy(𝒯); [roundtrip(𝒯ₖ, f̃) for f̃ ∈ chunk]; end)
+            for chunk ∈ chunks
+        ]
+        reduce(vcat, fetch.(tasks))
+    end
+    for (method, s, ℓₘₐₓ, kw) in (
+        ("RS", -2, 12, (;)), ("RS", 1//2, 15//2, (;)),
+        ("Minimal", 0, 10, (;)), ("Minimal", 2, 8, (; inplace=false)),
+    )
+        𝒯 = SSHT(s, ℓₘₐₓ; method, kw...)
+        inputs = [randn(rng, ComplexF64, nmodes(𝒯)) for _ in 1:48]
+        serial = [roundtrip(𝒯, f̃) for f̃ in inputs]
+        @test in_tasks(𝒯, inputs, 8) == serial
+    end
+
+    # An SSHTMatrix holds no workspace, so one object may serve any number of tasks at once,
+    # both in place and not, and with the QR decomposition of a least-squares problem
+    for 𝒯 in (
+        SSHTMatrix(2, 10), SSHTMatrix(2, 10; inplace=false),
+        SSHTMatrix(1, 6; Rθϕ=golden_ratio_spiral_rotors(0, 7)),  # more points than modes
+        SSHTMatrix(1//2, 11//2; decomposition=qr, inplace=false),
+    )
+        inputs = [randn(rng, ComplexF64, nmodes(𝒯)) for _ in 1:12]
+        function work(f̃s)
+            f = zeros(ComplexF64, npixels(𝒯))
+            g̃ = zeros(ComplexF64, nmodes(𝒯))
+            map(f̃s) do f̃
+                mul!(f, 𝒯, f̃)
+                ldiv!(g̃, 𝒯, f)
+                (copy(f), copy(g̃), roundtrip(𝒯, f̃))
+            end
+        end
+        serial = work(inputs)
+        @test all(==(serial), fetch.([Threads.@spawn(work(inputs)) for _ in 1:16]))
+    end
+end
+
+
+@testitem "SSHT deepcopy and serialization" begin
+    import SphericalFunctions
+    import SphericalFunctions: SSHT
+    import SphericalFunctions: nmodes  # unexported
+    using DoubleFloats: Double64
+    using FFTW: FFTW
+    using Serialization: Serialization, serialize, deserialize
+    using Random
+
+    rng = Random.Xoshiro(20260928)
+
+    # An FFTW plan object wraps a pointer to a plan that belongs to the process that made it.
+    # A deep copy of a transform shares the plans of the original: a copied plan object would
+    # wrap the pointer without owning it, and the copy would execute freed memory once the
+    # original had been collected.  A deserialized transform makes its plans again, since
+    # Serialization writes every pointer as a null pointer.  Either failure would crash the
+    # process rather than fail a test, so each round trip runs only after the property that
+    # makes it safe has been checked.
+    function reference(𝒯, T)
+        f̃ = randn(rng, Complex{T}, nmodes(𝒯), 2)
+        f = 𝒯 * copy(f̃)
+        (f̃, f, 𝒯 \ copy(f))
+    end
+    cases = (
+        ("RS", 2, 12, Float64, (;)), ("RS", 1//2, 7//2, Float32, (;)),
+        ("RS", 1, 4, BigFloat, (;)), ("RS", -1, 6, Float64, (; plan_fft_flags=FFTW.MEASURE)),
+        ("Minimal", 2, 8, Float64, (; inplace=false)),
+        ("Minimal", 0, 5, Double64, (; inplace=false)),
+        ("Matrix", 2, 8, Float64, (;)), ("Matrix", 1//2, 7//2, Float32, (;)),
+    )
+
+    # A deep copy, of which the original is collected before it is used
+    make_deep_copy(s, ℓₘₐₓ, T, method, kw) = deepcopy(SSHT(s, ℓₘₐₓ, T; method, kw...))
+    for (method, s, ℓₘₐₓ, T, kw) in cases
+        𝒯 = SSHT(s, ℓₘₐₓ, T; method, kw...)
+        if method != "Matrix"
+            d = deepcopy(𝒯)
+            safe = d.plans.forward === 𝒯.plans.forward && d.F !== 𝒯.F
+            @test safe
+            safe || continue
+        end
+        f̃, f, g̃ = reference(𝒯, T)
+        𝒯₂ = make_deep_copy(s, ℓₘₐₓ, T, method, kw)
+        for _ in 1:3
+            GC.gc(true)
+        end
+        @test 𝒯₂ * copy(f̃) == f
+        @test 𝒯₂ \ copy(f) == g̃
+    end
+
+    # A round trip through Serialization, as a transform sent to another process makes.  (The
+    # plans are made again with the same options, so for the planner's default of
+    # `FFTW.ESTIMATE` they are the same plans, and the results are identical.)
+    roundtrip(x) = (io = IOBuffer(); serialize(io, x); deserialize(seekstart(io)))
+    for (method, s, ℓₘₐₓ, T, kw) in cases
+        𝒯 = SSHT(s, ℓₘₐₓ, T; method, kw...)
+        if method != "Matrix"
+            m = which(
+                Serialization.deserialize,
+                Tuple{Serialization.Serializer{IOBuffer}, Type{typeof(𝒯.plans)}}
+            )
+            safe = m.module === SphericalFunctions
+            @test safe
+            safe || continue
+        end
+        f̃, f, g̃ = reference(𝒯, T)
+        𝒯₂ = roundtrip(𝒯)
+        @test typeof(𝒯₂) === typeof(𝒯)
+        if method != "Matrix"
+            @test 𝒯₂.plans.forward[1] !== 𝒯.plans.forward[1]  # made again
+            @test (𝒯₂.plans.flags, 𝒯₂.plans.timelimit) == (𝒯.plans.flags, 𝒯.plans.timelimit)
+        end
+        if get(kw, :plan_fft_flags, FFTW.ESTIMATE) == FFTW.ESTIMATE
+            @test 𝒯₂ * copy(f̃) == f
+            @test 𝒯₂ \ copy(f) == g̃
+        else  # a measured plan may be another algorithm, which rounds differently
+            ϵ = 100ℓₘₐₓ * eps(T)
+            @test 𝒯₂ * copy(f̃) ≈ f atol=ϵ rtol=ϵ
+            @test 𝒯₂ \ copy(f) ≈ g̃ atol=ϵ rtol=ϵ
+        end
+    end
+end
+
+
+@testitem "SSHT transforms run on the caller's thread, with one plan per ring size" begin
+    import SphericalFunctions: SSHT, SSHTRS, SSHTMinimal, Ysize
+    import SphericalFunctions: nmodes, npixels  # unexported
+    using FFTW: FFTW
+    using LinearAlgebra: mul!, ldiv!
+    using Random
+
+    rng = Random.Xoshiro(20260929)
+
+    # A transform runs on its caller's thread.  A `@threads` loop inside it, or an FFTW plan
+    # made for several threads, allocates for every task it spawns, so the allocation of a
+    # transform that writes into given storage bounds both.  (Measured: 176–224 bytes, the
+    # headers of the reshaped arrays and views.  A single `@threads` loop allocates about
+    # 1.5 kB, and each execution of a threaded plan for a ring of 33 points about 8 kB.)
+    function allocation(f, args...)
+        f(args...)
+        @allocated f(args...)
+    end
+    for (method, s, ℓₘₐₓ) in (
+        ("RS", -2, 16), ("RS", 1//2, 31//2), ("Minimal", 0, 12), ("Minimal", 2, 10)
+    )
+        𝒯 = SSHT(s, ℓₘₐₓ; method)
+        f̃ = randn(rng, ComplexF64, nmodes(𝒯))
+        f = zeros(ComplexF64, npixels(𝒯))
+        g̃ = zeros(ComplexF64, nmodes(𝒯))
+        @test allocation(mul!, f, 𝒯, f̃) < 1000
+        @test allocation(ldiv!, g̃, 𝒯, f) < 1000
+        if method == "Minimal"
+            @test allocation(mul!, 𝒯, copy(f̃)) < 1000
+            @test allocation(ldiv!, 𝒯, copy(f)) < 1000
+        end
+    end
+    # ... and so does one of several columns, once the workspace of a chunk of columns exists
+    let 𝒯 = SSHT(-2, 16)
+        F̃ = randn(rng, ComplexF64, nmodes(𝒯), 11)
+        F = zeros(ComplexF64, npixels(𝒯), 11)
+        @test allocation(mul!, F, 𝒯, F̃) < 1000
+        @test allocation(ldiv!, similar(F̃), 𝒯, F) < 1000
+    end
+
+    # One pair of FFT plans is made for each distinct number of points on a ring — a single pair
+    # for the default grid, whose rings are all alike — and each is made for a single thread.
+    # (FFTW describes a plan for several threads as a "thr" solver.)
+    for T in (Float64, Float32)
+        𝒯 = SSHTRS(2, 32, T)
+        @test length(𝒯.plans.forward) == length(𝒯.plans.backward) == 1
+        @test 𝒯.plans.sizes == [65] && all(==(1), 𝒯.plans.index)
+        @test !any(p -> occursin("thr", string(p)), [𝒯.plans.forward; 𝒯.plans.backward])
+    end
+    let Nϕ = [15 + k % 3 for k in 1:15], 𝒯 = SSHTRS(1, 7; Nϕ)
+        @test 𝒯.plans.sizes == unique(Nϕ)
+        @test 𝒯.plans.sizes[𝒯.plans.index] == Nϕ
+    end
+    # The rings of "Minimal" for s ≠ 0 come in pairs of equal size
+    let 𝒯 = SSHTMinimal(2, 10)
+        @test 𝒯.plans.sizes == unique(𝒯.Nϕ) && length(𝒯.plans.sizes) < length(𝒯.Nϕ)
+        @test 𝒯.plans.sizes[𝒯.plans.index] == 𝒯.Nϕ
+    end
+end
+
+
+@testitem "SSHTRS transforms several columns a chunk at a time, each column exactly" begin
+    import SphericalFunctions: SSHT, SSHTRS, ModeWeights, sYlm_matrix, rotors
+    import SphericalFunctions: nmodes, npixels  # unexported
+    using DoubleFloats: Double64
+    using LinearAlgebra: mul!, ldiv!
+    using Random
+
+    rng = Random.Xoshiro(20260930)
+
+    # The columns of batched data are transformed a chunk of up to 8 at a time, with the
+    # harmonics of each ℓ computed once for the chunk.  The arithmetic of each column is that of
+    # a transform of the column alone, in the same order, so the results agree to the last bit —
+    # for 11 columns (a chunk of 8 and one of 3), in three dimensions, and for a half-integer
+    # spin weight, whose ring phase factors are tabulated for each size of ring.
+    for (s, ℓₘₐₓ, T) in (
+        (-2, 16, Float64), (0, 6, Float32), (3//2, 23//2, Float64), (1, 5, Double64)
+    )
+        𝒯 = SSHT(s, ℓₘₐₓ, T)
+        n, N = nmodes(𝒯), npixels(𝒯)
+        F̃ = randn(rng, Complex{T}, n, 11)
+        F = 𝒯 * F̃
+        @test all(F[:, k] == 𝒯 * F̃[:, k] for k in 1:11)
+        G̃ = 𝒯 \ F
+        @test all(G̃[:, k] == parent(𝒯 \ F[:, k]) for k in 1:11)
+        F₃ = reshape(F, N, 1, 11)
+        @test 𝒯 \ F₃ == reshape(G̃, n, 1, 11)
+        # No columns at all is an empty result
+        @test size(𝒯 * zeros(Complex{T}, n, 0)) == (N, 0)
+        @test size(𝒯 \ zeros(Complex{T}, N, 0)) == (n, 0)
+    end
+
+    # Rings of several different sizes, for a half-integer spin weight: each ring uses the
+    # plans and phase factors of its own size.  Synthesis is the evaluation of the harmonics at
+    # the transform's rotors, and the analysis inverts it (the rings number 2ℓₘₐₓ+1, of at least
+    # 2ℓₘₐₓ+1 points each).  Measured over 20 draws: synthesis within 14 eps of the largest
+    # value, and round trips within 6 eps.
+    for (s, ℓₘₐₓ) in ((1//2, 11//2), (-5//2, 9//2))
+        Nθ = Int(2ℓₘₐₓ + 1)
+        𝒯 = SSHTRS(s, ℓₘₐₓ; Nϕ=[Nθ + k % 3 for k in 1:Nθ])
+        @test length(𝒯.plans.sizes) == 3
+        ϵ = 100ℓₘₐₓ * eps()
+        F̃ = randn(rng, ComplexF64, nmodes(𝒯), 2)
+        F = 𝒯 * F̃
+        @test F ≈ sYlm_matrix(rotors(𝒯), ℓₘₐₓ, s) * F̃ atol=ϵ rtol=ϵ
+        @test 𝒯 \ F ≈ F̃ atol=ϵ rtol=ϵ
+    end
+end
+
+
 @testitem "SSHT half-integer construction" begin
     using SphericalFunctions
     using SphericalFunctions: HalfOddInteger, nmodes, npixels
@@ -1183,24 +1623,37 @@ end
     𝒯m = SSHT(-3//2, 7//2; method="Matrix")
     @test 𝒯m isa SSHTMatrix{Float64, true}
     @test npixels(𝒯m) == nmodes(𝒯m) == Ysize(3//2, 7//2)
-    @test SSHTMatrix(1//2, 5//2; T=Float32) isa SSHTMatrix{Float32}
-    @test SSHTRS(1//2, 5//2; T=Float32) isa SSHTRS{Float32}
+    @test SSHTMatrix(1//2, 5//2, Float32) isa SSHTMatrix{Float32}
+    @test SSHTRS(1//2, 5//2, Float32) isa SSHTRS{Float32}
 
     # The spellings agree, and the two kinds of index may not be mixed
     @test typeof(SSHT(HalfOddInteger(1//2), HalfOddInteger(7//2))) === typeof(𝒯)
-    @test_throws "must all be integers, like 3, or all be half-odd-integers" SSHT(1//2, 4)
-    @test_throws "must all be integers, like 3, or all be half-odd-integers" SSHTMatrix(1, 7//2)
-    @test_throws "must all be integers, like 3, or all be half-odd-integers" SSHTRS(1//2, 4)
-    @test_throws "must all be integers, like 3, or all be half-odd-integers" map2salm(zeros(ComplexF64, 8, 8), 1//2, 3)
+    mixed = "must all be integers of type `Int`, like 3, or all be half-odd-integers"
+    @test_throws ArgumentError SSHT(1//2, 4)
+    @test_throws mixed SSHT(1//2, 4)
+    @test_throws mixed SSHTMatrix(1, 7//2)
+    @test_throws mixed SSHTRS(1//2, 4)
+    @test_throws mixed map2salm(zeros(ComplexF64, 8, 8), 1//2, 3)
+    @test_throws mixed salm2map(zeros(ComplexF64, 8), 1//2, 3, 8, 8)
+    @test_throws mixed SphericalFunctions.map2salm_plan(zeros(ComplexF64, 8, 8), 1, 7//2)
     @test_throws "exceeds ℓₘₐₓ" SSHT(5//2, 3//2)
 
     # The Minimal method is integer-only (decision E3), and names the methods that are not
-    @test_throws "\"RS\"" SSHT(1//2, 7//2; method="Minimal")
-    @test_throws "\"Matrix\"" SSHTMinimal(1//2, 7//2)
+    for f in (() -> SSHT(1//2, 7//2; method="Minimal"), () -> SSHTMinimal(1//2, 7//2))
+        @test_throws ArgumentError f()
+        @test_throws "does not accept half-odd-integers" f()
+        @test_throws "The \"RS\" method (the default) and the \"Matrix\" method both accept" f()
+    end
+    # ... and so are its rings
+    @test_throws "`sorted_rings` and `sorted_ring_pixels` accept half-integer ones" SphericalFunctions.minimal_rings(1//2, 5//2)
 
-    # The integer path stores `Int`, as it always did
-    @test SSHT(Int8(1), Int8(4)).s === 1
+    # The integer path stores `Int`, and integers of other types are refused
+    @test SSHT(1, 4).s === 1
     @test SSHT(1, 4; method="Minimal").s === 1 && SSHT(1, 4; method="Matrix").ℓₘₐₓ === 4
+    for method in ("RS", "Minimal", "Matrix")
+        @test_throws ArgumentError SSHT(Int8(1), Int8(4); method)
+        @test_throws "`Int8` is narrower than `Int`" SSHT(Int8(1), 4; method)
+    end
 end
 
 @testitem "SSHT half-integer round trips and cross-method agreement" begin
@@ -1210,9 +1663,11 @@ end
     using LinearAlgebra: mul!, ldiv!
     using Random
 
+    # Measured over these cases, in the norm of the error relative to that of the result: at
+    # most 3.5ℓₘₐₓ eps, for every comparison below, so 100ℓₘₐₓ eps leaves a factor of ≳ 28.
     rng = MersenneTwister(2026_09_17)
     for s ∈ (1//2, -1//2, 3//2, -5//2), ℓₘₐₓ ∈ (abs(s), 7//2, 11//2)
-        ℓₘₐₓ ≥ abs(s) || continue
+        ϵ = 100ℓₘₐₓ * eps()
         f̃ = ModeWeights(randn(rng, ComplexF64, Ysize(abs(s), ℓₘₐₓ)), s)
         𝒯r = SSHT(s, ℓₘₐₓ)
         𝒯m = SSHT(s, ℓₘₐₓ; method="Matrix")
@@ -1221,21 +1676,21 @@ end
         # rotors, which is the strongest check available: the two computations share nothing
         # but the calculator
         fr = 𝒯r * f̃
-        @test fr ≈ sYlm_matrix(rotors(𝒯r), ℓₘₐₓ, s) * parent(f̃) rtol=1e-12
+        @test fr ≈ sYlm_matrix(rotors(𝒯r), ℓₘₐₓ, s) * parent(f̃) rtol=ϵ
         fm = 𝒯m * copy(f̃)
-        @test fm ≈ sYlm_matrix(rotors(𝒯m), ℓₘₐₓ, s) * parent(f̃) rtol=1e-12
+        @test fm ≈ sYlm_matrix(rotors(𝒯m), ℓₘₐₓ, s) * parent(f̃) rtol=ϵ
 
         # Analysis inverts synthesis, for both methods, and labels its result
         g̃r = 𝒯r \ fr
         @test g̃r isa ModeWeights
         @test spin(g̃r) === HalfOddInteger(s) && SphericalFunctions.ℓₘₐₓ(g̃r) === HalfOddInteger(ℓₘₐₓ)
-        @test parent(g̃r) ≈ parent(f̃) rtol=1e-11
-        @test parent(𝒯m \ copy(fm)) ≈ parent(f̃) rtol=1e-11
+        @test parent(g̃r) ≈ parent(f̃) rtol=ϵ
+        @test parent(𝒯m \ copy(fm)) ≈ parent(f̃) rtol=ϵ
 
         # The Matrix method on the ring grid agrees with the ring algorithm
         𝒯mr = SSHTMatrix(s, ℓₘₐₓ; Rθϕ=rotors(𝒯r))
-        @test 𝒯mr * copy(f̃) ≈ fr rtol=1e-12
-        @test parent(𝒯mr \ copy(fr)) ≈ parent(f̃) rtol=1e-10
+        @test 𝒯mr * copy(f̃) ≈ fr rtol=ϵ
+        @test parent(𝒯mr \ copy(fr)) ≈ parent(f̃) rtol=ϵ
 
         # The in-place forms compute the same values
         f2 = similar(fr)
@@ -1245,11 +1700,13 @@ end
         ldiv!(g2, 𝒯r, fr)
         @test g2 == g̃r
 
-        # Trailing dimensions are transformed column by column
+        # Trailing dimensions are transformed column by column, each exactly as it would be
+        # alone (and doubling the weights doubles every rounded result exactly)
         F̃ = hcat(parent(f̃), 2 .* parent(f̃))
         F = 𝒯r * F̃
-        @test F[:, 1] ≈ fr && F[:, 2] ≈ 2fr
-        @test 𝒯r \ F ≈ F̃ rtol=1e-11
+        @test F[:, 1] == fr && F[:, 2] == 2fr
+        @test 𝒯r \ F ≈ F̃ rtol=ϵ
+        @test (𝒯r \ F)[:, 1] == parent(g̃r)
     end
 end
 
@@ -1263,9 +1720,11 @@ end
     f = 𝒯 * f̃
     # The function values are those at `rotors(𝒯)`.  A full circuit of the azimuth reaches the
     # antipodal rotor, at which every harmonic — and so the function — changes sign.
+    # (Measured: within 2.1ℓₘₐₓ eps, in the norm of the error relative to that of `f`.)
+    ϵ = 100ℓₘₐₓ * eps()
     R₊ = [from_spherical_coordinates(θ, ϕ + 2π) for (θ, ϕ) ∈ pixels(𝒯)]
-    @test sYlm_matrix(R₊, ℓₘₐₓ, s) * parent(f̃) ≈ -f rtol=1e-12
-    @test sYlm_matrix(rotors(𝒯), ℓₘₐₓ, s) * parent(f̃) ≈ f rtol=1e-12
+    @test sYlm_matrix(R₊, ℓₘₐₓ, s) * parent(f̃) ≈ -f rtol=ϵ
+    @test sYlm_matrix(rotors(𝒯), ℓₘₐₓ, s) * parent(f̃) ≈ f rtol=ϵ
 end
 
 @testitem "SSHTMatrix mul! and ldiv! with aliased arguments" begin
@@ -1275,8 +1734,8 @@ end
 
     # With as many points as modes the input and output of the three-argument forms can be
     # the same array, which is the obvious way to act in place with them.  A BLAS product
-    # cannot write over its own input, and `mul!(x, 𝒯, x)` once returned zeros; the input is
-    # now copied whenever it shares memory with the output.
+    # cannot write over its own input — `mul!(x, 𝒯, x)` would return zeros — so the input is
+    # copied whenever it shares memory with the output.
     rng = Random.Xoshiro(20260923)
     for (s, ℓₘₐₓ) ∈ ((0, 4), (2, 5)), inplace ∈ (true, false), decomposition ∈ (nothing, qr)
         kw = decomposition === nothing ? (; inplace) : (; inplace, decomposition)
@@ -1284,7 +1743,8 @@ end
         n = Ysize(abs(s), ℓₘₐₓ)
         f̃ = randn(rng, ComplexF64, n)
         f = 𝒯.Y * f̃
-        ϵ = 1e-12
+        # (Measured: the products exact, or within 2.4ℓₘₐₓ eps, and the solves 6.5ℓₘₐₓ eps.)
+        ϵ = 100ℓₘₐₓ * eps()
 
         x = copy(f̃)
         @test mul!(x, 𝒯, x) === x
@@ -1343,15 +1803,15 @@ end
     # tested in
     for T ∈ (Float64, Float32, Double64), (s, ℓₘₐₓ) ∈ ((0, 0), (1, 4), (-2, 12), (1//2, 7//2))
         N = Int(2ℓₘₐₓ + 1)
-        @test_logs SSHTRS(s, ℓₘₐₓ; T)
-        @test_logs SSHTRS(s, ℓₘₐₓ; T, θ=fejer1_rings(N, T), quadrature_weights=fejer1(N, T))
-        @test_logs SSHTRS(s, ℓₘₐₓ; T, θ=fejer2_rings(N, T), quadrature_weights=fejer2(N, T))
+        @test_logs SSHTRS(s, ℓₘₐₓ, T)
+        @test_logs SSHTRS(s, ℓₘₐₓ, T; θ=fejer1_rings(N, T), quadrature_weights=fejer1(N, T))
+        @test_logs SSHTRS(s, ℓₘₐₓ, T; θ=fejer2_rings(N, T), quadrature_weights=fejer2(N, T))
         @test_logs SSHTRS(
-            s, ℓₘₐₓ; T, θ=fejer1_rings(N + 3, T), quadrature_weights=fejer1(N + 3, T)
+            s, ℓₘₐₓ, T; θ=fejer1_rings(N + 3, T), quadrature_weights=fejer1(N + 3, T)
         )
         if N ≥ 2
             @test_logs SSHTRS(
-                s, ℓₘₐₓ; T, θ=clenshaw_curtis_rings(N, T), quadrature_weights=clenshaw_curtis(N, T)
+                s, ℓₘₐₓ, T; θ=clenshaw_curtis_rings(N, T), quadrature_weights=clenshaw_curtis(N, T)
             )
         end
     end
@@ -1386,5 +1846,254 @@ end
             @test_throws DimensionMismatch call()
             @test_throws "Trailing dimensions" call()
         end
+    end
+end
+
+
+@testitem "SSHT synthesis of mode weights of another range of ℓ" begin
+    import SphericalFunctions: SSHT, ModeWeights, Ysize, Yindex, spin, ð, ð̄, salm2map
+    import SphericalFunctions: nmodes, npixels  # unexported
+    using LinearAlgebra: mul!
+    using Random
+
+    rng = Random.Xoshiro(20260924)
+
+    # Synthesis accepts mode weights of the transform's spin weight with any range of ℓ up to
+    # its ℓₘₐₓ: the modes they lack are zero, and their entries with ℓ < |s|, which belong to
+    # no function of spin weight s, are ignored.  The reference is the same weights copied by
+    # hand into the transform's range.
+    function padded(w, ℓₘₐₓ)
+        s = spin(w)
+        v = zeros(eltype(w), Ysize(abs(s), ℓₘₐₓ))
+        for ℓ in max(abs(s), SphericalFunctions.ℓₘᵢₙ(w)):SphericalFunctions.ℓₘₐₓ(w), m in -ℓ:ℓ
+            v[Yindex(ℓ, m, abs(s))] = w[ℓ, m]
+        end
+        ModeWeights(v, s)
+    end
+    for method in ("RS", "Minimal", "Matrix"), (s, ℓₘₐₓ) in ((1, 6), (-2, 6), (1//2, 11//2))
+        (method == "Minimal" && !(s isa Integer)) && continue
+        𝒯 = SSHT(s, ℓₘₐₓ; method)
+        # Ranges inside the transform's, below |s| as well as inside it, and — for an integer
+        # s — only below |s|, when the function is zero
+        ℓ₀ = s isa Integer ? 0 : 1//2
+        ranges = [(abs(s) + 1, ℓₘₐₓ - 1), (ℓ₀, ℓₘₐₓ), (ℓ₀, abs(s)), (abs(s), abs(s))]
+        s isa Integer && push!(ranges, (0, abs(s) - 1))
+        for (ℓₘᵢₙ, ℓₘₐₓ′) in ranges
+            w = ModeWeights(randn(rng, ComplexF64, Ysize(ℓₘᵢₙ, ℓₘₐₓ′)), s, ℓₘᵢₙ, ℓₘₐₓ′)
+            w₀ = copy(parent(w))
+            reference = padded(w, ℓₘₐₓ)
+            @test 𝒯 * w == 𝒯 * ModeWeights(copy(parent(reference)), s)
+            # A copy in the transform's range is what synthesis uses, even for the in-place
+            # "Minimal", which would otherwise overwrite the storage of `w`
+            @test parent(w) == w₀
+        end
+        # Weights beyond the transform's ℓₘₐₓ are refused rather than dropped
+        w = ModeWeights(zeros(ComplexF64, Ysize(abs(s), ℓₘₐₓ + 1)), s)
+        @test_throws ArgumentError 𝒯 * w
+        @test_throws "synthesizes ℓ ≤ $ℓₘₐₓ only" 𝒯 * w
+        # `mul!` needs the transform's range exactly, so that it allocates nothing
+        @test_throws ArgumentError mul!(
+            zeros(ComplexF64, npixels(𝒯)), 𝒯, ModeWeights(zeros(ComplexF64, Ysize(abs(s), ℓₘₐₓ - 1)), s)
+        )
+    end
+
+    # This is what makes a spin-changing operator's output synthesizable directly: ð and ð̄
+    # keep the range of ℓ of their input, which then either includes ℓ below the new |s| or
+    # lacks some of the new range.  The analysis → operator → synthesis chain gives exactly
+    # what the same weights copied into the new range by hand give.
+    for (s, op) in ((1, ð), (1, ð̄), (-2, ð), (-2, ð̄), (0, ð), (1//2, ð), (3//2, ð̄)), method in ("RS", "Matrix")
+        ℓₘₐₓ = s isa Integer ? 6 : 11//2
+        𝒯 = SSHT(s, ℓₘₐₓ; method)
+        w = ModeWeights(randn(rng, ComplexF64, nmodes(𝒯)), s)
+        dw = op * (𝒯 \ (𝒯 * w))
+        𝒯′ = SSHT(spin(dw), ℓₘₐₓ; method)
+        @test 𝒯′ * dw == 𝒯′ * padded(dw, ℓₘₐₓ)
+        N = Int(2ℓₘₐₓ + 2)
+        @test salm2map(dw, N, N) == salm2map(padded(dw, ℓₘₐₓ), N, N)
+    end
+end
+
+
+@testitem "SSHT real data" begin
+    import SphericalFunctions: SSHT, ModeWeights, Ysize, map2salm, salm2map
+    import SphericalFunctions: nmodes, npixels  # unexported
+    using DoubleFloats: Double64
+    using LinearAlgebra: mul!, ldiv!
+    using Random
+
+    rng = Random.Xoshiro(314159)
+
+    # Real mode weights and real function values — the ordinary case for spin weight 0 — are
+    # accepted by every method that does not act in place, and give the complex results of the
+    # same data made complex, in the transform's type.  (Measured: identical for "RS" and
+    # "Minimal", and within 2 eps for "Matrix", whose BLAS product differs for real input.)
+    for T in (Float64, Double64), method in ("RS", "Minimal", "Matrix")
+        kw = method == "RS" ? (;) : (; inplace=false)
+        𝒯 = SSHT(0, 4, T; method, kw...)
+        ϵ = 20eps(T)
+        f̃ = randn(rng, T, nmodes(𝒯))
+        f = 𝒯 * f̃
+        @test f isa Vector{Complex{T}}
+        @test f ≈ 𝒯 * complex.(f̃) atol=ϵ rtol=ϵ
+        @test 𝒯 * ModeWeights(f̃, 0) ≈ f atol=ϵ rtol=ϵ
+        r = randn(rng, T, npixels(𝒯))
+        w = 𝒯 \ r
+        @test w isa ModeWeights{Complex{T}}
+        @test parent(w) ≈ parent(𝒯 \ complex.(r)) atol=ϵ rtol=ϵ
+        # The outputs of `mul!` and `ldiv!` must hold the complex results
+        @test_throws ArgumentError mul!(zeros(T, npixels(𝒯)), 𝒯, f̃)
+        @test_throws "must hold complex floating-point numbers" ldiv!(zeros(T, nmodes(𝒯)), 𝒯, r)
+    end
+
+    # Data in another precision is transformed in the transform's type, by "Minimal" as by the
+    # others, rather than in the type of the data
+    for method in ("RS", "Minimal", "Matrix")
+        𝒯 = SSHT(0, 4; method, (method == "RS" ? (;) : (; inplace=false))...)
+        @test 𝒯 * randn(rng, ComplexF32, nmodes(𝒯)) isa Vector{ComplexF64}
+        @test 𝒯 \ randn(rng, ComplexF32, npixels(𝒯)) isa ModeWeights{ComplexF64}
+    end
+
+    # `map2salm` and `salm2map` take real data, working in its floating-point type
+    let ℓₘₐₓ = 4, N = 2ℓₘₐₓ + 1
+        m = randn(rng, N, N)
+        @test map2salm(m, 0, ℓₘₐₓ) isa ModeWeights{ComplexF64}
+        @test parent(map2salm(m, 0, ℓₘₐₓ)) == parent(map2salm(complex.(m), 0, ℓₘₐₓ))
+        @test map2salm(Float32.(m), 0, ℓₘₐₓ) isa ModeWeights{ComplexF32}
+        a = randn(rng, Ysize(0, ℓₘₐₓ))
+        @test salm2map(a, 0, ℓₘₐₓ, N, N) == salm2map(complex.(a), 0, ℓₘₐₓ, N, N)
+        @test salm2map(ModeWeights(a, 0), N, N) == salm2map(a, 0, ℓₘₐₓ, N, N)
+    end
+end
+
+
+@testitem "SSHT in-place analysis of storage that is not contiguous" begin
+    import SphericalFunctions: SSHT, ModeWeights
+    import SphericalFunctions: nmodes, npixels  # unexported
+    using LinearAlgebra: ldiv!, qr
+    using Random
+
+    rng = Random.Xoshiro(2718281)
+
+    # A strided view, or a row of a matrix, is analyzed in place by every in-place form, as by
+    # those that are not, although LAPACK solves only in contiguous storage, and refuses other
+    # storage with "matrix does not have contiguous columns".
+    for (method, kw) in (("Matrix", (;)), ("Matrix", (; inplace=false)), ("Matrix", (; decomposition=qr)),
+                         ("Minimal", (;)), ("Minimal", (; inplace=false)))
+        𝒯 = SSHT(-1, 4; method, kw...)
+        n = nmodes(𝒯)
+        f̃ = randn(rng, ComplexF64, n)
+        f = 𝒯 * copy(f̃)
+        reference = collect(𝒯 \ copy(f))
+        A = zeros(ComplexF64, 2n)
+        A[1:2:end] .= f
+        C = zeros(ComplexF64, 3, n)
+        C[2, :] .= f
+        # (The same numbers are solved for, in a copy, so the results agree exactly.)
+        @test collect(𝒯 \ view(copy(A), 1:2:2n)) == reference
+        @test collect(𝒯 \ view(copy(C), 2, :)) == reference
+        x = view(copy(A), 1:2:2n)
+        @test collect(ldiv!(𝒯, x)) == reference
+        @test x == reference  # in place
+    end
+end
+
+
+@testitem "SSHT function values held in a ModeWeights" begin
+    import SphericalFunctions: SSHT, ModeWeights
+    import SphericalFunctions: nmodes, npixels  # unexported
+    using LinearAlgebra: mul!, ldiv!
+    using Random
+
+    rng = Random.Xoshiro(141421)
+
+    # Function values may be held in a ModeWeights where there are as many of them as modes,
+    # or by `array_view` in any case; every analysis path unwraps them, as every synthesis
+    # path unwraps its mode weights.
+    for (method, kw) in (("RS", (;)), ("Matrix", (;)), ("Matrix", (; inplace=false)),
+                         ("Minimal", (;)), ("Minimal", (; inplace=false)))
+        𝒯 = SSHT(0, 4; method, kw...)
+        f̃ = randn(rng, ComplexF64, nmodes(𝒯))
+        f = 𝒯 * copy(f̃)
+        reference = parent(𝒯 \ copy(f))
+        # (The same numbers go through the same kernels, so the results agree exactly.)
+        wf = ModeWeights(copy(f), 0)
+        @test parent(𝒯 \ wf) == reference
+        @test parent(ldiv!(zeros(ComplexF64, nmodes(𝒯)), 𝒯, ModeWeights(copy(f), 0))) == reference
+        # ... and a ModeWeights may receive function values from `mul!`, which returns it
+        out = ModeWeights(zeros(ComplexF64, npixels(𝒯)), 0)
+        @test mul!(out, 𝒯, f̃) === out
+        @test parent(out) == f
+    end
+end
+
+
+@testitem "SSHT inference" begin
+    import SphericalFunctions: SSHT, SSHTRS, SSHTMinimal, SSHTMatrix, ModeWeights, Ysize
+    import SphericalFunctions: map2salm, salm2map, map2salm_plan
+    import SphericalFunctions: golden_ratio_spiral_pixels, leja_pixels, sorted_rings
+    using Test: @inferred
+
+    # The entry points infer concrete types from the types of their arguments alone, for
+    # indices whose values are not known to the compiler.  The element type is positional,
+    # and so part of the type of the call.  (Passed as a keyword, it defeated inference, and
+    # `salm2map` inferred `Any`.)  The type of an "RS" transform follows from its arguments;
+    # those of "Minimal" and "Matrix" also depend on the value of `inplace`, and that of
+    # `SSHT` on the value of `method`, so these are not asserted.
+    for (s, ℓₘₐₓ) in ((1, 4), (1//2, 7//2))
+        @test @inferred(SSHTRS(s, ℓₘₐₓ)) isa SSHTRS{Float64}
+        @test @inferred(SSHTRS(s, ℓₘₐₓ, Float32)) isa SSHTRS{Float32}
+        N = Int(2ℓₘₐₓ + 1)
+        m = randn(ComplexF64, N, N)
+        @test @inferred(map2salm_plan(m, s, ℓₘₐₓ)) isa SSHTRS{Float64}
+        w = @inferred map2salm(m, s, ℓₘₐₓ)
+        @test w isa ModeWeights{ComplexF64}
+        @test @inferred(map2salm(real.(m), s, ℓₘₐₓ)) isa ModeWeights{ComplexF64}
+        @test @inferred(salm2map(w, s, ℓₘₐₓ, N, N)) isa Matrix{ComplexF64}
+        @test @inferred(salm2map(parent(w), s, ℓₘₐₓ, N, N)) isa Matrix{ComplexF64}
+        @test @inferred(salm2map(w, N, N)) isa Matrix{ComplexF64}
+        𝒯 = SSHTRS(s, ℓₘₐₓ)
+        @test @inferred(𝒯 * w) isa Vector{ComplexF64}
+        @test @inferred(𝒯 \ (𝒯 * w)) isa ModeWeights{ComplexF64}
+        @test @inferred(golden_ratio_spiral_pixels(s, ℓₘₐₓ, Float32)) isa Vector
+        @test @inferred(sorted_rings(s, ℓₘₐₓ)) isa Vector{Float64}
+    end
+    # The in-place analysis of "Minimal" and of an in-place "Matrix" always labels the whole
+    # of its argument, so its type follows from the transform's
+    for 𝒯 in (SSHT(0, 3; method="Minimal"), SSHT(0, 3; method="Matrix"))
+        @test @inferred(𝒯 \ randn(ComplexF64, 16)) isa ModeWeights{ComplexF64}
+    end
+    @test @inferred(leja_pixels(0, 3, Float32)) isa Vector
+end
+
+
+@testitem "SSHT round trips in BigFloat, at ℓₘₐₓ = 0, and of half-integer spin in other types" begin
+    import SphericalFunctions: SSHT, ModeWeights, sYlm_matrix, rotors
+    import SphericalFunctions: nmodes  # unexported
+    using DoubleFloats: Double64
+    using Random
+
+    rng = Random.Xoshiro(20260925)
+
+    # Measured, in units of eps(T): BigFloat at (s, ℓₘₐₓ) = (1, 4) ≤ 25 ("Minimal"; ≤ 8
+    # otherwise), a single mode at ℓₘₐₓ = 0 ≤ 1.1, and half-integer spin in Float32 and Double64
+    # ≤ 14.  100ℓₘₐₓ eps(T) (and 100 eps(T) at ℓₘₐₓ = 0) leaves a factor of ≳ 7.
+    roundtrip(𝒯, f̃) = collect(𝒯 \ (𝒯 * copy(f̃)))
+    for method in ("RS", "Minimal", "Matrix")
+        kw = method == "RS" ? (;) : (; inplace=false)
+        for (T, s, ℓₘₐₓ) in ((BigFloat, 1, 4), (Float64, 0, 0), (Float32, 0, 0), (Double64, 0, 0))
+            𝒯 = SSHT(s, ℓₘₐₓ, T; method, kw...)
+            ϵ = 100max(ℓₘₐₓ, 1) * eps(T)
+            f̃ = randn(rng, Complex{T}, nmodes(𝒯))
+            @test roundtrip(𝒯, f̃) ≈ f̃ atol=ϵ rtol=ϵ
+            @test 𝒯 * f̃ isa Vector{Complex{T}}
+        end
+    end
+    for method in ("RS", "Matrix"), T in (Float32, Double64), (s, ℓₘₐₓ) in ((1//2, 7//2), (-3//2, 11//2), (5//2, 5//2))
+        𝒯 = SSHT(s, ℓₘₐₓ, T; method)
+        ϵ = 100ℓₘₐₓ * eps(T)
+        f̃ = randn(rng, Complex{T}, nmodes(𝒯))
+        @test roundtrip(𝒯, f̃) ≈ f̃ atol=ϵ rtol=ϵ
+        # Synthesis is the evaluation of the harmonics at the transform's own rotors
+        @test 𝒯 * f̃ ≈ sYlm_matrix(rotors(𝒯), ℓₘₐₓ, s) * f̃ atol=ϵ rtol=ϵ
     end
 end

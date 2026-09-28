@@ -20,7 +20,7 @@ documentation](https://moble.github.io/SphericalFunctions.jl/) for more details.
 
 ## Installation
 
-```bash
+```julia
 using Pkg
 Pkg.add("SphericalFunctions")
 ```

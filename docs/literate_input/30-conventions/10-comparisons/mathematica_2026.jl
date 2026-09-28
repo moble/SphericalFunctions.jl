@@ -115,14 +115,15 @@ We encapsulate the formulas in a module so that we can test them against the
 
 using TestItems: @testitem  #hide
 @testitem "Mathematica conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
+import .Utilities: αβγrange, θϕrange  #hide
 
 module Mathematica
 #+
 
 # We'll use some predefined utilities to make the code look more like the equations,
 # including `∂ⁿ`, which computes derivatives symbolically so that we can transcribe the
-# Legendre formulas literally, and our reference ``𝔇`` for the candidate `WignerD`.
-import ..ConventionsUtilities: 𝒾, ❗, ∂ⁿ, D
+# Legendre formulas literally.
+import ..ConventionsUtilities: 𝒾, ❗, ∂ⁿ
 #+
 
 # The Legendre polynomial (Rodrigues' formula) and Mathematica's `LegendreP[n, m, x]`, with
@@ -145,9 +146,11 @@ function SphericalHarmonicY(ℓ, m, θ::T, ϕ::T) where {T<:Real}
 end
 #+
 
-# The candidate for `WignerD[{j, m1, m2}, ψ, θ, ϕ]`, and its two-argument form:
-WignerD(j, m₁, m₂, ψ, θ, ϕ) = D(j, -m₁, -m₂, ψ, θ, ϕ)
-WignerD(j, m₁, m₂, θ, ϕ) = WignerD(j, m₁, m₂, zero(θ), θ, ϕ)
+# The candidate for `WignerD[{j, m1, m2}, ψ, θ, ϕ]`, expressed through the block `𝔇ʲ` of
+# our ``𝔇`` evaluated at the same angles ``(ψ, θ, ϕ)``.  The two-argument form
+# `WignerD[{j, m1, m2}, θ, ϕ]` is the same with ``ψ = 0``, so it is given our block at
+# ``(0, θ, ϕ)``.
+WignerD(𝔇ʲ, m₁, m₂) = 𝔇ʲ[-m₁, -m₂]
 #+
 
 end  # module Mathematica
@@ -168,7 +171,7 @@ end  # module Mathematica
 # because the formulas are slow, and this will be sufficient to sort out any sign or
 # normalization differences, which are the most likely source of error.  For the same reason
 # we use a modest grid of Euler angles.
-αβγs = αβγrange(Float64, 5)
+αβγs = αβγrange(rng, Float64, 5)
 #+
 
 # We will also need the imaginary unit from the utilities module.
@@ -176,9 +179,9 @@ import .ConventionsUtilities: 𝒾
 #+
 
 # First, `SphericalHarmonicY` agrees with ours:
-for (θ, ϕ) ∈ θϕrange(Float64, 7)
-    for (ℓ, m) ∈ ℓmrange(ℓₘₐₓ)
-        @test Mathematica.SphericalHarmonicY(ℓ, m, θ, ϕ) ≈ ConventionsUtilities.Y(ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+for (θ, ϕ) ∈ θϕrange(rng, Float64, 7)
+    for (ℓ, Yˡ) ∈ SphericalFunctions.YlmCalculator(θ, ϕ, ℓₘₐₓ), m ∈ -ℓ:ℓ
+        @test Mathematica.SphericalHarmonicY(ℓ, m, θ, ϕ) ≈ Yˡ[m] atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
@@ -186,35 +189,50 @@ end
 # Now the documented identities for `WignerD`, in the order quoted above.  The phase
 # convention:
 for (ψ, θ, ϕ) ∈ αβγs
-    for (j, m₁, m₂) ∈ ℓm′mrange(ℓₘₐₓ)
-        @test Mathematica.WignerD(j, m₁, m₂, ψ, θ, ϕ) ≈
-            exp(𝒾 * m₁ * ψ + 𝒾 * m₂ * ϕ) * Mathematica.WignerD(j, m₁, m₂, zero(θ), θ, zero(θ)) atol=ϵₐ rtol=ϵᵣ
+    𝔇 = SphericalFunctions.DCalculator(ψ, θ, ϕ, ℓₘₐₓ)
+    𝔇ᶿ = SphericalFunctions.DCalculator(zero(θ), θ, zero(θ), ℓₘₐₓ)
+    for ((j, 𝔇ʲ), (_, 𝔇ʲᶿ)) ∈ zip(𝔇, 𝔇ᶿ), m₁ ∈ -j:j, m₂ ∈ -j:j
+        @test Mathematica.WignerD(𝔇ʲ, m₁, m₂) ≈
+            exp(𝒾 * m₁ * ψ + 𝒾 * m₂ * ϕ) * Mathematica.WignerD(𝔇ʲᶿ, m₁, m₂) atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
 
 # The two symmetries:
 for (ψ, θ, ϕ) ∈ αβγs
-    for (j, m₁, m₂) ∈ ℓm′mrange(ℓₘₐₓ)
-        @test Mathematica.WignerD(j, m₁, m₂, ψ, θ, ϕ) ≈
-            (-1)^(m₁-m₂) * conj(Mathematica.WignerD(j, -m₁, -m₂, ψ, θ, ϕ)) atol=ϵₐ rtol=ϵᵣ
-        @test Mathematica.WignerD(j, m₁, m₂, ψ, θ, ϕ) ≈
-            (-1)^(m₁-m₂) * Mathematica.WignerD(j, m₂, m₁, ϕ, θ, ψ) atol=ϵₐ rtol=ϵᵣ
+    𝔇 = SphericalFunctions.DCalculator(ψ, θ, ϕ, ℓₘₐₓ)
+    𝔇ˢʷᵃᵖ = SphericalFunctions.DCalculator(ϕ, θ, ψ, ℓₘₐₓ)  # ψ and ϕ swapped
+    for ((j, 𝔇ʲ), (_, 𝔇ʲˢʷᵃᵖ)) ∈ zip(𝔇, 𝔇ˢʷᵃᵖ), m₁ ∈ -j:j, m₂ ∈ -j:j
+        @test Mathematica.WignerD(𝔇ʲ, m₁, m₂) ≈
+            (-1)^(m₁-m₂) * conj(Mathematica.WignerD(𝔇ʲ, -m₁, -m₂)) atol=ϵₐ rtol=ϵᵣ
+        @test Mathematica.WignerD(𝔇ʲ, m₁, m₂) ≈
+            (-1)^(m₁-m₂) * Mathematica.WignerD(𝔇ʲˢʷᵃᵖ, m₂, m₁) atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
 
 # The relation to `SphericalHarmonicY`, and the explicit example — which, as explained
 # above, are the identities that rule out the plain complex conjugate of our ``𝔇``:
-for (θ, ϕ) ∈ θϕrange(Float64, 7)
-    for (ℓ, m) ∈ ℓmrange(ℓₘₐₓ)
-        @test Mathematica.WignerD(ℓ, 0, m, θ, ϕ) ≈
+for (θ, ϕ) ∈ θϕrange(rng, Float64, 7)
+    for (ℓ, 𝔇ˡ) ∈ SphericalFunctions.DCalculator(zero(θ), θ, ϕ, ℓₘₐₓ), m ∈ -ℓ:ℓ
+        @test Mathematica.WignerD(𝔇ˡ, 0, m) ≈
             √(4π / (2ℓ+1)) * Mathematica.SphericalHarmonicY(ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
     end
     for ψ ∈ (0.0, 0.7, 2.9)
-        @test Mathematica.WignerD(1, 0, 1, ψ, θ, ϕ) ≈
+        𝔇¹ = SphericalFunctions.D(ψ, θ, ϕ, 1)[1]
+        @test Mathematica.WignerD(𝔇¹, 0, 1) ≈
             -√2 * exp(𝒾 * ϕ) * cos(θ/2) * sin(θ/2) atol=ϵₐ rtol=ϵᵣ
     end
+end
+#+
+
+# The plain complex conjugate of our ``𝔇``, by contrast, fails the explicit example at any
+# point where the example is nonzero — here, a few generic points:
+for (ψ, θ, ϕ) ∈ ((0.7, 0.8, 1.9), (2.9, 2.3, 4.4), (5.1, 1.2, 0.3))
+    𝔇¹ = SphericalFunctions.D(ψ, θ, ϕ, 1)[1]
+    @test !isapprox(
+        conj(𝔇¹[0, 1]), -√2 * exp(𝒾 * ϕ) * cos(θ/2) * sin(θ/2); atol=ϵₐ, rtol=ϵᵣ
+    )
 end
 #+
 

@@ -108,9 +108,9 @@ end  # module SomeAuthor
 # ## Tests
 #
 # Prose explaining what is compared, and why:
-for (θ, ϕ) ∈ θϕrange()
-    for (ℓ, m) ∈ ℓmrange(4)
-        @test SomeAuthor.Y(ℓ, m, θ, ϕ) ≈ ConventionsUtilities.Y(ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+for (θ, ϕ) ∈ θϕrange(rng)
+    for (ℓ, Yˡ) ∈ SphericalFunctions.YlmCalculator(θ, ϕ, 4), m ∈ -ℓ:ℓ
+        @test SomeAuthor.Y(ℓ, m, θ, ϕ) ≈ Yˡ[m] atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
@@ -207,12 +207,12 @@ The expressions in the literature are, naturally, given very similar
 or identical names — nearly every source has its own `Y` or `D` or `d`
 — so each reference's formulas are defined in a module of their own,
 which also lets the tests read as a direct comparison like
-`CondonShortley.𝜙(...) ≈ ConventionsUtilities.Y(...)`.  Of course, I
-couldn't have all these extra inefficient and inaccurate functions
-cluttering up the actual package, so these modules are defined inside
-the test items.  Because such a module is nested inside the module
-that the test runner creates for the test item, it reaches the setup
-modules with two dots, as in `import ..ConventionsUtilities: 𝒾`.
+`CondonShortley.𝜙(ℓ, m, θ, ϕ) ≈ Yˡ[m]`.  Of course, I couldn't have
+all these extra inefficient and inaccurate transcriptions cluttering
+up the actual package, so these modules are defined inside the test
+items.  Because such a module is nested inside the module that the
+test runner creates for the test item, it reaches the setup modules
+with two dots, as in `import ..ConventionsUtilities: 𝒾`.
 
 Occasionally one reference's formulas are needed by another page;
 Varshalovich's tests, for example, also use the formulas from my own
@@ -226,15 +226,27 @@ Two files in the comparisons directory are not pages at all, and
 `make_literate.jl` lists them in `skip_input_files` so that Literate
 leaves them alone:
 
-- `ConventionsSetup.jl` is a `@testsnippet` that seeds the random
-  number generator.
+- `ConventionsSetup.jl` is a `@testsnippet` that creates `rng`, the
+  random-number generator from which a page draws its sample angles.
+  Every page starts from the same seed, so its samples are the same
+  regardless of which pages have run before it in the same process.
 - `ConventionsUtilities.jl` is a `@testmodule` holding everything the
   pages share.
 
-The most important contents of `ConventionsUtilities` are the
-functions `D`, `d`, and `Y`, which are the standard every page is
-compared against.  They call this package, but they have their own
-test item pinning them to the explicit formulas on the conventions
+The pages compare the literature directly with this package's own
+functions, used just as they should be used anywhere else.  At each
+sample point a calculator such as `SphericalFunctions.DCalculator(α,
+β, γ, ℓₘₐₓ)` or `SphericalFunctions.YlmCalculator(θ, ϕ, ℓₘₐₓ)` is
+constructed, and iterated as `(ℓ, block)` pairs; each element of the
+block is then compared with the transcribed formula.  Where a relation
+involves the functions at two points, two calculators are iterated in
+step with `zip`.  The package's functions are always qualified, so
+that it is plain which side of each comparison is the package.
+(Half-integer blocks are labelled with `HalfOddInteger`s, which refuse
+arithmetic with other kinds of number, so the pages convert those
+labels with `Rational` before handing them to a transcribed formula.)
+`ConventionsUtilities` holds a test item that pins the package's
+functions to the explicit formulas on the conventions
 [Summary](../30-conventions/01-summary.md) page, so the pages are
 guaranteed to compare the literature against the *documented*
 conventions rather than against whatever the code happens to compute
@@ -244,17 +256,31 @@ unit, and `❗` is a singleton object whose multiplication method
 computes a factorial in `BigInt` arithmetic, so that `(ℓ+m)❗` — which
 Julia parses as juxtaposition, and hence multiplication — reads just
 like ``(ℓ+m)!``.  Finally, the generic angle and index ranges
-(`θϕrange`, `ℓmrange`, and so on) come from the `Utilities` snippet in
+(`θϕrange`, `ℓmrange`, and so on) come from the `Utilities` module in
 `test/utilities/utilities.jl`, which is shared with the rest of the
-test suite.
+test suite.  The ranges of angles mix fixed points, such as the poles
+and their nearest neighbors, with random samples, which are drawn from
+the generator passed as the first argument; that is why the pages
+call, for example, `θϕrange(rng)`.
 
-The pages import these names explicitly, even though TestItems.jl
-already brings setup modules into scope with `using`.  The explicit
-imports show the reader where each symbol came from; for the same
-reason, the setup modules export nothing, so that nothing they define
-can silently shadow a name defined in a page.
+The pages import the names from `ConventionsUtilities` and `Utilities`
+explicitly, even though TestItems.jl already brings setup modules into
+scope with `using`.  The explicit imports show the reader where each
+symbol came from, and neither module exports anything, so that nothing
+they define can silently shadow a name defined in a page.
 
-### Derivatives are computed, not rewritten
+### Formulas are transcribed literally
+
+The formulas on each page are copied verbatim from the reference,
+including its notation, and changed only as far as Julia demands — for
+example, by making arguments explicit where the reference leaves them
+implicit.  When a comparison fails, the formula is not massaged until
+it agrees; the disagreement is the finding, and it is what the page
+reports.  The tests are what get adjusted, to express the relation
+between the reference's conventions and this package's (a factor of
+``(-1)^m``, say, or a complex conjugate).
+
+### Derivatives are computed, not computed by hand
 
 Many of these sources define their functions in terms of derivatives.
 Condon and Shortley, for example, give the ``θ`` dependence of the
@@ -271,28 +297,18 @@ these general formulas into useful implementations; the helpers
 `dʲsin²ᵏθdcosθʲ` and `∂ⁿ` wrap it, and they have test items of their
 own.
 
-### Formulas are transcribed literally
-
-The formulas on each page are copied verbatim from the reference,
-including its notation, and changed only as far as Julia demands — for
-example, by making arguments explicit where the reference leaves them
-implicit.  When a comparison fails, the formula is not massaged until
-it agrees; the disagreement is the finding, and it is what the page
-reports.  The tests are what get adjusted, to express the relation
-between the reference's conventions and this package's (a factor of
-``(-1)^m``, say, or a complex conjugate).
-
 ### Finding and running the tests
 
 `JuliaTestItems.toml` in the package root tells the runners where to
 look for test items, and it lists `docs/literate_input/` alongside
-`src/` and `test/`.  It deliberately does not list the generated
-copies under `docs/src/`, which would otherwise be found twice.
-(Those generated files are also added to `.gitignore` by
-`make_literate.jl`, so that the Literate script is the only version
-under version control.)  TestItemRunner.jl honors the same file, so
-`Pkg.test` and continuous integration run the comparison pages along
-with the rest of the suite.
+`src/` and `test/`.  The pages that `make_literate.jl` generates from
+these scripts are Markdown files, which no runner searches, so each
+test item is found just once, in its Literate script.  (The two
+directories of `docs/src` that receive the generated pages hold
+nothing else, and `.gitignore` ignores them as a whole, so that the
+Literate script is the only version under version control.)
+TestItemRunner.jl honors the same file, so `Pkg.test` and continuous
+integration run the comparison pages along with the rest of the suite.
 
 While writing a page, the page alone can be run from VS Code's Testing
 panel, or from the command line with, for example,
@@ -302,9 +318,14 @@ juliati --filter 'Condon-Shortley'
 ```
 
 A few pages also cross-check against Python libraries (SciPy and
-SymPy).  Those comparisons are separate test items tagged `:python`
-and `:skipci`, because continuous integration does not have the Python
-environment they need.
+SymPy).  Those comparisons are separate test items tagged `:python`,
+because they need a Python installation, which CondaPkg builds on
+first use.  `Pkg.test` and `scripts/test.jl` run them only when that
+tag is requested, as the scheduled CI workflow does, while `juliati`
+and the editors run them unless they are filtered out, for example
+with `juliati --filter '!(:python in tags)'`.  They are also tagged
+`:skipci`, which leaves them out of any run in continuous integration
+that does not ask for them by tag.
 
 
 ## Loose ends

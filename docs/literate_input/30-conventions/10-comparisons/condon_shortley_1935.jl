@@ -3,7 +3,7 @@ md"""
 
 !!! info "Summary"
     Condon and Shortley's angular-momentum operators and definition of the spherical
-    harmonics agrees with the definition used in the `SphericalFunctions` package.
+    harmonics agree with the definition used in the `SphericalFunctions` package.
 
 [Condon and Shortley's "The Theory Of Atomic Spectra"](@cite CondonShortley_1935) is the
 standard reference for the "Condon-Shortley phase convention".  Though some references are
@@ -64,12 +64,20 @@ the formulas in a module so that we can test them against the `SphericalFunction
 
 using TestItems: @testitem  #hide
 @testitem "Condon-Shortley conventions" setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide
+import .Utilities: ℓmrange, θrange, θϕrange  #hide
 
 module CondonShortley
 #+
 
-# We'll also use some predefined utilities to make the code look more like the equations.
+# We'll also use some predefined utilities to make the code look more like the equations,
+# and `ForwardDiff` to evaluate the derivatives in the angular-momentum operators.
 import ..ConventionsUtilities: 𝒾, ❗, dʲsin²ᵏθdcosθʲ
+import ForwardDiff
+#+
+
+# Condon-Shortley include ``\hbar``, so we will include it in the expressions, but we will
+# set it to 1 to match the conventions of the `SphericalFunctions` package.
+const ħ = 1
 #+
 
 # Equation (12) of section 4³ (page 51) writes the solution to the three-dimensional Laplace
@@ -146,6 +154,17 @@ end
 ϴ(::Val{3}, ::Val{-3}, 𝜃) = +√(35/32) * sin(𝜃)^3
 #+
 
+# The angular-momentum operators are given just before equation (1) and in equation (8) of
+# section 4³ (pages 50 and 51).  Note that we defined ``\hbar = 1`` above.  Each operator
+# takes a function `f(𝜃, φ)` and returns a new function, with the derivatives evaluated by
+# forward-mode automatic differentiation.
+∂𝜃(f) = (𝜃, φ) -> ForwardDiff.derivative(𝜃′ -> f(𝜃′, φ), 𝜃)
+∂φ(f) = (𝜃, φ) -> ForwardDiff.derivative(φ′ -> f(𝜃, φ′), φ)
+L_z(f) = (𝜃, φ) -> -𝒾 * ħ * ∂φ(f)(𝜃, φ)
+L₊(f) = (𝜃, φ) -> ħ * exp(𝒾 * φ) * (∂𝜃(f)(𝜃, φ) + 𝒾 * cot(𝜃) * ∂φ(f)(𝜃, φ))
+L₋(f) = (𝜃, φ) -> ħ * exp(-𝒾 * φ) * (-∂𝜃(f)(𝜃, φ) + 𝒾 * cot(𝜃) * ∂φ(f)(𝜃, φ))
+#+
+
 # Condon and Shortley do not give an expression for the Wigner D-matrices, but the
 # convention for spherical harmonics is what they are known for, so this will suffice.
 
@@ -169,7 +188,7 @@ end  # module CondonShortley
 # again, noting the subtle difference between the characters `Θ` and `ϴ`.  Note that the
 # ``1/\sin θ`` factor in the general form will cause problems at the poles, so we avoid
 # the poles by using `βrange` with a small offset:
-for θ ∈ θrange(; avoid_poles=ϵₐ/10)
+for θ ∈ θrange(rng; avoid_poles=ϵₐ/10)
     for (ℓ, m) ∈ ℓmrange(ℓₘₐₓ)
         @test CondonShortley.ϴ(ℓ, m, θ) ≈ CondonShortley.Θ(ℓ, m, θ) atol=ϵₐ rtol=ϵᵣ
     end
@@ -180,16 +199,45 @@ end
 # the `SphericalFunctions` package.  We will only test up to
 ℓₘₐₓ = 4
 #+
-# because the formulas are very slow, and this will be sufficient to sort out any sign or
-# normalization differences, which are the most likely source of error.
-for (θ, ϕ) ∈ θϕrange(; avoid_poles=ϵₐ/40)
-    for (ℓ, m) ∈ ℓmrange(ℓₘₐₓ)
-        @test CondonShortley.𝜙(ℓ, m, θ, ϕ) ≈ ConventionsUtilities.Y(ℓ, m, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+# because near the poles the literal formula divides a nearly vanishing high-order
+# derivative by a power of the small quantity ``\sin θ``, and so loses precision as ``ℓ``
+# grows.  This will be sufficient to sort out any sign or normalization differences, which
+# are the most likely source of error.
+for (θ, ϕ) ∈ θϕrange(rng; avoid_poles=ϵₐ/40)
+    for (ℓ, Yˡ) ∈ SphericalFunctions.YlmCalculator(θ, ϕ, ℓₘₐₓ), m ∈ -ℓ:ℓ
+        @test CondonShortley.𝜙(ℓ, m, θ, ϕ) ≈ Yˡ[m] atol=ϵₐ rtol=ϵᵣ
     end
 end
 #+
 
-# This successful test shows that the function ``ϕ`` defined by Condon and Shortley
-# agrees with the spherical harmonics defined by the `SphericalFunctions` package.
+# Now the operators.  Applying Eq. (8) to Condon and Shortley's spherical harmonics must
+# reproduce Eq. (3), the relation that fixes their phase convention, and ``L_z`` must have
+# eigenvalue ``m``.  At the edges ``m = ±ℓ`` the raised or lowered function must vanish.
+# The operators involve ``\cot θ``, so we avoid the poles, and — as on the Goldberg et al.
+# page — evaluate in `BigFloat` arithmetic to keep the rounding errors amplified near the
+# poles below `Float64` precision.
+for (θ, ϕ) ∈ ((big(θ), big(ϕ)) for (θ, ϕ) ∈ θϕrange(rng, Float64, 5; avoid_poles=1e-3))
+    for (ℓ, m) ∈ ℓmrange(ℓₘₐₓ)
+        𝜙ₗₘ = (θ, ϕ) -> CondonShortley.𝜙(ℓ, m, θ, ϕ)
+        @test CondonShortley.L_z(𝜙ₗₘ)(θ, ϕ) ≈ m * 𝜙ₗₘ(θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+        if m < ℓ
+            @test CondonShortley.L₊(𝜙ₗₘ)(θ, ϕ) ≈
+                √((ℓ-m) * (ℓ+m+1)) * CondonShortley.𝜙(ℓ, m+1, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+        else
+            @test CondonShortley.L₊(𝜙ₗₘ)(θ, ϕ) ≈ 0 atol=ϵₐ
+        end
+        if m > -ℓ
+            @test CondonShortley.L₋(𝜙ₗₘ)(θ, ϕ) ≈
+                √((ℓ+m) * (ℓ-m+1)) * CondonShortley.𝜙(ℓ, m-1, θ, ϕ) atol=ϵₐ rtol=ϵᵣ
+        else
+            @test CondonShortley.L₋(𝜙ₗₘ)(θ, ϕ) ≈ 0 atol=ϵₐ
+        end
+    end
+end
+#+
+
+# These successful tests show that the function ``ϕ`` defined by Condon and Shortley agrees
+# with the spherical harmonics defined by the `SphericalFunctions` package, and that their
+# angular-momentum operators act on it exactly as their Eq. (3) requires.
 
 end  #hide

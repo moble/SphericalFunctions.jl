@@ -137,10 +137,12 @@ Thus, up to a phase factor,
 |κ_{ℓ,s}| = \sqrt{\frac{2ℓ+1}{4π}}.
 ```
 At ``s = 0`` that phase factor is 1, because of the near-universal
-agreement that ``Y_{ℓ,0}(θ, ϕ)`` should be real-valued, which we
-interpret to mean that ``{}_{0}Y_{ℓ,0}(𝟏)`` is real-valued; and
-``𝔇^{(ℓ)}_{m', m}(𝟏) = δ_{m',m}`` is real, so the constant must be
-real and positive.
+agreement that ``Y_{ℓ,0}(θ, ϕ)`` should be real-valued, with the sign
+chosen so that it is positive at the north pole ``θ = 0``.  We
+interpret that to mean that ``{}_{0}Y_{ℓ,0}(𝟏)`` is real and positive,
+and since ``{}_{0}Y_{ℓ,0}(𝟏) = κ_{ℓ,0}\, \overline{𝔇^{(ℓ)}_{0,0}(𝟏)}``
+with ``𝔇^{(ℓ)}_{m', m}(𝟏) = δ_{m',m}``, the constant must be real and
+positive.
 
 The dependence on ``s`` is then fixed by the ``R_±`` ladder
 operators.  Conjugation reverses them — a short calculation from the

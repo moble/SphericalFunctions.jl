@@ -26,42 +26,51 @@ index_kind_name(::Type{<:Integer}) = "integers"
 index_kind_name(::Type{HalfOddInteger}) = "half-odd-integers"
 
 function check_same_kind(::Type{IT}, w::ModeWeights{T, JT}, what) where {IT<:IntegerHalf, T, JT}
-    isindex(IT, ℓₘᵢₙ(w)) && return nothing
-    error(
+    (IT <: Integer) === (JT <: Integer) && return nothing
+    throw(ArgumentError(
         "These mode weights are indexed by $(index_kind_name(JT)) — "
         * "ℓ ∈ $(ℓₘᵢₙ(w)):$(ℓₘₐₓ(w)) — but $what is indexed by $(index_kind_name(IT)); "
         * "the two must be of one kind."
-    )
+    ))
 end
 
-# Containment, not equality: `D` has no `ℓₘᵢₙ` argument and always starts at 0 (or 1/2), while
-# a `ModeWeights` usually starts at `abs(s)`.  Truncation the other way is never silent.
-# `fix` is a function rather than a string, and is called only on the failing branch.  Written
-# the other way, the hint — which names `ℓₘₐₓ(w)`, so it cannot be a literal — was interpolated
-# on every call, pass or fail, and that one string was the whole of the ~350 bytes a `mul!`
-# allocated where its docstring promises none.
-@inline function check_ℓ_covers(lo, hi, w::ModeWeights, what, fix::F) where {F}
-    if lo > ℓₘᵢₙ(w) || hi < ℓₘₐₓ(w)
-        error(
-            "The mode weights cover ℓ ∈ $(ℓₘᵢₙ(w)):$(ℓₘₐₓ(w)); the ℓ range of $what is only "
+# Containment, not equality: `D` has no `ℓₘᵢₙ` argument and always starts at 0 (or 1/2),
+# while a `ModeWeights` usually starts at `abs(s)`.  Truncation the other way is never
+# silent.  What must be covered is the range of ℓ that the product reads, `needed`: every ℓ
+# of `w` for a rotation, and those from |s| up for an evaluation.  An empty range needs
+# nothing.  `fix` is a function rather than a string, and is called only on the failing
+# branch; the hint names `ℓₘₐₓ(w)`, so it cannot be a literal, and interpolating it on every
+# call would allocate in a `mul!` that allocates nothing.
+@inline function check_ℓ_covers(lo, hi, needed, w::ModeWeights, what, fix::F) where {F}
+    if !isempty(needed) && (lo > first(needed) || hi < last(needed))
+        throw(ArgumentError(
+            "The mode weights cover ℓ ∈ $(ℓₘᵢₙ(w)):$(ℓₘₐₓ(w)), of which ℓ ∈ "
+            * "$(first(needed)):$(last(needed)) are needed; the ℓ range of $what is only "
             * "$lo:$hi.  $(fix())"
-        )
+        ))
     end
     nothing
 end
 
-# The run of `w`'s modes inside the flat storage of a container whose ℓ range contains it.
-@inline function shared_mode_range(container, w::ModeWeights)
-    i₀ = Yindex(ℓₘᵢₙ(w), -ℓₘᵢₙ(w), ℓₘᵢₙ(container))
-    i₀:(i₀ + length(w) - 1)
+# The ℓ that an evaluation reads: those of `w` from |s| up, since the entries below |s| belong
+# to no harmonic, and are skipped rather than multiplied by the harmonics' zeros there,
+# which would turn a non-finite entry into a non-finite value of the function.  Both ends
+# come from `w`, so the range is of one index type.
+@inline evaluated_range(w::ModeWeights) = max(ℓₘᵢₙ(w), abs(spin(w))):ℓₘₐₓ(w)
+
+# The positions in the flat storage of a container with lowest degree `ℓ₀` of the modes of
+# the nonempty range `r` of ℓ.
+@inline function mode_positions(ℓ₀, r)
+    i₀ = Yindex(first(r), -first(r), ℓ₀)
+    i₀:(i₀ + Ysize(first(r), last(r)) - 1)
 end
 
 
 ### Rotation.
 
 # The blocks of a `WignerSeries` hold the numbers, so the number type is the `eltype` of the
-# block type — which is the `eltype` of `values(𝔇)`, not of `𝔇`, whose `eltype` is the
-# `ℓ => block` pair it iterates as.  Getting this wrong would quietly ask `similar` for a
+# block type — which is the `eltype` of `values(𝔇)`, not of `𝔇`, whose `eltype` is the `ℓ
+# => block` pair it iterates as.  Getting this wrong would quietly ask `similar` for a
 # vector of blocks or of pairs.
 number_type(𝔇::WignerSeries) = eltype(eltype(values(𝔇)))
 number_type(::WignerCalculator{IT, RT, NT}) where {IT, RT, NT} = NT
@@ -72,12 +81,12 @@ number_type(::WignerCalculator{IT, RT, NT}) where {IT, RT, NT} = NT
 # threshold — which is why a series is checked per ℓ rather than once.
 function check_whole_block(B, ℓ)
     if m′ₘᵢₙ(B) != -ℓ || m′ₘₐₓ(B) != ℓ || mₘᵢₙ(B) != -ℓ || mₘₐₓ(B) != ℓ
-        error(
+        throw(ArgumentError(
             "The Wigner matrix for ℓ=$ℓ holds only m′ ∈ $(m′ₘᵢₙ(B)):$(m′ₘₐₓ(B)) and "
             * "m ∈ $(mₘᵢₙ(B)):$(mₘₐₓ(B)), but rotating mode weights needs the whole "
             * "(2ℓ+1)×(2ℓ+1) block, because every m mixes into every m′.  Rebuild the "
             * "matrices without the m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ or mₘᵢₙ restrictions."
-        )
+        ))
     end
     nothing
 end
@@ -85,7 +94,7 @@ end
 function check_rotation(𝔇::WignerSeries{IT}, w::ModeWeights) where {IT}
     check_same_kind(IT, w, "this WignerSeries")
     check_ℓ_covers(
-        ℓₘᵢₙ(𝔇), ℓₘₐₓ(𝔇), w, "this WignerSeries",
+        ℓₘᵢₙ(𝔇), ℓₘₐₓ(𝔇), ℓₘᵢₙ(w):ℓₘₐₓ(w), w, "this WignerSeries",
         () -> "Build the matrices with `D(R, $(ℓₘₐₓ(w)))`."
     )
 end
@@ -93,24 +102,29 @@ end
 function check_rotation(calc::WignerCalculator{IT}, w::ModeWeights) where {IT}
     check_same_kind(IT, w, "this calculator")
     check_ℓ_covers(
-        ℓₘᵢₙ(calc), ℓₘₐₓ(calc), w, "this calculator", () -> "Build it with ℓₘₐₓ=$(ℓₘₐₓ(w))."
+        ℓₘᵢₙ(calc), ℓₘₐₓ(calc), ℓₘᵢₙ(w):ℓₘₐₓ(w), w, "this calculator",
+        () -> "Build it with ℓₘₐₓ=$(ℓₘₐₓ(w))."
     )
-    if Nᵣ(calc) != 1
-        error(
-            "This calculator handles Nᵣ=$(Nᵣ(calc)) rotors at once, but a rotation of mode "
-            * "weights is by one rotor; build the calculator with a single `Rotor`, or step "
-            * "through the batch with `set_R!`."
-        )
+    # A calculator built from a vector of rotors is batched even when the vector has one
+    # element, and its blocks then have a rotor axis, so the test is `isbatched`, not Nᵣ.
+    if isbatched(calc)
+        throw(ArgumentError(
+            "This calculator was built for a batch of $(Nᵣ(calc)) "
+            * (Nᵣ(calc) == 1 ? "rotor" : "rotors") * ", from a vector of rotor data, but a "
+            * "rotation of mode weights is by one rotor; build the calculator from a single "
+            * "`Rotor` — not a vector of them, even of length one — or step through the batch "
+            * "with `set_R!`."
+        ))
     end
     # The limits are fields of a calculator, so one check covers every ℓ.
     let L = ℓₘₐₓ(w)
         if m′ₘₐₓ(calc) < L || m′ₘᵢₙ(calc) > -L || mₘₐₓ(calc) < L || mₘᵢₙ(calc) > -L
-            error(
+            throw(ArgumentError(
                 "This calculator computes only m′ ∈ $(m′ₘᵢₙ(calc)):$(m′ₘₐₓ(calc)) and "
                 * "m ∈ $(mₘᵢₙ(calc)):$(mₘₐₓ(calc)), but rotating mode weights up to "
                 * "ℓₘₐₓ=$L needs the whole block for every ℓ.  Build it without those "
                 * "restrictions."
-            )
+            ))
         end
     end
     nothing
@@ -118,17 +132,19 @@ end
 
 function check_rotation_output(w′::ModeWeights, w::ModeWeights)
     if spin(w′) != spin(w) || ℓₘᵢₙ(w′) != ℓₘᵢₙ(w) || ℓₘₐₓ(w′) != ℓₘₐₓ(w)
-        error(
+        throw(ArgumentError(
             "The output has s=$(spin(w′)) and ℓ ∈ $(ℓₘᵢₙ(w′)):$(ℓₘₐₓ(w′)), but a rotation "
-            * "changes neither, so it must have s=$(spin(w)) and ℓ ∈ $(ℓₘᵢₙ(w)):$(ℓₘₐₓ(w))."
-        )
+            * "changes neither, so it must have s=$(spin(w)) and ℓ ∈ $(ℓₘᵢₙ(w)):$(ℓₘₐₓ(w)).  "
+            * "`similar(w)` is such an output, and `ModeWeights(w; ℓₘᵢₙ, ℓₘₐₓ)` copies weights "
+            * "into another range of ℓ."
+        ))
     end
     if Base.mightalias(array_view(w′), array_view(w))
-        error(
+        throw(ArgumentError(
             "The output aliases the input.  A rotation mixes every m of a block into every "
             * "m′, so it cannot be done in place; pass a separate destination, such as "
             * "`similar(w)`."
-        )
+        ))
     end
     nothing
 end
@@ -144,25 +160,31 @@ from [`D`](@ref)) or `calc` (a [`DCalculator`](@ref)) hold.  Mode by mode,
 ```math
 f′_{ℓ,m′} = \\sum_m 𝔇^{(ℓ)}_{m′,m}(𝐑)\\, f_{ℓ,m},
 ```
-with **no** complex conjugate: version 2's ``𝔇`` was the conjugate of this one, so code ported
-from it must drop a `conj` rather than add one.  The derivation is in the conventions section,
-under [Rotation of mode weights](@ref conv_rotation_of_modes).
+with **no** complex conjugate: version 2's ``𝔇`` was the conjugate of this one, so code
+ported from it must drop a `conj` rather than add one.  The derivation is in the conventions
+section, under [Rotation of mode weights](@ref conv_rotation_of_modes).
 
-The result is a new `ModeWeights` with the same spin weight and the same range of ``ℓ`` as `w`
-— a rotation changes neither.  `𝔇` must *cover* `w`'s range, which is not the same as matching
-it: [`D`](@ref) has no `ℓₘᵢₙ` argument and always starts at ``0`` (or ``1/2``), while a
-`ModeWeights` usually starts at ``|s|``.  The blocks must be whole: a ``𝔇`` built with any of
-the `m′ₘₐₓ`, `m′ₘᵢₙ`, `mₘₐₓ` or `mₘᵢₙ` restrictions cannot rotate anything, because every ``m``
-mixes into every ``m′``, and is refused.
+The result is a new `ModeWeights` with the same spin weight and the same range of ``ℓ`` as
+`w` — a rotation changes neither.  `𝔇` must *cover* `w`'s range, which is not the same as
+matching it: [`D`](@ref) has no `ℓₘᵢₙ` argument and always starts at ``0`` (or ``1/2``),
+while a `ModeWeights` usually starts at ``|s|``.  The blocks must be whole: a ``𝔇`` built
+with any of the `m′ₘₐₓ`, `m′ₘᵢₙ`, `mₘₐₓ` or `mₘᵢₙ` restrictions cannot rotate anything,
+because every ``m`` mixes into every ``m′``, and is refused.
 
 Real matrices from [`d`](@ref) are accepted, and are exactly the rotation by
-`from_euler_angles(0, β, 0)`, for which ``𝔇 = d``.
+`from_euler_angles(0, β, 0)`, for which ``𝔇 = d``.  The matrices are computed in the
+floating-point type of the rotor, as [`D`](@ref) says, and the result is of the promoted
+type of the matrices and the weights, so weights of higher precision than the rotor are
+rotated only to the rotor's precision; convert the rotor to the weights' type where their
+full precision is wanted.
 
 The calculator form holds one ``ℓ`` at a time instead of materializing every block, so it
 allocates only the result; `mul!` into an existing container allocates nothing at all.  (The
 destination may also be a bare vector at least as long as the result, which then comes back
-as a `ModeWeights` over it.)  A calculator holds workspace, so it must not be used from two
-threads at once.
+as a `ModeWeights` over it.)  The calculator must have been built from a single `Rotor`: one
+built from a vector of rotors, even of length one, is batched, and is refused.  A calculator
+holds workspace, so it must not be used by two tasks at once; `similar(calc)` gives each
+task one of its own.
 
 ```julia
 w′ = D(R, ℓₘₐₓ(w)) * w
@@ -198,8 +220,9 @@ function LinearAlgebra.mul!(w′::ModeWeights, calc::WignerCalculator, w::ModeWe
     rotate_modes!(array_view(w′), calc, w)
     w′
 end
-# Bare storage, at least as long as the result, is accepted as the output too, and the result
-# comes back labelled as `w` is, as a `ModeWeights` over it (see `mode_weights_view`).
+# Bare storage, at least as long as the result, is accepted as the output too, and the
+# result comes back labelled as `w` is, as a `ModeWeights` over it (see
+# `mode_weights_view`).
 LinearAlgebra.mul!(w′::AbstractVector, 𝔇::WignerSeries, w::ModeWeights) =
     mul!(mode_weights_view(w′, w.s, w.ℓₘᵢₙ, w.ℓₘₐₓ), 𝔇, w)
 LinearAlgebra.mul!(w′::AbstractVector, calc::WignerCalculator, w::ModeWeights) =
@@ -207,8 +230,8 @@ LinearAlgebra.mul!(w′::AbstractVector, calc::WignerCalculator, w::ModeWeights)
 
 # The workers, against the flat storage of both containers: one `mul!` per ℓ, on the
 # contiguous run of modes that ℓ occupies.  Both ends of the loop come from `w`, because a
-# range formed from two different objects' accessors is a `MethodError` waiting to happen when
-# one side is a `HalfOddInteger` and the other is not.
+# range formed from two different objects' accessors is a `MethodError` waiting to happen
+# when one side is a `HalfOddInteger` and the other is not.
 function rotate_modes!(dst::AbstractVector, 𝔇::WignerSeries, w::ModeWeights)
     src = array_view(w)
     for ℓ ∈ ℓₘᵢₙ(w):ℓₘₐₓ(w)
@@ -220,8 +243,8 @@ function rotate_modes!(dst::AbstractVector, 𝔇::WignerSeries, w::ModeWeights)
     dst
 end
 
-# Streaming: nothing is held but the block the calculator is standing on.  Beginning above the
-# calculator's own ℓₘᵢₙ still runs the recurrence through the ℓ below, so the result is
+# Streaming: nothing is held but the block the calculator is standing on.  Beginning above
+# the calculator's own ℓₘᵢₙ still runs the recurrence through the ℓ below, so the result is
 # bit-for-bit what a sequential pass gives.  The m′/m limits were checked once, in
 # `check_rotation`, because they are fields of the calculator rather than of each block.
 function rotate_modes!(dst::AbstractVector, calc::WignerCalculator, w::ModeWeights)
@@ -239,34 +262,37 @@ end
 
 # The contraction over modes, written out rather than reached through `dot`, which would
 # conjugate.  `eachindex(y, x)` is also the length check, and `init` is what lets an empty
-# container give zero rather than throw.  The association is `mapfoldl`'s, which is what the
-# `w(R)` of earlier versions used, so the two agree bit for bit.
+# container give zero rather than throw.  The association is `mapfoldl`'s, strictly from
+# left to right over the modes.
 @inline function synthesize(y::AbstractVector, x::AbstractVector)
     T = promote_type(eltype(y), eltype(x))
     sum(y[i] * x[i] for i ∈ eachindex(y, x); init=zero(T))
 end
 
-# A difference of two `HalfOddInteger`s is an `Int` by construction, so this is the same
-# expression for either kind of index.
-@inline spin_row(Y, w::ModeWeights) = Int(spin(w) - first(spins(Y))) + 1
+# The position of the spin weight `s` in the spin axis of `Y`, as `spin_index` gives it for
+# a calculator.  A difference of two `HalfOddInteger`s is an `Int` by construction, so this
+# is the same expression for either kind of index.
+@inline spin_index(Y::HarmonicValues, s) = Int(s - first(spins(Y))) + 1
 
+# `what` names the harmonics with its verb, as "these harmonic values serve" or "this
+# calculator serves", so that the sentence agrees with either.
 function check_spin_available(sr, w::ModeWeights, what)
     if !(first(sr) ≤ spin(w) ≤ last(sr))
-        error(
-            "These mode weights have spin weight s=$(spin(w)), but $what serves "
+        throw(ArgumentError(
+            "These mode weights have spin weight s=$(spin(w)), but $what only "
             * (length(sr) == 1 ? "s=$(first(sr))" : "s ∈ $(first(sr)):$(last(sr))")
             * ".  Evaluation pairs the weights of a function with the harmonics of its own "
             * "spin weight."
-        )
+        ))
     end
     nothing
 end
 
 # The real harmonics ₛλₗₘ(θ) are functions of θ alone — ₛYₗₘ(θ, 0) for integer s, and for a
 # half-odd s that divided by the constant phase i^{2s} — so pairing mode weights with them
-# evaluates the function at no rotor at all, and for a half-odd spin weight the result is off
-# by that phase, ±i.  They
-# are for the transforms' ring-by-ring work, not for evaluation, and are refused here.
+# evaluates the function at no rotor at all, and for a half-odd spin weight the result is
+# off by that phase, ±i.  They are for the transforms' ring-by-ring work, not for
+# evaluation, and are refused here.
 function check_complex_harmonics(::Type{T}, what) where {T}
     if T <: Real
         throw(ArgumentError(
@@ -281,19 +307,20 @@ function check_evaluation(Y::HarmonicValues{T, IT}, w::ModeWeights) where {T, IT
     check_complex_harmonics(T, "these harmonic values")
     check_same_kind(IT, w, "these harmonic values")
     check_ℓ_covers(
-        ℓₘᵢₙ(Y), ℓₘₐₓ(Y), w, "these harmonic values",
+        ℓₘᵢₙ(Y), ℓₘₐₓ(Y), evaluated_range(w), w, "these harmonic values",
         () -> "Compute them with `sYlm(R, $(ℓₘₐₓ(w)), $(spin(w)); ℓₘᵢₙ=$(ℓₘᵢₙ(w)))`."
     )
-    check_spin_available(spins(Y), w, "these harmonic values")
+    check_spin_available(spins(Y), w, "these harmonic values serve")
 end
 
 function check_evaluation(calc::HarmonicCalculator{IT}, w::ModeWeights) where {IT}
     check_complex_harmonics(number_type(calc), "this calculator")
     check_same_kind(IT, w, "this calculator")
     check_ℓ_covers(
-        ℓₘᵢₙ(calc), ℓₘₐₓ(calc), w, "this calculator", () -> "Build it with ℓₘₐₓ=$(ℓₘₐₓ(w))."
+        ℓₘᵢₙ(calc), ℓₘₐₓ(calc), evaluated_range(w), w, "this calculator",
+        () -> "Build it with ℓₘₐₓ=$(ℓₘₐₓ(w))."
     )
-    check_spin_available(spins(calc), w, "this calculator")
+    check_spin_available(spins(calc), w, "this calculator serves")
 end
 
 
@@ -302,26 +329,37 @@ end
     calc * w
 
 Evaluate the function with mode weights `w` at the rotor (or rotors) whose harmonics `Y`
-holds, ``f(𝐑) = \\sum_{ℓ,m} f_{ℓ,m}\\, {}_sY_{ℓ,m}(𝐑)``.  `Y` is a [`HarmonicValues`](@ref)
-from [`sYlm`](@ref), or an [`sYlmCalculator`](@ref).  The real harmonics of
-[`sλlm`](@ref) and [`sλlmCalculator`](@ref) are refused: they are functions of ``θ`` alone,
-without the phase ``i^{2s}`` of ``{}_sY_{ℓ,m}``, so they evaluate the function at no rotor.
+holds, ``f(𝐑) = \\sum_{ℓ,m} f_{ℓ,m}\\, {}_sY_{ℓ,m}(𝐑)``.  `Y` is a
+[`HarmonicValues`](@ref) from [`sYlm`](@ref), or an [`sYlmCalculator`](@ref).  The real
+harmonics of [`sλlm`](@ref) and [`sλlmCalculator`](@ref) are refused: they are functions of
+``θ`` alone, without the phase ``i^{2s}`` of ``{}_sY_{ℓ,m}``, so they evaluate the function
+at no rotor.
 
-The result is a scalar when the harmonics were computed for a single rotor, and a `Vector` of
-one value per rotor otherwise.  Where `Y` holds a *range* of spin weights, the row of `w`'s own
-spin weight is the one used, and the result is as above; weights of one spin weight paired
-against harmonics of another mean nothing, so a `w` whose spin weight is not among them is
-refused.
+The result is a scalar when the harmonics were computed for a single rotor, and a `Vector`
+of one value per rotor otherwise.  Where `Y` holds a *range* of spin weights, the row of
+`w`'s own spin weight is the one used, and the result is as above; weights of one spin
+weight paired against harmonics of another mean nothing, so a `w` whose spin weight is not
+among them is refused.
 
-`Y`'s range of ``ℓ`` must *cover* `w`'s, which is not the same as matching it: [`sYlm`](@ref)
-takes an `ℓₘᵢₙ`, and the two need not agree.
+`Y`'s range of ``ℓ`` must *cover* that of `w`, from the larger of `ℓₘᵢₙ(w)` and ``|s|`` up,
+which is not the same as matching it: [`sYlm`](@ref) takes an `ℓₘᵢₙ`, and the two need not
+agree.  The entries of `w` with ``ℓ < |s|`` belong to no harmonic and are not read, so a
+non-finite value there does not reach the result; weights that hold no ``ℓ ≥ |s|`` at all
+evaluate to zero.
+
+The harmonics are computed in the floating-point type of the rotor, and the result is of the
+promoted type of the harmonics and the weights, so weights of higher precision than the
+rotor are evaluated only to the rotor's precision; convert the rotor to the weights' type
+where their full precision is wanted.
 
 This product does **not** conjugate anything, which is why it is `*` and not `⋅`: `⋅` is
-`LinearAlgebra.dot`, which conjugates its first argument.  It is the same product that
-[`sYlm_matrix`](@ref)'s docstring writes as `f = Y * f̃`.
+`LinearAlgebra.dot`, which conjugates its first argument.  It is the labelled form of the
+product that [`sYlm_matrix`](@ref)'s docstring writes as `f = Y * array_view(f̃)`, and
+unlike that product of plain arrays it checks the spin weight and the range of ``ℓ`` of `w`.
 
 The calculator form holds one ``ℓ`` at a time rather than every harmonic at once.  A
-calculator holds workspace, so it must not be used from two threads at once.
+calculator holds workspace, so it must not be used by two tasks at once; `similar(calc)`
+gives each task one of its own.
 
 ```julia
 Y = sYlm(R, ℓₘₐₓ(w), spin(w); ℓₘᵢₙ=ℓₘᵢₙ(w))
@@ -331,31 +369,43 @@ Y * w == w(R)
 function Base.:*(
     Y::HarmonicValues{T, IT, S, <:AbstractVector}, w::ModeWeights
 ) where {T, IT, S<:IntegerHalf}
+    # Each of these pairs the modes of `evaluated_range(w)` in the two storages; an empty
+    # range gives zero.
     check_evaluation(Y, w)
-    synthesize(view(array_view(Y), shared_mode_range(Y, w)), array_view(w))
+    let r = evaluated_range(w), y = array_view(Y), x = array_view(w)
+        synthesize(view(y, mode_positions(ℓₘᵢₙ(Y), r)), view(x, mode_positions(ℓₘᵢₙ(w), r)))
+    end
 end
 function Base.:*(
     Y::HarmonicValues{T, IT, S, <:AbstractMatrix}, w::ModeWeights
 ) where {T, IT, S<:IntegerHalf}
     check_evaluation(Y, w)
-    view(array_view(Y), :, shared_mode_range(Y, w)) * array_view(w)
+    let r = evaluated_range(w), y = array_view(Y), x = array_view(w)
+        view(y, :, mode_positions(ℓₘᵢₙ(Y), r)) * view(x, mode_positions(ℓₘᵢₙ(w), r))
+    end
 end
 function Base.:*(
     Y::HarmonicValues{T, IT, S, <:AbstractMatrix}, w::ModeWeights
 ) where {T, IT, S<:AbstractUnitRange}
     check_evaluation(Y, w)
-    synthesize(view(array_view(Y), spin_row(Y, w), shared_mode_range(Y, w)), array_view(w))
+    let r = evaluated_range(w), y = array_view(Y), x = array_view(w), iₛ = spin_index(Y, spin(w))
+        synthesize(
+            view(y, iₛ, mode_positions(ℓₘᵢₙ(Y), r)), view(x, mode_positions(ℓₘᵢₙ(w), r))
+        )
+    end
 end
 function Base.:*(
     Y::HarmonicValues{T, IT, S, <:AbstractArray{T, 3}}, w::ModeWeights
 ) where {T, IT, S<:AbstractUnitRange}
     check_evaluation(Y, w)
-    view(array_view(Y), :, spin_row(Y, w), shared_mode_range(Y, w)) * array_view(w)
+    let r = evaluated_range(w), y = array_view(Y), x = array_view(w), iₛ = spin_index(Y, spin(w))
+        view(y, :, iₛ, mode_positions(ℓₘᵢₙ(Y), r)) * view(x, mode_positions(ℓₘᵢₙ(w), r))
+    end
 end
 
 # Streaming.  Batchedness is a type parameter, so these dispatch on it rather than branching
-# inside; each then has one concrete return type — a scalar, or one value per rotor — instead
-# of a union of the two.
+# inside; each then has one concrete return type — a scalar, or one value per rotor —
+# instead of a union of the two.
 function Base.:*(
     calc::HarmonicCalculator{IT, RT, YT, ST, S, false}, w::ModeWeights
 ) where {IT, RT, YT, ST, S}
@@ -363,9 +413,9 @@ function Base.:*(
     src = array_view(w)
     f = zero(promote_type(YT, eltype(w)))
     iₛ = spin_index(calc, convert(IT, spin(w)))
-    for ℓ ∈ ℓₘᵢₙ(w):ℓₘₐₓ(w)
-        recurrence!(calc, ℓ)
-        Yˡ = spin_row(calc, ℓ, iₛ)
+    for ℓ ∈ evaluated_range(w)
+        # Only the row of this spin weight is assembled, however many the calculator serves.
+        Yˡ = spin_row!(calc, ℓ, iₛ)
         f += synthesize(array_view(Yˡ), view(src, mode_range(w, ℓ)))
     end
     f
@@ -378,10 +428,10 @@ function Base.:*(
     NT = promote_type(YT, eltype(w))
     f = zeros(NT, Nᵣ(calc))
     iₛ = spin_index(calc, convert(IT, spin(w)))
-    for ℓ ∈ ℓₘᵢₙ(w):ℓₘₐₓ(w)
-        recurrence!(calc, ℓ)
-        # β = 1 accumulates across ℓ, so nothing beyond `f` is ever held.
-        mul!(f, array_view(spin_row(calc, ℓ, iₛ)), view(src, mode_range(w, ℓ)), one(NT), one(NT))
+    for ℓ ∈ evaluated_range(w)
+        # Only the row of this spin weight is assembled, and β = 1 accumulates across ℓ, so
+        # nothing beyond `f` is ever held.
+        mul!(f, array_view(spin_row!(calc, ℓ, iₛ)), view(src, mode_range(w, ℓ)), one(NT), one(NT))
     end
     f
 end
@@ -393,22 +443,37 @@ end
     w(R)
     w(R⃗)
 
-Evaluate the function with mode weights `w` at the rotor `R`, or at each of a vector of rotors
-`R⃗`, ``f(𝐑) = \\sum_{ℓ,m} f_{ℓ,m}\\, {}_sY_{ℓ,m}(𝐑)``.  For spherical coordinates use
-`R = from_spherical_coordinates(θ, ϕ)`.
+Evaluate the function with mode weights `w` at the rotor `R`, or at each of a vector of
+rotors `R⃗`, ``f(𝐑) = \\sum_{ℓ,m} f_{ℓ,m}\\, {}_sY_{ℓ,m}(𝐑)``.  For spherical coordinates
+use `R = from_spherical_coordinates(θ, ϕ)`.
 
-This computes the harmonics afresh on every call.  For repeated evaluation build an
+This computes the harmonics on every call.  For repeated evaluation build an
 [`sYlmCalculator`](@ref) once and use `calc * w`; for many rotors at once see
-[`sYlm_matrix`](@ref) and the transforms in the "Transformations" section.
+[`sYlm_matrix`](@ref) and the transforms in the "Transformations" section.  As for `Y * w`,
+the harmonics are computed in the floating-point type of the rotor, so a rotor of lower
+precision than the weights limits the precision of the result.
 
-Mode weights whose ``|s|`` exceeds their ``ℓₘₐₓ`` hold no harmonics at all, and cannot be
-evaluated: the call is refused, as [`sYlm`](@ref) refuses such a spin weight.  Weights of that
-kind arise from [`ð`](@ref) applied to weights with ``s = ℓₘₐₓ``, for example, and the
-function they describe is zero.
+The entries of `w` with ``ℓ < |s|`` belong to no harmonic, and are not read.  Mode weights
+that hold no ``ℓ ≥ |s|`` at all, such as an empty `ModeWeights` or weights whose ``|s|``
+exceeds their ``ℓₘₐₓ``, describe the zero function, and evaluate to zero, although
+[`sYlm`](@ref) refuses such a spin weight; weights of that kind arise from [`ð`](@ref)
+applied to weights with ``s = ℓₘₐₓ``, for example.  An empty vector of rotors gives an empty
+vector of values.
 """
-(w::ModeWeights)(R::Rotor) = sYlm(R, ℓₘₐₓ(w), spin(w); ℓₘᵢₙ=ℓₘᵢₙ(w)) * w
-(w::ModeWeights)(R⃗::AbstractVector{<:Rotor}) = sYlm(R⃗, ℓₘₐₓ(w), spin(w); ℓₘᵢₙ=ℓₘᵢₙ(w)) * w
-(w::ModeWeights)(R::NonRotorData) = error(not_a_rotor(R))
+function (w::ModeWeights)(R::Rotor)
+    isempty(evaluated_range(w)) && return zero(evaluation_type(R, w))
+    sYlm(R, ℓₘₐₓ(w), spin(w); ℓₘᵢₙ=ℓₘᵢₙ(w)) * w
+end
+function (w::ModeWeights)(R⃗::AbstractVector{<:Rotor})
+    if isempty(evaluated_range(w)) || isempty(R⃗)
+        return zeros(evaluation_type(R⃗, w), length(R⃗))
+    end
+    sYlm(R⃗, ℓₘₐₓ(w), spin(w); ℓₘᵢₙ=ℓₘᵢₙ(w)) * w
+end
+(w::ModeWeights)(R::NonRotorData) = throw(ArgumentError(not_a_rotor(R)))
+# The number type of the values, that of a product of the harmonics, which are complex numbers
+# of the rotor's floating-point type, with the weights.
+evaluation_type(R, w::ModeWeights) = promote_type(Complex{rotor_basetype(R)}, eltype(w))
 
 
 ### `dot` is *not* evaluation.
@@ -422,12 +487,13 @@ function they describe is zero.
 # `MethodError` for someone to "fix" later by adding the harmful method.
 const dot_is_not_evaluation = (
     "`dot` (`⋅`) conjugates its first argument, but evaluating a spin-weighted function — "
-    * "f(𝐑) = Σ f_{ℓ,m} ₛYₗₘ(𝐑) — must not conjugate the harmonics.  Use `Y * w`, which is "
-    * "the bilinear product that `sYlm_matrix` documents as `f = Y * f̃`.  For the conjugating "
-    * "inner product of two sets of mode weights, `dot(w₁, w₂)` is still what you want."
+    * "f(𝐑) = Σ f_{ℓ,m} ₛYₗₘ(𝐑) — must not conjugate the harmonics.  Use `Y * w`, the "
+    * "bilinear product of the harmonic values `Y = sYlm(R⃗, ℓₘₐₓ, s)` with the weights, which "
+    * "checks their labels.  For the conjugating inner product of two sets of mode weights, "
+    * "`dot(w₁, w₂)` is still what you want."
 )
 
 LinearAlgebra.dot(::Union{HarmonicValues, HarmonicCalculator}, ::ModeWeights) =
-    error(dot_is_not_evaluation)
+    throw(ArgumentError(dot_is_not_evaluation))
 LinearAlgebra.dot(::ModeWeights, ::Union{HarmonicValues, HarmonicCalculator}) =
-    error(dot_is_not_evaluation)
+    throw(ArgumentError(dot_is_not_evaluation))

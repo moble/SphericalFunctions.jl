@@ -1,7 +1,8 @@
 # Python packages used by the optional PythonCall cross-checks in the conventions comparison
-# pages (test items tagged `:python`).  These test items are skipped by default and in
-# regular CI; they run in the scheduled workflow (`.github/workflows/scheduled.yml`) or when
-# explicitly requested with `julia --project=. scripts/test.jl :python`.
+# pages (test items tagged `:python`).  `Pkg.test` and `scripts/test.jl` run these items only
+# when `:python` is requested, as the scheduled workflow (`.github/workflows/scheduled.yml`)
+# does, or as `julia --project=. scripts/test.jl :python` does; other runners, such as
+# `juliati` and the editors, run them unless they are filtered out.
 #
 # These live in the `[dev.deps]` section of the *package root* rather than in
 # `test/CondaPkg.toml`, for two reasons:
