@@ -285,7 +285,7 @@ end
 
 @testitem "HalfOddInteger: the recurrence arithmetic stays in `Int`" setup=[InferenceChecks] begin
     using SphericalFunctions: HalfOddInteger, HCalculator, δ², sgn, ϵ
-    import .InferenceChecks: inferred_type, dynamic_calls
+    import .InferenceChecks: inferred_type, dynamic_calls, dynamic_call_list
 
     # This is the whole point of the type, and it is exactly the property that no
     # correctness test can see: if these inferred `Rational` instead, every answer would
@@ -317,7 +317,11 @@ end
                       SphericalFunctions.recurrence_seed!)
             ir = string(Base.code_typed(step!, (typeof(H),); optimize=true)[1][1])
             @test !occursin("Rational", ir)
-            @test dynamic_calls(step!, (typeof(H),)) == 0
+            calls = dynamic_call_list(step!, (typeof(H),))
+            # On Julia 1.10, in CI, this has been seen to fail only after the rest of the
+            # suite has run in the same process, so the calls are printed for diagnosis
+            isempty(calls) || @info "Dynamic calls in $(nameof(step!))" typeof(H) calls
+            @test isempty(calls)
         end
     end
 

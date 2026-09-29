@@ -36,6 +36,43 @@ function testfilter(testitem)
     !(CI && :skipci ∈ tags)
 end
 
+# Facts about the machine and the run, printed before any item runs, so that they appear at
+# the top of a CI log.  Whether `muladd` fuses is measured on compiled code, with the inputs
+# hidden from constant folding; the case is the modulus of `cis(0.3)`, which is 1 - eps/2
+# when rounded once and 1 when rounded twice.  The dynamic calls in the half-integer
+# recurrence are counted in a fresh process with the same options, because asking for them
+# here would fill this process's inference cache and could change what the items see.
+let
+    fused(x, y) = muladd(x, x, y * y)
+    z = Base.inferencebarrier(cis(0.3))::ComplexF64
+    have_fma = isdefined(Core.Intrinsics, :have_fma) ? Core.Intrinsics.have_fma(Float64) : missing
+    @info("Test-run diagnostics", VERSION, Sys.CPU_NAME, Sys.ARCH, Threads.nthreads(),
+        JULIA_CPU_TARGET=get(ENV, "JULIA_CPU_TARGET", "(unset)"),
+        code_coverage=Base.JLOptions().code_coverage, check_bounds=Base.JLOptions().check_bounds,
+        have_fma, muladd_fuses=(fused(z.re, z.im) == fma(z.re, z.re, z.im * z.im)),
+        muladd=fused(z.re, z.im), fma=fma(z.re, z.re, z.im * z.im))
+    script = """
+        using SphericalFunctions: SphericalFunctions, HCalculator
+        builtin(f::GlobalRef) = isdefined(f.mod, f.name) && getglobal(f.mod, f.name) isa Core.Builtin
+        builtin(f) = f isa Core.Builtin
+        for H ∈ (HCalculator(0.3, 7//2), HCalculator([0.3, 0.4], 7//2)),
+                step! ∈ (SphericalFunctions.recurrence_step4!, SphericalFunctions.recurrence_step5!,
+                         SphericalFunctions.recurrence_seed!)
+            code = only(Base.code_typed(step!, (typeof(H),); optimize=true)).first.code
+            calls = filter(ex -> Meta.isexpr(ex, :call) && !builtin(ex.args[1]), code)
+            println("  ", nameof(step!), " for ", typeof(H), ": ", length(calls), " dynamic calls")
+            foreach(c -> println("      ", c), calls)
+        end
+        """
+    println("Dynamic calls in the half-integer recurrence, in a fresh process:")
+    try
+        run(`$(Base.julia_cmd()) --project=$(Base.active_project()) -e $script`)
+    catch e
+        @warn "The fresh process failed" exception=e
+    end
+    flush(stdout); flush(stderr)
+end
+
 @run_package_tests verbose = true filter = testfilter
 
 # Including the test files is not needed for discovery — `@run_package_tests` finds them on

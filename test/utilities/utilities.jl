@@ -204,10 +204,12 @@ end  # @testmodule Utilities
     builtin(f::GlobalRef) =
         isdefined(f.mod, f.name) && getglobal(f.mod, f.name) isa Core.Builtin
     builtin(f) = f isa Core.Builtin
-    dynamic_calls(f, types) = count(
+    # The statements of the optimized code that are dispatched at run time, and their number
+    dynamic_call_list(f, types) = filter(
         ex -> Meta.isexpr(ex, :call) && !builtin(ex.args[1]),
         only(Base.code_typed(f, types; optimize=true)).first.code
     )
+    dynamic_calls(f, types) = length(dynamic_call_list(f, types))
 end
 
 @testitem "Utilities: the sampling helpers and array_equal" setup=[Utilities] begin
