@@ -318,8 +318,8 @@ end
             ir = string(Base.code_typed(step!, (typeof(H),); optimize=true)[1][1])
             @test !occursin("Rational", ir)
             calls = dynamic_call_list(step!, (typeof(H),))
-            # On Julia 1.10, in CI, this has been seen to fail only after the rest of the
-            # suite has run in the same process, so the calls are printed for diagnosis
+            # Printed if there are any, since they have differed between Julia versions and
+            # between ways of running the tests
             isempty(calls) || @info "Dynamic calls in $(nameof(step!))" typeof(H) calls
             @test isempty(calls)
         end

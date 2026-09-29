@@ -204,9 +204,15 @@ end  # @testmodule Utilities
     builtin(f::GlobalRef) =
         isdefined(f.mod, f.name) && getglobal(f.mod, f.name) isa Core.Builtin
     builtin(f) = f isa Core.Builtin
+    # Calls that only construct an exception, on a branch that throws it.  Julia 1.10, under
+    # `Pkg.test` with bounds checking forced on, leaves the `BoundsError(A, i)` of each
+    # bounds check as a `:call`; these say nothing about how the code runs when it does not
+    # throw.
+    exception_type(f::GlobalRef) = isdefined(f.mod, f.name) && exception_type(getglobal(f.mod, f.name))
+    exception_type(f) = f isa Type && f <: Exception
     # The statements of the optimized code that are dispatched at run time, and their number
     dynamic_call_list(f, types) = filter(
-        ex -> Meta.isexpr(ex, :call) && !builtin(ex.args[1]),
+        ex -> Meta.isexpr(ex, :call) && !builtin(ex.args[1]) && !exception_type(ex.args[1]),
         only(Base.code_typed(f, types; optimize=true)).first.code
     )
     dynamic_calls(f, types) = length(dynamic_call_list(f, types))
