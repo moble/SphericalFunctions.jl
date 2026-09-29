@@ -359,12 +359,14 @@ end
     using Random
     rng = Random.Xoshiro(13)
     R64 = randn(rng, Rotor{Float64})
-    # Float32
-    Y32 = array_view(sYlm(Rotor{Float32}(R64), 20, -1))
-    Y64 = array_view(sYlm(R64, 20, -1))
+    # Float32, against Float64 at the same (Float32-rounded) rotor, so that the difference
+    # is the Float32 arithmetic alone.  Measured at most 11.7 eps(Float32) over thirty seeds.
+    R32 = Rotor{Float32}(R64)
+    Y32 = array_view(sYlm(R32, 20, -1))
+    Y64 = array_view(sYlm(Rotor{Float64}(R32), 20, -1))
     @test eltype(Y32) === ComplexF32
     @test all(isfinite, Y32)
-    @test maximum(abs(Y32[i] - Y64[i]) / abs(Y64[i]) for i ∈ eachindex(Y64) if abs(Y64[i]) > 1e-3) < 1e-4
+    @test maximum(abs, Y32 .- Y64) < 50eps(Float32)
     # BigFloat vs Double64
     YB = array_view(sYlm(Rotor{BigFloat}(R64), 4, 2))
     YD = array_view(sYlm(Rotor{Double64}(R64), 4, 2))
@@ -379,7 +381,8 @@ end
         h = 1e-6
         fd = (f(θ₀ + h) - f(θ₀ - h)) / 2h
         @test isfinite(dual)
-        @test abs(dual - fd) < 1e-6
+        # The central difference is accurate to about eps/h ≈ 2e-10; measured 4e-11
+        @test abs(dual - fd) < 1e-8
     end
     # ... and directly through `complex_powers!` at the exact phase 1
     let dz3 = ForwardDiff.derivative(
@@ -410,8 +413,9 @@ end
             for s ∈ -sₘₐₓ:sₘₐₓ
                 # Every entry must have been written: an untouched one still holds the
                 # sentinel NaN, which turns `err` into NaN and fails the comparison.  The
-                # values are only approximately equal to the plain-`Float64` run because
-                # `@fastmath` has no effect on a wrapper type, so the two round differently.
+                # values are only approximately equal to the plain-`Float64` run because the
+                # `muladd` in `complex_powers!` is fused for `Float64` but not for a wrapper
+                # type, so the two round differently.
                 err = 0.0
                 for i ∈ 1:Nᵣ, m ∈ -ℓ:ℓ
                     # A vector of rotors, even of one, gives batched blocks
@@ -910,7 +914,7 @@ end
     end
     @test !iszero(blk[0, 0])
 
-    # A range calculator also reproduces the flat `sYlm`, which is the independent oracle
+    # A range calculator also reproduces the flat `sYlm` for each spin weight in the range
     for s ∈ -2:2
         Y = array_view(sYlm(rotors[1], 4, s; ℓₘᵢₙ=0))
         for (ℓ, b) ∈ sYlmCalculator(rotors[1], 4, -2:2)

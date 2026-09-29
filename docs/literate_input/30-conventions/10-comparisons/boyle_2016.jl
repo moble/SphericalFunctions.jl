@@ -7,7 +7,9 @@ md"""
     used in the `SphericalFunctions` package, for integer *and* half-integer indices:
     ``𝔇^{(ℓ)}_{m',m}(𝐑)|_{2016} = \overline{𝔇^{(ℓ)}_{m',m}(𝐑)}``.  Because that paper
     defines the spin-weighted spherical harmonics as ``(-1)^s \sqrt{(2ℓ+1)/4π}\,
-    𝔇^{(ℓ)}_{m,-s}(𝐑)|_{2016}``, its ``{}_sY_{ℓ,m}`` agree with ours.
+    𝔇^{(ℓ)}_{m,-s}(𝐑)|_{2016}``, its ``{}_sY_{ℓ,m}`` agree with ours.  The explicit
+    expression for ``𝔇`` in Eq. (35) of that paper contains two errors, which are described
+    and corrected below; one of them affects only half-integer ``ℓ``.
 
 [Boyle_2016](@citet) argued that spin-weighted spherical functions should be defined as
 functions on the spin group ``\mathrm{Spin}(3)``, represented by unit quaternions, rather
@@ -33,6 +35,27 @@ describes how to evaluate the sum stably, and that algorithm is transcribed belo
 ``e^{i(α+γ)/2}`` and ``e^{i(γ-α)/2}``, the ``e^{+i(m'α + mγ)}`` dependence is the complex
 conjugate of [ours](@ref summary_wigner_D).
 
+!!! danger "Errata in Eq. (35) of Boyle (2016)"
+    Eq. (35) of the paper, as printed, contains two errors.  The code below implements the
+    corrected expression, which agrees with the naive sum of Eq. (33), from which Eq. (35)
+    was derived, and with every other source on these pages.
+
+    1. In the two branches for ``r_s < ϵ`` and ``r_s < r_a``, the sign ``(-1)^{ℓ+m}`` should
+       be ``(-1)^{ℓ-m}``.  The two are equal for integer ``ℓ``, but opposite for
+       half-integer ``ℓ`` — for which the paper states that the expression is valid.  The
+       correct sign is that of the only term of Eq. (33) that survives as ``r_s → 0``,
+       namely ``ρ = ℓ - m``.
+    2. In the two general branches, the powers of ``r_s`` and ``r_a`` in front of each sum
+       already include the first term of the sum, at ``ρ = ρ_1`` or ``ρ = ρ_3``, so that the
+       summands should be ``(-1)^ρ (r_a^2 / r_s^2)^{ρ-ρ_1}`` and ``(-1)^ρ (r_s^2 /
+       r_a^2)^{ρ-ρ_3}``, rather than ``(-r_a^2 / r_s^2)^ρ`` and ``(-r_s^2 / r_a^2)^ρ``.  As
+       printed, the expression is wrong — for integer ``ℓ`` as well — whenever ``m' > m`` in
+       the branch for ``r_a ≤ r_s``, or ``m' < -m`` in the branch for ``r_s < r_a``.
+
+    The tests below confirm the corrected expression by comparing `WignerDElement` with this
+    package for integer and half-integer indices, and show explicitly that the printed sign
+    fails for half-integer ``ℓ``.
+
 The same paper defines left and right operators ``L`` and ``K`` [Eqs. (42)–(43)] with
 ``K_z\, {}_sY_{ℓ,m} = -s\, {}_sY_{ℓ,m}`` [Eq. (47)], and identifies ``\eth = -K_-`` and
 ``\bar{\eth} = K_+`` [Eq. (46)]; in the present conventions ``K = -R``, so this is the
@@ -53,9 +76,11 @@ using Quaternionic
 #+
 
 # Compute a single Wigner-D matrix element for half-integer or integer ``(ℓ, m', m)``,
-# following Eq. (35) and Appendix A of [Boyle (2016)](@cite Boyle_2016).  `R` is a `Rotor`,
-# and `ℓ`, `m′`, and `m` are the indices of the Wigner-D matrix element.  The indices must
-# all be integers or all be `Rational` with denominators of 2.
+# following Eq. (35) and Appendix A of [Boyle (2016)](@cite Boyle_2016), with the two
+# corrections to Eq. (35) described above: the sign ``(-1)^{ℓ-m}`` in the branches for
+# ``r_s < ϵ`` and ``r_s < r_a``, and summands measured from the first term of each sum.  `R`
+# is a `Rotor`, and `ℓ`, `m′`, and `m` are the indices of the Wigner-D matrix element.  The
+# indices must all be integers or all be `Rational` with denominators of 2.
 function WignerDElement(R::Rotor{T}, ℓ::I, m′::I, m::I) where {T, I}
     ## If `I` is Rational, check that the denominators are 2
     if I <: Rational
@@ -111,9 +136,9 @@ function WignerDElement(R::Rotor{T}, ℓ::I, m′::I, m::I) where {T, I}
         elseif rₐ ≤ rₛ
             λ = -(rₐ/rₛ)^2
             ρₘᵢₙ = max(0, (M′ - M)÷2)
-            κ = √T(
-                    (factorial((L + M)÷2) * factorial((L - M)÷2))
-                    / (factorial((L + M′)÷2) * factorial((L - M′)÷2))
+            κ = √(
+                    T(factorial((L + M)÷2) * factorial((L - M)÷2))
+                    / T(factorial((L + M′)÷2) * factorial((L - M′)÷2))
                 ) *
                 binomial((L + M′)÷2, ρₘᵢₙ) * binomial((L - M′)÷2, (L - M)÷2 - ρₘᵢₙ)
             if (ρₘᵢₙ % 2) != 0
@@ -138,9 +163,9 @@ function WignerDElement(R::Rotor{T}, ℓ::I, m′::I, m::I) where {T, I}
         else # rₛ < rₐ
             λ = -(rₛ/rₐ)^2
             ρₘᵢₙ = max(0, -(M′ + M)÷2)
-            κ = √T(
-                    (factorial((L + M)÷2) * factorial((L - M)÷2))
-                    / (factorial((L + M′)÷2) * factorial((L - M′)÷2))
+            κ = √(
+                    T(factorial((L + M)÷2) * factorial((L - M)÷2))
+                    / T(factorial((L + M′)÷2) * factorial((L - M′)÷2))
                 ) *
                 binomial((L + M′)÷2, (L - M)÷2 - ρₘᵢₙ) * binomial((L - M′)÷2, ρₘᵢₙ)
             if (((L - M)÷2 - ρₘᵢₙ) % 2) != 0
@@ -243,6 +268,23 @@ for R ∈ Rs
         J = Rational(J)
         for M′ ∈ -J:J, M ∈ -J:J
             @test Boyle2016.WignerDElement(R, J, M′, M) ≈ conj(𝔇ᴶ[M′, M]) atol=ϵₐ rtol=ϵᵣ
+        end
+    end
+end
+#+
+
+# The sign printed in the ``r_s < ϵ`` branch of Eq. (35), ``(-1)^{ℓ+m}``, is wrong for
+# half-integer indices, as described in the errata above.  On rotors with ``r_s = 0``, the
+# nonzero elements are ``±e^{2imϕ_a}``, and the printed sign gives the negative of the
+# correct value for every one of them:
+for R ∈ (Rotor{Float64}(imx), Rotor{Float64}(imy), Rotor(0.0, 0.6, 0.8, 0.0))
+    ϕₐ = angle(Complex(R[3], R[2]))
+    for (J, 𝔇ᴶ) ∈ SphericalFunctions.DCalculator(R, 15//2)
+        J = Rational(J)
+        denominator(J) == 2 || continue
+        for M ∈ -J:J
+            printed = (-1)^Int(J + M) * cis(2M * ϕₐ)
+            @test printed ≈ -conj(𝔇ᴶ[-M, M]) atol=ϵₐ rtol=ϵᵣ
         end
     end
 end

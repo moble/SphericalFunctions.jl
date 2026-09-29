@@ -698,8 +698,10 @@ end
                 @test parent(Ow) == O(s, ℓₘᵢₙ, ℓₘₐₓ, T) * data
                 @test spin(Ow) == s + Δs
             end
-            # The coefficients are computed at the precision of T (no Float64 leaks): the
-            # relative error of the ladder coefficients is a few eps(T)
+            # The coefficients are computed at the precision of T: the relative error of the
+            # ladder coefficients is a few eps(T), which for `Double64` rules out coefficients
+            # computed in `Float64`.  (For `Float32`, coefficients computed in `Float64` would
+            # only be more accurate; the element-type checks above guard against promotion.)
             ϵ = 8eps(T)
             L₊w, ðw = L₊(w), ð(w)
             for ℓ in max(abs(s), ℓₘᵢₙ):ℓₘₐₓ, m in -ℓ+1:ℓ
@@ -1286,21 +1288,37 @@ end
 end
 
 
-@testitem "ModeWeights half-integer evaluation" begin
-    import SphericalFunctions: ModeWeights, modes, spin, Ysize, Yindex, sYlm, HalfOddInteger
-    import Quaternionic: Rotor
+@testitem "ModeWeights half-integer evaluation" setup=[HalfIntegerOracle] begin
+    import SphericalFunctions: ModeWeights, modes, spin, Ysize, sYlm, HalfOddInteger
+    import Quaternionic: Rotor, Quaternion, components
     import LinearAlgebra: norm
     import DoubleFloats: Double64
     import Random
 
     rng = Random.Xoshiro(20260919)
 
-    # The reference is the explicit sum Σ f_{ℓm} ₛYₗₘ(R) over the flat `sYlm`, which is
-    # checked against the `sYlmCalculator` for half-integer indices in `test/sYlm/sYlm.jl`,
-    # read through natural indexing so that the pairing of weights with harmonics is the one
-    # `modes` gives.
+    # The reference is the explicit sum Σ f_{ℓm} ₛYₗₘ(R), with the harmonics taken from the
+    # documented definition ₛYₗₘ(R) = i^{2s} √((2ℓ+1)/4π) conj(𝔇ˡ_{m,-s}(R)) and the
+    # factorization 𝔇ˡ_{m,-s} = e^{-imα} dˡ_{m,-s}(β) e^{isγ}, with Varshalovich's d from the
+    # oracle, which shares no code with the package.  (`w(R)` itself is computed from `sYlm`,
+    # so a reference built from `sYlm` would test only the summation.)  Everything is in
+    # `BigFloat`, so that `Double64` is checked to its own precision.  The Euler angles
+    # come from the half-angle phases of the rotor's components, so that the sign of a
+    # half-integer 𝔇 is that of R and not of -R.  The weights are read through natural
+    # indexing, so that the pairing of weights with harmonics is the one `modes` gives.
+    function sYlm_oracle(R, ℓ, m, s)
+        W, X, Y, Z = BigFloat.(components(Quaternion(R)))
+        ϕₛ, ϕₐ = angle(Complex(W, Z)), angle(Complex(Y, X))
+        α, β, γ = ϕₛ - ϕₐ, 2atan(abs(Complex(Y, X)), abs(Complex(W, Z))), ϕₛ + ϕₐ
+        ℓ, m, s = Rational(ℓ), Rational(m), Rational(s)
+        𝔇 = cis(-m * α) * HalfIntegerOracle.d_oracle(ℓ, m, -s, β) * cis(s * γ)
+        cispi(BigFloat(s)) * √((2ℓ + 1) / (4BigFloat(π))) * conj(𝔇)
+    end
+    # Measured: at most 1.1 eps(T) times the norm of the weights, for both types; 10 is
+    # asserted.  (Evaluated at -R instead, the reference misses by more than 10¹⁴ of those
+    # units, so a sign error would be caught.)
     for T in (Float64, Double64)
-        ϵ = 100eps(T)
+        ϵ = 10eps(T)
         # (ℓₘₐₓ must be at least |s|: a container with ℓₘₐₓ < |s| holds no harmonics to sum.)
         for s in (-3//2, -1//2, 1//2, 3//2), ℓₘᵢₙ in unique((abs(s), 1//2)), ℓₘₐₓ in (max(abs(s), ℓₘᵢₙ), 7//2, 11//2)
             n = Ysize(ℓₘᵢₙ, ℓₘₐₓ)
@@ -1308,16 +1326,18 @@ end
             w = ModeWeights(data, s, ℓₘᵢₙ, ℓₘₐₓ)
             for _ in 1:3
                 R = randn(rng, Rotor{T})
-                Y = array_view(sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ))
                 expected = sum(
-                    w[ℓ, m] * Y[Yindex(ℓ, m, ℓₘᵢₙ)] for (ℓ, m) in modes(w);
-                    init=zero(Complex{T})
+                    w[ℓ, m] * sYlm_oracle(R, ℓ, m, s) for (ℓ, m) in modes(w);
+                    init=zero(Complex{BigFloat})
                 )
                 f = w(R)
                 @test f isa Complex{T}
                 @test f ≈ expected atol=ϵ*norm(data) rtol=ϵ
-                # Linearity in the weights
-                @test (2 .* w)(R) ≈ 2f atol=ϵ*norm(data) rtol=ϵ
+                # Linearity in the weights, with a second set of weights and complex
+                # coefficients, so that the check is not exact in floating point
+                w₂ = ModeWeights(randn(rng, Complex{T}, n), s, ℓₘᵢₙ, ℓₘₐₓ)
+                a, b = randn(rng, Complex{T}, 2)
+                @test (a .* w .+ b .* w₂)(R) ≈ a * f + b * w₂(R) atol=ϵ*norm(data) rtol=ϵ
             end
         end
     end

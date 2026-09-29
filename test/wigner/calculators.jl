@@ -431,7 +431,7 @@ end
                 @test isconcretetype(
                     Base.return_types(recurrence!, (typeof(single), typeof(ℓ)))[1]
                 )
-                @test (@inferred recurrence!(single, ℓ)) == recurrence!(single, ℓ)
+                @inferred recurrence!(single, ℓ)  # fails, without `@test`, if not inferred
                 @test blockallocs(single, ℓ) == 0
 
                 batched = Ctor(rotors, ℓₘₐₓ)
@@ -441,7 +441,7 @@ end
                 @test isconcretetype(
                     Base.return_types(recurrence!, (typeof(batched), typeof(ℓ)))[1]
                 )
-                @test (@inferred recurrence!(batched, ℓ)) == recurrence!(batched, ℓ)
+                @inferred recurrence!(batched, ℓ)  # fails, without `@test`, if not inferred
                 @test blockallocs(batched, ℓ) == 0
             end
 
@@ -456,7 +456,7 @@ end
                 @test isconcretetype(
                     Base.return_types(recurrence!, (typeof(single), typeof(ℓ)))[1]
                 )
-                @test (@inferred recurrence!(single, ℓ)) == recurrence!(single, ℓ)
+                @inferred recurrence!(single, ℓ)  # fails, without `@test`, if not inferred
                 @test blockallocs(single, ℓ) == 0
 
                 batched = sYlmCalculator(rotors, ℓₘₐₓ, spec)
@@ -465,7 +465,7 @@ end
                 @test isconcretetype(
                     Base.return_types(recurrence!, (typeof(batched), typeof(ℓ)))[1]
                 )
-                @test (@inferred recurrence!(batched, ℓ)) == recurrence!(batched, ℓ)
+                @inferred recurrence!(batched, ℓ)  # fails, without `@test`, if not inferred
                 @test blockallocs(batched, ℓ) == 0
 
                 # Slicing one spin weight out of a multi-spin block keeps that concreteness
@@ -554,7 +554,11 @@ end
     ℓₘₐₓ = 5
     R = randn(rng, Rotor{Float64})
     R₂ = randn(rng, Rotor{Float64})
-    atol = 20 * ℓₘₐₓ * eps(Float64)
+    # The phase and rotor forms differ from the angle form only through the rounding of β
+    # itself, measured at 1.1 eps; Float32 results differ from Float64 by at most 1.0
+    # eps(Float32)
+    atol = 8eps(Float64)
+    atol32 = 4eps(Float32)
     limits = (m′ₘₐₓ=2, m′ₘᵢₙ=-1, mₘₐₓ=3, mₘᵢₙ=0)
 
     @testset "D" begin
@@ -598,7 +602,7 @@ end
         # ... and lower precision only rounds the result
         𝔇₃₂ = D(Rotor{Float32}(R), 3)
         for ℓ in 0:3
-            @test maximum(abs, 𝔇₃₂[ℓ] .- 𝔇[ℓ]) ≤ 20 * 3 * eps(Float32)
+            @test maximum(abs, 𝔇₃₂[ℓ] .- 𝔇[ℓ]) ≤ atol32
         end
     end
 
@@ -648,7 +652,11 @@ end
                 m′r = max(-ℓ, limits.m′ₘᵢₙ):min(ℓ, limits.m′ₘₐₓ)
                 mr = max(-ℓ, limits.mₘᵢₙ):min(ℓ, limits.mₘₐₓ)
                 @test axes(dₗ[ℓ]) == (m′r, mr)
-                @test all(isapprox(dₗ[ℓ][m′, m], dβ[ℓ][m′, m]; atol) for m′ in m′r, m in mr)
+                if input === β  # the same computation, restricted
+                    @test all(dₗ[ℓ][m′, m] == dβ[ℓ][m′, m] for m′ in m′r, m in mr)
+                else
+                    @test all(isapprox(dₗ[ℓ][m′, m], dβ[ℓ][m′, m]; atol) for m′ in m′r, m in mr)
+                end
             end
         end
         # The element type follows the input
@@ -661,7 +669,7 @@ end
         @test eltype(d(BigFloat(β), 2)[2]) === BigFloat
         @test eltype(d(Rotor{BigFloat}(R), 2)[2]) === BigFloat
         @test eltype(d(1, 2)[2]) === Float64  # an integer angle is promoted to Float64
-        @test maximum(abs, d(Float32(β), 3)[3] .- dβ[3]) ≤ 20 * 3 * eps(Float32)
+        @test maximum(abs, d(Float32(β), 3)[3] .- dβ[3]) ≤ atol32
     end
 end
 
@@ -674,9 +682,10 @@ end
     using LinearAlgebra: I, opnorm
     using Random
 
-    # Every element of 𝔇ˡ and dˡ, for several generic rotors, at every ℓ up to 6, is compared
-    # here with two closed forms that owe nothing to the package, and checked against
-    # identities that the recurrence cannot satisfy by accident.
+    # Every element of 𝔇ˡ, for several generic rotors, at every ℓ up to 6, is compared here
+    # with two closed forms that owe nothing to the package, and every element of dˡ with
+    # one of them, and both are checked against identities that the recurrence cannot
+    # satisfy by accident.
 
     rng = Random.Xoshiro(8901)
     ℓₘₐₓ = 6
@@ -857,7 +866,11 @@ end
     # applies the symmetries one element at a time, and from the same power tables: the ϵ
     # signs of d, and for 𝔇 the phase e^{-i(m′α+mγ)} = conj(z₊^(m′+m) z₋^(m′-m)).  The
     # restrictions include rows or columns narrower than the other range, so that the wedge
-    # is narrowed too, and asymmetric ranges; the calculators are single and batched.
+    # is narrowed too, and asymmetric ranges; the calculators are single and batched.  None of
+    # the rotors is near a pole, where a complex calculator overwrites the block with the
+    # expansion of `src/wigner/poles.jl` (tested in `test/wigner/poles.jl`); that is
+    # checked below, since otherwise those elements would not be `wedge_value`'s.  The real
+    # calculators never use the expansion, so β = 0 and π are included for them.
     rng = Random.Xoshiro(20260924)
     R⃗ = randn(rng, Rotor{Float64}, 5)
     β⃗ = [0.0, 0.4, 1.9, π, 2.7]
@@ -884,6 +897,7 @@ end
             data ∈ (R⃗, R⃗[1], β⃗, β⃗[2])
         Ctor = eltype(data) <: Rotor ? DCalculator : dCalculator
         calc = Ctor(data, ℓmax; lim...)
+        @test isempty(calc.poles)
         for ℓ ∈ ℓₘᵢₙ(calc):ℓₘₐₓ(calc)
             blk = recurrence!(calc, ℓ)
             H = calc.H.Hˡ

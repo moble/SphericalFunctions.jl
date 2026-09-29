@@ -538,9 +538,12 @@ Rz(f) = (α, β, γ) -> 𝒾 * ∂γ(f)(α, β, γ)
 Jₘₐₓ = 5
 #+
 # for integers and ``15/2`` for half-integers, and we use a modest grid of Euler angles for
-# the integer tests and a smaller one for the half-integer and operator tests:
+# the integer tests and a smaller one for the half-integer and operator tests.  The smaller
+# grid still includes one random value of each angle in each half of its range, besides the
+# special values near ``0``, ``π``, and ``2π``, at which the phases ``e^{-im'α}`` and
+# ``e^{-imγ}`` could not distinguish a sign error in their exponents:
 αβγs = αβγrange(rng, Float64, 5)
-αβγs_small = αβγrange(rng, Float64, 1)
+αβγs_small = αβγrange(rng, Float64, 2)
 #+
 
 # First, the integer case: with ``(M, M') = (m', m)``, Varshalovich's ``d`` and ``D`` are
@@ -577,12 +580,15 @@ end
 # half-integer ``d`` (entries the tables omit return `nothing` and are skipped).  Our
 # calculators label half-integer blocks with `HalfOddInteger`s, which serve as indices but
 # refuse arithmetic with other kinds of number; the transcriptions do that arithmetic, so
-# here and below each label is converted to a `Rational` first.
+# here and below each label is converted to a `Rational` first.  The tabulated expressions
+# are polynomials whose terms cancel, so that in `Float64` their errors exceed 100 ϵ at ``J
+# = 9/2``; here and below they are therefore evaluated in `BigFloat`, at exactly the same
+# angles.
 for β ∈ βrange(rng)
     for (J, dᴶ) ∈ SphericalFunctions.dCalculator(β, 9//2)
         J = Rational(J)
         for M ∈ -J:J, M′ ∈ -J:J
-            dₜ = Varshalovich.d_½_explicit(J, M, M′, β)
+            dₜ = Varshalovich.d_½_explicit(J, M, M′, big(β))
             dₜ === nothing && continue
             @test dₜ ≈ Varshalovich.d(J, M, M′, β) atol=ϵₐ rtol=ϵᵣ
             @test dₜ ≈ dᴶ[M, M′] atol=ϵₐ rtol=ϵᵣ
@@ -596,7 +602,7 @@ for (α, β, γ) ∈ αβγs_small
     for (J, 𝔇ᴶ) ∈ SphericalFunctions.DCalculator(α, β, γ, 9//2)
         J = Rational(J)
         for M ∈ -J:J, M′ ∈ -J:J
-            dₜ = Varshalovich.d_½_explicit(J, M, M′, β)
+            dₜ = Varshalovich.d_½_explicit(J, M, M′, big(β))
             dₜ === nothing && continue
             @test exp(-𝒾 * M * α) * dₜ * exp(-𝒾 * M′ * γ) ≈ 𝔇ᴶ[M, M′] atol=ϵₐ rtol=ϵᵣ
         end
@@ -611,7 +617,7 @@ for (θ, ϕ) ∈ θϕrange(rng, Float64, 3)
     for (J, Yᴶ) ∈ SphericalFunctions.sYlmCalculator(θ, ϕ, 9//2, -9//2:9//2)
         J = Rational(J)
         for M ∈ -J:J, M′ ∈ -J:J
-            dₜ = Varshalovich.d_½_explicit(J, M, M′, θ)
+            dₜ = Varshalovich.d_½_explicit(J, M, M′, big(θ))
             dₜ === nothing && continue
             s = -M′
             @test exp(𝒾 * π * s) * √((2J+1) / (4π)) * exp(𝒾 * M * ϕ) * dₜ ≈

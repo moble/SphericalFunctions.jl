@@ -106,12 +106,13 @@ s = -2
 # case, which is the only one defined in the paper.  We will need to test approximate
 # floating-point equality, so we set absolute and relative tolerances (respectively) in
 # terms of the machine epsilon:
-ϵₐ = 30eps()
-ϵᵣ = 1500eps()
+ϵₐ = 100eps()
+ϵᵣ = 100eps()
 #+
 
-# This loose relative tolerance is necessary because the numerical errors in Blanchet's
-# explicit expressions grow rapidly with ``ℓ``.
+# Blanchet's explicit expressions are alternating sums, which lose accuracy to cancellation;
+# the resulting error is absolute, up to about ``40ϵ``, rather than relative to the final
+# value.
 for (θ, ϕ) ∈ θϕrange(rng)
     for (ℓ, Yˡ) ∈ SphericalFunctions.sYlm(θ, ϕ, ℓₘₐₓ, s), m ∈ -ℓ:ℓ
         @test Blanchet.Yˡᵐ₋₂(ℓ, m, θ, ϕ) ≈ Yˡ[m] atol=ϵₐ rtol=ϵᵣ

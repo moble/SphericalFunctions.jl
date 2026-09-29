@@ -32,8 +32,9 @@ const 𝒾 = im
 
 
 # ---------------------------------------------------------------------------------------
-# Boyle (2016), Eq. (35) and Appendix A.
-# Copied verbatim from docs/literate_input/30-conventions/10-comparisons/boyle_2016.jl:59-167.
+# Boyle (2016), Eq. (35) and Appendix A, with the two corrections to Eq. (35) described on
+# the comparison page.  Copied verbatim from
+# docs/literate_input/30-conventions/10-comparisons/boyle_2016.jl:84-192.
 # ---------------------------------------------------------------------------------------
 
 function WignerDElement(R::Rotor{T}, ℓ::I, m′::I, m::I) where {T, I}
@@ -91,9 +92,9 @@ function WignerDElement(R::Rotor{T}, ℓ::I, m′::I, m::I) where {T, I}
         elseif rₐ ≤ rₛ
             λ = -(rₐ/rₛ)^2
             ρₘᵢₙ = max(0, (M′ - M)÷2)
-            κ = √T(
-                    (factorial((L + M)÷2) * factorial((L - M)÷2))
-                    / (factorial((L + M′)÷2) * factorial((L - M′)÷2))
+            κ = √(
+                    T(factorial((L + M)÷2) * factorial((L - M)÷2))
+                    / T(factorial((L + M′)÷2) * factorial((L - M′)÷2))
                 ) *
                 binomial((L + M′)÷2, ρₘᵢₙ) * binomial((L - M′)÷2, (L - M)÷2 - ρₘᵢₙ)
             if (ρₘᵢₙ % 2) != 0
@@ -118,9 +119,9 @@ function WignerDElement(R::Rotor{T}, ℓ::I, m′::I, m::I) where {T, I}
         else # rₛ < rₐ
             λ = -(rₛ/rₐ)^2
             ρₘᵢₙ = max(0, -(M′ + M)÷2)
-            κ = √T(
-                    (factorial((L + M)÷2) * factorial((L - M)÷2))
-                    / (factorial((L + M′)÷2) * factorial((L - M′)÷2))
+            κ = √(
+                    T(factorial((L + M)÷2) * factorial((L - M)÷2))
+                    / T(factorial((L + M′)÷2) * factorial((L - M′)÷2))
                 ) *
                 binomial((L + M′)÷2, (L - M)÷2 - ρₘᵢₙ) * binomial((L - M′)÷2, ρₘᵢₙ)
             if (((L - M)÷2 - ρₘᵢₙ) % 2) != 0

@@ -22,21 +22,31 @@
             # rounding of the reference itself, at the same precision, is part of the
             # difference).
             ϵ = 10eps(T)
+            # That absolute bound is the natural one, since the weights sum to 2, but for
+            # `Float16` it exceeds the largest weight once n is in the hundreds, where a
+            # vector of zeros would satisfy it.  For the machine floats, the error is
+            # therefore also bounded relative to the largest weight.  Measured in units of
+            # eps(T), that error is at most 4.5, except for `fejer1` in `Float16`, where it
+            # reaches 47 at n = 171.  (For `Double64` and `BigFloat`, the absolute bound is
+            # already tiny compared with every weight.)
+            ϵᵣ = T <: Base.IEEEFloat ? 10eps(T) : T(Inf)
+            agrees(w, ref, ϵᵣ=ϵᵣ) =
+                maximum(abs, w .- ref) < ϵ && maximum(abs, w .- ref) < ϵᵣ * maximum(abs, ref)
             # `fejer1` transforms a `Float16` vector with GenericFFT, whose `Float16`
             # arithmetic overflows in forming k² for n above 256, so there it is checked
             # only up to that size.
             if !(T === Float16 && n > 256)
                 w = fejer1(n, T)
                 @test w isa Vector{T} && length(w) == n
-                @test maximum(abs, w .- ref¹) < ϵ
+                @test agrees(w, ref¹, T === Float16 ? 100eps(T) : ϵᵣ)
             end
             w = fejer2(n, T)
             @test w isa Vector{T} && length(w) == n
-            @test maximum(abs, w .- ref²) < ϵ
+            @test agrees(w, ref²)
             if n ≥ 2
                 w = clenshaw_curtis(n, T)
                 @test w isa Vector{T} && length(w) == n
-                @test maximum(abs, w .- refᶜᶜ) < ϵ
+                @test agrees(w, refᶜᶜ)
             end
         end
         # The default type is `Float64`

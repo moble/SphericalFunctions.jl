@@ -45,7 +45,7 @@ obscurity.
 
 We begin by writing code that implements the concepts described by Ref.
 [Whittaker_1947](@cite).  We encapsulate the formulas in a module so that we can test them
-against the `Quaternionic` and `SphericalFunctions` package.
+against the `Quaternionic` package.
 
 """
 
@@ -279,16 +279,17 @@ end  #module Whittaker
 
 # ## Tests
 #
-# We can now test the functions against the equivalent functions from the
-# `SphericalFunctions` package.  We will need to test approximate floating-point equality,
-# so we set absolute and relative tolerances (respectively) in terms of the machine epsilon:
+# We can now test the functions against the equivalent functions from the `Quaternionic`
+# package.  We will need to test approximate floating-point equality, so we set absolute and
+# relative tolerances (respectively) in terms of the machine epsilon:
 ϵₐ = 10eps()
 ϵᵣ = 10eps()
 #+
 
 # ### Basis vectors and handedness
 #
-# We'll test that the angles the line makes with the axes are what Whittaker intended.  The
+# We'll check that `line` is consistent with the direction angles it is built from.  This is
+# only a sanity check of the transcription, rather than a comparison with another source.  The
 # three direction angles of a line are not independent — their cosines are the components of
 # a unit vector, so the squares of the cosines sum to 1 — and for arbitrary angles `line` is
 # not a unit vector, and `acos(l ⋅ Ox)` is just `acos(cos(α))`.  So we start from a sampling

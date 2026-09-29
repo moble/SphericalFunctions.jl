@@ -1,20 +1,19 @@
 @testitem "Complex powers" setup=[Utilities] begin
     import .Utilities: array_equal
 
-    complex_powers_comparison(z, m, T=Float64) = (
-        complex_powers(Complex{T}(z), m),
-        z.^collect(0:m),
-        eps(T)*m
-    )
-
+    # Each power zᵏ is compared with the exact `BigFloat` power, element by element.  The
+    # recurrence accumulates error linearly in k; the worst error measured over these cases
+    # is 0.37(k+1) eps(T).  In `Float16`, the bound 2(k+1) eps(T) exceeds 1 beyond k ≈ 500,
+    # where it would accept any value on the unit circle, so m = 1000 is omitted there.
     for T in [Float64, Float32, Float16]
         nozpowers = Vector{Complex{T}}(undef, 0)
         fudge = one(T) + 2 * sqrt(eps(T))
         for k in 0:25
             z = cis(k*big(π)/10)
-            for m in [0, 1, 2, 3, 4, 1_000]
-                mine, theirs, ϵ = complex_powers_comparison(z, m, T)
-                @test mine ≈ theirs rtol=2ϵ
+            for m in (T === Float16 ? [0, 1, 2, 3, 4, 100] : [0, 1, 2, 3, 4, 1_000])
+                mine = complex_powers(Complex{T}(z), m)
+                theirs = z.^collect(0:m)
+                @test all(abs.(mine .- theirs) .≤ 2(1:m+1) .* eps(T))
                 @test_throws DomainError complex_powers(Complex{T}(z*fudge), m)
                 @test_throws DomainError complex_powers(Complex{T}(z/fudge), m)
                 inplace = zeros(Complex{T}, size(mine))

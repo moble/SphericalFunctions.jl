@@ -60,7 +60,7 @@
 end
 
 
-@testitem "Iteration reproduces sYlm" begin
+@testitem "Iteration reproduces sYlm, and the manual loop for half-integers" begin
     import SphericalFunctions: sYlmCalculator, sYlm, sYlm_matrix, recurrence!, Yindex
     using Quaternionic: Rotor
     using Random

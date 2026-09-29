@@ -22,15 +22,19 @@
     import DoubleFloats: Double64
 
     # For a type that FFTW does not handle, the transform is GenericFFT's, but the rules
-    # fill the same half spectrum as for the other types (see the next item).  n = -1 and n
-    # = 1 are below the smallest number of nodes of each rule, and are refused before
-    # anything is filled.
-    @test_throws ArgumentError fejer2(-1, Double64)
-    @test_throws ArgumentError clenshaw_curtis(1, Double64)
+    # fill the same half spectrum as for the other types (see the next item), whose length is
+    # zero for these values of n; they are refused before anything is filled.
+    for n ∈ (-3, -4)
+        @test_throws ArgumentError fejer2(n, Double64)
+    end
+    for n ∈ (-1, -2)
+        @test_throws ArgumentError clenshaw_curtis(n, Double64)
+    end
 
-    # The same rule is what `salm2map` and `map2salm` build for a map with a single ring
-    @test_throws ArgumentError salm2map(zeros(Complex{Double64}, Ysize(0, 3)), 0, 3, 7, 1)
-    @test_throws ArgumentError map2salm(zeros(Complex{Double64}, 7, 1), 0, 3)
+    # `salm2map` and `map2salm` refuse a map with fewer than two rings before they build the
+    # Clenshaw–Curtis rule for it
+    @test_throws "needs at least two rings" salm2map(zeros(Complex{Double64}, Ysize(0, 3)), 0, 3, 7, 1)
+    @test_throws "needs at least two rings" map2salm(zeros(Complex{Double64}, 7, 1), 0, 3)
 end
 
 @testitem "Bounds: the machine-float weight rules refuse too few nodes" tags=[:bounds] begin
@@ -48,9 +52,9 @@ end
         @test_throws ArgumentError clenshaw_curtis(n, Float32)
     end
 
-    # `salm2map` builds the Clenshaw–Curtis rule for its number of rings
-    @test_throws ArgumentError salm2map(zeros(ComplexF64, Ysize(0, 3)), 0, 3, 7, -1)
-    @test_throws ArgumentError salm2map(zeros(ComplexF64, Ysize(0, 3)), 0, 3, 7, -2)
+    # `salm2map` refuses these numbers of rings before it builds the Clenshaw–Curtis rule
+    @test_throws "needs at least two rings" salm2map(zeros(ComplexF64, Ysize(0, 3)), 0, 3, 7, -1)
+    @test_throws "needs at least two rings" salm2map(zeros(ComplexF64, Ysize(0, 3)), 0, 3, 7, -2)
 end
 
 @testitem "Bounds: the typed block constructors refuse storage smaller than the block" tags=[:bounds] begin
@@ -146,58 +150,58 @@ end
 
     # Steps 2 and 3 write one row of their first argument for every m ≥ 0 ...
     let (buffer, Hˡ) = padded(Float64, 3; m′ₘₐₓ=1, m′ₘᵢₙ=-1, mₘₐₓ=1, mₘᵢₙ=-1)
-        @test_throws ArgumentError recurrence_step2!(Hˡ, WignerMatrix(ones(5, 5), 2), sinβ, cosβ)
+        @test_throws "needs a block with the full range" recurrence_step2!(Hˡ, WignerMatrix(ones(5, 5), 2), sinβ, cosβ)
         @test padding_intact(buffer)
     end
     let (buffer, Hˡ) = padded(Float64, 3; m′ₘₐₓ=1, m′ₘᵢₙ=-1, mₘₐₓ=1, mₘᵢₙ=-1)
-        @test_throws ArgumentError recurrence_step3!(Hˡ, WignerMatrix(ones(9, 9), 4), sinβ, cosβ)
+        @test_throws "needs a block with the full range" recurrence_step3!(Hˡ, WignerMatrix(ones(9, 9), 4), sinβ, cosβ)
         @test padding_intact(buffer)
     end
     # ... and read the m′ = 0 row of their second for every m ≥ 0 of its own ℓ
     let (buffer, Hˡ⁻¹) = padded(Float64, 2; mₘₐₓ=1, mₘᵢₙ=-1)
-        @test_throws ArgumentError recurrence_step2!(WignerMatrix(zeros(7, 7), 3), Hˡ⁻¹, sinβ, cosβ)
+        @test_throws "needs a block with the full range" recurrence_step2!(WignerMatrix(zeros(7, 7), 3), Hˡ⁻¹, sinβ, cosβ)
         @test padding_intact(buffer)
     end
     let (buffer, Hˡ⁺¹) = padded(Float64, 4; mₘₐₓ=2, mₘᵢₙ=-2)
-        @test_throws ArgumentError recurrence_step3!(WignerMatrix(zeros(7, 7), 3), Hˡ⁺¹, sinβ, cosβ)
+        @test_throws "needs a block with the full range" recurrence_step3!(WignerMatrix(zeros(7, 7), 3), Hˡ⁺¹, sinβ, cosβ)
         @test padding_intact(buffer)
     end
 
     # Steps 4 and 5 run each row of m′ out to m = ℓ
     let (buffer, Hˡ) = padded(Float64, 3; m′ₘₐₓ=2, m′ₘᵢₙ=-2, mₘₐₓ=2, mₘᵢₙ=-2)
-        @test_throws ArgumentError recurrence_step4!(Hˡ, sinβ, cosβ)
+        @test_throws "needs a block with the full range" recurrence_step4!(Hˡ, sinβ, cosβ)
         @test padding_intact(buffer)
     end
     let (buffer, Hˡ) = padded(Float64, 3; m′ₘₐₓ=1, m′ₘᵢₙ=-1, mₘₐₓ=2, mₘᵢₙ=-2)
-        @test_throws ArgumentError recurrence_step5!(Hˡ, sinβ, cosβ)
+        @test_throws "needs a block with the full range" recurrence_step5!(Hˡ, sinβ, cosβ)
         @test padding_intact(buffer)
     end
 
     # Step 6 reflects through m → -m and m′ → -m′
     let (buffer, Hˡ) = padded(Float64, 3; m′ₘₐₓ=1, m′ₘᵢₙ=-1, mₘₐₓ=3, mₘᵢₙ=-1)
-        @test_throws ArgumentError recurrence_step6!(Hˡ)
+        @test_throws "needs a block with the full range" recurrence_step6!(Hˡ)
         @test padding_intact(buffer)
     end
     let (buffer, Hˡ) = padded(Float64, 3; m′ₘₐₓ=2, m′ₘᵢₙ=-1)
-        @test_throws ArgumentError recurrence_step6!(Hˡ)
+        @test_throws "needs a block with the full range" recurrence_step6!(Hˡ)
         @test padding_intact(buffer)
     end
 
     # The conversions multiply every element of the full block
     let (buffer, Hˡ) = padded(Float64, 3; m′ₘₐₓ=1, m′ₘᵢₙ=-1, mₘₐₓ=1, mₘᵢₙ=-1)
-        @test_throws ArgumentError convert_H_to_d!(Hˡ)
+        @test_throws "needs a block with the full range" convert_H_to_d!(Hˡ)
         @test padding_intact(buffer)
     end
     let (buffer, Hˡ) = padded(Float64, 3; m′ₘₐₓ=2, m′ₘᵢₙ=-1)
-        @test_throws ArgumentError convert_H_to_d!(Hˡ)
+        @test_throws "needs a block with the full range" convert_H_to_d!(Hˡ)
         @test padding_intact(buffer)
     end
     let (buffer, Hˡ) = padded(ComplexF64, 3; m′ₘₐₓ=1, m′ₘᵢₙ=-1, mₘₐₓ=1, mₘᵢₙ=-1)
-        @test_throws ArgumentError convert_H_to_D!(Hˡ, cis(0.2), cis(0.4))
+        @test_throws "needs a block with the full range" convert_H_to_D!(Hˡ, cis(0.2), cis(0.4))
         @test padding_intact(buffer)
     end
     let (buffer, Hˡ) = padded(ComplexF64, 3; m′ₘₐₓ=2, m′ₘᵢₙ=-1)
-        @test_throws ArgumentError convert_H_to_D!(Hˡ, cis(0.2), cis(0.4))
+        @test_throws "needs a block with the full range" convert_H_to_D!(Hˡ, cis(0.2), cis(0.4))
         @test padding_intact(buffer)
     end
 end
@@ -704,7 +708,7 @@ end
     @test_throws narrow_refusal @inferred(ℓ(HCalculator(0.3, Int32(4))))
 end
 
-@testitem "Bounds: blocks refuse an Int32 index type, which Int indices could not read" tags=[:bounds, :narrow_integers] setup=[IndexTypeRefusals] begin
+@testitem "Bounds: blocks refuse a narrow index type, which Int indices could not read" tags=[:bounds, :narrow_integers] setup=[IndexTypeRefusals] begin
     import SphericalFunctions: D, d, DCalculator, recurrence!, DegreeBlock, sYlm, ModeWeights
     using Quaternionic: Rotor
 

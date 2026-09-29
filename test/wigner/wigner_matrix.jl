@@ -185,7 +185,7 @@ end
         @test sprint(show, w) == summ
         shown = sprint(show, MIME("text/plain"), w)
         @test occursin("WignerMatrix", shown)
-        @test occursin(string(M[1, 1]), shown)
+        @test occursin(string(M[end, end]), shown)  # n², which no other element contains
     end
 
     # A `Rational` ℓ is accepted and converted, and so are `Rational` indices
@@ -789,14 +789,15 @@ end
 
     # A `SpinMatrix` iterates over every element, (s, m) in column-major order, so `pairs`,
     # and everything built on it — `findmax`, `argmax`, `findall`, `findfirst` — must cover
-    # every element as well, or not be defined at all.  A `MethodError` is an acceptable
-    # answer; one that looks at some of the elements, or reports a spin weight as the
-    # position of an element, is not.
-    function agrees_or_refuses(agrees, f)
+    # every element as well, or not be defined at all.  The refusal is that `keys` is not
+    # defined for the block, and a `MethodError` for exactly that call is an acceptable
+    # answer; any other error, or an answer that looks at some of the elements, or reports a
+    # spin weight as the position of an element, is not.
+    function agrees_or_refuses(agrees, f, b)
         result = try
             f()
         catch e
-            e isa MethodError && return true
+            e isa MethodError && e.f === keys && e.args == (b,) && return true
             rethrow()
         end
         agrees(result)
@@ -807,14 +808,14 @@ end
         sYlm(R, 3, -1:1)[2],
     )
         M = Matrix(b)
-        @test agrees_or_refuses(r -> r == findmax(abs, M), () -> findmax(abs, b))
-        @test agrees_or_refuses(r -> r == findmin(abs, M), () -> findmin(abs, b))
-        @test agrees_or_refuses(r -> r == argmax(abs, M), () -> argmax(abs, b))
-        @test agrees_or_refuses(r -> r == argmax(M), () -> argmax(b))
+        @test agrees_or_refuses(r -> r == findmax(abs, M), () -> findmax(abs, b), b)
+        @test agrees_or_refuses(r -> r == findmin(abs, M), () -> findmin(abs, b), b)
+        @test agrees_or_refuses(r -> r == argmax(abs, M), () -> argmax(abs, b), b)
+        @test agrees_or_refuses(r -> r == argmax(M), () -> argmax(b), b)
         large(x) = abs(x) > 0.1
-        @test agrees_or_refuses(r -> r == findall(large, M), () -> findall(large, b))
-        @test agrees_or_refuses(r -> r == findfirst(>(5) ∘ abs, M), () -> findfirst(>(5) ∘ abs, b))
-        @test agrees_or_refuses(r -> length(r) == length(M), () -> collect(pairs(b)))
+        @test agrees_or_refuses(r -> r == findall(large, M), () -> findall(large, b), b)
+        @test agrees_or_refuses(r -> r == findfirst(>(5) ∘ abs, M), () -> findfirst(>(5) ∘ abs, b), b)
+        @test agrees_or_refuses(r -> length(r) == length(M), () -> collect(pairs(b)), b)
         # The reductions over the elements themselves are unaffected
         @test maximum(abs, b) == maximum(abs, M)
         @test sum(b) == sum(M)
@@ -982,7 +983,9 @@ end
         @test refuses(() -> x[pre..., 1, 1//1], ArgumentError, "1//1 is a whole number")
         @test refuses(() -> x[pre..., 1//2, 0], ArgumentError, "are integers of type `Int`")
         @test refuses(() -> (x[pre..., 0, Int16(1)] = 1.0), ArgumentError, "`Int16` is narrower")
-        @test x[pre..., 1, 0] == x[pre..., 1, 0]  # the natural form is untouched
+        # The natural form is untouched: it reaches the same storage element as ever
+        ax = axes(x)
+        @test x[pre..., 1, 0] == parent(x)[pre..., 1 - first(ax[end-1]) + 1, 0 - first(ax[end]) + 1]
     end
     @test refuses(() -> si[Int32(0), :], ArgumentError, "`Int32` is narrower")
     @test refuses(() -> sbi[:, Int32(0), :], ArgumentError, "`Int32` is narrower")

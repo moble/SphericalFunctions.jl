@@ -214,8 +214,11 @@ end
         if s == 0
             @test rings.θ == sorted_rings(s, ℓₘₐₓ, T)
             @test rings.Nϕ == [2j + 1 for j in 0:ℓₘₐₓ]
-            @test p ≈ sorted_ring_pixels(s, ℓₘₐₓ, T)
-            @test rotors(𝒯) ≈ sorted_ring_rotors(s, ℓₘₐₓ, T)
+            # These differ only through the rounding of the azimuths (≤ 8 eps, as measured
+            # below)
+            @test length(p) == length(sorted_ring_pixels(s, ℓₘₐₓ, T))
+            @test all(isapprox(a, b; atol=8eps(T)) for (a, b) in zip(p, sorted_ring_pixels(s, ℓₘₐₓ, T)))
+            @test all(isapprox(a, b; atol=8eps(T)) for (a, b) in zip(rotors(𝒯), sorted_ring_rotors(s, ℓₘₐₓ, T)))
         end
 
         # `sorted_rings` itself: the same interior grid, ordered so that each successive
@@ -483,7 +486,9 @@ end
         # ... as do the rings: slot i of n, counted from the north pole, is |2i - (n+1)| half
         # spacings from the equator, and the rings fill the slots from the farthest in, the
         # larger of each mirror-image pair to the north for s ≥ 0 and to the south for s <
-        # 0.
+        # 0.  (This expression is the implementation's own, so it pins the current ordering
+        # bit for bit; the independent checks of the documented properties are in
+        # `test/utilities/pixelizations.jl`.)
         expected_rings = let n = ℓₘₐₓ - abs(s) + 1
             slots = collect(LinRange{T}(0, π, n + 2))[begin+1:end-1]
             slots[sort(1:n, by=i -> (-abs(2i - (n + 1)), s ≥ 0 ? -i : i))]
@@ -668,12 +673,12 @@ end
                 F = 𝒯 * F̃
                 @test F isa Matrix{Complex{T}}
                 @test size(F) == (npixels(𝒯), 3)
-                @test all(F[:, j] ≈ 𝒯 * F̃[:, j] for j in 1:3)
+                @test all(isapprox(F[:, j], 𝒯 * F̃[:, j]; atol=ϵ, rtol=ϵ) for j in 1:3)
                 F̃′ = 𝒯 \ F
                 @test F̃′ isa Matrix{Complex{T}}
                 @test size(F̃′) == (n, 3)
                 @test F̃′ ≈ F̃ atol=ϵ rtol=ϵ
-                @test all(F̃′[:, j] ≈ 𝒯 \ F[:, j] for j in 1:3)
+                @test all(isapprox(F̃′[:, j], 𝒯 \ F[:, j]; atol=ϵ, rtol=ϵ) for j in 1:3)
             end
         end
     end
@@ -1088,7 +1093,7 @@ end
     # A single ring is still a batch of rings, as any vector of rotor data is
     𝒯 = SSHTRS(0, 0)
     @test length(𝒯.θ) == 1
-    @test 𝒯 \ (𝒯 * [0.3 + 0.4im]) ≈ [0.3 + 0.4im]
+    @test 𝒯 \ (𝒯 * [0.3 + 0.4im]) ≈ [0.3 + 0.4im] rtol=4eps()
 
     # FFTW planner options are accepted and do not change the results
     𝒯 = SSHTRS(1, 5)
@@ -1267,6 +1272,10 @@ end
 
     # Each SSHT holds its own workspace, so one object per task gives results identical to a
     # serial computation (each transform runs on its caller's thread, in a fixed order).
+    # With a single thread the tasks run one after another, since a transform never yields,
+    # so these checks can fail only when Julia has several threads, as it does in CI; the
+    # structural checks of "SSHT copies share their tables and have workspace of their own"
+    # guard against shared workspace regardless.
     for method in ("RS", "Minimal", "Matrix"), T in (Float64, Float32)
         s, ℓₘₐₓ = -2, 8
         kw = method == "RS" ? (;) : (; inplace=false)

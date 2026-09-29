@@ -303,7 +303,7 @@ end
                 @test abs(a) ≤ m′ₘₐₓ
                 @test σ == 1              # integer indices never pick up a sign
                 @test max(abs(a), abs(b)) ≤ ℓ
-                # The map is an involution on the four symmetry images
+                # The source is one of the four symmetry images of (m′, m)
                 @test (a, b) ∈ ((m′, m), (-m, -m′), (m, m′), (-m′, -m))
             else
                 # Neither index is small enough, so no stored element can supply it
@@ -315,16 +315,22 @@ end
     # Half-odd-integer indices do pick up a sign, σ = sgn(m′) sgn(m) whenever the source is
     # a transposition; the values that the identity H[m′,m] = σ H[a,b] relates are compared
     # in "HCalculator: half-integer wedge_value vs closed-form H", since this item has none
-    for twoℓ ∈ 1:2:7
+    for twoℓ ∈ 1:2:7, twom′ₘₐₓ ∈ 1:2:twoℓ
         ℓ = HalfOddInteger(twoℓ//2)
+        m′ₘₐₓ = HalfOddInteger(twom′ₘₐₓ//2)
         for twom′ ∈ -twoℓ:2:twoℓ, twom ∈ -twoℓ:2:twoℓ
             m′, m = HalfOddInteger(twom′//2), HalfOddInteger(twom//2)
-            a, b, σ = wedge_source(m′, m, ℓ)
-            @test b ≥ abs(a)
-            @test (a, b) ∈ ((m′, m), (-m, -m′), (m, m′), (-m′, -m))
-            # The images (m, m′) and (-m′, -m) are transpositions, and (-m, -m′) is not
-            @test σ == ((a, b) ∈ ((m, m′), (-m′, -m)) && (a, b) != (m′, m) ?
-                transpose_sign(m′, m) : 1)
+            if abs(m′) ≤ m′ₘₐₓ || abs(m) ≤ m′ₘₐₓ
+                a, b, σ = wedge_source(m′, m, m′ₘₐₓ)
+                @test b ≥ abs(a)
+                @test abs(a) ≤ m′ₘₐₓ
+                @test (a, b) ∈ ((m′, m), (-m, -m′), (m, m′), (-m′, -m))
+                # The images (m, m′) and (-m′, -m) are transpositions, and (-m, -m′) is not
+                @test σ == ((a, b) ∈ ((m, m′), (-m′, -m)) && (a, b) != (m′, m) ?
+                    transpose_sign(m′, m) : 1)
+            else
+                @test_throws ArgumentError wedge_source(m′, m, m′ₘₐₓ)
+            end
         end
     end
 

@@ -231,7 +231,8 @@ end
             end
         end
 
-        # End to end, against the closed-form synthesis matrix.  Measured worst case over
+        # End to end, against the package's synthesis matrix `sYlm_matrix`, which is
+        # computed separately from these ring tables.  Measured worst case over
         # the cases here was 11 eps, and 200 is asserted.
         f̃ = randn(rng, ComplexF64, Ysize(abs(s), ℓmax))
         f = 𝒯rs * copy(f̃)
@@ -240,7 +241,7 @@ end
         # ... and the algorithm still inverts itself: worst case 3 eps, 200 asserted.
         @test 𝒯rs \ copy(f) ≈ f̃ atol=200eps(Float64) * maximum(abs, f̃)
 
-        # `SSHTMinimal` is defined only for integer spin weights.  Against the closed form
+        # `SSHTMinimal` is defined only for integer spin weights.  Against `sYlm_matrix`
         # its synthesis measured 12 eps at worst, and its round trip 11 eps; 200 is asserted
         # for both.  (On the rings of `sorted_rings` the round trip at s = -2 would measure
         # 26_000 eps, which is a property of those rings and not of these tables.)

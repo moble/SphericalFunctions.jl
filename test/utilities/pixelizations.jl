@@ -133,9 +133,10 @@ end
         @test 0 ∉ θ2 && T(π) ∉ θ2
         @test first(θcc) == 0 && last(θcc) == T(π)
 
-        # Fejér's first rule is symmetric about the equator by construction
-        @test θ1 ≈ reverse(T(π) .- θ1)
-        @test θ2 ≈ reverse(T(π) .- θ2)
+        # Both Fejér rules are symmetric about the equator by construction, up to the rounding
+        # of π - θ
+        @test all(abs.(θ1 .- reverse(T(π) .- θ1)) .≤ 2eps(T(π)))
+        @test all(abs.(θ2 .- reverse(T(π) .- θ2)) .≤ 2eps(T(π)))
     end
 
     # `Float64` is the default element type
@@ -271,7 +272,7 @@ end
     )
         p = golden_ratio_spiral_pixels(0, ℓₘₐₓ, T)
         @test length(p) == Ysize(0, ℓₘₐₓ)
-        @test all(0 ≤ θϕ[2] ≤ 2T(π) for θϕ ∈ p)
+        @test all(0 ≤ θϕ[2] < 2T(π) for θϕ ∈ p)
         @test p[1][2] == 0
         @test maximum(k -> abs(big(p[k+1][2]) - exact(k, T)), 0:length(p)-1) ≤ ϵ
         @test golden_ratio_spiral_rotors(0, ℓₘₐₓ, T) == from_spherical_coordinates.(p)
@@ -349,9 +350,9 @@ end
         for N ∈ (1, 0, -1)
             @test_throws ArgumentError clenshaw_curtis_rings(N, T)
         end
-        @test fejer1_rings(1, T) ≈ [T(π) / 2]
-        @test fejer2_rings(1, T) ≈ [T(π) / 2]
-        @test clenshaw_curtis_rings(2, T) ≈ [0, T(π)]
+        @test fejer1_rings(1, T) ≈ [T(π) / 2] atol=eps(T(π)) rtol=0
+        @test fejer2_rings(1, T) ≈ [T(π) / 2] atol=eps(T(π)) rtol=0
+        @test clenshaw_curtis_rings(2, T) ≈ [0, T(π)] atol=eps(T(π)) rtol=0
     end
     @test_throws ArgumentError fejer1_rings(0)
     @test_throws ArgumentError fejer2_rings(0)

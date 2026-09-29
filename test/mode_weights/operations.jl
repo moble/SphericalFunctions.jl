@@ -13,8 +13,10 @@
     using Random
 
     rng = Random.Xoshiro(20260920)
-    # `w(R)` is already pinned against the closed-form harmonics elsewhere, so it serves as
-    # an independent oracle here: no new reference is needed.  The half-integer cases matter
+    # `w(R)` is already pinned against independent harmonics elsewhere — the closed form for
+    # integer indices, in "ModeWeights evaluation", and the Wigner 𝔇 oracle for half-integer
+    # indices, in "ModeWeights half-integer evaluation" — so it serves as an independent
+    # oracle here: no new reference is needed.  The half-integer cases matter
     # because the group structure checked in the next item holds for the conjugate of 𝔇 as
     # well, so only this property distinguishes 𝔇 from it; for the same reason each case is
     # also compared with the rotation the other way, `w(R * Q)`, which must differ.
@@ -148,7 +150,9 @@ end
     # Measured: at most 7 eps over thirty seeds, against 400 eps allowed
     ϵ = 100ℓₘₐₓ * eps()
 
-    # One rotor, one spin: bit-exact against `w(R)`, which uses the same reduction
+    # One rotor, one spin: `w(R)` is defined as this very product, so the two agree bit for
+    # bit; this pins only that they stay the same computation.  The other shapes below are
+    # compared across different code paths.
     @test sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ=abs(s)) * w == w(R)
     # Many rotors
     @test isapprox(sYlm(R⃗, ℓₘₐₓ, s; ℓₘᵢₙ=abs(s)) * w, [w(r) for r ∈ R⃗]; atol=ϵ, rtol=ϵ)
@@ -377,8 +381,8 @@ end
         𝒯 = SSHT(s, L; method)
         f = 𝒯 * ModeWeights(randn(rng, ComplexF64, Ysize(abs(s), L)), s)
         # A multi-column analysis is a plain array, whose columns are labelled one at a time
-        # without copying, so an operator or a rotation applies to each with no allocation,
-        # and exactly as it applies to a copy of the column
+        # without copying, so an operator or a rotation applies to each exactly as it applies
+        # to a copy of the column
         W = 𝒯 \ hcat(f, 2f, 3f)
         @test W isa Matrix{ComplexF64}
         @test_throws "ModeWeights(view(data, :, j), s)" ModeWeights(W, s)

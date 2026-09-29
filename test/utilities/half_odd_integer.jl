@@ -34,7 +34,9 @@
     @test HalfOddInteger(big(-1)//2) === HalfOddInteger(-1//2)
     @test_throws InexactError HalfOddInteger((big(2)^70 + 1)//2)
 
-    # Round trips, through `Rational` and through every float type of `Base`, all exact
+    # Round trips, through `Rational` and through every float type of `Base`: exact wherever
+    # the type can represent n/2, and otherwise correctly rounded, as for 2^40 + 1 in
+    # `Float32` (where `Float32(n)/2` is the rounding of n/2, since halving is exact)
     for n in (-7, -1, 1, 3, 9, 2^40 + 1)
         x = HalfOddInteger(n//2)
         @test Rational(x) === n//2

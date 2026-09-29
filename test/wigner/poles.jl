@@ -216,15 +216,19 @@ end
     # Rotors within ⁴√ε of either pole, where the calculators use the expansion.  There its
     # values and derivatives should agree with the recurrence's to within the recurrence's own
     # error, which grows as the pole is approached, like ε r⁻ᵏ for the k-th derivative — at
-    # ⁴√ε that is about ε^{1-k/4}, so that fourth derivatives would test nothing, and the
-    # comparison stops at the third.  Against the full polynomial the expansion should be
-    # accurate to about ε + ((ℓ+1) r)^{N+1-k}, and that is checked up to the fourth.
+    # ⁴√ε that is about ε^{1-k/4}, and closer in it is larger still.  Wherever that error is
+    # not small compared with the derivative itself, the comparison could not fail, so it is
+    # made only where the tolerance is below a hundredth of the largest element being
+    # compared; the number of comparisons made for each k is checked at the end.  Against the
+    # full polynomial the expansion should be accurate to about ε + ((ℓ+1) r)^{N+1-k}, and
+    # that is checked everywhere, up to the fourth derivative.
     #
     # The largest ratios of the measured differences to the model below, for Float32, Float64
     # and Double64 alike, are 2.3 (for the values) and 0.3 (for the derivatives) against the
     # recurrence, and 3.2 against the polynomial.
     cases(::Type{Double64}) = ((1, 4, 5//2), (1, 0.01))
     cases(::Type) = ((1, 2, 4, 8, 3//2, 7//2), (1, 0.1, 0.01))
+    compared = zeros(Int, 4)  # comparisons with the recurrence, for k = 0:3
     for T ∈ (Float32, Float64, Double64)
         ns, fractions = cases(T)
         δ₀ = sqrt(sqrt(eps(T)))
@@ -236,9 +240,10 @@ end
             @test r < pole_radius(T, n)  # so that the package does use the expansion here
             for k ∈ 0:4
                 e = nthderiv(t -> flat(expansion_block(n, through(R, T)(t), isnorth)), zero(T), k)
-                if k ≤ 3
+                if k ≤ 3 && tolerance(T, n, k, r; source=:both) ≤ maximum(abs, e) / 100
                     h = nthderiv(t -> flat(recurrence_block(n, through(R, T)(t))), zero(T), k)
                     @test maxdiff(e, h) ≤ tolerance(T, n, k, r; source=:both)
+                    compared[k+1] += 1
                 end
                 p = nthderiv(t -> flat(Pblock(n, through(tobig(R), T)(t))), big(zero(T)), k)
                 @test maxdiff(e, p) ≤ tolerance(T, n, k, r; source=:expansion)
@@ -248,6 +253,7 @@ end
             @test maxdiff(Dblock(n, R), expansion_block(n, R, isnorth)) ≤ tolerance(T, n, 0, r; source=:expansion)
         end
     end
+    @test all(>(0), compared)
 end
 
 
@@ -410,6 +416,9 @@ end
 
     # No NaN arises anywhere, not even in the engine's work for a rotor at a pole, whose
     # results are overwritten: `MathChecker` throws as soon as one takes part in an operation.
+    # The checked values agree with the plain ones only to rounding, since the two types
+    # round differently; the largest difference measured, over the whole complex values, is
+    # 8.6 eps on Julia 1.13 (and 1 eps on Julia 1.12), and 16 eps is asserted.
     NC = checked(Float64; precision=false, nan=true, inf=false)
     rotors = [
         from_euler_angles(0.3, 0.0, -1.1), Rotor(Quaternion(0.0, 0.3, 0.8, 0.0)),
@@ -419,11 +428,11 @@ end
         RNC = [Rotor(NC(R[1]), NC(R[2]), NC(R[3]), NC(R[4])) for R ∈ rotors]
         a = array_view(recurrence!(DCalculator(RNC, n), n))
         b = array_view(recurrence!(DCalculator(rotors, n), n))
-        @test maximum(abs.(unchecked.(real.(a)) .- real.(b))) ≤ 8eps()
+        @test maximum(abs.(complex.(unchecked.(real.(a)), unchecked.(imag.(a))) .- b)) ≤ 16eps()
         s = n isa Integer ? -2 : 1//2
         a = array_view(recurrence!(sYlmCalculator(RNC, n, s), n))
         b = array_view(recurrence!(sYlmCalculator(rotors, n, s), n))
-        @test maximum(abs.(unchecked.(imag.(a)) .- imag.(b))) ≤ 8eps()
+        @test maximum(abs.(complex.(unchecked.(real.(a)), unchecked.(imag.(a))) .- b)) ≤ 16eps()
     end
 
     # Once warmed up, moving a calculator onto a pole and computing there allocates nothing.

@@ -83,8 +83,8 @@ end
 
     # Read every element of the current block of the checked calculator (any read of a NaN
     # throws) and compare to the plain Float64 calculator.  Exact equality is not possible:
-    # `@fastmath` in `recurrence_step4!` and `complex_powers!` lets the Float64 path contract
-    # multiply-adds into FMAs, while `Checked` arithmetic goes through the generic methods.
+    # the `muladd` in `complex_powers!` is a fused multiply-add for `Float64`, but for the
+    # `Checked` wrapper it falls back to a separate multiply and add, which round differently.
     function check_block(block, blockF, atol)
         # `array_view` is what turns a labelled block into a plain 1-based array; the containers
         # deliberately have no linear indexing of their own, so `eachindex` goes through it.
@@ -211,7 +211,8 @@ end
     @test value(dd[1][1, 0]) ≈ -sin(β) / √2 atol=4eps()
     @test deriv(dd[1][1, 0]) ≈ -cos(β) / √2 atol=4eps()
 
-    # Values agree with the Float64 path and derivatives with central finite differences
+    # Values agree with the Float64 path and derivatives with central finite differences,
+    # which with h = 1e-6 are accurate to about eps/h ≈ 2e-10 (measured at most 1.5e-10 here)
     d₀ = d(β, ℓₘₐₓ)
     d₊ = d(β + h, ℓₘₐₓ)
     d₋ = d(β - h, ℓₘₐₓ)
@@ -220,7 +221,7 @@ end
         for m′ in -ℓ:ℓ, m in -ℓ:ℓ
             @test value(dd[ℓ][m′, m]) ≈ d₀[ℓ][m′, m] atol=4*max(1, ℓ)*eps()
             fd = (d₊[ℓ][m′, m] - d₋[ℓ][m′, m]) / 2h
-            @test deriv(dd[ℓ][m′, m]) ≈ fd atol=1e-6
+            @test deriv(dd[ℓ][m′, m]) ≈ fd atol=1e-8
         end
     end
 
@@ -236,14 +237,14 @@ end
     𝔇(α, θ, γ) = D(from_euler_angles(α, θ, γ), 3)[3]
     g = ForwardDiff.derivative(θ -> real(𝔇(0.3, θ, 1.1)[2, -1]), β)
     fd = (real(𝔇(0.3, β + h, 1.1)[2, -1]) - real(𝔇(0.3, β - h, 1.1)[2, -1])) / 2h
-    @test g ≈ fd atol=1e-6
+    @test g ≈ fd atol=1e-8
     for (m′, m) in ((2, -1), (-3, 3), (0, 1), (1, 0), (3, 3))
         gr = ForwardDiff.derivative(θ -> real(𝔇(0.3, θ, 1.1)[m′, m]), β)
         gi = ForwardDiff.derivative(θ -> imag(𝔇(0.3, θ, 1.1)[m′, m]), β)
         fdr = (real(𝔇(0.3, β + h, 1.1)[m′, m]) - real(𝔇(0.3, β - h, 1.1)[m′, m])) / 2h
         fdi = (imag(𝔇(0.3, β + h, 1.1)[m′, m]) - imag(𝔇(0.3, β - h, 1.1)[m′, m])) / 2h
-        @test gr ≈ fdr atol=1e-6
-        @test gi ≈ fdi atol=1e-6
+        @test gr ≈ fdr atol=1e-8
+        @test gi ≈ fdi atol=1e-8
         # Derivatives with respect to α and γ are analytic in the settled convention
         # 𝔇 = e^{-im′α} d e^{-imγ}: ∂α𝔇 = -im′ 𝔇 and ∂γ𝔇 = -im 𝔇.
         𝔇₀ = 𝔇(0.3, β, 1.1)[m′, m]
@@ -262,7 +263,7 @@ end
     blkD = recurrence!(calcD, 3)
     @test eltype(blkD) <: Complex{<:ForwardDiff.Dual}
     @test value(real(blkD[2, -1])) ≈ real(𝔇(0.3, β, 1.1)[2, -1]) atol=40eps()
-    @test deriv(real(blkD[2, -1])) ≈ fd atol=1e-6
+    @test deriv(real(blkD[2, -1])) ≈ fd atol=1e-8
 end
 
 

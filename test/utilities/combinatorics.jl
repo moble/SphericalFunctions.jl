@@ -20,7 +20,13 @@
                 a = sqrtbinomial(2ℓ, ℓ - s, T)
                 b = T(√big(binomial(big(2ℓ), big(ℓ - s))))
                 @test a isa T
-                @test a ≈ b rtol=8max(1, log(abs(b)))*eps(T)
+                if isinf(b)
+                    # The value overflows `T` (in `Float16` for the ℓ ≥ 64 here, and in
+                    # `Float32` for ℓ = 1025), and so must the result
+                    @test isinf(a) && a > 0
+                else
+                    @test a ≈ b rtol=8max(1, log(abs(b)))*eps(T)
+                end
             end
         end
     end

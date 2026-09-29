@@ -641,21 +641,21 @@ end
                 @test lz * e == T(mr) .* e
                 @test rz * e == T(s) .* e
                 # L₊ maps (ℓ, m) to (ℓ, m+1) with coefficient √((ℓ-m)(ℓ+m+1)), and L₋ maps it
-                # to (ℓ, m-1) with √((ℓ+m)(ℓ-m+1)); (ℓ∓m) and (ℓ±m+1) are `Int`s
+                # to (ℓ, m-1) with √((ℓ+m)(ℓ-m+1)), formed from the `Rational`s
                 expected = zeros(T, n)
                 if m < ℓ
-                    expected[Yindex(ℓ, m + 1, h(ℓₘᵢₙ))] = √(T((ℓ - m) * (ℓ + m + 1)))
+                    expected[Yindex(ℓ, m + 1, h(ℓₘᵢₙ))] = √(T((ℓr - mr) * (ℓr + mr + 1)))
                 end
                 @test lp * e ≈ expected atol=ϵ rtol=ϵ
                 expected = zeros(T, n)
                 if m > -ℓ
-                    expected[Yindex(ℓ, m - 1, h(ℓₘᵢₙ))] = √(T((ℓ + m) * (ℓ - m + 1)))
+                    expected[Yindex(ℓ, m - 1, h(ℓₘᵢₙ))] = √(T((ℓr + mr) * (ℓr - mr + 1)))
                 end
                 @test lm * e ≈ expected atol=ϵ rtol=ϵ
                 # ð raises the spin weight with √((ℓ-s)(ℓ+s+1)), ð̄ lowers it with
                 # -√((ℓ+s)(ℓ-s+1)), and R₊ = ð, R₋ = -ð̄
-                @test d * e ≈ √(T((ℓ - sh) * (ℓ + sh + 1))) .* e atol=ϵ rtol=ϵ
-                @test d̄ * e ≈ -√(T((ℓ + sh) * (ℓ - sh + 1))) .* e atol=ϵ rtol=ϵ
+                @test d * e ≈ √(T((ℓr - s) * (ℓr + s + 1))) .* e atol=ϵ rtol=ϵ
+                @test d̄ * e ≈ -√(T((ℓr + s) * (ℓr - s + 1))) .* e atol=ϵ rtol=ϵ
                 @test rp * e == d * e
                 @test rm * e == -(d̄ * e)
                 # Entries below the spin weight of the *result* are exactly zero

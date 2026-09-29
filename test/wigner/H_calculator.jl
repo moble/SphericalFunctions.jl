@@ -554,8 +554,8 @@ end
             for ℓ in order  # `fill!` keeps the rotor data, so none is supplied again here
                 recurrence!(signaling, ℓ)  # throws NaNError if any poisoned entry is used
                 values = unchecked.(wedge(signaling.Hˡ))
-                # `@fastmath` in the Float64 path may contract or reorder operations, so the
-                # agreement is not bitwise (measured ≤ 1 eps).
+                # The `muladd` in `complex_powers!` is fused for `Float64` but not for the
+                # wrapper type, so the agreement is not bitwise (measured ≤ 1 eps).
                 @test maximum(abs.(values .- wedges[ℓ+1])) ≤ 8eps(T)
             end
         end

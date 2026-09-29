@@ -237,7 +237,11 @@ for (θ, ϕ) ∈ θϕrange(rng, Float64, 3)
         @test Y_sympy ≈ Yˡ[m] atol=ϵₐ rtol=ϵᵣ
     end
 end
-for (α, β, γ) ∈ αβγrange(rng, Float64, 1)
+#+
+
+# The Euler angles include random values of α and γ, besides the special values near 0, π,
+# and 2π, at which the phases could not reveal a sign error in their exponents.
+for (α, β, γ) ∈ αβγrange(rng, Float64, 2)
     for (J, 𝔇ᴶ) ∈ SphericalFunctions.DCalculator(α, β, γ, 3)
         D_sympy = wigner.wigner_d(J, α, β, γ)
         for m′ ∈ -J:J, m ∈ -J:J
