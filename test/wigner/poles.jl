@@ -29,7 +29,10 @@
     # derivatives at t = 0 (as of Quaternionic 4.4.1).  The direction is converted to the type
     # of the path before use, so that a path in `BigFloat` follows exactly the same direction as
     # the one it is compared with.
-    const 𝐮 = let u = [0.3, -0.7, 0.2]; u / sqrt(sum(abs2, u)) end
+    # A tuple rather than a vector: TestItemRunner on Julia 1.10 evaluates this snippet twice
+    # in each item's module, and redefining a constant with an identical value, unlike an
+    # equal vector, draws no warning
+    const 𝐮 = let u = (0.3, -0.7, 0.2); u ./ sqrt(sum(abs2, u)) end
     qpath(t, u) = Quaternion(cos(t/2), sin(t/2) * u[1], sin(t/2) * u[2], sin(t/2) * u[3])
     through(R₀, ::Type{T}) where {T} = t -> R₀ * qpath(t, T.(𝐮))
     tobig(R) = Quaternion(big(R[1]), big(R[2]), big(R[3]), big(R[4]))
