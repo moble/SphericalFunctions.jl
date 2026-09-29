@@ -554,9 +554,9 @@ end
             for ℓ in order  # `fill!` keeps the rotor data, so none is supplied again here
                 recurrence!(signaling, ℓ)  # throws NaNError if any poisoned entry is used
                 values = unchecked.(wedge(signaling.Hˡ))
-                # The `muladd` in `complex_powers!` is fused for `Float64` but not for the
-                # wrapper type, so the agreement is not bitwise (measured ≤ 1 eps).
-                @test maximum(abs.(values .- wedges[ℓ+1])) ≤ 8eps(T)
+                # `Checked` performs each operation in `Float64`, on the same angles, so the
+                # agreement is bitwise
+                @test values == wedges[ℓ+1]
             end
         end
     end

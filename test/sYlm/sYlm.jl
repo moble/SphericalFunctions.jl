@@ -413,9 +413,8 @@ end
             for s ∈ -sₘₐₓ:sₘₐₓ
                 # Every entry must have been written: an untouched one still holds the
                 # sentinel NaN, which turns `err` into NaN and fails the comparison.  The
-                # values are only approximately equal to the plain-`Float64` run because the
-                # `muladd` in `complex_powers!` is fused for `Float64` but not for a wrapper
-                # type, so the two round differently.
+                # checked rotors are the plain ones converted, and `Checked` performs each
+                # operation in `Float64`, so the values agree bit for bit.
                 err = 0.0
                 for i ∈ 1:Nᵣ, m ∈ -ℓ:ℓ
                     # A vector of rotors, even of one, gives batched blocks
@@ -423,7 +422,7 @@ end
                     zref = refblk[i, s, m]
                     err = max(err, abs(unchecked(real(z)) - real(zref)), abs(unchecked(imag(z)) - imag(zref)))
                 end
-                @test err < 1e-13
+                @test err == 0
             end
         end
         # `fill!` keeps the stored rotor data, as its docstring promises, so the recurrence

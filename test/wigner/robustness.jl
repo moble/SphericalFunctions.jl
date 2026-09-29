@@ -48,9 +48,9 @@ end
             β=single(βs),
             βNC=single(NC.(βs)),
             eⁱᵝ=single(cis.(βs)),
-            eⁱᵝNC=single(cis.(NC.(βs))),
+            eⁱᵝNC=single(Complex{NC}.(cis.(βs))),
             R=single([from_euler_angles(t...) for t in αβγ]),
-            RNC=single([from_euler_angles(NC.(t)...) for t in αβγ]),
+            RNC=single([Rotor{NC}(from_euler_angles(t...)) for t in αβγ]),
         )
     end
 
@@ -82,9 +82,9 @@ end
     end
 
     # Read every element of the current block of the checked calculator (any read of a NaN
-    # throws) and compare to the plain Float64 calculator.  Exact equality is not possible:
-    # the `muladd` in `complex_powers!` is a fused multiply-add for `Float64`, but for the
-    # `Checked` wrapper it falls back to a separate multiply and add, which round differently.
+    # throws) and compare to the plain Float64 calculator.  The checked inputs are the plain
+    # ones converted, not recomputed, and `Checked` performs each operation in `Float64`, so
+    # the two calculators agree bit for bit, and `atol` is zero.
     function check_block(block, blockF, atol)
         # `array_view` is what turns a labelled block into a plain 1-based array; the containers
         # deliberately have no linear indexing of their own, so `eachindex` goes through it.
@@ -119,7 +119,7 @@ end
     # annihilate), and the half-integer phases.
     for ℓₘₐₓ in (0, 1, 2, 5, 9, 1//2, 5//2, 9//2), Nᵣ in (1, 3)
         data = rotor_data(Nᵣ)
-        atol = 4 * max(1, ℓₘₐₓ) * eps(Float64)
+        atol = 0.0
         lo = lowest(ℓₘₐₓ)
 
         # The raw H engine, driven by β

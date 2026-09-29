@@ -9,6 +9,13 @@
 # running this one recurrence, and they share its start and its step, below, so that they
 # compute the same values.
 
+# The sum x² + y², rounded once.  `fma` rounds once on every machine, in hardware where
+# there is an FMA instruction and in software where there is not; `muladd` only permits
+# that, and on a machine where it is not fused it rounds twice.  Number types without an
+# `fma` method, such as ReverseDiff's tracked reals, take `muladd`.
+@inline fused_abs2(x::T, y::T) where {T<:AbstractFloat} = fma(x, x, y * y)
+@inline fused_abs2(x, y) = muladd(x, x, y * y)
+
 # The start of the recurrence: `z` rotated by a power of i into the sector -π/4 < arg z ≤
 # π/4, that power `θ`, which is factored out and restored exactly at each power, the first
 # increment δz¹ = z² - z, and the constant `t`.  The recurrence is most accurate for z near
@@ -39,12 +46,12 @@
     # when `z` is near 1 (which is exactly the small-angle case).  `Re z ≥ |Im z|` and `Re z
     # > 0` here, so the denominator cannot cancel.
     #
-    # `modulus` must be computed with a fused multiply-add.  A one-ulp error here feeds
-    # `dc`, which the form above has just gone to some trouble to keep free of cancellation,
-    # and the recurrence then amplifies it linearly in `m`.  Measured at m = 4096, ϕ = 0.3:
-    # `√(abs2(z))` gives 9.1e-14, this gives 7.7e-15.  (`hypot` does not help; nor does a
-    # `muladd` in the recurrence itself.)
-    modulus = √(muladd(z.re, z.re, z.im*z.im))
+    # `modulus` must be computed with a single rounding, by `fused_abs2`.  A one-ulp error
+    # here feeds `dc`, which the form above has just gone to some trouble to keep free of
+    # cancellation, and the recurrence then amplifies it linearly in `m`.  Measured at m =
+    # 4096, ϕ = 0.3: `√(abs2(z))` gives 9.1e-14, this gives 7.7e-15.  (`hypot` does not
+    # help; nor does a `muladd` in the recurrence itself.)
+    modulus = √(fused_abs2(z.re, z.im))
     dc = -z.im^2 / (z.re + modulus)
     t = 2 * dc
     # The first increment δz¹ = z² - z is (z - 1) + 2dc z for |z| = 1, since then

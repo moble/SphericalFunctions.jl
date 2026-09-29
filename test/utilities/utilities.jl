@@ -1,9 +1,9 @@
 # Helpers shared by many test items and by the literature-comparison pages: ranges of mode
-# indices, samples of angles, directions and rotors, and a closed-form ₛYₗₘ that owes nothing
-# to the package.  They are defined in a `@testmodule`, which is evaluated once in each test
-# process rather than once in every item that uses it.  The module exports nothing, so that
-# no name it defines can shadow one defined in an item; each item imports the helpers it uses
-# by name, which also shows where they come from.
+# indices, samples of angles, directions and rotors, and a closed-form ₛYₗₘ that owes
+# nothing to the package.  They are defined in a `@testmodule`, which is evaluated once in
+# each test process rather than once in every item that uses it.  The module exports
+# nothing, so that no name it defines can shadow one defined in an item; each item imports
+# the helpers it uses by name, which also shows where they come from.
 #
 # Every sampling helper takes the random-number generator as its first argument.  Each item
 # creates its own, as in `rng = Random.Xoshiro(1234)`, so that its samples are the same
@@ -33,9 +33,10 @@
         ]
     end
 
-    # `n` samples drawn uniformly from the interval [a, b].  They are computed in `T` itself,
-    # so that any type `rand` supports can be sampled, `Double64` and `BigFloat` included, and
-    # they are clamped to the interval, so that rounding cannot put one outside it.
+    # `n` samples drawn uniformly from the interval [a, b].  They are computed in `T`
+    # itself, so that any type `rand` supports can be sampled, `Double64` and `BigFloat`
+    # included, and they are clamped to the interval, so that rounding cannot put one
+    # outside it.
     uniform_samples(rng::AbstractRNG, ::Type{T}, a, b, n) where {T} =
         clamp.(T(a) .+ (T(b) - T(a)) .* rand(rng, T, n), T(a), T(b))
 
@@ -46,10 +47,10 @@
         nextfloat(T(π)); uniform_samples(rng, T, T(π), 2T(π), n÷2); prevfloat(2T(π)); 2T(π)
     ]
     # Samples of a polar angle in [0, π]: both poles, their neighbors, and `n` random values
-    # between them.  `avoid_poles` keeps every sample, random ones included, at least that far
-    # from either pole; the formulas of several reference pages are singular there.  The edges
-    # of the band are computed in `T`, so that the sample just inside the upper edge is
-    # distinct from the edge itself in every precision.
+    # between them.  `avoid_poles` keeps every sample, random ones included, at least that
+    # far from either pole; the formulas of several reference pages are singular there.  The
+    # edges of the band are computed in `T`, so that the sample just inside the upper edge
+    # is distinct from the edge itself in every precision.
     βrange(rng::AbstractRNG, ::Type{T}=Float64, n=15; avoid_poles=0) where {T} = T[
         T(avoid_poles); nextfloat(T(avoid_poles));
         uniform_samples(rng, T, T(avoid_poles), T(π)-T(avoid_poles), n);
@@ -96,12 +97,12 @@
     """
         array_equal(a1, a2, equal_nan=false)
 
-    Ensure that arrays have same types and shapes, and all elements are the same.
-    If `equal_nan` is `true`, NaNs in the same place in each array will be
-    considered to be equal.
+    Ensure that arrays have same types and shapes, and all elements are the same.  If
+    `equal_nan` is `true`, NaNs in the same place in each array will be considered to be
+    equal.
 
-    Note that this is slightly stricter than the numpy version of this function,
-    because arrays of different type will not be considered equal.
+    Note that this is slightly stricter than the numpy version of this function, because
+    arrays of different type will not be considered equal.
 
     """
     function array_equal(a1::T1, a2::T2, equal_nan=false) where {T1, T2}
@@ -139,11 +140,11 @@
     """
         sYlm_closed_form_pixels(s, ℓ, m, pixels)
 
-    The same closed form as `sYlm_closed_form`, evaluated on a whole list of `(θ, ϕ)` pixels,
-    with the pixel-independent factorials hoisted out of the loop.  That is about 40 times
-    faster, which is what makes pixel-by-pixel comparisons against a transform affordable; it
-    is the same transcription of the conventions-page formula, so it owes nothing to the
-    package.
+    The same closed form as `sYlm_closed_form`, evaluated on a whole list of `(θ, ϕ)`
+    pixels, with the pixel-independent factorials hoisted out of the loop.  That is about 40
+    times faster, which is what makes pixel-by-pixel comparisons against a transform
+    affordable; it is the same transcription of the conventions-page formula, so it owes
+    nothing to the package.
 
     Checked against `sYlm_closed_form` itself in the "SSHT synthesis" test item.
     """
@@ -186,13 +187,13 @@
 end  # @testmodule Utilities
 
 
-# Two checks of what the compiler makes of a call, which work alike on every Julia version the
-# package supports.  `Base.infer_return_type` exists only from Julia 1.11 on; on 1.10 the same
-# answer comes from `Core.Compiler.return_type`, which is what `Base.promote_op` uses.  The
-# printed optimized code marks a dynamically dispatched call with the word "dynamic" only from
-# Julia 1.12 on, so `dynamic_calls` reads the code itself: a call that inference has resolved
-# is an `:invoke`, or a `:call` of a builtin function, and any other `:call` is dispatched at
-# run time.
+# Two checks of what the compiler makes of a call, which work alike on every Julia version
+# the package supports.  `Base.infer_return_type` exists only from Julia 1.11 on; on 1.10
+# the same answer comes from `Core.Compiler.return_type`, which is what `Base.promote_op`
+# uses.  The printed optimized code marks a dynamically dispatched call with the word
+# "dynamic" only from Julia 1.12 on, so `dynamic_calls` reads the code itself: a call that
+# inference has resolved is an `:invoke`, or a `:call` of a builtin function, and any other
+# `:call` is dispatched at run time.
 @testmodule InferenceChecks begin
     inferred_type(f, types) = @static if isdefined(Base, :infer_return_type)
         Base.infer_return_type(f, types)

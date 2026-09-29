@@ -416,23 +416,23 @@ end
 
     # No NaN arises anywhere, not even in the engine's work for a rotor at a pole, whose
     # results are overwritten: `MathChecker` throws as soon as one takes part in an operation.
-    # The checked values agree with the plain ones only to rounding, since the two types
-    # round differently; the largest difference measured, over the whole complex values, is
-    # 8.6 eps on Julia 1.13 (and 1 eps on Julia 1.12), and 16 eps is asserted.
+    # The checked rotors are the plain ones converted (`Rotor{NC}(R)`, which, unlike
+    # `Rotor(NC(R[1]), …)`, does not renormalize them), and `Checked` performs each operation
+    # in `Float64`, so the checked values agree with the plain ones bit for bit.
     NC = checked(Float64; precision=false, nan=true, inf=false)
     rotors = [
         from_euler_angles(0.3, 0.0, -1.1), Rotor(Quaternion(0.0, 0.3, 0.8, 0.0)),
         from_euler_angles(1.2, 1e-7, 0.4),
     ]
     for n ∈ (4, 7//2)
-        RNC = [Rotor(NC(R[1]), NC(R[2]), NC(R[3]), NC(R[4])) for R ∈ rotors]
+        RNC = [Rotor{NC}(R) for R ∈ rotors]
         a = array_view(recurrence!(DCalculator(RNC, n), n))
         b = array_view(recurrence!(DCalculator(rotors, n), n))
-        @test maximum(abs.(complex.(unchecked.(real.(a)), unchecked.(imag.(a))) .- b)) ≤ 16eps()
+        @test complex.(unchecked.(real.(a)), unchecked.(imag.(a))) == b
         s = n isa Integer ? -2 : 1//2
         a = array_view(recurrence!(sYlmCalculator(RNC, n, s), n))
         b = array_view(recurrence!(sYlmCalculator(rotors, n, s), n))
-        @test maximum(abs.(complex.(unchecked.(real.(a)), unchecked.(imag.(a))) .- b)) ≤ 16eps()
+        @test complex.(unchecked.(real.(a)), unchecked.(imag.(a))) == b
     end
 
     # Once warmed up, moving a calculator onto a pole and computing there allocates nothing.
