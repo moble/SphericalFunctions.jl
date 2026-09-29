@@ -324,6 +324,19 @@ version 2 already started at ``ℓ = |s|``.)
   ``\cos(β/2)``, ``\sin(β/2)``, rather than through Euler angles.
   This is accurate near both poles, and gives ``𝔇(-R) = -𝔇(R)`` for
   half-integer indices.  (Issue #57.)
+* **Automatic differentiation with respect to the rotor.**  Package
+  extensions for `ChainRulesCore`, `EnzymeCore`, `ForwardDiff`,
+  `Mooncake`, and `ReverseDiff` supply rules for `D` and `sYlm` of a
+  rotor, and so for `Ylm` and for the forms that take Euler angles or
+  spherical coordinates.  The rules give the derivatives from the
+  angular-momentum operators, as combinations of the values
+  themselves, rather than by differentiating the recurrence, so the
+  derivatives are as accurate as the values at every rotor, the poles
+  included, and to every order under nested differentiation.  The
+  calculators are differentiated through the recurrence, which
+  evaluates the rotors near a pole from an expansion about it, so
+  that their derivatives are accurate there too.  The note on
+  automatic differentiation in the documentation describes both.
 * **Restricted ranges.**  The keywords `m′ₘₐₓ`, `m′ₘᵢₙ`, `mₘₐₓ` and
   `mₘᵢₙ` of `D`, `d` and their calculators limit the part of each
   matrix that is computed, and restricting either index makes the

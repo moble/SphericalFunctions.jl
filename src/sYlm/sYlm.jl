@@ -817,7 +817,7 @@ of branch is explained under [`sYlmCalculator`](@ref).
     R::Rotor, ℓₘₐₓ::IndexType, s::IndexOrRange;
     ell_min::IndexType=min_abs_spin(s), ℓₘᵢₙ::IndexType=ell_min
 )
-    sYlm_helper(sYlmCalculator_helper, R, ℓₘₐₓ, s, ℓₘᵢₙ)
+    HarmonicValues(sYlm_array(R, ℓₘₐₓ, s, ℓₘᵢₙ), s, ℓₘᵢₙ, ℓₘₐₓ, 1)
 end
 @index_methods function sYlm(
     θ::Real, ϕ::Real, ℓₘₐₓ::IndexType, s::IndexOrRange;
@@ -826,6 +826,9 @@ end
     sYlm(from_spherical_coordinates(θ, ϕ), ℓₘₐₓ, s; ℓₘᵢₙ)
 end
 function sYlm_helper(make, R, ℓₘₐₓ::IT, s, ℓₘᵢₙ::IT) where {IT<:IntegerHalf}
+    HarmonicValues(harmonic_array(make, R, ℓₘₐₓ, s, ℓₘᵢₙ), s, ℓₘᵢₙ, ℓₘₐₓ, 1)
+end
+function harmonic_array(make, R, ℓₘₐₓ::IT, s, ℓₘᵢₙ::IT) where {IT<:IntegerHalf}
     check_sYlm_args(ℓₘₐₓ, s, ℓₘᵢₙ)
     # The calculator decides the element type, and the output buffer follows it, so that
     # there is exactly one place where that decision is made.  `make` is what chooses the
@@ -834,8 +837,16 @@ function sYlm_helper(make, R, ℓₘₐₓ::IT, s, ℓₘᵢₙ::IT) where {IT<:
     calc = make(R, ℓₘₐₓ, s)
     Y = allocate_sYlm(number_type(calc), s, ℓₘᵢₙ, ℓₘₐₓ)
     fill_sYlm!(Y, calc, s, ℓₘᵢₙ)
-    HarmonicValues(Y, s, ℓₘᵢₙ, ℓₘₐₓ, 1)
+    Y
 end
+
+# The values of `sYlm` for a single rotor, as the bare array that `HarmonicValues` labels: a
+# vector of modes for one spin weight, or a matrix of spin weights by modes for a range of
+# them.  Like `D_array`, this is the function to which the rules for automatic
+# differentiation are attached (see `src/derivatives.jl`), because it takes the rotor and
+# returns a plain array.
+sYlm_array(R::Rotor, ℓₘₐₓ::IT, s, ℓₘᵢₙ::IT) where {IT<:IntegerHalf} =
+    harmonic_array(sYlmCalculator_helper, R, ℓₘₐₓ, s, ℓₘᵢₙ)
 
 # Many rotors at once.  The storage and the recursion are `sYlm_matrix`'s — that is the
 # efficient path, and there is no reason to have two — so this labels the same array rather

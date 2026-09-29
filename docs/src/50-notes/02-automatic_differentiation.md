@@ -7,17 +7,80 @@ CurrentModule = SphericalFunctions
 Wigner's ``𝔇`` matrices and the spin-weighted spherical harmonics are
 smooth functions of the rotor everywhere on ``\mathrm{Spin}(3)``, so
 it is natural to differentiate them with respect to the rotor by
-automatic differentiation — with `ForwardDiff`, `ReverseDiff`, or
-`Enzyme`, for example.  But automatic differentiation differentiates
-the algorithm, not the function, and the algorithm used here passes
-through intermediate quantities that are singular at two special sets
-of rotors: those that take the ``z`` axis to itself, and those that
-take it to its opposite — or those with ``β = 0`` or ``β = π``.  These
-are the rotors at which the harmonics are evaluated at the poles of
-the sphere, so we will refer to both sets as "poles."  This note
-explains where those singularities come from, how this package works
-around them for ``𝔇`` and the harmonics, and why the same cannot be
-done for ``d`` and ``H`` of a rotor.
+automatic differentiation.  For [`D`](@ref) and [`sYlm`](@ref) of a
+single rotor, and for the functions built on them, this package
+supplies rules that give the derivatives directly, in terms of the
+values themselves.  These rules are used by `ForwardDiff`,
+`ReverseDiff`, `Enzyme`, and `Mooncake`, and by the tools that read
+`ChainRules`, such as `Zygote`.  Elsewhere — in the calculators, for
+example — automatic differentiation differentiates the algorithm, not
+the function, and the algorithm used here passes through intermediate
+quantities that are singular at two special sets of rotors: those that
+take the ``z`` axis to itself, and those that take it to its opposite
+— or those with ``β = 0`` or ``β = π``.  These are the rotors at which
+the harmonics are evaluated at the poles of the sphere, so we will
+refer to both sets as "poles."  This note describes the rules first,
+and then explains where the singularities come from, how the
+calculators work around them for ``𝔇`` and the harmonics, and why the
+same cannot be done for ``d`` and ``H`` of a rotor.
+
+
+## Rules for the derivatives
+
+The derivative of ``𝔇`` along a rotation is given by the generators
+of rotations, which are the angular-momentum operators.  Along the
+path ``𝐑(t) = e^{t𝐮/2}\, 𝐑``, for any vector ``𝐮``,
+```math
+\frac{d}{dt} 𝔇^{(ℓ)}(𝐑(t)) \bigg|_{t=0}
+=
+-i\, (𝐮 ⋅ 𝐉)\, 𝔇^{(ℓ)}(𝐑),
+```
+where ``𝐉`` is the angular momentum acting on the index ``m'``, with
+``⟨m'|J_z|m'⟩ = m'`` and ``⟨m'±1|J_±|m'⟩ = \sqrt{(ℓ∓m')(ℓ±m'+1)}``.
+The functions are taken to depend on the rotor only through
+``𝐑/\|𝐑\|``, which is how they are computed, so a tangent
+``\dot{𝐑}`` may be any quaternion.  Writing ``\dot{𝐑} = 𝐪\, 𝐑``,
+with ``𝐪 = \dot{𝐑}\, \bar{𝐑} / \|𝐑\|^2``, the scalar part of
+``𝐪`` changes only the norm of ``𝐑``, and drops out, while its
+vector part ``𝐯`` gives ``𝐮 = 2𝐯``.  So, with ``w = v_x + i v_y``,
+```math
+\dot{𝔇}^{(ℓ)}_{m',m}
+=
+-i \left[
+2 v_z\, m'\, 𝔇^{(ℓ)}_{m',m}
++ \bar{w} \sqrt{(ℓ-m'+1)(ℓ+m')}\, 𝔇^{(ℓ)}_{m'-1,m}
++ w \sqrt{(ℓ+m'+1)(ℓ-m')}\, 𝔇^{(ℓ)}_{m'+1,m}
+\right].
+```
+The harmonics are a conjugated row of ``𝔇``, so the same derivative,
+conjugated, applies to them, and couples each harmonic only to those
+of the same ``ℓ`` and spin weight with ``m ± 1``.  Differentiating
+from the left in this way is what keeps the spin weight fixed; from
+the right, the derivative would couple the harmonics of weight ``s``
+to those of weights ``s ± 1``.  For a block of ``𝔇`` restricted in
+``m'``, the derivatives need the values one row beyond each limit,
+which the rules compute along with the block.  The reverse-mode rules
+apply the adjoint of this linear map, and return a cotangent that is
+orthogonal to ``𝐑``, as the cotangent of a function of ``𝐑/\|𝐑\|``
+must be.
+
+The derivative in every direction is therefore a combination of values
+of the same ``ℓ``, and is as accurate as the values are, at every
+rotor, the poles included.  Because the rules compute those values by
+calling the same function again, a tool that nests its derivatives, as
+`ForwardDiff` does for a Hessian, reaches the rules once at each
+level, and every order of derivative is exact.  The recurrence itself
+is never differentiated.
+
+The rules are supplied by package extensions, which are loaded along
+with the tool: for `ChainRulesCore`, `EnzymeCore`, `ForwardDiff`,
+`Mooncake`, and `ReverseDiff`.  They apply to [`D`](@ref) of a rotor
+or of Euler angles, and to [`sYlm`](@ref) and [`Ylm`](@ref) of a rotor
+or of spherical coordinates, since each of these reaches the same
+underlying function of a single rotor.  The calculators, the forms
+that take a vector of rotors, [`sYlm_matrix`](@ref), and the
+transforms are differentiated through the algorithm, as described in
+the rest of this note.
 
 
 ## The singularity in the recurrence

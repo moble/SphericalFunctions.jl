@@ -55,6 +55,8 @@ export HarmonicValues
 include("sYlm/sYlm.jl")
 export sYlmCalculator, sYlm, sYlm!, sYlm_matrix, Ylm, YlmCalculator
 
+include("derivatives.jl")
+
 include("set_rotor_data.jl")
 export set_R!, set_β!, set_θ!
 

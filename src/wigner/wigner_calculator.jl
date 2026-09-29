@@ -634,10 +634,7 @@ See also [`d`](@ref) and [`sYlm`](@ref).
     m_max::IndexType=ℓₘₐₓ, mₘₐₓ::IndexType=m_max,
     m_min::IndexType=-mₘₐₓ, mₘᵢₙ::IndexType=m_min
 ) where {IT<:IndexType}
-    calc = DCalculator(R, ℓₘₐₓ; m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
-    WignerSeries(
-        [copy(recurrence!(calc, ℓ)) for ℓ ∈ ℓₘᵢₙ(IT):ℓₘₐₓ], ℓₘᵢₙ(IT), ℓₘₐₓ
-    )
+    D_series(D_array(R, ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ), ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
 end
 @index_methods function D(
     α::Real, β::Real, γ::Real, ℓₘₐₓ::IndexType;
@@ -677,6 +674,54 @@ the sign ``(-1)^{2ℓ}`` (the branch ``β ∈ (-π, π]`` is used).
     WignerSeries(
         [copy(recurrence!(calc, ℓ)) for ℓ ∈ ℓₘᵢₙ(IT):ℓₘₐₓ], ℓₘᵢₙ(IT), ℓₘₐₓ
     )
+end
+
+# The values of `D(R, ℓₘₐₓ)` are computed as one flat vector, and then labelled.  The vector
+# holds the block of each ℓ in turn, from ℓₘᵢₙ up, each in column-major order over the
+# ranges of m′ and m that `D_block_ranges` gives, which are those a `DCalculator` with the
+# same limits returns.  This split is for automatic differentiation: `D_array` takes the
+# rotor and returns a plain array, which every tool can handle, so it is the function to
+# which the rules for its derivatives are attached (see `src/derivatives.jl`), while the
+# labelling in `D_series` is differentiated like any other code.
+@inline function D_block_ranges(ℓ::IT, m′ₘₐₓ::IT, m′ₘᵢₙ::IT, mₘₐₓ::IT, mₘᵢₙ::IT) where {IT}
+    (max(-ℓ, m′ₘᵢₙ):min(ℓ, m′ₘₐₓ), max(-ℓ, mₘᵢₙ):min(ℓ, mₘₐₓ))
+end
+
+# The number of elements in the blocks of every degree below ℓ, which is the offset of the
+# block of degree ℓ in the flat vector.
+function D_offset(ℓ::IT, m′ₘₐₓ::IT, m′ₘᵢₙ::IT, mₘₐₓ::IT, mₘᵢₙ::IT) where {IT<:IntegerHalf}
+    n = 0
+    for ℓ′ ∈ ℓₘᵢₙ(IT):(ℓ - 1)
+        m′r, mr = D_block_ranges(ℓ′, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
+        n += length(m′r) * length(mr)
+    end
+    n
+end
+
+function D_array(
+    R::Rotor, ℓₘₐₓ::IT, m′ₘₐₓ::IT, m′ₘᵢₙ::IT, mₘₐₓ::IT, mₘᵢₙ::IT
+) where {IT<:IntegerHalf}
+    calc = DCalculator(R, ℓₘₐₓ; m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
+    A = Vector{eltype(calc.Wˡ)}(undef, D_offset(ℓₘₐₓ + 1, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ))
+    i = 0
+    for ℓ ∈ ℓₘᵢₙ(IT):ℓₘₐₓ
+        b = parent(recurrence!(calc, ℓ))
+        copyto!(view(A, (i + 1):(i + length(b))), b)
+        i += length(b)
+    end
+    A
+end
+
+function D_series(
+    A::AbstractVector{NT}, ℓₘₐₓ::IT, m′ₘₐₓ::IT, m′ₘᵢₙ::IT, mₘₐₓ::IT, mₘᵢₙ::IT
+) where {NT, IT<:IntegerHalf}
+    blocks = map(ℓₘᵢₙ(IT):ℓₘₐₓ) do ℓ
+        m′r, mr = D_block_ranges(ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
+        i = D_offset(ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
+        p = reshape(A[(i + 1):(i + length(m′r) * length(mr))], length(m′r), length(mr))
+        WignerMatrix{IT, NT, typeof(p)}(p, ℓ, last(m′r), first(m′r), last(mr), first(mr))
+    end
+    WignerSeries(blocks, ℓₘᵢₙ(IT), ℓₘₐₓ)
 end
 
 # `D` and `d` take one rotor.  A vector of them is what a calculator is for, and is refused
