@@ -103,7 +103,9 @@ end
     end
     decomposition = decomposition === nothing ?
         (square ? LinearAlgebra.lu : LinearAlgebra.qr) : decomposition
-    Rs = Vector{Rotor{TT}}(Rθϕ)  # a copy, never a conversion: `check_sample_rotors` saw to that
+    # A copy, never a conversion of type, which `check_sample_rotors` saw to; a `Quaternion`
+    # is kept as the rotation it denotes.
+    Rs = Rotor{TT}[R isa Rotor ? R : Quaternionic.rotor(R) for R ∈ Rθϕ]
     Y = sYlm_matrix(Rs, ℓₘₐₓ, s)
     Ydecomp = decomposition(Y)
     if !square && Ydecomp isa LinearAlgebra.LU

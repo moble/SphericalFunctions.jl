@@ -251,13 +251,18 @@ end
         γ⃗ = T.(rand(rng, Nᵣ)) .* 2T(π)
         eⁱᵝ⃗ = cis.(β⃗)
         R⃗ = [Quaternionic.from_euler_angles(α, β, γ) for (α, β, γ) in zip(α⃗, β⃗, γ⃗)]
-        # A quaternion that is not a `Rotor` is refused rather than normalized: `Rotor` is
-        # what says a quaternion denotes a rotation.  (A `Rotor` whose magnitude is not 1 is
-        # accepted, and the magnitude divides out; see the item "Calculators accept
-        # unnormalized rotors, and refuse phases that are not".)
+        # A quaternion that is not a `Rotor` denotes the rotation of its normalization, and
+        # its magnitude divides out, as that of a `Rotor` does; see the item "Calculators
+        # accept unnormalized rotors, and refuse phases that are not".
         Q⃗ = [2 * Quaternion(R) for R in R⃗]
-        @test_throws "Rotations are taken as" HCalculator(Q⃗, ℓₘₐₓ)
-        @test_throws "Rotations are taken as" HCalculator(Q⃗[1], ℓₘₐₓ)
+        @test maxabsdiff(
+            wedge(recurrence!(HCalculator(Q⃗, ℓₘₐₓ), ℓₘₐₓ), 1),
+            wedge(recurrence!(HCalculator(R⃗, ℓₘₐₓ), ℓₘₐₓ), 1)
+        ) ≤ 64eps(T)
+        @test maxabsdiff(
+            wedge(recurrence!(HCalculator(Q⃗[2], ℓₘₐₓ), ℓₘₐₓ), 1),
+            wedge(recurrence!(HCalculator(R⃗[2], ℓₘₐₓ), ℓₘₐₓ), 1)
+        ) ≤ 64eps(T)
         @test eltype(β⃗) === T
         @test eltype(eⁱᵝ⃗) === Complex{T}
         @test eltype(R⃗) === Rotor{T}

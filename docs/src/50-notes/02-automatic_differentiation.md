@@ -7,22 +7,26 @@ CurrentModule = SphericalFunctions
 Wigner's ``𝔇`` matrices and the spin-weighted spherical harmonics are
 smooth functions of the rotor everywhere on ``\mathrm{Spin}(3)``, so
 it is natural to differentiate them with respect to the rotor by
-automatic differentiation.  For [`D`](@ref) and [`sYlm`](@ref) of a
-single rotor, and for the functions built on them, this package
-supplies rules that give the derivatives directly, in terms of the
-values themselves.  These rules are used by `ForwardDiff`,
-`ReverseDiff`, `Enzyme`, and `Mooncake`, and by the tools that read
-`ChainRules`, such as `Zygote`.  Elsewhere — in the calculators, for
-example — automatic differentiation differentiates the algorithm, not
-the function, and the algorithm used here passes through intermediate
-quantities that are singular at two special sets of rotors: those that
-take the ``z`` axis to itself, and those that take it to its opposite
-— or those with ``β = 0`` or ``β = π``.  These are the rotors at which
-the harmonics are evaluated at the poles of the sphere, so we will
-refer to both sets as "poles."  This note describes the rules first,
-and then explains where the singularities come from, how the
-calculators work around them for ``𝔇`` and the harmonics, and why the
-same cannot be done for ``d`` and ``H`` of a rotor.
+automatic differentiation.  This package supplies rules that give the
+derivatives directly, in terms of the values themselves.
+`ForwardDiff`, `Enzyme`, `Mooncake`, and `ReverseDiff` use them for
+every step of the calculators, and so for [`D`](@ref), [`sYlm`](@ref),
+and [`sYlm_matrix`](@ref), which the calculators compute; the tools
+that read `ChainRules`, such as `Zygote`, use them for those three
+functions.  A rotor may be given as a `Rotor` or as any other
+`Quaternion`, which denotes the rotation of its normalization, so that
+the derivatives may be taken with respect to the four components of an
+unnormalized quaternion directly.  The rules are needed for accuracy,
+and not only for speed.  Where no rule applies, automatic
+differentiation differentiates the algorithm, not the function, and
+the algorithm used here passes through intermediate quantities that
+are singular at two special sets of rotors: those that take the ``z``
+axis to itself, and those that take it to its opposite — or those with
+``β = 0`` or ``β = π``.  These are the rotors at which the harmonics
+are evaluated at the poles of the sphere, so we will refer to both
+sets as "poles."  This note describes the rules first, and then
+explains where the singularities come from, and why ``d`` and ``H`` of
+a rotor cannot be protected from them in the same way.
 
 
 ## Rules for the derivatives
@@ -52,35 +56,78 @@ vector part ``𝐯`` gives ``𝐮 = 2𝐯``.  So, with ``w = v_x + i v_y``,
 + w \sqrt{(ℓ+m'+1)(ℓ-m')}\, 𝔇^{(ℓ)}_{m'+1,m}
 \right].
 ```
-The harmonics are a conjugated row of ``𝔇``, so the same derivative,
-conjugated, applies to them, and couples each harmonic only to those
-of the same ``ℓ`` and spin weight with ``m ± 1``.  Differentiating
-from the left in this way is what keeps the spin weight fixed; from
-the right, the derivative would couple the harmonics of weight ``s``
-to those of weights ``s ± 1``.  For a block of ``𝔇`` restricted in
-``m'``, the derivatives need the values one row beyond each limit,
-which the rules compute along with the block.  The reverse-mode rules
-apply the adjoint of this linear map, and return a cotangent that is
-orthogonal to ``𝐑``, as the cotangent of a function of ``𝐑/\|𝐑\|``
-must be.
+This is the derivative from the left, which couples each element to
+its neighbors in the same column.  Writing instead ``\dot{𝐑} = 𝐑\,
+𝐪'``, with ``𝐪' = \bar{𝐑}\, \dot{𝐑} / \|𝐑\|^2`` and ``𝐯'`` its
+vector part, gives the derivative from the right, which couples each
+element to its neighbors in the same row:
+```math
+\dot{𝔇}^{(ℓ)}_{m',m}
+=
+-i \left[
+2 v'_z\, m\, 𝔇^{(ℓ)}_{m',m}
++ w' \sqrt{(ℓ-m+1)(ℓ+m)}\, 𝔇^{(ℓ)}_{m',m-1}
++ \bar{w}' \sqrt{(ℓ+m+1)(ℓ-m)}\, 𝔇^{(ℓ)}_{m',m+1}
+\right].
+```
+A block of ``𝔇`` whose rows include all of ``-ℓ:ℓ`` is differentiated
+from the left, and one whose columns do, from the right, so that every
+neighbor needed is in the block already.  Only a block restricted in
+both ``m'`` and ``m`` needs values beyond its limits, and a calculator
+of such blocks computes one more row or column on each side, along
+whichever axis is the wider, so that the recurrence, whose cost is set
+by the narrower, is widened only when the two are equally wide.  The
+harmonics are a conjugated row of ``𝔇``, so the derivative from the
+left, conjugated, applies to them, and couples each harmonic only to
+those of the same ``ℓ`` and spin weight with ``m ± 1``; from the
+right, the derivative would couple the harmonics of weight ``s`` to
+those of weights ``s ± 1``.  The reverse-mode rules apply the adjoint
+of these linear maps, and give a cotangent that is orthogonal to
+``𝐑``, as the cotangent of a function of ``𝐑/\|𝐑\|`` must be.
 
-The derivative in every direction is therefore a combination of values
-of the same ``ℓ``, and is as accurate as the values are, at every
-rotor, the poles included.  Because the rules compute those values by
-calling the same function again, a tool that nests its derivatives, as
-`ForwardDiff` does for a Hessian, reaches the rules once at each
-level, and every order of derivative is exact.  The recurrence itself
-is never differentiated.
+The derivative of a block in every direction is therefore a
+combination of values of that same block, and is as accurate as the
+values are, at every rotor, the poles included.  This is what lets a
+calculator produce the derivatives of each block as it produces the
+block, one ``ℓ`` at a time, in the loop over blocks that the
+calculators are designed for.  A calculator whose rotors are
+`ForwardDiff`'s dual numbers runs the recurrence on the values of
+those rotors, and writes each value together with its derivatives into
+its blocks of dual numbers; stepping it allocates nothing.  Under
+nested differentiation, as for a Hessian, those values are themselves
+lifted from a calculator of their own values, so every order of
+derivative is exact.  `Enzyme` and `Mooncake` differentiate a
+calculator of floats: the calculator keeps a copy of its rotors, whose
+tangents or cotangents those tools follow, and the rules for each step
+give the block's derivatives from them, or add the block's cotangents
+into them.  A calculator that `Enzyme` is to differentiate must be
+`Duplicated`, as any mutable workspace must be, which it is
+automatically when it is created within the function being
+differentiated.  A calculator of `ReverseDiff`'s tracked numbers, like
+one of dual numbers, runs the recurrence on the values of its rotors,
+and it records each step as one instruction for each rotor, whose
+pullback adds the cotangents of that rotor's block into the rotor's.
+In every case the recurrence itself is never differentiated.
+`ReverseDiff` replays a recorded tape by running its instructions
+again, but keeps the pullbacks of the first run, so a tape recorded at
+one rotor and replayed at another gives the derivatives at the first;
+as for any rule defined with `ReverseDiff`'s `@grad`, each gradient
+should record its own tape.  On Julia 1.10, `Enzyme`'s reverse mode
+fails to differentiate a loop over a calculator when bounds checking
+is forced on, as it is by `Pkg.test`, because its type analysis cannot
+deduce the type of an integer in that loop; its forward mode, and
+every other tool, is unaffected.
 
 The rules are supplied by package extensions, which are loaded along
 with the tool: for `ChainRulesCore`, `EnzymeCore`, `ForwardDiff`,
-`Mooncake`, and `ReverseDiff`.  They apply to [`D`](@ref) of a rotor
-or of Euler angles, and to [`sYlm`](@ref) and [`Ylm`](@ref) of a rotor
-or of spherical coordinates, since each of these reaches the same
-underlying function of a single rotor.  The calculators, the forms
-that take a vector of rotors, [`sYlm_matrix`](@ref), and the
-transforms are differentiated through the algorithm, as described in
-the rest of this note.
+`Mooncake`, and `ReverseDiff`.  `Zygote` cannot follow the mutation of
+a calculator's buffers, so it uses rules for the arrays of
+[`D`](@ref), [`sYlm`](@ref), and [`sYlm_matrix`](@ref) instead, which
+also serve [`Ylm`](@ref) and the forms of those functions that take
+Euler angles or spherical coordinates; it cannot differentiate a loop
+over a calculator at all.  `ReverseDiff` uses rules for those arrays
+too, which record one instruction for a whole array rather than one
+for each block.
 
 
 ## The singularity in the recurrence
@@ -120,101 +167,19 @@ leaves an error of order ``ε\, r^{-k}`` relative to the size of the
 ``k``-th derivative of ``𝔇``, where ``ε`` is the machine epsilon.
 The values themselves are unaffected; only the derivatives suffer.
 
-
-## The expansion about a pole
-
-The quantities that are smooth everywhere are the products
-```math
-σ = \cos\frac{β}{2}\, z_+ = \frac{W + iZ}{\|𝐑\|}
-\qquad \text{and} \qquad
-ρ = \sin\frac{β}{2}\, z_- = \frac{Y - iX}{\|𝐑\|},
-```
-which are the rotor's normalized Cayley–Klein parameters.  Wigner's
-formula for ``d``, with the phases of our convention absorbed into
-``σ`` and ``ρ``, expresses ``𝔇`` as a polynomial in these parameters
-and their conjugates:
-```math
-𝔇^{(ℓ)}_{m',m}(𝐑)
-=
-\sum_s (-1)^{k+s} C_s\,
-\bar{σ}^{ℓ+m-s}\, σ^{ℓ-m'-s}\, \bar{ρ}^{k+s}\, ρ^s,
-\qquad
-k = m' - m,
-```
-where
-```math
-C_s^2
-=
-\binom{ℓ+m}{s} \binom{ℓ-m'}{s} \binom{ℓ+m'}{k+s} \binom{ℓ-m}{k+s},
-```
-and the sum runs over every ``s`` for which all of the exponents are
-non-negative.  Every exponent is an integer, even for half-integer
-indices.  This polynomial is of no use as a general-purpose algorithm:
-away from the poles its terms cancel badly, and for large ``ℓ`` its
-coefficients overflow.  Near a pole, however, it is exactly what is
-needed.
-
-At ``β = 0`` the parameter ``ρ`` vanishes, and at ``β = π`` the
-parameter ``σ`` vanishes.  A term of degree ``n`` in the vanishing
-parameter and its conjugate vanishes at the pole together with all of
-its derivatives of order less than ``n``.  So every derivative of
-order ``N`` or less at the pole is given *exactly* by the terms of
-degree at most ``N``.  There are at most ``\lfloor N/2 \rfloor + 1``
-such terms in any element, and they appear only in the elements with
-``|m'-m| ≤ N`` near ``β = 0``, or ``|m'+m| ≤ N`` near ``β = π``; every
-other element vanishes to that order.  The remaining factor is a power
-of the parameter that does not vanish, which is written as its modulus
-times one of the phases ``z_\pm``, both of which are smooth near that
-pole.  Near the pole, the truncated sum is accurate to the size of the
-first term omitted, which is about ``\left((ℓ+1)\, r\right)^{N+1-k}``
-relative to the size of a ``k``-th derivative.
-
-This package keeps the terms up to degree ``N = 8``.  A rotor within a
-distance
-```math
-r_s = \frac{ε^{1/(N+1)}}{ℓₘₐₓ+1}
-```
-of either pole is evaluated from the truncated expansion, in place of
-the recurrence.  In `Float64` this corresponds to an angle of about
-``0.04/(ℓₘₐₓ+1)``.  The radius ``r_s`` is the largest at which the
-omitted terms cannot change the values, so the values are as accurate
-as the recurrence's.  At the pole itself, every derivative up to
-eighth order is exact, and only a derivative of higher order would be
-wrong.  Just outside ``r_s``, where the recurrence is used again, the
-recurrence's ``k``-th derivatives are wrong by at most about
-``ε^{1-k/(N+1)}\, (ℓₘₐₓ+1)^k`` relative to their size.  In `Float64`
-with ``ℓₘₐₓ = 32``, the errors measured there are of order
-``10^{-13}`` for first derivatives and ``10^{-10}`` for second
-derivatives.  A Hessian needs only ``N = 2``, of course, but the order
-also sets the radius, and a larger order widens the neighborhood in
-which the recurrence's inaccurate derivatives are replaced.  The cost
-is negligible, since at most seventeen elements of any column are
-nonzero in the expansion, each with at most five terms.  The radius is
-set by ``ℓₘₐₓ`` rather than by each ``ℓ``, so that a given rotor is
-treated in the same way at every ``ℓ``.
-
-The test for whether a rotor is near a pole is applied to every number
-type, not just to dual numbers.  This is necessary because tools like
-`Enzyme` differentiate the ordinary floating-point code, and cannot be
-distinguished from an ordinary evaluation by the type of the input.
-Also, a rotor that is exactly at a pole is given to the recurrence as
-the exact constants ``e^{iβ} = ±1`` and the corresponding half-angles,
-rather than through the square root of zero.  The recurrence's results
-for that rotor are overwritten by the expansion anyway, but a
-reverse-mode tool like `ReverseDiff` runs its reverse pass through
-every operation it recorded, including those whose results were later
-discarded, and would otherwise encounter ``0 × ∞``.
-
-None of this is needed when the recurrence is given an angle rather
-than a rotor — as it is for ``d`` of an angle ``β`` or of a phase
-``e^{iβ}``, and for [the real harmonics](@ref
-interface_real_harmonics) ``{}_{s}λ_{ℓ,m}(θ)`` — because the
-recurrence is a smooth function of that angle at the poles.
+The rules avoid both problems, because they never differentiate this
+split: the derivatives of a block are formed from its values, which
+are as accurate at and near a pole as anywhere else.  None of this
+arises when the recurrence is given an angle rather than a rotor — as
+it is for ``d`` of an angle ``β`` or of a phase ``e^{iβ}``, and for
+[the real harmonics](@ref interface_real_harmonics)
+``{}_{s}λ_{ℓ,m}(θ)`` — because the recurrence is then a smooth
+function of that angle at the poles.
 
 
 ## ``d`` and ``H`` of a rotor
 
-The expansion is not used for ``d`` and ``H`` of a rotor, and their
+The rules do not apply to ``d`` and ``H`` of a rotor, and their
 derivatives at the poles are `NaN`.  This is not a limitation of the
 algorithm; for some of the elements, those derivatives simply do not
 exist.  Although ``d`` is a smooth function of ``β``, ``β`` is *not* a

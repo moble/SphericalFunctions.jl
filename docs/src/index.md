@@ -369,20 +369,18 @@ cases, results are typically accurate to roughly ℓ times the precision
 of the underlying float type.
 
 Half-integer ``ℓ, m', m`` — the representations of ``𝐒𝐩𝐢𝐧(3)``
-that do not descend to ``𝐒𝐎(3)`` — are supported throughout: by
+that do not descend to ``𝐒𝐎(3)`` — are supported throughout, at the
+same accuracy and essentially the same speed as integer indices, by
 ``𝔇``, ``d`` and the spin-weighted harmonics, by the mode weights and
-the operators on them, and by the transforms, at the same accuracy and
-essentially the same speed as integer indices.  Pass a `Rational{Int}`
+the operators on them, and by the transforms.  Pass a `Rational{Int}`
 with denominator 2, as in `D(R, 7//2)` or `SSHT(1//2, 7//2)`, or a
 [`HalfOddInteger`](@ref SphericalFunctions.HalfOddInteger).  An
-integer index is an `Int`; narrower, unsigned and wider integer types
-are refused with an explanation, because the index arithmetic is not
-closed under them.  The exceptions are [`recurrence!`](@ref) and
+integer index is an `Int`; narrower, wider, and unsigned integer types
+are rejected.  The exceptions are [`recurrence!`](@ref) and
 [`wedge_value`](@ref SphericalFunctions.wedge_value), which convert an
 index of any integer type to that of the calculator or wedge they are
-given.  See
-[Half-integer indices](@ref interface_half_integers), and the
-[half-integer section of the transforms page](@ref
+given.  See [Half-integer indices](@ref interface_half_integers), and
+the [half-integer section of the transforms page](@ref
 transformations_half_integer) for what a function of half-integer spin
 weight is a function *of*.
 

@@ -460,11 +460,11 @@ exceeds their ``ℓₘₐₓ``, describe the zero function, and evaluate to zero
 applied to weights with ``s = ℓₘₐₓ``, for example.  An empty vector of rotors gives an empty
 vector of values.
 """
-function (w::ModeWeights)(R::Rotor)
+function (w::ModeWeights)(R::RotorLike)
     isempty(evaluated_range(w)) && return zero(evaluation_type(R, w))
     sYlm(R, ℓₘₐₓ(w), spin(w); ℓₘᵢₙ=ℓₘᵢₙ(w)) * w
 end
-function (w::ModeWeights)(R⃗::AbstractVector{<:Rotor})
+function (w::ModeWeights)(R⃗::AbstractVector{<:RotorLike})
     if isempty(evaluated_range(w)) || isempty(R⃗)
         return zeros(evaluation_type(R⃗, w), length(R⃗))
     end

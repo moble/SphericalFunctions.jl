@@ -860,19 +860,17 @@ end
     using Quaternionic: Rotor
     import Random
 
-    # `materialize!` reads the wedge in runs along its rows, resolving the symmetries of H once
-    # for each run rather than once for each element, as `wedge_source` does.  Each element of
-    # every block is compared here, bit for bit, with the value built from `wedge_value`, which
-    # applies the symmetries one element at a time, and from the same power tables: the ϵ
-    # signs of d, and for 𝔇 the phase e^{-i(m′α+mγ)} = conj(z₊^(m′+m) z₋^(m′-m)).  The
-    # restrictions include rows or columns narrower than the other range, so that the wedge
-    # is narrowed too, and asymmetric ranges; the calculators are single and batched.  None of
-    # the rotors is near a pole, where a complex calculator overwrites the block with the
-    # expansion of `src/wigner/poles.jl` (tested in `test/wigner/poles.jl`); that is
-    # checked below, since otherwise those elements would not be `wedge_value`'s.  The real
-    # calculators never use the expansion, so β = 0 and π are included for them.
+    # `materialize!` reads the wedge in runs along its rows, resolving the symmetries of H
+    # once for each run rather than once for each element, as `wedge_source` does.  Each
+    # element of every block is compared here, bit for bit, with the value built from
+    # `wedge_value`, which applies the symmetries one element at a time, and from the same
+    # power tables: the ϵ signs of d, and for 𝔇 the phase e^{-i(m′α+mγ)} = conj(z₊^(m′+m)
+    # z₋^(m′-m)).  The restrictions include rows or columns narrower than the other range,
+    # so that the wedge is narrowed too, and asymmetric ranges; the calculators are single
+    # and batched.  The rotors and angles include some exactly at both poles, β = 0 and β =
+    # π.
     rng = Random.Xoshiro(20260924)
-    R⃗ = randn(rng, Rotor{Float64}, 5)
+    R⃗ = [randn(rng, Rotor{Float64}, 5); Rotor(1.0, 0.0, 0.0, 0.0); Rotor(0.0, 0.6, 0.8, 0.0)]
     β⃗ = [0.0, 0.4, 1.9, π, 2.7]
     function expected(calc, H, iᵣ, m′, m)
         RT = SphericalFunctions.floattype(calc)
@@ -897,7 +895,6 @@ end
             data ∈ (R⃗, R⃗[1], β⃗, β⃗[2])
         Ctor = eltype(data) <: Rotor ? DCalculator : dCalculator
         calc = Ctor(data, ℓmax; lim...)
-        @test isempty(calc.poles)
         for ℓ ∈ ℓₘᵢₙ(calc):ℓₘₐₓ(calc)
             blk = recurrence!(calc, ℓ)
             H = calc.H.Hˡ

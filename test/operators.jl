@@ -140,8 +140,9 @@ end
     # The fourth is exactly at the north pole, θ = 0, and the fifth exactly at the south
     # pole.  There the recurrence's split of the rotor into the half angles of β and the
     # phases of α ± γ is singular, and derivatives taken through it would be NaN, so the
-    # calculators evaluate such a rotor from the expansion of 𝔇 about the pole instead (see
-    # `src/wigner/poles.jl`); these two check the ForwardDiff-based operators through it.
+    # calculators give the derivatives from their values instead, by the rules for automatic
+    # differentiation (see `src/derivatives.jl`); these two check the ForwardDiff-based
+    # operators through those rules.
     Qs = [
         [from_spherical_coordinates(T(θ), T(ϕ)) for (θ, ϕ) ∈ ((0.4, 0.9), (1.0, 2.0), (2.5, -1.5), (0.0, 0.9))];
         [Rotor{T}(zero(T), T(0.6), T(0.8), zero(T))];

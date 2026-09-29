@@ -379,40 +379,38 @@ end
 end
 
 @testitem "Bounds: the Wigner and harmonic calculators refuse buffers too small for them" tags=[:bounds] begin
-    import SphericalFunctions: DCalculator, sYlmCalculator, PoleRotor
+    import SphericalFunctions: DCalculator, sYlmCalculator
     using Quaternionic: Rotor
     import Random
 
     rng = Random.Xoshiro(20260924)
 
-    # `materialize!` writes the block and reads the power tables under `@inbounds`, for every
-    # rotor, every (m′, m) or (s, m) the calculator serves, and every power up to 2ℓₘₐₓ, so the
-    # calculators' own constructors compare the buffers they are given with all of those.
-    # Each buffer is replaced here by one too small in a single dimension: the power tables
-    # are laid out [iᵣ, k+1], with a row for each of the 4 rotors and 7 columns.  The record of
-    # the rotors near a pole must likewise name only rotors that exist, since their values are
-    # written at those indices.
+    # `materialize!` writes the block and reads the power tables under `@inbounds`, for
+    # every rotor, every (m′, m) or (s, m) the calculator serves, and every power up to
+    # 2ℓₘₐₓ, so the calculators' own constructors compare the buffers they are given with
+    # all of those.  Each buffer is replaced here by one too small in a single dimension:
+    # the power tables are laid out [iᵣ, k+1], with a row for each of the 4 rotors and 7
+    # columns.  The calculator's copy of its rotors must likewise hold one for each.
     R⃗ = randn(rng, Rotor{Float64}, 4)
-    beyond = [PoleRotor{Float64}(5, true, zero(ComplexF64), 1.0)]
     c = DCalculator(R⃗, 3)
     C = typeof(c)
-    limits = (c.m′ₘₐₓ, c.m′ₘᵢₙ, c.mₘₐₓ, c.mₘᵢₙ)
-    @test C(c.H, c.Wˡ, c.Z₊, c.Z₋, c.poles, limits..., c.ℓ) isa C
-    @test_throws DimensionMismatch C(c.H, zeros(ComplexF64, 1, 7, 7), c.Z₊, c.Z₋, c.poles, limits..., c.ℓ)
-    @test_throws DimensionMismatch C(c.H, zeros(ComplexF64, 4, 7, 6), c.Z₊, c.Z₋, c.poles, limits..., c.ℓ)
-    @test_throws DimensionMismatch C(c.H, c.Wˡ, zeros(ComplexF64, 3, 7), c.Z₋, c.poles, limits..., c.ℓ)
-    @test_throws DimensionMismatch C(c.H, c.Wˡ, c.Z₊, zeros(ComplexF64, 4, 6), c.poles, limits..., c.ℓ)
-    @test_throws DimensionMismatch C(c.H, c.Wˡ, c.Z₊, c.Z₋, beyond, limits..., c.ℓ)
+    limits = (c.m′ₘₐₓ, c.m′ₘᵢₙ, c.mₘₐₓ, c.mₘᵢₙ, c.m′ₘₐₓˢ, c.m′ₘᵢₙˢ, c.mₘₐₓˢ, c.mₘᵢₙˢ)
+    @test C(c.H, c.Wˡ, c.Z₊, c.Z₋, c.rotors, limits..., c.ℓ, c.lift) isa C
+    @test_throws DimensionMismatch C(c.H, zeros(ComplexF64, 1, 7, 7), c.Z₊, c.Z₋, c.rotors, limits..., c.ℓ, c.lift)
+    @test_throws DimensionMismatch C(c.H, zeros(ComplexF64, 4, 7, 6), c.Z₊, c.Z₋, c.rotors, limits..., c.ℓ, c.lift)
+    @test_throws DimensionMismatch C(c.H, c.Wˡ, zeros(ComplexF64, 3, 7), c.Z₋, c.rotors, limits..., c.ℓ, c.lift)
+    @test_throws DimensionMismatch C(c.H, c.Wˡ, c.Z₊, zeros(ComplexF64, 4, 6), c.rotors, limits..., c.ℓ, c.lift)
+    @test_throws DimensionMismatch C(c.H, c.Wˡ, c.Z₊, c.Z₋, c.rotors[1:3], limits..., c.ℓ, c.lift)
 
     y = sYlmCalculator(R⃗, 3, -1:1)
     Y = typeof(y)
-    state = (y.s, y.ℓ, y.phases)
-    @test Y(y.H, y.Yˡ, y.Z₊, y.Z₋, y.poles, state...) isa Y
-    @test_throws DimensionMismatch Y(y.H, zeros(ComplexF64, 4, 1, 7), y.Z₊, y.Z₋, y.poles, state...)
-    @test_throws DimensionMismatch Y(y.H, zeros(ComplexF64, 4, 3, 5), y.Z₊, y.Z₋, y.poles, state...)
-    @test_throws DimensionMismatch Y(y.H, y.Yˡ, zeros(ComplexF64, 3, 7), y.Z₋, y.poles, state...)
-    @test_throws DimensionMismatch Y(y.H, y.Yˡ, y.Z₊, zeros(ComplexF64, 4, 6), y.poles, state...)
-    @test_throws DimensionMismatch Y(y.H, y.Yˡ, y.Z₊, y.Z₋, beyond, state...)
+    state = (y.s, y.ℓ, y.phases, y.lift)
+    @test Y(y.H, y.Yˡ, y.Z₊, y.Z₋, y.rotors, state...) isa Y
+    @test_throws DimensionMismatch Y(y.H, zeros(ComplexF64, 4, 1, 7), y.Z₊, y.Z₋, y.rotors, state...)
+    @test_throws DimensionMismatch Y(y.H, zeros(ComplexF64, 4, 3, 5), y.Z₊, y.Z₋, y.rotors, state...)
+    @test_throws DimensionMismatch Y(y.H, y.Yˡ, zeros(ComplexF64, 3, 7), y.Z₋, y.rotors, state...)
+    @test_throws DimensionMismatch Y(y.H, y.Yˡ, y.Z₊, zeros(ComplexF64, 4, 6), y.rotors, state...)
+    @test_throws DimensionMismatch Y(y.H, y.Yˡ, y.Z₊, y.Z₋, y.rotors[1:3], state...)
 end
 
 

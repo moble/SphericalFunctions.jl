@@ -1,151 +1,237 @@
 module SphericalFunctionsEnzymeCoreExt
 
-# Enzyme's rules for `D_array` and `sYlm_array`, from the generators, as described in
-# `src/derivatives.jl`.  They are defined in EnzymeCore, which is all that a rule needs.
+# Enzyme's rules for the calculators of 𝔇 and of the harmonics, from the generators, as
+# described in `src/derivatives.jl`.  They are defined in EnzymeCore, which is all that a
+# rule needs.  `D`, `sYlm`, and `sYlm_matrix` are computed by calculators, which Enzyme
+# follows, so these rules serve them too.
 #
-# Enzyme gives a shadow the type of its primal, so the tangent of a rotor arrives as a
-# `Rotor`, and its cotangent must be returned as one, although neither has unit norm.  Both
-# are read and built by their components alone.
+# A calculator keeps a copy of its rotors, and everything else it derives from them is
+# computed by `set_rotor_data!`, which is declared here to have no derivatives.  So Enzyme
+# differentiates only the copy, which puts the rotors' tangents, or later their cotangents,
+# into the shadow calculator's copy.  Each step of a calculator is a `compute_block!`, whose
+# rules give the block's derivatives from those of the rotors in forward mode, and add the
+# cotangents of the block into those of the rotors in reverse mode, so that Enzyme never
+# differentiates the recurrence.  A calculator that Enzyme is to differentiate must be
+# `Duplicated`, as any mutable workspace must: if it is created within the function being
+# differentiated, Enzyme makes it so.
 #
-# The index arguments are integers or ranges of them, which Enzyme treats as constants, but
-# the rules accept any annotation of them rather than only `Const`: a rule whose signature
-# does not match the call is not an error, but is silently passed over, and Enzyme would
-# then differentiate the recurrence instead.
+# In reverse mode, every step of a calculator writes its block into the same buffer, so the
+# cotangents that the code after the step accumulates in the shadow of that buffer belong to
+# that step alone.  The reverse rule reads them, and then zeroes them, before the code that
+# read the block of the step before it adds its own.  The values of the block are kept on
+# the tape, since the next step overwrites them.
 
-import SphericalFunctions: D_array, sYlm_array, D_array_widened, D_is_widened, D_narrowed,
-    D_pushforward, D_pullback, sYlm_pushforward, sYlm_pullback, rotor_generator,
-    rotor_cotangent
-using Quaternionic: Rotor
-using EnzymeCore: EnzymeRules, Annotation, Const, Active, Duplicated, BatchDuplicated
+import SphericalFunctions: WignerCalculator, HarmonicCalculator, allocate_W, allocate_Y,
+    compute_block!, set_rotor_data!, wigner_block_pushforward!, wigner_block_pullback!,
+    harmonic_block_pushforward!, harmonic_block_pullback!, derivatives_from_left,
+    stored_m′range, stored_mrange, m′range, mrange, rotor_generator, rotor_cotangent
+using Quaternionic: Quaternion
+using EnzymeCore: EnzymeCore, EnzymeRules, Annotation, Const, Duplicated, BatchDuplicated
 using EnzymeCore.EnzymeRules: FwdConfig, RevConfig, AugmentedReturn, needs_primal,
     needs_shadow, width
 
-# The tangents of the rotor in each of the `width` directions, or `nothing` for a constant.
-# Any other annotation is an error, rather than being taken to have no tangent.
-rotor_tangents(::Const) = nothing
-rotor_tangents(R::Duplicated) = (R.dval,)
-rotor_tangents(R::BatchDuplicated) = R.dval
+# The complex calculators whose rotor data are floats, which are those these rules serve.
+const DCalc = WignerCalculator{IT, RT, Complex{RT}, ST, B, RT, Nothing} where {IT, RT, ST, B}
+const YCalc = HarmonicCalculator{IT, RT, Complex{RT}, ST, S, B, RT, Nothing} where {IT, RT, ST, S, B}
 
-# What a forward rule returns, given the primal and a tuple of `width` shadows.
-function forward_return(config::FwdConfig, Y, Ẏ::Tuple)
-    if needs_primal(config)
-        width(config) == 1 ? Duplicated(Y, only(Ẏ)) : BatchDuplicated(Y, Ẏ)
+EnzymeRules.inactive(::typeof(set_rotor_data!), ::DCalc, ::Any) = nothing
+EnzymeRules.inactive(::typeof(set_rotor_data!), ::YCalc, ::Any) = nothing
+
+# The shadows of an annotated argument, as a tuple of `width` of them, or `nothing` for a
+# constant.  Any other annotation is an error, rather than being taken to have no shadow.
+shadows(::Const) = nothing
+shadows(x::Duplicated) = (x.dval,)
+shadows(x::BatchDuplicated) = x.dval
+
+# What a forward rule returns, given the primal and the tuple of its shadows.
+function forward_return(config::FwdConfig, x, ẋ)
+    if needs_shadow(config) && ẋ !== nothing
+        if needs_primal(config)
+            width(config) == 1 ? Duplicated(x, only(ẋ)) : BatchDuplicated(x, ẋ)
+        else
+            width(config) == 1 ? only(ẋ) : ẋ
+        end
     else
-        width(config) == 1 ? only(Ẏ) : Ẏ
+        needs_primal(config) ? x : nothing
     end
 end
 
-zero_shadows(Y, ::Val{1}) = zero(Y)
-zero_shadows(Y, ::Val{N}) where {N} = ntuple(_ -> zero(Y), Val(N))
+# The generators of the tangents of `c`'s rotors that are held in the shadow `dc`.
+function generators(left::Bool, c, dc)
+    G = Matrix{real(eltype(eltype(c.rotors)))}(undef, 3, length(c.rotors))
+    for i ∈ eachindex(c.rotors)
+        G[1, i], G[2, i], G[3, i] = rotor_generator(left, c.rotors[i], dc.rotors[i])
+    end
+    G
+end
 
-# The derivative of the rotor as a `Rotor` of its type, from the components of its cotangent,
-# and the zero derivative, in each of the `width` directions, of an active rotor on which
-# nothing that was differentiated depends.
-as_rotor(::Rotor{T}, R̄) where {T} = Rotor{T}(R̄...)
-zero_rotors(R::Rotor{T}, ::Val{1}) where {T} = as_rotor(R, ntuple(_ -> zero(T), 4))
-zero_rotors(R::Rotor, ::Val{N}) where {N} = ntuple(_ -> zero_rotors(R, Val(1)), Val(N))
+# Add the cotangents of the rotors from the vectors in the columns of `Ḡ` into the shadow
+# `dc`'s copy of them.
+function add_rotor_cotangents!(dc, left::Bool, c, Ḡ)
+    for i ∈ eachindex(c.rotors)
+        R̄ = rotor_cotangent(left, c.rotors[i], (Ḡ[1, i], Ḡ[2, i], Ḡ[3, i]))
+        q = dc.rotors[i]
+        dc.rotors[i] = Quaternion(q[1] + R̄[1], q[2] + R̄[2], q[3] + R̄[3], q[4] + R̄[4])
+    end
+    nothing
+end
+
+# The shadow of the returned calculator, as the configuration asks for it.
+shadow_return(config, c) = needs_shadow(config) ? (width(config) == 1 ? only(shadows(c)) : shadows(c)) : nothing
+
+
+## Allocation
+#
+# A new calculator is given a zeroed copy of itself as its shadow, rather than having Enzyme
+# differentiate its allocation.  That allocation stores empty buffers — the half angles of
+# an integer calculator, for example — in the fields of a struct, and Julia gives every empty
+# buffer of a type the same constant object, which Enzyme cannot prove is never written
+# through, and so would refuse without runtime activity.  Nothing about the allocation has a
+# derivative: every argument is an index, a type or a size.
+
+for allocate ∈ (allocate_W, allocate_Y)
+    @eval begin
+        function EnzymeRules.forward(
+            config::FwdConfig, ::Const{typeof($allocate)}, ::Type{<:Annotation}, args::Const...
+        )
+            c = $allocate(map(a -> a.val, args)...)
+            needs_shadow(config) || return needs_primal(config) ? c : nothing
+            forward_return(config, c, ntuple(_ -> EnzymeCore.make_zero(c), Val(width(config))))
+        end
+        function EnzymeRules.augmented_primal(
+            config::RevConfig, ::Const{typeof($allocate)}, ::Type{<:Annotation}, args::Const...
+        )
+            c = $allocate(map(a -> a.val, args)...)
+            shadow = if needs_shadow(config)
+                width(config) == 1 ? EnzymeCore.make_zero(c) :
+                    ntuple(_ -> EnzymeCore.make_zero(c), Val(width(config)))
+            else
+                nothing
+            end
+            AugmentedReturn(needs_primal(config) ? c : nothing, shadow, nothing)
+        end
+        function EnzymeRules.reverse(
+            ::RevConfig, ::Const{typeof($allocate)}, ::Type{<:Annotation}, tape, args::Const...
+        )
+            ntuple(_ -> nothing, length(args))
+        end
+    end
+end
+
+
+## 𝔇
+
+# The block of degree ℓ: the stored rows of `c.Wˡ`, its columns, the rows that the block
+# returns, and their offset among those stored.
+function block_geometry(c::DCalc, ℓ)
+    rows, cols = stored_m′range(c, ℓ), stored_mrange(c, ℓ)
+    outrows, outcols = m′range(c, ℓ), mrange(c, ℓ)
+    rows, cols, outrows, outcols
+end
+# The part of `Wˡ` that holds the block that `recurrence!` returns, within what is stored.
+function labelled_view(Wˡ, rows, cols, outrows, outcols)
+    o′, o = Int(first(outrows) - first(rows)), Int(first(outcols) - first(cols))
+    view(Wˡ, :, (o′ + 1):(o′ + length(outrows)), (o + 1):(o + length(outcols)))
+end
+
+function EnzymeRules.forward(
+    config::FwdConfig, ::Const{typeof(compute_block!)}, ::Type{<:Annotation},
+    c::Annotation{<:DCalc}, ℓ::Annotation
+)
+    calc, l = c.val, ℓ.val
+    compute_block!(calc, l)
+    # The shadow block is written whether or not the returned calculator's shadow is asked
+    # for, since the code after the step reads the block from the shadow's buffer.
+    left = derivatives_from_left(calc)
+    rows, cols, outrows, outcols = block_geometry(calc, l)
+    A = view(calc.Wˡ, :, 1:length(rows), 1:length(cols))
+    for dc ∈ something(shadows(c), ())
+        wigner_block_pushforward!(
+            (x, ẋ) -> only(ẋ), labelled_view(dc.Wˡ, rows, cols, outrows, outcols), A, l,
+            rows, cols, outrows, outcols, left, generators(left, calc, dc), Val(1)
+        )
+    end
+    forward_return(config, calc, shadows(c))
+end
+
+function EnzymeRules.augmented_primal(
+    config::RevConfig, ::Const{typeof(compute_block!)}, ::Type{<:Annotation},
+    c::Annotation{<:DCalc}, ℓ::Annotation
+)
+    calc, l = c.val, ℓ.val
+    compute_block!(calc, l)
+    rows, cols, _, _ = block_geometry(calc, l)
+    tape = calc.Wˡ[:, 1:length(rows), 1:length(cols)]
+    AugmentedReturn(needs_primal(config) ? calc : nothing, shadow_return(config, c), tape)
+end
+
+function EnzymeRules.reverse(
+    ::RevConfig, ::Const{typeof(compute_block!)}, ::Type{<:Annotation}, tape,
+    c::Annotation{<:DCalc}, ℓ::Annotation
+)
+    calc, l = c.val, ℓ.val
+    left = derivatives_from_left(calc)
+    rows, cols, outrows, outcols = block_geometry(calc, l)
+    for dc ∈ something(shadows(c), ())
+        Ā = labelled_view(dc.Wˡ, rows, cols, outrows, outcols)
+        Ḡ = zeros(real(eltype(tape)), 3, length(calc.rotors))
+        wigner_block_pullback!(Ḡ, tape, Ā, l, rows, cols, outrows, outcols, left)
+        add_rotor_cotangents!(dc, left, calc, Ḡ)
+        fill!(Ā, zero(eltype(Ā)))
+    end
+    (nothing, nothing)
+end
 
 
 ## The harmonics
 
+# The part of the destination `Y` that holds the block of degree ℓ; see `compute_block!`.
+block_view(Y, ℓ, j₀) = view(Y, :, :, (j₀ + 1):(j₀ + Int(2ℓ) + 1))
+
 function EnzymeRules.forward(
-    config::FwdConfig, ::Const{typeof(sYlm_array)}, ::Type{<:Annotation},
-    R::Annotation{<:Rotor}, ℓₘₐₓ::Annotation, s::Annotation, ℓₘᵢₙ::Annotation
+    config::FwdConfig, ::Const{typeof(compute_block!)}, ::Type{<:Annotation},
+    c::Annotation{<:YCalc}, ℓ::Annotation, is::Annotation, Y::Annotation, j₀::Annotation
 )
-    Y = sYlm_array(R.val, ℓₘₐₓ.val, s.val, ℓₘᵢₙ.val)
-    needs_shadow(config) || return needs_primal(config) ? Y : nothing
-    Ṙ = rotor_tangents(R)
-    Ẏ = if Ṙ === nothing
-        ntuple(_ -> zero(Y), Val(width(config)))
-    else
-        map(Ṙ) do Ṙₖ
-            sYlm_pushforward(Y, rotor_generator(R.val, Ṙₖ), ℓₘᵢₙ.val, ℓₘₐₓ.val)
+    calc, l, i, j = c.val, ℓ.val, is.val, j₀.val
+    compute_block!(calc, l, i, Y.val, j)
+    # As for 𝔇, the shadow block is written whether or not the returned calculator's shadow
+    # is asked for.
+    if shadows(c) !== nothing && shadows(Y) !== nothing
+        for (dc, dY) ∈ zip(shadows(c), shadows(Y))
+            harmonic_block_pushforward!(
+                (y, ẏ) -> only(ẏ), block_view(dY, l, j), block_view(Y.val, l, j), l, i,
+                generators(true, calc, dc), Val(1)
+            )
         end
     end
-    forward_return(config, Y, Ẏ)
-end
-
-# The tape holds the values, copied if the caller is also given them and so might change
-# them, and the shadows into which the cotangents are accumulated.
-function EnzymeRules.augmented_primal(
-    config::RevConfig, ::Const{typeof(sYlm_array)}, ::Type{<:Annotation},
-    R::Annotation{<:Rotor}, ℓₘₐₓ::Annotation, s::Annotation, ℓₘᵢₙ::Annotation
-)
-    Y = sYlm_array(R.val, ℓₘₐₓ.val, s.val, ℓₘᵢₙ.val)
-    Ȳ = needs_shadow(config) ? zero_shadows(Y, Val(width(config))) : nothing
-    AugmentedReturn(needs_primal(config) ? Y : nothing, Ȳ, (needs_primal(config) ? copy(Y) : Y, Ȳ))
-end
-
-function EnzymeRules.reverse(
-    config::RevConfig, ::Const{typeof(sYlm_array)}, ::Type{<:Annotation}, tape,
-    R::Annotation{<:Rotor}, ℓₘₐₓ::Annotation, ::Annotation, ℓₘᵢₙ::Annotation
-)
-    Y, Ȳ = tape
-    dR = if !(R isa Active)
-        nothing
-    elseif Ȳ === nothing
-        zero_rotors(R.val, Val(width(config)))
-    else
-        cotangent(Ȳₖ) = as_rotor(R.val, rotor_cotangent(
-            R.val, sYlm_pullback(Y, Ȳₖ, ℓₘᵢₙ.val, ℓₘₐₓ.val)
-        ))
-        width(config) == 1 ? cotangent(Ȳ) : map(cotangent, Ȳ)
-    end
-    (dR, nothing, nothing, nothing)
-end
-
-
-## Wigner's 𝔇
-
-function EnzymeRules.forward(
-    config::FwdConfig, ::Const{typeof(D_array)}, ::Type{<:Annotation},
-    R::Annotation{<:Rotor}, ℓₘₐₓ::Annotation, m′ₘₐₓ::Annotation, m′ₘᵢₙ::Annotation,
-    mₘₐₓ::Annotation, mₘᵢₙ::Annotation
-)
-    limits = (ℓₘₐₓ.val, m′ₘₐₓ.val, m′ₘᵢₙ.val, mₘₐₓ.val, mₘᵢₙ.val)
-    needs_shadow(config) || return needs_primal(config) ? D_array(R.val, limits...) : nothing
-    Aʷ = D_array_widened(R.val, limits...)
-    A = D_is_widened(limits[1:3]...) ? D_narrowed(Aʷ, limits...) : Aʷ
-    Ṙ = rotor_tangents(R)
-    Ȧ = if Ṙ === nothing
-        ntuple(_ -> zero(A), Val(width(config)))
-    else
-        map(Ṙₖ -> D_pushforward(Aʷ, rotor_generator(R.val, Ṙₖ), limits...), Ṙ)
-    end
-    forward_return(config, A, Ȧ)
+    forward_return(config, calc, shadows(c))
 end
 
 function EnzymeRules.augmented_primal(
-    config::RevConfig, ::Const{typeof(D_array)}, ::Type{<:Annotation},
-    R::Annotation{<:Rotor}, ℓₘₐₓ::Annotation, m′ₘₐₓ::Annotation, m′ₘᵢₙ::Annotation,
-    mₘₐₓ::Annotation, mₘᵢₙ::Annotation
+    config::RevConfig, ::Const{typeof(compute_block!)}, ::Type{<:Annotation},
+    c::Annotation{<:YCalc}, ℓ::Annotation, is::Annotation, Y::Annotation, j₀::Annotation
 )
-    limits = (ℓₘₐₓ.val, m′ₘₐₓ.val, m′ₘᵢₙ.val, mₘₐₓ.val, mₘᵢₙ.val)
-    Aʷ = D_array_widened(R.val, limits...)
-    widened = D_is_widened(limits[1:3]...)
-    A = widened ? D_narrowed(Aʷ, limits...) : Aʷ
-    Ā = needs_shadow(config) ? zero_shadows(A, Val(width(config))) : nothing
-    # `Aʷ` is `A` itself when nothing was widened, and must then be copied as `A` would be.
-    kept = needs_primal(config) && !widened ? copy(Aʷ) : Aʷ
-    AugmentedReturn(needs_primal(config) ? A : nothing, Ā, (kept, Ā))
+    calc, l, i, j = c.val, ℓ.val, is.val, j₀.val
+    compute_block!(calc, l, i, Y.val, j)
+    tape = copy(block_view(Y.val, l, j))
+    AugmentedReturn(needs_primal(config) ? calc : nothing, shadow_return(config, c), tape)
 end
 
 function EnzymeRules.reverse(
-    config::RevConfig, ::Const{typeof(D_array)}, ::Type{<:Annotation}, tape,
-    R::Annotation{<:Rotor}, ℓₘₐₓ::Annotation, m′ₘₐₓ::Annotation, m′ₘᵢₙ::Annotation,
-    mₘₐₓ::Annotation, mₘᵢₙ::Annotation
+    ::RevConfig, ::Const{typeof(compute_block!)}, ::Type{<:Annotation}, tape,
+    c::Annotation{<:YCalc}, ℓ::Annotation, is::Annotation, Y::Annotation, j₀::Annotation
 )
-    limits = (ℓₘₐₓ.val, m′ₘₐₓ.val, m′ₘᵢₙ.val, mₘₐₓ.val, mₘᵢₙ.val)
-    Aʷ, Ā = tape
-    dR = if !(R isa Active)
-        nothing
-    elseif Ā === nothing
-        zero_rotors(R.val, Val(width(config)))
-    else
-        cotangent(Āₖ) = as_rotor(R.val, rotor_cotangent(R.val, D_pullback(Aʷ, Āₖ, limits...)))
-        width(config) == 1 ? cotangent(Ā) : map(cotangent, Ā)
+    calc, l, i, j = c.val, ℓ.val, is.val, j₀.val
+    if shadows(c) !== nothing && shadows(Y) !== nothing
+        for (dc, dY) ∈ zip(shadows(c), shadows(Y))
+            Ȳ = block_view(dY, l, j)
+            Ḡ = zeros(real(eltype(tape)), 3, length(calc.rotors))
+            harmonic_block_pullback!(Ḡ, tape, Ȳ, l, i)
+            add_rotor_cotangents!(dc, true, calc, Ḡ)
+            fill!(view(Ȳ, :, i, :), zero(eltype(Ȳ)))
+        end
     end
-    (dR, nothing, nothing, nothing, nothing, nothing)
+    (nothing, nothing, nothing, nothing, nothing)
 end
 
 end # module SphericalFunctionsEnzymeCoreExt

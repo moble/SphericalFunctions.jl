@@ -9,17 +9,19 @@ abstract type SSHT{T<:Real} end
 
 
 # Sample data given to a transform must already be in the type `T` it works in.  Converting
-# it silently is how a `QuatVec` becomes a rotation by π about its own direction, an
-# unnormalized `Quaternion` scales every harmonic by a power of its norm, and `BigFloat`
-# data is rounded to `Float64`; so, as for the calculators (see `check_rotor_type`),
-# anything else is refused and the caller converts.  Integer colatitudes or weights convert
-# exactly, and are accepted for every `T`.
+# it silently is how a `QuatVec` becomes a rotation by π about its own direction, and
+# `BigFloat` data is rounded to `Float64`; so, as for the calculators (see
+# `check_rotor_type`), anything else is refused and the caller converts.  A `Quaternion`
+# denotes the rotation of its normalization, as it does throughout, and the transform keeps
+# that rotation.  Integer colatitudes or weights convert exactly, and are accepted for every
+# `T`.
 function check_sample_rotors(::Type{T}, Rθϕ) where {T}
     Rθϕ isa NonRotorData && throw(ArgumentError(not_a_rotor(Rθϕ)))
-    if !(Rθϕ isa AbstractVector{Rotor{T}})
+    if !(Rθϕ isa Union{AbstractVector{Rotor{T}}, AbstractVector{Quaternionic.Quaternion{T}}})
         throw(ArgumentError(
-            "This transform works in $T, so `Rθϕ` must be a vector of `Rotor{$T}`s, but it is a "
-            * "$(typeof(Rθϕ)).  Pass `T` to work in another type, or convert the rotors."
+            "This transform works in $T, so `Rθϕ` must be a vector of `Rotor{$T}`s or "
+            * "`Quaternion{$T}`s, but it is a $(typeof(Rθϕ)).  Pass `T` to work in another "
+            * "type, or convert the rotors."
         ))
     end
     nothing

@@ -752,7 +752,7 @@ end
     import SphericalFunctions
     import SphericalFunctions: DCalculator, dCalculator, HCalculator,
         sYlmCalculator, D, d, sYlm, sYlm!, sYlm_matrix, Ylm, Ysize, floattype,
-        set_R!, set_β!, set_θ!
+        set_R!, set_β!, set_θ!, array_view, recurrence!
     using Quaternionic: Rotor, Quaternion, QuatVec, rotor
     using StaticArrays: SVector
     using Random
@@ -850,15 +850,15 @@ end
     @test occursin("Vector{Any}", err.msg)
     @test occursin("should be converted", err.msg)
 
-    # Rotations are taken as `Rotor`s, which is the type that says a quaternion denotes one.
-    # A `Quaternion` has a magnitude that would be divided out, and a `QuatVec` is a
-    # vector rather than a rotation at all; neither is silently reinterpreted.  Every entry
-    # point — the convenience functions, `w(R)`, the transforms, the calculators and the
-    # setters — refuses with a message that names `rotor(q)` and `exp(v/2)`.
+    # Rotations are taken as `Rotor`s, or as `Quaternion`s, which denote the rotations of
+    # their normalizations.  A `QuatVec` is a vector rather than a rotation at all, and is
+    # not silently reinterpreted: every entry point — the convenience functions, `w(R)`, the
+    # transforms, the calculators and the setters — refuses it with a message that names
+    # `exp(v/2)`.
     q = Quaternion(0.3, 0.5, 0.7, 0.11)
     qv = QuatVec(0.0, 0.0, 1.0)
-    w = SphericalFunctions.ModeWeights(zeros(ComplexF64, 9), 0)
-    for bad ∈ (q, qv)
+    w = SphericalFunctions.ModeWeights(randn(ComplexF64, 9), 0)
+    for bad ∈ (qv,)
         @test_throws "Rotations are taken as" D(bad, 2)
         @test_throws "Rotations are taken as" D(bad, 3//2)
         @test_throws "Rotations are taken as" d(bad, 2)
@@ -877,14 +877,29 @@ end
         @test_throws "Rotations are taken as" set_R!(DCalculator(rotors[1], 2), bad)
         @test_throws "Rotations are taken as" DCalculator([bad, bad], 2)
     end
-    # The message names what to write instead, and those spellings work
-    @test abs(rotor(q)) ≈ 1
-    @test floattype(DCalculator(rotor(q), 2)) === Float64
+    # The message names what to write instead, and that spelling works
     @test floattype(DCalculator(exp(qv/2), 2)) === Float64
+    # Every entry point takes a `Quaternion` as the rotation of its normalization
+    R = rotor(q)
+    @test D(q, 2) ≈ D(R, 2)
+    @test D(q, 3//2) ≈ D(R, 3//2)
+    @test d(q, 2) ≈ d(R, 2)
+    @test array_view(sYlm(q, 2, 0)) ≈ array_view(sYlm(R, 2, 0))
+    @test array_view(sYlm([q, q], 2, 0)) ≈ array_view(sYlm([R, R], 2, 0))
+    @test array_view(Ylm(q, 2)) ≈ array_view(Ylm(R, 2))
+    @test sYlm_matrix([q, q], 2, 0) ≈ sYlm_matrix([R, R], 2, 0)
+    @test w(q) ≈ w(R)
+    @test w([q]) ≈ w([R])
+    @test SphericalFunctions.rotors(SphericalFunctions.SSHTMatrix(0, 0; Rθϕ=[q])) ≈ [R]
+    @test recurrence!(DCalculator(q, 2), 2) ≈ recurrence!(DCalculator(R, 2), 2)
+    @test floattype(DCalculator(q, 2)) === floattype(dCalculator(q, 2)) === Float64
+    @test floattype(HCalculator(q, 2)) === floattype(sYlmCalculator(q, 2, -0:0)) === Float64
+    @test recurrence!(set_R!(DCalculator(rotors[1], 2), q), 2) ≈ recurrence!(DCalculator(R, 2), 2)
+    @test SphericalFunctions.Nᵣ(DCalculator([q, q], 2)) == 2
 
     # Concretely typed data is untouched by any of this, in each of its forms
     @test SphericalFunctions.Nᵣ(DCalculator(rotors, 3)) == 2
-    # (A `Vector{Quaternion}` is not one of these forms; it is covered by the refusals above.)
+    # (A `Vector{Quaternion}` is one of these forms too; it is covered by the tests above.)
     @test SphericalFunctions.Nᵣ(DCalculator(SVector{2}(rotors[1], rotors[2]), 3)) == 2
     @test SphericalFunctions.Nᵣ(dCalculator([0.3, 0.5], 3)) == 2
     @test SphericalFunctions.Nᵣ(dCalculator(cis.([0.3, 0.5]), 3)) == 2

@@ -66,18 +66,18 @@ are relative to version 2.2.9.
   over blocks, which returns an ordinary `Array`, refuses operands
   whose labels differ.  `first`, `last` and `only` of a series give
   blocks, as `Y[ℓ]` and `Y[ℓ, :]` do.
-* **Rotations must be given as `Rotor`s, or as angles.**  `D`,
+* **Rotations must be given as quaternions, or as angles.**  `D`,
   `DCalculator`, `sYlm`, `Ylm`, `sYlmCalculator` and `YlmCalculator`
   accept Euler angles or spherical coordinates in place of a single
   rotor, as in `D(α, β, γ, ℓₘₐₓ)` and `sYlm(θ, ϕ, ℓₘₐₓ, s)`;
   everything else takes a `Rotor`, converted with
   `from_euler_angles(α, β, γ)` or `from_spherical_coordinates(θ, ϕ)`
-  from Quaternionic.  A general `Quaternion` or a `QuatVec` is
-  refused, with a message suggesting `rotor(q)` or `exp(v/2)`, by
-  every function that takes a rotation — including `w(R)` and the
-  `Rθϕ` keyword of `SSHTMatrix`, which version 2 converted without
-  comment.  The functions of ``β`` alone — `d`, `dCalculator` and
-  `HCalculator` — still accept ``β``, ``e^{iβ}`` or a `Rotor`.
+  from Quaternionic, or any other `Quaternion`, which denotes the
+  rotation of its normalization.  A `QuatVec` is rejected, with a
+  message suggesting `exp(v/2)`, by every function that takes a
+  rotation — including `w(R)` and the `Rθϕ` keyword of `SSHTMatrix`.
+  The functions of ``β`` alone — `d`, `dCalculator` and `HCalculator`
+  — still accept ``β``, ``e^{iβ}`` or a quaternion.
 * **An index can be an `Int` or a half-odd-integer.**  Every public
   function and constructor that takes an index, and every container
   indexed by one, accepts an `Int`, a `HalfOddInteger`, or a
@@ -104,8 +104,9 @@ are relative to version 2.2.9.
   conversion.  The transforms, the pixelizations, the quadrature
   weights and the operator matrices take a positional `T` argument,
   since they construct their own numbers.  Sample points passed to a
-  transform must be `Rotor`s of its type, and colatitudes or weights
-  must be of its type or integers, where version 2 converted them.
+  transform must be `Rotor`s or `Quaternion`s of its type, and
+  colatitudes or weights must be of its type or integers, where
+  version 2 converted them.
 * **The differential operators are objects rather than functions.**
   `L²`, `Lz`, `L₊`, `L₋`, `R²`, `Rz`, `R₊`, `R₋`, `ð` and `ð̄` are now
   singleton instances of subtypes of `DifferentialOperator`.  Calling
@@ -326,17 +327,21 @@ version 2 already started at ``ℓ = |s|``.)
   half-integer indices.  (Issue #57.)
 * **Automatic differentiation with respect to the rotor.**  Package
   extensions for `ChainRulesCore`, `EnzymeCore`, `ForwardDiff`,
-  `Mooncake`, and `ReverseDiff` supply rules for `D` and `sYlm` of a
-  rotor, and so for `Ylm` and for the forms that take Euler angles or
-  spherical coordinates.  The rules give the derivatives from the
-  angular-momentum operators, as combinations of the values
-  themselves, rather than by differentiating the recurrence, so the
-  derivatives are as accurate as the values at every rotor, the poles
-  included, and to every order under nested differentiation.  The
-  calculators are differentiated through the recurrence, which
-  evaluates the rotors near a pole from an expansion about it, so
-  that their derivatives are accurate there too.  The note on
-  automatic differentiation in the documentation describes both.
+  `Mooncake`, and `ReverseDiff` supply rules that give the derivatives
+  of ``𝔇`` and of the harmonics from the angular-momentum operators,
+  as combinations of the values themselves, rather than by
+  differentiating the recurrence, so the derivatives are as accurate
+  as the values at every rotor, the poles included.  `ForwardDiff`,
+  `Enzyme`, `Mooncake`, and `ReverseDiff` apply them to every step of
+  a `DCalculator` or `sYlmCalculator`, batched or not, so that a loop
+  over a calculator's blocks is differentiated one block at a time, as
+  efficiently as it is evaluated; a calculator of dual numbers
+  allocates nothing when stepped, and gives derivatives of every order
+  exactly under nested differentiation.  `D`, `sYlm`, `Ylm`, and
+  `sYlm_matrix` are computed by calculators, so the same rules serve
+  them; `Zygote` uses rules for their arrays instead, and
+  `ReverseDiff` uses those too.  The note on automatic differentiation
+  in the documentation describes all of this.
 * **Restricted ranges.**  The keywords `m′ₘₐₓ`, `m′ₘᵢₙ`, `mₘₐₓ` and
   `mₘᵢₙ` of `D`, `d` and their calculators limit the part of each
   matrix that is computed, and restricting either index makes the

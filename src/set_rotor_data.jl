@@ -18,10 +18,13 @@ calculator was holding are discarded, so the next step of the recurrence starts 
 
 `R` must be a `Rotor`, or an `AbstractVector` of exactly as many rotors as the calculator
 handles, which is required when the calculator was built from a vector of rotors; a vector
-of one rotor is accepted by a calculator built from a single one.  A quaternion that is not
-a `Rotor` is refused rather than normalized; see [`not_a_rotor`](@ref).  The number of
-rotors is fixed at construction and cannot be changed here; for a different number, build
-another calculator.
+of one rotor is accepted by a calculator built from a single one.  A `Quaternion` may also
+stand in for a rotor, as the rotation of its normalization; a `QuatVec` is refused, as
+[`not_a_rotor`](@ref) explains.  The reason we *must* accept `Quaternion`s is that they some
+automatic-differentiation packages require the tangent of a type to have the same type; the
+tangent to the space of `Rotor`s is not a `Rotor`, but a `Quaternion`, so we must accept
+`Quaternion`s to begin with.  The number of rotors is fixed at construction and cannot be
+changed here; for a different number of rotors, build another calculator.
 
 This applies to [`DCalculator`](@ref) and [`sYlmCalculator`](@ref), both of which need the
 whole rotor.  The real ``d`` matrices and the ``H`` wedge depend on ``β`` alone, so their
@@ -162,13 +165,13 @@ function set_θ!(c::HarmonicCalculator, θ::Union{Real, AbstractVector{<:Real}})
     check_rotor_type(c, θ)
     set_rotors!(c, θ)
 end
-function set_θ!(::sYlmCalculator, ::Union{Rotor, AbstractVector{<:Rotor}})
+function set_θ!(::sYlmCalculator, ::Union{RotorLike, AbstractVector{<:RotorLike}})
     throw(ArgumentError(
         "`set_θ!` takes angles θ, meaning the points (θ, ϕ=0); the setter for rotors is "
         * "`set_R!`."
     ))
 end
-function set_θ!(::sλlmCalculator, ::Union{Rotor, AbstractVector{<:Rotor}})
+function set_θ!(::sλlmCalculator, ::Union{RotorLike, AbstractVector{<:RotorLike}})
     throw(ArgumentError(
         "`set_θ!` takes angles θ, meaning the points (θ, ϕ=0).  An sλlmCalculator stores "
         * "real numbers, so it has nowhere to put the α and γ phases a rotor specifies; use "

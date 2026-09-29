@@ -112,8 +112,11 @@ end
         @test_throws "Cannot build a calculator from rotor data of type" rotor_basetype(data)
         @test_throws "the accepted forms are a Rotor" rotor_basetype(data)
     end
-    # ... and a quaternion that is not a `Rotor` is told how to make one
-    for data ∈ (Quaternion(1.0, 0, 0, 0), [Quaternion(1.0, 0, 0, 0)], QuatVec(0.0, 1, 0, 0))
+    # ... a `Quaternion` is the rotation of its normalization ...
+    @test rotor_basetype(Quaternion(1.0, 0, 0, 0)) === Float64
+    @test rotor_basetype([Quaternion(1.0f0, 0, 0, 0)]) === Float32
+    # ... and a `QuatVec` is told how to make one
+    for data ∈ (QuatVec(0.0, 1, 0, 0), [QuatVec(0.0, 1, 0, 0)])
         @test_throws ArgumentError rotor_basetype(data)
         @test_throws "Rotations are taken as `Rotor`s" rotor_basetype(data)
     end

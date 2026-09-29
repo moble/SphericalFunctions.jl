@@ -1228,12 +1228,12 @@ end
         fejer1_rings, fejer1, minimal_rings
     using Quaternionic: Rotor, Quaternion, QuatVec
 
-    # A `QuatVec` is not the rotor of its direction, and an unnormalized `Quaternion` is not a
-    # rotor at all.  Converted to rotors, the first would become 𝐢 (whose pixel is the south
-    # pole) and the second a rotor of the wrong norm, so both are refused.
+    # A `QuatVec` is not the rotor of its direction: converted to a rotor, it would become
+    # 𝐢, whose pixel is the south pole, so it is refused.  A `Quaternion` is the rotation
+    # of its normalization, which is the rotor that the transform keeps.
     @test_throws ArgumentError SSHTMatrix(0, 0; Rθϕ=[QuatVec(0.0, 1.0, 0.0, 0.0)])
     @test_throws "Rotations are taken as" SSHTMatrix(0, 0; Rθϕ=[QuatVec(0.0, 1.0, 0.0, 0.0)])
-    @test_throws "Rotations are taken as" SSHTMatrix(0, 0; Rθϕ=[2.0 * Quaternion(1.0, 0, 0, 0)])
+    @test rotors(SSHTMatrix(0, 0; Rθϕ=[2.0 * Quaternion(1.0, 0, 0, 0)])) == [Rotor(1.0)]
     @test_throws "Rotations are taken as" SSHT(0, 0; method="Matrix", Rθϕ=[QuatVec(0.0, 1.0, 0.0, 0.0)])
 
     # Data of another precision is refused rather than rounded or widened, for each method

@@ -48,8 +48,16 @@ end
 # runtime reduction over a vector would infer only as `Type`, which would make the element
 # type a runtime value and cost the calculators their type stability.
 
+# The rotor data that denote rotations: a `Rotor`, or any other `Quaternion`, which denotes
+# the rotation of its normalization.  The recurrence divides out the norm in any case.
+const RotorLike = Union{Rotor, Quaternionic.Quaternion}
+
+# A rotation as a `Quaternion` with components of type `T`, read by its components alone.
+@inline as_quaternion(::Type{T}, R) where {T} = Quaternion{T}(R[1], R[2], R[3], R[4])
+
 const rotor_input_forms = (
-    "the accepted forms are a Rotor, the angle β::Real, or the phase e^{iβ}::Complex — or, "
+    "the accepted forms are a Rotor or Quaternion, the angle β::Real, or the phase "
+    * "e^{iβ}::Complex — or, "
     * "for a batch, a non-empty AbstractVector of any one of those, which makes a batch "
     * "however short, and whose element type must say which (a `Vector{Any}`, or one with a "
     * "`Union` element type, does not, and should be converted before it is passed)"
@@ -61,17 +69,20 @@ const rotor_input_forms = (
 The floating-point type in which to work, given the rotor data `R`: the `float` of its
 component type.  This is the *only* thing that decides the element type a calculator works
 in, so that a `Rotor{Float32}` gives a `Float32` calculator and a `Rotor{Double64}` a
-`Double64` one.  To compute in some other type, convert the rotor data — which is also the
-honest way to say it, since the type of the data is the claim being made about the points.
+`Double64` one.  A `Quaternion` counts as a rotor here; we always divide out by the norm,
+and accept `Quaternion` for compatibility with various automatic-differentiation packages.
+To compute in some other type, convert the rotor data — which is also the honest way to say
+it, since the type of the data is the claim being made about the points.
 
 The rotor data must therefore commit to a type to go on: data whose component type is
 abstract, such as a `Complex{Real}` or a `Vector{Rotor{Real}}`, or a vector whose element
 type is abstract or a `Union`, is refused with an `ArgumentError` rather than guessed at.
 """
-rotor_basetype(R::Rotor) = concrete_float(Quaternionic.basetype(R), R)
+rotor_basetype(R::RotorLike) = concrete_float(Quaternionic.basetype(R), R)
 rotor_basetype(β::Real) = float(typeof(β))
 rotor_basetype(z::Complex{T}) where {T<:Real} = concrete_float(T, z)
 rotor_basetype(R::AbstractVector{<:Rotor{T}}) where {T<:Real} = concrete_float(T, R)
+rotor_basetype(R::AbstractVector{<:Quaternionic.Quaternion{T}}) where {T<:Real} = concrete_float(T, R)
 rotor_basetype(β::AbstractVector{T}) where {T<:Real} = concrete_float(T, β)
 rotor_basetype(z::AbstractVector{<:Complex{T}}) where {T<:Real} = concrete_float(T, z)
 function rotor_basetype(R)
@@ -80,16 +91,16 @@ function rotor_basetype(R)
     ))
 end
 # `Vector{Rotor}` and `Vector{Rotor{<:Real}}` hold rotations, but their element type does not
-# say in what precision, so they get the message above rather than the one below.
-function rotor_basetype(R::AbstractVector{<:Rotor})
+# say in what precision, so they get the message above rather than the one below; so do the
+# vectors of `Quaternion`s like them.
+function rotor_basetype(R::AbstractVector{<:RotorLike})
     throw(ArgumentError(
         "Cannot build a calculator from rotor data of type $(typeof(R)); $rotor_input_forms."
     ))
 end
-# A quaternion that is not a `Rotor` is refused here, which is where the calculators catch
-# it: the constructors call this directly, and the setters through `check_rotor_type`.
-rotor_basetype(R::Union{AbstractQuaternion, AbstractVector{<:AbstractQuaternion}}) =
-    throw(ArgumentError(not_a_rotor(R)))
+# A `QuatVec` is refused here, which is where the calculators catch it: the constructors
+# call this directly, and the setters through `check_rotor_type`.
+rotor_basetype(R::Union{QuatVec, AbstractVector{<:QuatVec}}) = throw(ArgumentError(not_a_rotor(R)))
 
 # The float type of rotor data `R` whose components are of type `T`.  `float(Real)` is
 # `Float64`, so without the check data of an abstract component type would be answered with
@@ -99,7 +110,7 @@ rotor_basetype(R::Union{AbstractQuaternion, AbstractVector{<:AbstractQuaternion}
 # away.
 @inline function concrete_float(::Type{T}, R) where {T}
     isconcretetype(T) || throw(abstract_components_error(T, R))
-    float(T)
+    working_type(float(T))
 end
 @noinline function abstract_components_error(T, R)
     ArgumentError(
@@ -108,34 +119,33 @@ end
     )
 end
 
-# Quaternions that are not `Rotor`s, singly or in a vector.  The functions that take only
-# `Rotor`s — `D`, `d`, `sYlm`, `Ylm`, `sYlm_matrix`, `w(R)` and the transforms — never reach
-# `rotor_basetype` with these, so each has a method on this type that refuses them with the
-# message of `not_a_rotor` rather than a bare `MethodError`.
-const NonRotorData = Union{
-    Quaternionic.Quaternion, QuatVec, AbstractVector{<:Union{Quaternionic.Quaternion, QuatVec}}
-}
+# Quaternions that do not denote rotations — `QuatVec`s — singly or in a vector.  The
+# functions that take rotations — `D`, `d`, `sYlm`, `Ylm`, `sYlm_matrix`, `w(R)` and the
+# transforms — never reach `rotor_basetype` with these, so each has a method on this type
+# that refuses them with the message of `not_a_rotor` rather than a bare `MethodError`.
+const NonRotorData = Union{QuatVec, AbstractVector{<:QuatVec}}
 
 """
     not_a_rotor(R)
 
-The message for rotor data that is a quaternion but not a `Rotor`.
+The message for rotor data that is a quaternion but does not denote a rotation, which is to
+say a `QuatVec`.
 
-These functions are defined on the rotation group, so a rotation is what they take, and
-`Rotor` is the type that says a quaternion is one.  A general `Quaternion` has a magnitude
-that the recurrence would simply divide out; `rotor(q)` normalizes it into the rotation it
-denotes, and says so at the call site.  A `QuatVec` is further still from a rotation — it
-represents a vector, and reading one as a rotation by ``π`` about its own direction would be
-a category error rather than a convenience; `exp(v/2)` gives the rotation a vector
-generates.
+These functions are defined on the rotation group, so a rotation is what they take: a
+`Rotor`, or any other `Quaternion`, which denotes the rotation of its normalization, since
+the recurrence divides out its magnitude.  A `QuatVec` is a different thing — it represents
+a vector, and reading one as a rotation by ``π`` about its own direction would be a category
+error rather than a convenience; `exp(v/2)` gives the rotation that a vector generates.
 """
 function not_a_rotor(R)
     T = R isa AbstractVector ? eltype(R) : typeof(R)
     (
-        (R isa AbstractVector ? "These are `$T`s, which are not `Rotor`s" : "A `$T` is not a `Rotor`")
-        * ".  Rotations are taken as `Rotor`s, which is what says a quaternion denotes one: "
-        * "`rotor(q)` normalizes a `Quaternion` into the rotation it points at, and `exp(v/2)` "
-        * "gives the rotation a `QuatVec` generates."
+        (
+            R isa AbstractVector ? "These are `$T`s, which are vectors, not rotations" :
+                "A `$T` is a vector, not a rotation"
+        )
+        * ".  Rotations are taken as `Rotor`s or `Quaternion`s, and `exp(v/2)` gives the "
+        * "rotation that a `QuatVec` generates."
     )
 end
 

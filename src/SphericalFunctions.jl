@@ -6,7 +6,8 @@ using FFTW: FFTW, ifft, irfft, plan_fft!, plan_bfft!
 # types that FFTW does not, such as `Float16`, `Double64` and `BigFloat`.
 import GenericFFT
 using LinearAlgebra: LinearAlgebra, mul!, ldiv!
-using Quaternionic: Quaternionic, AbstractQuaternion, Rotor, QuatVec, from_spherical_coordinates
+using Quaternionic: Quaternionic, AbstractQuaternion, Quaternion, Rotor, QuatVec,
+    from_spherical_coordinates
 using StaticArrays: @SVector
 import SpecialFunctions
 import Serialization
@@ -20,6 +21,7 @@ import PrecompileTools
 const IEEEFloat = Union{Float16, Float32, Float64}
 
 include("utilities/utils.jl")
+include("utilities/lifting.jl")
 
 include("utilities/half_odd_integer.jl")
 include("utilities/index_methods.jl")

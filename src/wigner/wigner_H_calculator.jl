@@ -303,12 +303,13 @@ of an exact zero, and a derivative taken through them there by automatic differe
 `NaN`.  No local rule can repair this — `sβ½ * z₋` is smooth in the rotor, but `sβ½` and
 `z₋` separately are not, so treating the zero as exact would silently drop the first-order
 term.  Near a pole the derivatives are finite but inaccurate, the ``k``-th by about ``ε
-r^{-k}`` relative to their size at a distance ``r`` from it.  The calculators of ``𝔇`` and
-of ``{}_sY_{ℓ,m}``, which are smooth there, therefore evaluate a rotor at or near a pole
-from the expansion described in `src/wigner/poles.jl` instead, and never call this for a
-rotor exactly at one.  The ``d`` and ``H`` of a rotor do call it there, and keep the `NaN`:
-they see the rotor only through ``β``, which has a cone-shaped singularity at each pole, so
-that some of their elements actually have no derivative there.
+r^{-k}`` relative to their size at a distance ``r`` from it.  The values are accurate at
+every rotor, the poles included, so the calculators of ``𝔇`` and of ``{}_sY_{ℓ,m}``, which
+are smooth there, are never differentiated through this: the rules for automatic
+differentiation give their derivatives in terms of their values (see `src/derivatives.jl`).
+The ``d`` and ``H`` of a rotor have no such rules, and keep the `NaN`: they see the rotor
+only through ``β``, which has a cone-shaped singularity at each pole, so that some of their
+elements actually have no derivative there.
 
 The optional second argument is the real type the phases are computed in; it defaults to
 `float(eltype(R))`.  Pass the *calculator's* type whenever that is more precise than the
@@ -465,7 +466,7 @@ function set_rotors!(w::HCalculator{IT, RT}, β::AbstractVector{<:Real}) where {
     end
     w
 end
-function set_rotors!(w::HCalculator{IT, RT}, R::AbstractVector{<:Rotor}) where {IT, RT<:Real}
+function set_rotors!(w::HCalculator{IT, RT}, R::AbstractVector{<:RotorLike}) where {IT, RT<:Real}
     Base.require_one_based_indexing(R)  # as for eⁱᵝ above
     check_rotor_length(w, R)
     # There is nothing further to validate: `spinor_phases` accepts every rotor, giving NaNs
@@ -476,7 +477,7 @@ function set_rotors!(w::HCalculator{IT, RT}, R::AbstractVector{<:Rotor}) where {
     end
     w
 end
-function set_rotors!(w::HCalculator{IT, RT}, R::Union{Real, Complex, Rotor}) where {IT, RT<:Real}
+function set_rotors!(w::HCalculator{IT, RT}, R::Union{Real, Complex, RotorLike}) where {IT, RT<:Real}
     check_single_rotor(w)
     set_rotors!(w, @SVector [R])
 end

@@ -1,5 +1,5 @@
 """
-    HarmonicCalculator{IT, RT, NT, ST, S, B}
+    HarmonicCalculator{IT, RT, NT, ST, S, B, FT, L}
 
 Calculator producing the spin-weighted spherical harmonics ``{}_sY_{ℓ,m}`` (when `NT` is
 `Complex{RT}`) or the real ``{}_sλ_{ℓ,m}`` (when `NT` is `RT`), for `Nᵣ` points at a time,
@@ -14,6 +14,11 @@ one ``ℓ`` at a time.  Use the constructors [`sYlmCalculator`](@ref) and
   `UnitRange` of it for a range of them.
 - `B` is `true` exactly when the calculator was built from a vector of rotor data, and is
   what [`isbatched`](@ref) reads.
+- `FT` is the real type in which the recurrence runs, which is `RT` itself unless `RT`
+  holds derivatives, as a dual number does.
+- `L` is `Nothing`, unless the calculator lifts the blocks of a calculator of the values of
+  its rotors into blocks that hold derivatives, when it is the type of the data for that.
+
 
 Internally this wraps an [`HCalculator`](@ref), which runs the recurrence that both subtypes
 use, plus a buffer backing the block for the current ``ℓ``.  The phase tables `Z₊` and `Z₋`
@@ -24,45 +29,46 @@ real, and it is only the ``e^{-i(mα - sγ)}`` factor that ever made the result 
 Because `S` and `B` decide the shape of the block, the type of the block is known at compile
 time, and a loop over the blocks is inferrable.
 """
-struct HarmonicCalculator{IT, RT<:Real, NT<:Union{RT, Complex{RT}}, ST, S, B}
-    # As for [`WignerCalculator`](@ref), the last parameter says whether the calculator was
+struct HarmonicCalculator{IT, RT<:Real, NT<:Union{RT, Complex{RT}}, ST, S, B, FT<:Real, L}
+    # As for [`WignerCalculator`](@ref), the parameter `B` says whether the calculator was
     # built from a vector of rotor data (of any length), lifted into the type so that the
     # branch in `spin_row` and `spin_block` — and hence the type of the block that
     # `recurrence!` returns — is settled at compile time.  `S` does the same job for the
     # spin weights: it is the index type when the calculator was built for one of them and a
     # `UnitRange` of it when it was built for several, which is what decides whether a block
     # has a spin axis at all.
-    H::HCalculator{IT, RT, ST}
+    H::HCalculator{IT, FT, ST}
     Yˡ::Array{NT, 3}  # [iᵣ, s, m] block for the current ℓ, using the leading m entries
-    Z₊::Matrix{Complex{RT}}  # Z₊[iᵣ, k+1] = z₊^k for k ∈ 0:2ℓₘₐₓ
-    Z₋::Matrix{Complex{RT}}  # Z₋[iᵣ, k+1] = z₋^k for k ∈ 0:2ℓₘₐₓ
-    poles::Vector{PoleRotor{RT}}  # the rotors at or near a pole; empty unless given rotors
+    Z₊::Matrix{Complex{FT}}  # Z₊[iᵣ, k+1] = z₊^k for k ∈ 0:2ℓₘₐₓ
+    Z₋::Matrix{Complex{FT}}  # Z₋[iᵣ, k+1] = z₋^k for k ∈ 0:2ℓₘₐₓ
+    rotors::Vector{Quaternion{RT}}  # the rotors, or those of the points (θ, 0); empty for ₛλₗₘ
     s::S
     ℓ::Base.RefValue{IT}  # ℓ of the block currently in Yˡ; ℓₘᵢₙ-1 if none
     phases::Base.RefValue{Bool}  # false when the rotor data are angles θ (ϕ = γ = 0)
+    lift::L  # `nothing`, or the calculator of the rotors' values and their generators
     # `materialize!` writes `Yˡ` and reads the power tables under `@inbounds`, for every
-    # rotor of `H`, every spin weight served and every m up to ℓₘₐₓ, and for every rotor
-    # recorded near a pole, so the buffers must be large enough for those, and the records
-    # must name rotors that exist; as for `HCalculator`, this checks them once, as they are
+    # rotor of `H`, every spin weight served and every m up to ℓₘₐₓ, so the buffers must be
+    # large enough for those; as for `HCalculator`, this checks them once, as they are
     # brought together.
-    function HarmonicCalculator{IT, RT, NT, ST, S, B}(
-        H, Yˡ, Z₊, Z₋, poles, s, ℓ, phases
-    ) where {IT, RT<:Real, NT<:Union{RT, Complex{RT}}, ST, S, B}
+    function HarmonicCalculator{IT, RT, NT, ST, S, B, FT, L}(
+        H, Yˡ, Z₊, Z₋, rotors, s, ℓ, phases, lift
+    ) where {IT, RT<:Real, NT<:Union{RT, Complex{RT}}, ST, S, B, FT<:Real, L}
         let n = Nᵣ(H), M = 2ℓₘₐₓ(H) + 1, K = NT <: Complex ? 2ℓₘₐₓ(H) + 1 : 0
             if !(
                 size(Yˡ, 1) ≥ n && size(Yˡ, 2) ≥ nspins(s) && size(Yˡ, 3) ≥ M
                 && size(Z₊, 1) ≥ n && size(Z₊, 2) ≥ K && size(Z₋, 1) ≥ n && size(Z₋, 2) ≥ K
+                && length(rotors) == (NT <: Complex ? n : 0)
             )
                 throw(DimensionMismatch(
                     "The buffers of a $(flavor_name(NT)) for Nᵣ=$n rotors, the spin weights "
                     * "$s and ℓₘₐₓ=$(ℓₘₐₓ(H)) are too small: the block has size $(size(Yˡ)), "
-                    * "and the power tables $(size(Z₊)) and $(size(Z₋)), which need a row for "
-                    * "each rotor and at least $K columns."
+                    * "the power tables $(size(Z₊)) and $(size(Z₋)), which need a row for "
+                    * "each rotor and at least $K columns, and there are $(length(rotors)) "
+                    * "rotors."
                 ))
             end
-            check_pole_records(poles, n)
         end
-        new{IT, RT, NT, ST, S, B}(H, Yˡ, Z₊, Z₋, poles, s, ℓ, phases)
+        new{IT, RT, NT, ST, S, B, FT, L}(H, Yˡ, Z₊, Z₋, rotors, s, ℓ, phases, lift)
     end
 end
 
@@ -190,7 +196,10 @@ See also [`sλlm`](@ref) and [`sλlm_matrix`](@ref) for simpler interfaces, and
 [`dCalculator`](@ref), which stands in the same relation to [`DCalculator`](@ref).
 """
 const sλlmCalculator{IT, RT, ST, S, B} =
-    HarmonicCalculator{IT, RT, RT, ST, S, B} where {IT, RT<:Real, ST, S, B}
+    HarmonicCalculator{IT, RT, RT, ST, S, B, RT, Nothing} where {IT, RT<:Real, ST, S, B}
+# A calculator of the real harmonics never lifts the blocks of another, since it is given
+# angles, whose recurrence is differentiated as it runs (see `src/derivatives.jl`), so the
+# last two parameters above are fixed, and the type is concrete once the others are.
 
 # The spin-weight argument is typed `IndexOrRange` rather than left open, so that a call
 # whose arguments are in the wrong order — `sYlmCalculator(3, 1, Float64)`, say — is still
@@ -268,40 +277,66 @@ function allocate_Y(
     # according to the sign of m; where |m| ≤ |s| the symmetries offer only the row ±m, and
     # m runs over both signs.  So a single spin weight touches every row of -|s|:|s| just as
     # the full range would, and |s| is the smallest wedge that can serve it.
-    H = allocate_H(IT, RT, ℓₘₐₓ, sₕ, Nᵣ)
     Yˡ = Array{NT, 3}(undef, Nᵣ, nspins(s), 2ℓₘₐₓ + 1)
-    # The phase tables are what a real calculator does not have: with `K = 0` they are empty
-    # rather than merely unread, so the ``{}_sλ_{ℓ,m}`` flavor allocates nothing for them.
-    # This is the same trick `allocate_W` uses to separate ``𝔇`` from ``d``, and the
-    # layout, with the rotor index first, is the same too.
-    K = NT <: Complex ? 2ℓₘₐₓ + 1 : 0
-    Z₊ = Matrix{Complex{RT}}(undef, Nᵣ, K)
-    Z₋ = Matrix{Complex{RT}}(undef, Nᵣ, K)
-    # The reference is typed explicitly because the field is a `RefValue{IT}`.
-    HarmonicCalculator{IT, RT, NT, typeof(parent(H.Hˡ)), S, B}(
-        H, Yˡ, Z₊, Z₋, PoleRotor{RT}[], s, Ref{IT}(ℓₘᵢₙ(IT) - 1), Ref(NT <: Complex)
-    )
+    rotors = Vector{Quaternion{RT}}(undef, NT <: Complex ? Nᵣ : 0)
+    ℓ = Ref{IT}(ℓₘᵢₙ(IT) - 1)  # typed explicitly because the field is a `RefValue{IT}`
+    # A calculator of ₛYₗₘ whose real type holds derivatives lifts the blocks of a
+    # calculator of its rotors' values, whose `H`, power tables, and `phases` flag it
+    # shares, as a `WignerCalculator` does; see `allocate_W`.
+    if NT <: Complex && value_type(RT) !== RT
+        let inner = allocate_Y(IT, value_type(RT), Complex{value_type(RT)}, ℓₘₐₓ, s, Nᵣ, Val(B))
+            lift = allocate_lift(RT, inner, Nᵣ)
+            HarmonicCalculator{IT, RT, NT, typeof(parent(inner.H.Hˡ)), S, B, float_type(RT), typeof(lift)}(
+                inner.H, Yˡ, inner.Z₊, inner.Z₋, rotors, s, ℓ, inner.phases, lift
+            )
+        end
+    else
+        H = allocate_H(IT, RT, ℓₘₐₓ, sₕ, Nᵣ)
+        # The phase tables are what a real calculator does not have: with `K = 0` they are
+        # empty rather than merely unread, so the ``{}_sλ_{ℓ,m}`` flavor allocates nothing
+        # for them.  This is the same trick `allocate_W` uses to separate ``𝔇`` from ``d``,
+        # and the layout, with the rotor index first, is the same too.
+        K = NT <: Complex ? 2ℓₘₐₓ + 1 : 0
+        Z₊ = Matrix{Complex{RT}}(undef, Nᵣ, K)
+        Z₋ = Matrix{Complex{RT}}(undef, Nᵣ, K)
+        HarmonicCalculator{IT, RT, NT, typeof(parent(H.Hˡ)), S, B, RT, Nothing}(
+            H, Yˡ, Z₊, Z₋, rotors, s, ℓ, Ref(NT <: Complex), nothing
+        )
+    end
 end
 
 # See the notes on `similar(::WignerCalculator)`, whose docstring covers these methods too,
 # for why the assertion is here and why the rotor data is copied rather than re-derived.
 # The `phases` flag is part of that data: it records whether the calculator was given rotors
-# or bare angles, and hence whether `Z₊` and `Z₋` hold anything at all.  So is the record of
-# the rotors near a pole.
-function Base.similar(c::HarmonicCalculator{IT, RT, NT, ST, S, B}) where {IT, RT, NT, ST, S, B}
-    c′ = allocate_Y(IT, RT, NT, ℓₘₐₓ(c), c.s, Nᵣ(c), Val(B))::HarmonicCalculator{IT, RT, NT, ST, S, B}
+# or bare angles, and hence whether `Z₊` and `Z₋` hold anything at all.
+function Base.similar(
+    c::HarmonicCalculator{IT, RT, NT, ST, S, B, FT, L}
+) where {IT, RT, NT, ST, S, B, FT<:Real, L}
+    c′ = allocate_Y(IT, RT, NT, ℓₘₐₓ(c), c.s, Nᵣ(c), Val(B))::HarmonicCalculator{IT, RT, NT, ST, S, B, FT, L}
+    copy_rotor_state!(c′, c)
+end
+# A calculator that lifts the blocks of another shares that calculator's `H`, power tables,
+# and `phases` flag, which are therefore copied once for both; its own
+# rotors and generators are copied, and then the rest of the other calculator's state.
+function copy_rotor_state!(c′::HarmonicCalculator, c::HarmonicCalculator)
     copy_rotor_data!(c′.H, c.H)
     copyto!(c′.Z₊, c.Z₊)
     copyto!(c′.Z₋, c.Z₋)
-    append!(c′.poles, c.poles)
     c′.phases[] = c.phases[]
+    copyto!(c′.rotors, c.rotors)
+    if c.lift !== nothing
+        copyto!(c′.lift.G, c.lift.G)
+        copy_rotor_state!(c′.lift.inner, c.lift.inner)
+    end
     c′
 end
-function Base.similar(c::HarmonicCalculator{IT, RT, NT, ST, S, B}, R) where {IT, RT, NT, ST, S, B}
+function Base.similar(
+    c::HarmonicCalculator{IT, RT, NT, ST, S, B, FT, L}, R
+) where {IT, RT, NT, ST, S, B, FT<:Real, L}
     check_rotor_count(c, R)
     check_rotor_type(c, R)
     set_rotors!(
-        allocate_Y(IT, RT, NT, ℓₘₐₓ(c), c.s, Nᵣ(c), Val(B))::HarmonicCalculator{IT, RT, NT, ST, S, B}, R
+        allocate_Y(IT, RT, NT, ℓₘₐₓ(c), c.s, Nᵣ(c), Val(B))::HarmonicCalculator{IT, RT, NT, ST, S, B, FT, L}, R
     )
 end
 
@@ -345,10 +380,9 @@ end
 
 Fill the axis, wedge and output buffers of `c` with the value `v` and mark the current
 results as invalid.  The stored rotor data — `e^{iβ}`, the half angles, the phase powers
-`Z₊`, `Z₋`, the record of the rotors near a pole, and the flag recording whether rotors or
-bare angles were given — is deliberately *not* touched, so `recurrence!(c, ℓ)` still has
-everything it needs, exactly as for [`HCalculator`](@ref).  Useful for testing that no
-uninitialized storage is ever read.
+`Z₊`, `Z₋`, and the flag recording whether rotors or bare angles were given — is
+deliberately *not* touched, so `recurrence!(c, ℓ)` still has everything it needs, exactly as
+for [`HCalculator`](@ref).  Useful for testing that no uninitialized storage is ever read.
 """
 function Base.fill!(c::HarmonicCalculator{IT, RT, NT}, v::Number) where {IT, RT, NT}
     fill!(c.H, real(v))
@@ -362,43 +396,90 @@ end
 
 # The `HCalculator` validates everything before it replaces anything, so if it refuses the
 # angles this calculator is left exactly as it was, and its own state is reset only once the
-# new data are in place.  Angles need no record of the poles, because the recurrence is
-# smooth in the angle there; the record of any earlier rotors is cleared.
-function set_rotors!(c::HarmonicCalculator{IT, RT}, θ::AbstractVector{<:Real}) where {IT, RT<:Real}
+# new data are in place.  A calculator of ₛYₗₘ also keeps the rotors of the points (θ, 0),
+# which are what the rules for automatic differentiation read (see `src/derivatives.jl`).
+#
+# As for a `WignerCalculator`, setting the rotor data is two steps: the rotors are copied by
+# `store_rotors!` or `store_point_rotors!`, and everything else is computed by
+# `set_rotor_data!`, which the extensions for Enzyme and Mooncake declare, for ₛYₗₘ, to have
+# no derivatives.  A calculator that lifts the blocks of another gives it the values of its
+# rotor data, and computes its own generators.
+function set_rotors!(
+    c::HarmonicCalculator{IT, RT, NT, ST, S, B, FT, Nothing}, θ::Union{Real, AbstractVector{<:Real}}
+) where {IT, RT<:Real, NT, ST, S, B, FT<:Real}
+    set_rotor_data!(c, θ)
+    NT <: Complex && store_point_rotors!(c.rotors, θ)
+    c
+end
+function set_rotor_data!(c::HarmonicCalculator{IT}, θ::Union{Real, AbstractVector{<:Real}}) where {IT}
     set_rotors!(c.H, θ)
-    empty!(c.poles)
     c.phases[] = false
+    c.ℓ[] = ℓₘᵢₙ(IT) - 1
+    nothing
+end
+function set_rotors!(
+    c::HarmonicCalculator{IT, RT, NT, ST, S, B, FT, <:Lift}, θ::AbstractVector{<:Real}
+) where {IT, RT<:Real, NT, ST, S, B, FT<:Real}
+    set_rotors!(c.lift.inner, LiftedValues(θ))
+    store_point_rotors!(c.rotors, θ)
+    set_generators!(c.lift, true, c.rotors)
     c.ℓ[] = ℓₘᵢₙ(IT) - 1
     c
 end
-function set_rotors!(c::HarmonicCalculator{IT, RT}, θ::Real) where {IT, RT<:Real}
-    set_rotors!(c.H, θ)
-    empty!(c.poles)
-    c.phases[] = false
-    c.ℓ[] = ℓₘᵢₙ(IT) - 1
-    c
+function set_rotors!(
+    c::HarmonicCalculator{IT, RT, NT, ST, S, B, FT, <:Lift}, θ::Real
+) where {IT, RT<:Real, NT, ST, S, B, FT<:Real}
+    check_single_rotor(c)
+    set_rotors!(c, @SVector [θ])
 end
-function set_rotors!(c::sYlmCalculator{IT, RT}, R::AbstractVector{<:Rotor}) where {IT, RT<:Real}
-    # The loop writes the calculator's 1-based buffers at the input's own indices, under
+
+# The rotors of the points (θ, 0).
+function store_point_rotors!(rotors::AbstractVector{Quaternion{T}}, θ) where {T}
+    @inbounds for i ∈ eachindex(rotors)
+        θᵢ = θ[i]
+        rotors[i] = as_quaternion(T, from_spherical_coordinates(θᵢ, zero(θᵢ)))
+    end
+    rotors
+end
+
+function set_rotors!(
+    c::HarmonicCalculator{IT, RT, Complex{RT}, ST, S, B, FT, Nothing}, R::AbstractVector{<:RotorLike}
+) where {IT, RT<:Real, ST, S, B, FT<:Real}
+    # The loops write the calculator's 1-based buffers at the input's own indices, under
     # `@inbounds`, so an offset vector would write outside them.
     Base.require_one_based_indexing(R)
     check_rotor_length(c, R)
+    store_rotors!(c.rotors, R)
+    set_rotor_data!(c, R)
+    c
+end
+function set_rotor_data!(
+    c::HarmonicCalculator{IT, RT, Complex{RT}}, R::AbstractVector{<:RotorLike}
+) where {IT, RT<:Real}
     # As in `set_rotors!(::HCalculator, …)`: every rotor is acceptable, and the results are
-    # marked invalid before the first one is replaced.  The rotors near a pole are recorded
-    # as they are for 𝔇 (see `src/wigner/poles.jl`).
+    # marked invalid before the first one is replaced.
     c.H.axes_valid[] = false
     c.ℓ[] = ℓₘᵢₙ(IT) - 1
-    empty!(c.poles)
-    r = pole_radius(RT, ℓₘₐₓ(c))
     @inbounds for i ∈ eachindex(R)
-        z₊, z₋ = store_complex_rotor!(c.H, c.poles, i, R[i], r)
+        z₊, z₋ = store_rotor!(c.H, i, R[i])
         complex_powers!(view(c.Z₊, i, :), z₊)
         complex_powers!(view(c.Z₋, i, :), z₋)
     end
     c.phases[] = true
+    nothing
+end
+function set_rotors!(
+    c::HarmonicCalculator{IT, RT, Complex{RT}, ST, S, B, FT, <:Lift}, R::AbstractVector{<:RotorLike}
+) where {IT, RT<:Real, ST, S, B, FT<:Real}
+    Base.require_one_based_indexing(R)
+    check_rotor_length(c, R)
+    store_rotors!(c.rotors, R)
+    set_rotors!(c.lift.inner, LiftedValues(c.rotors))
+    set_generators!(c.lift, true, c.rotors)
+    c.ℓ[] = ℓₘᵢₙ(IT) - 1
     c
 end
-function set_rotors!(c::sYlmCalculator{IT, RT}, R::Rotor) where {IT, RT<:Real}
+function set_rotors!(c::sYlmCalculator{IT, RT}, R::RotorLike) where {IT, RT<:Real}
     check_single_rotor(c)
     set_rotors!(c, @SVector [R])
 end
@@ -406,7 +487,7 @@ end
 # exactly as `set_β!` refuses them for the real `d` matrices.  The check is a method rather
 # than a branch so that the refusal happens at the outermost call, naming the type the
 # caller actually has.
-function set_rotors!(c::sλlmCalculator, R::Union{Rotor, AbstractVector{<:Rotor}})
+function set_rotors!(c::sλlmCalculator, R::Union{RotorLike, AbstractVector{<:RotorLike}})
     throw(ArgumentError(
         "An sλlmCalculator evaluates at (θ, ϕ=0) and stores real numbers, so it cannot take "
         * "a rotor, whose α and γ angles are phases it has nowhere to put.  Give the angle θ "
@@ -420,7 +501,7 @@ end
 function set_rotors!(c::HarmonicCalculator{IT, RT, NT}, R) where {IT, RT<:Real, NT}
     if NT <: Complex
         throw(ArgumentError(
-            "An sYlmCalculator needs rotors (as `Rotor`s) or angles θ::Real — one, or an "
+            "An sYlmCalculator needs rotors (as `Rotor`s or `Quaternion`s) or angles θ::Real — one, or an "
             * "AbstractVector of $(Nᵣ(c)) of either — not $(typeof(R))."
         ))
     else
@@ -442,10 +523,36 @@ function recurrence!(c::HarmonicCalculator, R, ℓ)
 end
 function recurrence!(c::HarmonicCalculator{IT}, ℓ) where {IT}
     let ℓ = calculator_index(IT, ℓ, "ℓ")
-        recurrence!(c.H, ℓ)
-        materialize!(c, ℓ)
+        compute_block!(c, ℓ)
         current_block(c, ℓ)
     end
+end
+
+# Compute the spin rows `is` of the block of degree ℓ into `Y[:, :, j₀ .+ (1:2ℓ+1)]`, where
+# `Y` is the calculator's own block `Yˡ` with `j₀ = 0`, or another array of the same layout,
+# as `sYlm_matrix` gives it; otherwise as for the `WignerCalculator` method, which describes
+# the role of this function.  The destination is an array and an offset, rather than a view,
+# so that the rules for it see an ordinary array.
+compute_block!(c::HarmonicCalculator, ℓ) = compute_block!(c, ℓ, Base.OneTo(nspins(c.s)), c.Yˡ, 0)
+function compute_block!(
+    c::HarmonicCalculator{IT, RT, NT, ST, S, B, FT, Nothing}, ℓ::IT, is, Y, j₀::Int
+) where {IT, RT, NT, ST, S, B, FT<:Real}
+    recurrence!(c.H, ℓ)
+    if Y === c.Yˡ && j₀ == 0
+        materialize!(c, ℓ, is, c.Yˡ)
+    else
+        materialize!(c, ℓ, is, view(Y, :, :, (j₀ + 1):(j₀ + Int(2ℓ) + 1)))
+    end
+    c
+end
+function compute_block!(
+    c::HarmonicCalculator{IT, RT, NT, ST, S, B, FT, <:Lift}, ℓ::IT, is, Y, j₀::Int
+) where {IT, RT, NT, ST, S, B, FT<:Real}
+    inner = c.lift.inner
+    compute_block!(inner, ℓ, is, inner.Yˡ, 0)
+    lift!(c, ℓ, is, Y, j₀)
+    c.ℓ[] = Y === c.Yˡ && j₀ == 0 && length(is) == nspins(c.s) ? ℓ : ℓₘᵢₙ(IT) - 1
+    c
 end
 
 # The block for the ``ℓ`` just computed: one spin weight's row when the calculator serves a
@@ -627,41 +734,10 @@ function materialize!(
                 end
             end
         end
-        if phases
-            materialize_poles!(c, ℓ, is, Yˡ, prefactor)
-        end
     end
     c.ℓ[] = Yˡ === c.Yˡ && length(is) == nspins(c.s) ? ℓ : ℓₘᵢₙ(IT) - 1
     c
 end
-
-# Overwrite the rows `is` of `Yˡ` for every rotor near a pole with ₛYₗₘ = (-1)^s
-# √((2ℓ+1)/4π) conj(𝔇ₘ,₋ₛ), taking 𝔇 from its expansion about that pole (see
-# `src/wigner/poles.jl`) in place of the values that `materialize!` computed from the
-# recurrence.  The phase is the power of z₊ or z₋ that `materialize!` applied to the same
-# element, and the rows with ℓ < |s| are already zero.
-function materialize_poles!(
-    c::HarmonicCalculator{IT, RT, Complex{RT}}, ℓ::IT, is, Yˡ, prefactor::Real
-) where {IT, RT}
-    let Z₊ = c.Z₊, Z₋ = c.Z₋, srange = spins(c)
-        for p ∈ c.poles, i ∈ is
-            s = srange[i]
-            abs(s) > ℓ && continue
-            iᵣ = p.iᵣ
-            sign = harmonic_sign(RT, s)
-            @inbounds for m ∈ -ℓ:ℓ
-                phase = p.north ? conj(zpower(Z₊, iᵣ, m - s)) : conj(zpower(Z₋, iᵣ, m + s))
-                𝔇 = pole_element(ℓ, m, -s, p.north, p.ζ, p.κ, phase)
-                Yˡ[iᵣ, i, Int(m + ℓ) + 1] = prefactor * (sign * conj(𝔇))
-            end
-        end
-    end
-    nothing
-end
-
-# The factor (-1)^s = i^{2s} of ₛYₗₘ: real for integer s, and ±i for half-odd s.
-harmonic_sign(::Type{RT}, s::Integer) where {RT} = convert(RT, minus_one_to_the(s))
-harmonic_sign(::Type{RT}, s::HalfOddInteger) where {RT} = im_power(RT, 2s)
 
 # One element (s, m) of the block, at position (i, j) of `Yˡ`, for every rotor, from the
 # wedge element whose first rotor is at `offset + 1` of `Hp`.
@@ -701,8 +777,7 @@ end
 # not count the block as held (see `materialize!`), and only the row returned may be read.
 function spin_row!(c::HarmonicCalculator{IT}, ℓ, iₛ::Int) where {IT}
     let ℓ = calculator_index(IT, ℓ, "ℓ")
-        recurrence!(c.H, ℓ)
-        materialize!(c, ℓ, iₛ:iₛ)
+        compute_block!(c, ℓ, iₛ:iₛ, c.Yˡ, 0)
         spin_row(c, ℓ, iₛ)
     end
 end
@@ -814,7 +889,7 @@ the values include that phase and are not real multiples of ``\\overline{𝔇}``
 of branch is explained under [`sYlmCalculator`](@ref).
 """
 @index_methods function sYlm(
-    R::Rotor, ℓₘₐₓ::IndexType, s::IndexOrRange;
+    R::RotorLike, ℓₘₐₓ::IndexType, s::IndexOrRange;
     ell_min::IndexType=min_abs_spin(s), ℓₘᵢₙ::IndexType=ell_min
 )
     HarmonicValues(sYlm_array(R, ℓₘₐₓ, s, ℓₘᵢₙ), s, ℓₘᵢₙ, ℓₘₐₓ, 1)
@@ -845,17 +920,17 @@ end
 # them.  Like `D_array`, this is the function to which the rules for automatic
 # differentiation are attached (see `src/derivatives.jl`), because it takes the rotor and
 # returns a plain array.
-sYlm_array(R::Rotor, ℓₘₐₓ::IT, s, ℓₘᵢₙ::IT) where {IT<:IntegerHalf} =
+sYlm_array(R::RotorLike, ℓₘₐₓ::IT, s, ℓₘᵢₙ::IT) where {IT<:IntegerHalf} =
     harmonic_array(sYlmCalculator_helper, R, ℓₘₐₓ, s, ℓₘᵢₙ)
 
 # Many rotors at once.  The storage and the recursion are `sYlm_matrix`'s — that is the
 # efficient path, and there is no reason to have two — so this labels the same array rather
 # than computing it again.  `sYlm_matrix` remains the way to ask for the bare array.
 @index_methods function sYlm(
-    R⃗::AbstractVector{<:Rotor}, ℓₘₐₓ::IndexType, s::IndexOrRange;
+    R⃗::AbstractVector{<:RotorLike}, ℓₘₐₓ::IndexType, s::IndexOrRange;
     ell_min::IndexType=min_abs_spin(s), ℓₘᵢₙ::IndexType=ell_min
 )
-    sYlm_batch_helper(sYlmCalculator_helper, R⃗, ℓₘₐₓ, s, ℓₘᵢₙ)
+    HarmonicValues(sYlm_matrix_array(R⃗, ℓₘₐₓ, s, ℓₘᵢₙ), s, ℓₘᵢₙ, ℓₘₐₓ, length(R⃗))
 end
 function sYlm_batch_helper(
     make, R⃗::AbstractVector, ℓₘₐₓ::IT, s, ℓₘᵢₙ::IT
@@ -915,7 +990,7 @@ weights.
 @index_methods integer_only (
     "Half-integer ℓ goes with half-integer spin weight, so spin weight zero has none; "
     * "`sYlm` and `sYlmCalculator` accept half-integer indices."
-) function Ylm(R::Rotor, ℓₘₐₓ::IndexType; ell_min::IndexType=0, ℓₘᵢₙ::IndexType=ell_min)
+) function Ylm(R::RotorLike, ℓₘₐₓ::IndexType; ell_min::IndexType=0, ℓₘᵢₙ::IndexType=ell_min)
     sYlm(R, ℓₘₐₓ, 0; ℓₘᵢₙ)
 end
 @index_methods integer_only (
@@ -930,7 +1005,7 @@ end
     "Half-integer ℓ goes with half-integer spin weight, so spin weight zero has none; "
     * "`sYlm` and `sYlmCalculator` accept half-integer indices."
 ) function Ylm(
-    R⃗::AbstractVector{<:Rotor}, ℓₘₐₓ::IndexType; ell_min::IndexType=0, ℓₘᵢₙ::IndexType=ell_min
+    R⃗::AbstractVector{<:RotorLike}, ℓₘₐₓ::IndexType; ell_min::IndexType=0, ℓₘᵢₙ::IndexType=ell_min
 )
     sYlm(R⃗, ℓₘₐₓ, 0; ℓₘᵢₙ)
 end
@@ -1016,7 +1091,7 @@ weight or `ℓₘᵢₙ` of the other kind is refused with a message saying so. 
 integer index must be an `Int` (as opposed to `Int16`, for example).
 """
 @index_methods function sYlm!(
-    Y::HarmonicValues, R::Rotor, ℓₘₐₓ::IndexType, s::IndexOrRange;
+    Y::HarmonicValues, R::RotorLike, ℓₘₐₓ::IndexType, s::IndexOrRange;
     ell_min::Union{Nothing, IndexType}=nothing, ℓₘᵢₙ::Union{Nothing, IndexType}=ell_min
 )
     # A `HarmonicValues` is filled by writing through its storage, and its labels do not
@@ -1029,7 +1104,7 @@ integer index must be an `Int` (as opposed to `Int16`, for example).
     Y
 end
 function sYlm!(
-    Y::HarmonicValues, calc::sYlmCalculator, R::Rotor;
+    Y::HarmonicValues, calc::sYlmCalculator, R::RotorLike;
     ell_min=nothing, ℓₘᵢₙ=calculator_ℓₘᵢₙ(calc, ell_min, "ell_min")
 )
     check_harmonic_labels(Y, calc, calc.s, ℓₘᵢₙ)
@@ -1037,7 +1112,7 @@ function sYlm!(
     Y
 end
 @index_methods function sYlm!(
-    Y::HarmonicValues, calc::sYlmCalculator, R::Rotor, s::IndexType;
+    Y::HarmonicValues, calc::sYlmCalculator, R::RotorLike, s::IndexType;
     ell_min::Union{Nothing, IndexType}=nothing, ℓₘᵢₙ::Union{Nothing, IndexType}=ell_min
 )
     check_harmonic_labels(Y, calc, s, ℓₘᵢₙ)
@@ -1091,7 +1166,7 @@ end
 # The flat form without a calculator.  It is `@inline`, like the calculator forms below, for
 # the reason given above `harmonic_values_view`.
 @index_methods @inline function sYlm!(
-    Y::AbstractVecOrMat{<:Complex}, R::Rotor, ℓₘₐₓ::IndexType, s::IndexOrRange;
+    Y::AbstractVecOrMat{<:Complex}, R::RotorLike, ℓₘₐₓ::IndexType, s::IndexOrRange;
     ell_min::IndexType=min_abs_spin(s), ℓₘᵢₙ::IndexType=ell_min
 )
     check_sYlm_args(ℓₘₐₓ, s, ℓₘᵢₙ)
@@ -1104,7 +1179,7 @@ end
 # against the calculator's kind and converted to it here, by `calculator_ℓₘᵢₙ`, and the
 # worker checks it, and the spin weight, against the calculator.
 @inline function sYlm!(
-    Y::AbstractVecOrMat{<:Complex}, calc::sYlmCalculator, R::Rotor;
+    Y::AbstractVecOrMat{<:Complex}, calc::sYlmCalculator, R::RotorLike;
     ell_min=nothing, ℓₘᵢₙ=calculator_ℓₘᵢₙ(calc, ell_min, "ell_min")
 )
     harmonic_values_view(sYlm_helper!(
@@ -1113,7 +1188,7 @@ end
     )...)
 end
 @index_methods @inline function sYlm!(
-    Y::AbstractVecOrMat{<:Complex}, calc::sYlmCalculator, R::Rotor, s::IndexType;
+    Y::AbstractVecOrMat{<:Complex}, calc::sYlmCalculator, R::RotorLike, s::IndexType;
     ell_min::IndexType=abs(s), ℓₘᵢₙ::IndexType=ell_min
 )
     harmonic_values_view(sYlm_helper!(Y, calc, R, s, ℓₘᵢₙ)...)
@@ -1215,8 +1290,7 @@ function fill_sYlm!(
     iₛ = spin_index(calc, s)
     Yˡ = calc.Yˡ
     @inbounds for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ
-        recurrence!(calc.H, ℓ)
-        materialize!(calc, ℓ, iₛ:iₛ)
+        compute_block!(calc, ℓ, iₛ:iₛ, calc.Yˡ, 0)
         i₀ = Yindex(ℓ, -ℓ, ℓₘᵢₙ) - 1
         for j ∈ 1:2ℓ+1
             Y[i₀ + j] = Yˡ[1, iₛ, j]
@@ -1232,8 +1306,7 @@ function fill_sYlm!(
     i₁ = spin_index(calc, first(s))
     Yˡ = calc.Yˡ
     @inbounds for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ
-        recurrence!(calc.H, ℓ)
-        materialize!(calc, ℓ, i₁:(i₁ + n - 1))
+        compute_block!(calc, ℓ, i₁:(i₁ + n - 1), calc.Yˡ, 0)
         i₀ = Yindex(ℓ, -ℓ, ℓₘᵢₙ) - 1
         for j ∈ 1:2ℓ+1
             for i ∈ 1:n
@@ -1316,11 +1389,15 @@ with `ℓₘᵢₙ` defaulting to the smallest ``|s|`` and the values including 
 ordering, and [`Yindex`](@ref) locates them as before.
 """
 @index_methods function sYlm_matrix(
-    R⃗::AbstractVector{<:Rotor}, ℓₘₐₓ::IndexType, s::IndexOrRange;
+    R⃗::AbstractVector{<:RotorLike}, ℓₘₐₓ::IndexType, s::IndexOrRange;
     ell_min::IndexType=min_abs_spin(s), ℓₘᵢₙ::IndexType=ell_min
 )
-    sYlm_matrix_helper(sYlmCalculator_helper, R⃗, ℓₘₐₓ, s, ℓₘᵢₙ)
+    sYlm_matrix_array(R⃗, ℓₘₐₓ, s, ℓₘᵢₙ)
 end
+# The array of `sYlm_matrix`, and of `sYlm` of a vector of rotors, for which the extensions
+# for ChainRulesCore and ReverseDiff define rules, as for `sYlm_array`.
+sYlm_matrix_array(R⃗::AbstractVector, ℓₘₐₓ::IT, s, ℓₘᵢₙ::IT) where {IT<:IntegerHalf} =
+    sYlm_matrix_helper(sYlmCalculator_helper, R⃗, ℓₘₐₓ, s, ℓₘᵢₙ)
 function sYlm_matrix_helper(
     make, R⃗::AbstractVector, ℓₘₐₓ::IT, s, ℓₘᵢₙ::IT
 ) where {IT<:IntegerHalf}
@@ -1341,9 +1418,8 @@ end
 # row per rotor, so the columns of each ℓ are a block of the calculator's own shape.
 function fill_sYlm_matrix!(Y::Array{<:Any, 3}, calc::HarmonicCalculator, ℓₘᵢₙ, ℓₘₐₓ)
     for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ
-        recurrence!(calc.H, ℓ)
         i₀ = Yindex(ℓ, -ℓ, ℓₘᵢₙ) - 1
-        materialize!(calc, ℓ, Base.OneTo(nspins(calc.s)), view(Y, :, :, (i₀ + 1):(i₀ + 2ℓ + 1)))
+        compute_block!(calc, ℓ, Base.OneTo(nspins(calc.s)), Y, i₀)
     end
     Y
 end
