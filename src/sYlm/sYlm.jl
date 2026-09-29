@@ -6,18 +6,23 @@ Calculator producing the spin-weighted spherical harmonics ``{}_sY_{ℓ,m}`` (wh
 one ``ℓ`` at a time.  Use the constructors [`sYlmCalculator`](@ref) and
 [`sλlmCalculator`](@ref).
 
+- `IT` is the index type, `Int` or [`HalfOddInteger`](@ref).
+- `RT` is the real type the calculator works in.
+- `NT` is the number type of the harmonics, `Complex{RT}` or `RT`.
+- `ST` is the storage type of the ``H`` wedge.
+- `S` is the type of the spin weights served: the index type for one spin weight, or a
+  `UnitRange` of it for a range of them.
+- `B` is `true` exactly when the calculator was built from a vector of rotor data, and is
+  what [`isbatched`](@ref) reads.
+
 Internally this wraps an [`HCalculator`](@ref), which runs the recurrence that both subtypes
 use, plus a buffer backing the block for the current ``ℓ``.  The phase tables `Z₊` and `Z₋`
 are empty for the real subtype, which is the whole of the saving: the ``H`` recurrence is
 real, and it is only the ``e^{-i(mα - sγ)}`` factor that ever made the result complex.
 
-`IT` is the index type (`Int` or [`HalfOddInteger`](@ref)) and `RT` the real type the
-calculator works in.  Three further parameters are lifted into the type: `ST`, the storage
-type of the ``H`` wedge; `S`, which records whether the calculator serves one spin weight
-(when it is the index type) or a range of them (when it is a `UnitRange`); and `B`, which is
-`true` exactly when the calculator was built from a vector of rotor data and is what
-[`isbatched`](@ref) reads.  Because `S` and `B` decide the shape of the block, the type of
-the block is known at compile time, and a loop over the blocks is inferrable.
+
+Because `S` and `B` decide the shape of the block, the type of the block is known at compile
+time, and a loop over the blocks is inferrable.
 """
 struct HarmonicCalculator{IT, RT<:Real, NT<:Union{RT, Complex{RT}}, ST, S, B}
     # As for [`WignerCalculator`](@ref), the last parameter says whether the calculator was

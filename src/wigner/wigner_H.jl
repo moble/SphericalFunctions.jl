@@ -43,6 +43,9 @@ single expression below serves both index types.
 
 A compact, real-valued workspace holding the ``Hˡ`` matrix of one ``ℓ`` for `Nᵣ` rotors at
 once.
+- `IT` is the index type, `Int` or [`HalfOddInteger`](@ref).
+- `RT` is the real type of the elements.
+- `ST` is the type of the flat storage, a vector of `RT`.
 
 The ``Hˡ`` matrix is critical to efficient and stable computation of the Wigner ``D`` and
 ``d`` matrices — in fact, it essentially *is* the ``d`` matrix with signs adjusted to avoid
@@ -411,6 +414,10 @@ end
 
 The `HAxis` type represents the ``m'=0``, ``m≥0`` axis of the `Hˡ` matrix used in
 calculation of the Wigner `D` and `d` matrices.
+- `IT` is the index type, `Int` or [`HalfOddInteger`](@ref).  The two axes inside an
+  [`HCalculator`](@ref) are always `Int`, even for half-integer ``ℓ``, because they hold the
+  axis of the integer order ``j = ℓ - 1/2``.
+- `RT` is the real type of the elements.
 
 As with [`HWedge`](@ref), the data is stored as a 1-dimensional vector, though it can be
 indexed as if it were a two-dimensional array, with the first dimension indexing `Nᵣ`

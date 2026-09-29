@@ -3,6 +3,11 @@
 
 Engine for the Gumerov–Duraiswami recurrences, computing the ``H`` wedge (see [`HWedge`](@ref))
 for one value of ``ℓ`` at a time, for `Nᵣ` rotors simultaneously.
+    
+The parameters of the type `HCalculator{IT, RT, ST}` are as follows:
+- `IT` is the index type, `Int` or [`HalfOddInteger`](@ref).
+- `RT` is the real type the calculator works in.
+- `ST` is the storage type of the ``H`` wedge.
 
 The ``H`` matrix depends on the rotor only through ``β``, so the calculator stores one phase
 ``e^{iβ}`` per rotor.  The first argument supplies them: an angle ``β``, a phase ``e^{iβ}``, a

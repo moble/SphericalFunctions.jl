@@ -87,6 +87,8 @@ Base.eltype(::Type{<:AbstractWignerMatrix{IT, NT, ST}}) where {IT, NT, ST} = NT
 Base.size(w::AbstractWignerMatrix{IT, NT, ST}) where {IT, NT, ST} = size(parent(w))
 Base.length(w::AbstractWignerMatrix{IT, NT, ST}) where {IT, NT, ST} = length(parent(w))
 
+# The range of one natural index, as `axes` of a block reports it.  `T` is the index type,
+# `Int` or `HalfOddInteger`.
 struct WignerRange{T<:IntegerHalf} <: AbstractUnitRange{T}
     start::T
     stop::T
@@ -396,6 +398,9 @@ end
 
 General concrete subtype of [`AbstractWignerMatrix`](@ref) for Wigner rotation matrices,
 which can include D-matrices (when `NT` is complex) or d-matrices (when `NT` is real).
+- `IT` is the index type, `Int` or [`HalfOddInteger`](@ref).
+- `NT` is the number type of the elements.
+- `ST` is the type of the storage, an `AbstractMatrix{NT}`.
 
 In general, the storage type `ST` can be any `AbstractMatrix{NT}`, but should be 1-based.
 That is, the storage should generally be either a `Matrix` or a view.  That matrix will
@@ -572,6 +577,9 @@ end
 `Nᵣ` Wigner matrices of one ``ℓ``, stored together and indexed as `w[iᵣ, m′, m]`.  This is
 what [`recurrence!`](@ref) returns for a calculator built from a vector of rotor data, of
 any length, for either kind of index.
+- `IT` is the index type, `Int` or [`HalfOddInteger`](@ref).
+- `NT` is the number type of the elements.
+- `ST` is the type of the storage, a 3-dimensional array of `NT`.
 
 The storage `parent(w)` is 1-based and 3-dimensional, ordered `[iᵣ, m′, m]`, exactly as in
 the calculator, and `Nᵣ` is its first extent.  The constructor takes the indices and the
@@ -695,6 +703,9 @@ Base.Matrix(w::WignerMatrixBatch) = throw(ArgumentError(
 
 One harmonic degree's worth of values, indexed naturally by the order ``m``: `v[m]` for
 ``mₘᵢₙ ≤ m ≤ mₘₐₓ``.  This is the 1-dimensional sibling of [`WignerMatrix`](@ref).
+- `IT` is the index type, `Int` or [`HalfOddInteger`](@ref).
+- `NT` is the number type of the elements.
+- `ST` is the type of the storage, an `AbstractVector{NT}`.
 
 The name is deliberately neutral, because the same shape serves three things: a block of
 spin-weighted harmonics at one ``ℓ``, from [`sYlm`](@ref) or [`sYlmCalculator`](@ref)'s
@@ -832,6 +843,9 @@ end
 the 1-dimensional sibling of [`WignerMatrixBatch`](@ref), and is what a batched
 [`sYlmCalculator`](@ref) built for one spin weight yields, for either kind of index.
 `v[iᵣ]` gives the [`DegreeBlock`](@ref) view of one rotor's row.
+- `IT` is the index type, `Int` or [`HalfOddInteger`](@ref).
+- `NT` is the number type of the elements.
+- `ST` is the type of the storage, an `AbstractMatrix{NT}`.
 
 The storage `parent(v)` is 1-based and 2-dimensional, ordered `[iᵣ, m]`, and `Nᵣ` is its
 first extent.  The constructor, `DegreeBlockBatch(parent, ℓ; mₘₐₓ=ℓ, mₘᵢₙ=-mₘₐₓ)`, takes the
@@ -943,6 +957,9 @@ The values of a single ``ℓ`` for a range of spin weights, indexed naturally by
 `b[s, m]` for ``sₘᵢₙ ≤ s ≤ sₘₐₓ`` and ``mₘᵢₙ ≤ m ≤ mₘₐₓ``, and `b[s, :]` for one whole row
 as a [`DegreeBlock`](@ref).  This is what an [`sYlmCalculator`](@ref) built for a range of
 spin weights yields for each ``ℓ``.
+- `IT` is the index type, `Int` or [`HalfOddInteger`](@ref).
+- `NT` is the number type of the elements.
+- `ST` is the type of the storage, an `AbstractMatrix{NT}`.
 
 The storage `parent(b)` is 1-based and 2-dimensional, ordered `[s, m]`.  The constructor
 
@@ -1094,6 +1111,9 @@ end
 This is what a batched [`sYlmCalculator`](@ref) yields when it was built for a range of spin
 weights.  `b[iᵣ]` gives the `SpinMatrix` view of one rotor's block, which is then indexed
 naturally as `b[iᵣ][s, m]`.
+- `IT` is the index type, `Int` or [`HalfOddInteger`](@ref).
+- `NT` is the number type of the elements.
+- `ST` is the type of the storage, a 3-dimensional array of `NT`.
 
 The storage `parent(b)` is 1-based and 3-dimensional, ordered `[iᵣ, s, m]`, exactly as in
 the calculator, and `Nᵣ` is its first extent.  The constructor, `SpinMatrixBatch(parent, ℓ;
@@ -1247,6 +1267,8 @@ The blocks of a Wigner matrix for every ``ℓ`` from `ℓₘᵢₙ` to `ℓₘ�
 `s[ℓ]` is the block of degree `ℓ`, and `s[ℓ][m′, m]` an element of it.  For a half-integer
 series `ℓ` may be written as a [`HalfOddInteger`](@ref) or as a `Rational{Int}` with
 denominator 2, and for an integer series it is an `Int`.
+- `IT` is the index type, `Int` or [`HalfOddInteger`](@ref).
+- `VT` is the type of the vector of blocks.
 
 This is what [`D`](@ref) and [`d`](@ref) return, for either kind of index.  Like a
 calculator, it iterates as `ℓ => block` pairs, so that `for (ℓ, 𝔇ˡ) ∈ D(R, ℓₘₐₓ)` reads

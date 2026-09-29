@@ -104,7 +104,7 @@ Base.pairs(c::IterableCalculator) = c
 
 # The blocks alone, as `values` of a `WignerSeries` gives them.  They are the same views of the
 # calculator's storage that iteration yields, so `collect` of this copies each one, as
-# `collect(calc)` does; see its docstring.
+# `collect(calc)` does; see its docstring.  `C` is the type of the calculator.
 struct CalculatorValues{C<:IterableCalculator}
     calculator::C
 end

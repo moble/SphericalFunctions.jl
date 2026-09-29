@@ -190,6 +190,10 @@ Construct an iterator to compute powers of the complex phase factor ``z``, which
 magnitude approximately 1.  The iterator will return the complex number ``zᵐ`` for each
 integer ``m = 0, 1, 2, \ldots``.
 
+The parameters of the iterator's type, `ComplexPowers{T, RT}`, are as follows:
+- `T` is the complex type of the powers.
+- `RT` is the real type of their components.
+
 A real `z` or one with integer components is converted to a complex floating-point number
 first, and a `z` whose magnitude is not approximately 1 is refused with a `DomainError`.
 

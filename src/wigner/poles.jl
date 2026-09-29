@@ -90,6 +90,7 @@ end
 # A rotor at or near a pole, as a calculator of 𝔇 or of the harmonics records it: its index
 # among the calculator's rotors, which pole it is near, the parameter ζ that vanishes at
 # that pole, and the modulus κ of the other.
+# `RT` is the real type the calculator works in.
 struct PoleRotor{RT<:Real}
     iᵣ::Int
     north::Bool  # near β = 0, where ζ = ρ; otherwise near β = π, where ζ = σ

@@ -1,7 +1,8 @@
 # One group of modes solved together: the modes of a set of m values that alias into one
 # another (a strongly connected component of the graph described in `minimal_blocks`), and
 # the Fourier coefficients — `(ring, index)` pairs, with index `mod(m, Nϕ)+1` — that
-# determine them.  There are exactly as many coefficients as modes.
+# determine them.  There are exactly as many coefficients as modes.  `T` is the number type
+# of the LU decomposition of their system.
 struct MinimalBlock{T}
     modes::Vector{Int}
     coefficients::Vector{Tuple{Int, Int}}
@@ -15,6 +16,11 @@ Construct an ``s``-SHT object that uses the optimal-dimensionality algorithm des
 [Elahi et al.](@cite Elahi_2018), which samples the function at exactly as many points as
 there are modes.  This may also be achieved by calling the main [`SSHT`](@ref) function with
 the same keywords, along with `method="Minimal"`.
+
+The parameters of the type `SSHTMinimal{T, Inplace, P, BP}` are as follows:
+- `T` is the real type the transform works in.
+- `Inplace` is `true` when the transforms act in place, as set by the `inplace` keyword.
+- `P` and `BP` are the types of the forward and backward FFT plans.
 
 !!! warning
     This method is experimental and not very accurate.  The round-trip error grows

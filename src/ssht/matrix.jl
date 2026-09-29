@@ -6,6 +6,12 @@ Construct an ``s``-SHT object that uses the "Matrix" method.  The dense matrix o
 matrix-vector product and analysis is a linear solve using the given `decomposition` of that
 matrix.  Also see [`SSHT`](@ref) for general information about how to use these objects.
 
+The parameters of the type `SSHTMatrix{T, Inplace, Tdecomp, IT}` are as follows:
+- `T` is the real type the transform works in.
+- `Inplace` is `true` when analysis acts in place, as set by the `inplace` keyword.
+- `Tdecomp` is the type of the `decomposition` of the matrix.
+- `IT` is the index type, `Int` or [`HalfOddInteger`](@ref).
+
 By default, this uses precisely optimal sampling — meaning that *the number of points* on
 which the function is evaluated (the length of `Rθϕ`), *is equal to the number of modes*
 ``(ℓₘₐₓ+1)²``.  However, it is equally possible to evaluate on *more* points than there are

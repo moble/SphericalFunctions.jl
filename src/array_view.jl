@@ -190,6 +190,8 @@ end
 # vector of factors there.
 
 # The numbers of a container, as broadcasting sees them, with the container for its labels.
+# `T` is the number type, `N` the number of dimensions, `A` the type of the array of
+# numbers, and `C` that of the container.
 struct LabelledArray{T, N, A<:AbstractArray{T, N}, C} <: AbstractArray{T, N}
     data::A
     container::C
@@ -242,6 +244,7 @@ end
     )
 end
 
+# The broadcast style of a `LabelledArray`; `N` is the number of dimensions.
 struct LabelledStyle{N} <: Broadcast.AbstractArrayStyle{N} end
 LabelledStyle{N}(::Val{M}) where {N, M} = LabelledStyle{M}()
 Base.BroadcastStyle(::Type{<:LabelledArray{T, N}}) where {T, N} = LabelledStyle{N}()

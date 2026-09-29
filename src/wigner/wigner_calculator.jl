@@ -13,18 +13,23 @@
 Calculator producing Wigner's ``𝔇`` matrices (when `NT` is `Complex{RT}`) or ``d`` matrices
 (when `NT` is `RT`) for `Nᵣ` rotors at a time, one ``ℓ`` at a time.  Use the constructors
 [`DCalculator`](@ref) and [`dCalculator`](@ref).
+The type parameters are as follows:
+- `IT` is the index type, `Int` or [`HalfOddInteger`](@ref).
+- `RT` is the real type the calculator works in.
+- `NT` is the number type of the matrix elements, `Complex{RT}` or `RT`.
+- `ST` is the storage type of the ``H`` wedge.
+- `B` is `true` exactly when the calculator was built from a vector of rotor data, of any
+  length, and is what [`isbatched`](@ref) reads.
 
-Internally this wraps a [`HCalculator`](@ref), which does the actual recurrence, plus a
+Internally this wraps an [`HCalculator`](@ref), which does the actual recurrence, plus a
 buffer into which the requested block of the matrix is written for the current ``ℓ``; that
 block is what [`recurrence!`](@ref) returns, as a [`WignerMatrix`](@ref) indexed naturally
 by `[m′, m]`, or a [`WignerMatrixBatch`](@ref) indexed by `[iᵣ, m′, m]` when the calculator
 was built from a vector of rotor data.
 
-`IT` is the index type (`Int` or [`HalfOddInteger`](@ref)), `RT` the real type the
-calculator works in, and `NT` the type of the matrix elements.  `ST` is the storage type of
-the ``H`` wedge.  `B` is `true` exactly when the calculator was built from a vector of rotor
-data, of any length, and is what [`isbatched`](@ref) reads; because it is a type parameter,
-the type of the block is known at compile time, and a loop over the blocks is inferrable.
+
+Because `B` is a type parameter, the type of the block is known at compile time, and a loop
+over the blocks is inferrable.
 """
 struct WignerCalculator{IT, RT<:Real, NT<:Union{RT, Complex{RT}}, ST, B}
     H::HCalculator{IT, RT, ST}

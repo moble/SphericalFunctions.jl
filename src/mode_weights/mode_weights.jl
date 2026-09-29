@@ -7,7 +7,11 @@
 
 Vector of mode weights ``f_{ℓ,m}`` of a spin-weighted function ``f = \\sum_{ℓ,m} f_{ℓ,m}\\,
 {}_sY_{ℓ,m}``, stored in the canonical ordering `[f(ℓ, m) for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ for m ∈ -ℓ:ℓ]`
-(see [`Yindex`](@ref)), together with the spin weight `s` and the range of ``ℓ``.
+(see [`Yindex`](@ref)), together with the spin weight `s` and the range of ``ℓ``.  The
+parameters of the type `ModeWeights{T, IT, V}` are as follows:
+- `T` is the number type of the weights.
+- `IT` is the index type, `Int` or [`HalfOddInteger`](@ref).
+- `V` is the type of the storage, a vector of `T`.
 
 A `ModeWeights` is an [`AbstractModeContainer`](@ref
 SphericalFunctions.AbstractModeContainer), not an `AbstractVector`; [`array_view`](@ref)

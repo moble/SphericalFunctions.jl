@@ -5,6 +5,13 @@ Construct an ``s``-SHT object that uses the ring-based algorithm described by [R
 Seljebotn](@cite Reinecke_2013).  This may also be achieved by calling the main
 [`SSHT`](@ref) function with the same keywords, along with `method="RS"` (the default).
 
+The parameters of the type `SSHTRS{T, ST, P, BP, B, IT}` are as follows:
+- `T` is the real type the transform works in.
+- `ST` is the storage type of the ``H`` wedge in the transform's [`sλlmCalculator`](@ref).
+- `P` and `BP` are the types of the forward and backward FFT plans.
+- `B` is `true` when that calculator is batched (see [`isbatched`](@ref)).
+- `IT` is the index type, `Int` or [`HalfOddInteger`](@ref).
+
 The spin-weighted spherical harmonics are evaluated on a series of "rings" at constant
 colatitude, whose locations are given by the `θ` keyword argument, and the analysis
 integrates over ``θ`` with the `quadrature_weights` of the rule that placed those rings.

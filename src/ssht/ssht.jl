@@ -2,7 +2,8 @@
     SSHT{T}
 
 Supertype of the spin-weighted spherical-harmonic transforms.  See [`SSHT`](@ref) (the
-constructor), [`SSHTMatrix`](@ref), [`SSHTRS`](@ref) and [`SSHTMinimal`](@ref).
+constructor), [`SSHTMatrix`](@ref), [`SSHTRS`](@ref) and [`SSHTMinimal`](@ref).  `T` is the
+real type the transform works in.
 """
 abstract type SSHT{T<:Real} end
 
@@ -237,6 +238,9 @@ end
 #
 # The fields that describe the plans come first, and are what the plans are remade from when
 # a transform is deserialized (see "serialization.jl").
+#
+# `T` is the real type the transform works in, and `P` and `BP` are the types of the forward
+# and backward plans.
 struct RingPlans{T<:Real, P, BP}
     sizes::Vector{Int}  # the distinct numbers of points on a ring
     index::Vector{Int}  # for each ring, the index of its number of points in `sizes`

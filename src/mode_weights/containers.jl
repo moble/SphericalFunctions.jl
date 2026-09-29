@@ -17,8 +17,9 @@
     AbstractModeContainer{T, IT}
 
 Supertype of the containers stored in the canonical mode ordering — [`ModeWeights`](@ref) and
-[`HarmonicValues`](@ref).  `T` is the number type and `IT` the index type (`Int` or
-[`HalfOddInteger`](@ref)).
+[`HarmonicValues`](@ref).
+- `T` is the number type.
+- `IT` is the index type, `Int` or [`HalfOddInteger`](@ref).
 
 The supertype promises only what the layout determines: the labels `ℓₘᵢₙ(c)` and `ℓₘₐₓ(c)`,
 [`ishalfinteger`](@ref), the block of one ``ℓ`` as `c[ℓ, :]`, and the flat storage as
@@ -81,6 +82,12 @@ indexed first by ``ℓ`` and then naturally within the block:
 | many rotors, one spin weight | `[iᵣ, m]` |
 | one rotor, a range of spin weights | `[s, m]` |
 | many rotors, a range of spin weights | `[iᵣ, s, m]` |
+
+The parameters of `HarmonicValues{T, IT, S, A}` are as follows:
+- `T` is the number type.
+- `IT` is the index type, `Int` or [`HalfOddInteger`](@ref).
+- `S` is the type of the spin weights: `IT` for one, or a range of `IT` for several.
+- `A` is the type of the storage, an array of `T`.
 
 This is what [`sYlm`](@ref) returns.  The blocks are [`DegreeBlock`](@ref),
 [`DegreeBlockBatch`](@ref), [`SpinMatrix`](@ref) and [`SpinMatrixBatch`](@ref) respectively,
