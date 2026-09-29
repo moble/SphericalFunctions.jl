@@ -239,10 +239,10 @@ const DCalculator{IT, RT, ST, B} = WignerCalculator{IT, RT, Complex{RT}, ST, B} 
 
 Calculator for Wigner's real ``d^{(ℓ)}_{m′,m}(β)`` matrices, for ``ℓ ≤ ℓₘₐₓ``, with elements
 of the angle's own floating-point type.  The first argument may be the angle ``β``, the
-phase ``e^{iβ}``, or a `Rotor`, or an `AbstractVector` of `Nᵣ` of any one of those; later
-values are supplied with [`set_β!`](@ref).  Otherwise this behaves exactly like
-[`DCalculator`](@ref) — including iteration, the ASCII spellings of the keywords, and
-half-integer ``ℓ`` for a `Rational` or [`HalfOddInteger`](@ref) `ℓₘₐₓ`.
+phase ``e^{iβ}``, or a `Rotor` or other `Quaternion`, or an `AbstractVector` of `Nᵣ` of any
+one of those; later values are supplied with [`set_β!`](@ref).  Otherwise this behaves
+exactly like [`DCalculator`](@ref) — including iteration, the ASCII spellings of the
+keywords, and half-integer ``ℓ`` for a `Rational` or [`HalfOddInteger`](@ref) `ℓₘₐₓ`.
 
 A `Rotor` contributes the ``β ∈ [0, π]`` of its canonical Euler decomposition.  If the rotor
 was built from a ``β`` outside that range, that ``β`` is folded into its ``α`` and ``γ``,
@@ -762,9 +762,9 @@ end
     d(β, ℓₘₐₓ; m′ₘₐₓ=ℓₘₐₓ, m′ₘᵢₙ=-m′ₘₐₓ, mₘₐₓ=ℓₘₐₓ, mₘᵢₙ=-mₘₐₓ)
 
 Wigner's real ``d^{(ℓ)}_{m′,m}(β)`` matrices for all ``ℓ ≤ ℓₘₐₓ``, for the single angle `β`,
-which may also be given as the phase ``e^{iβ}`` or as a `Rotor`.  The result is indexed as
-`d(β, ℓₘₐₓ)[ℓ][m′, m]`.  See [`D`](@ref) for details, including the keyword arguments and
-their ASCII spellings; this function is the real, ``β``-only analogue.
+which may also be given as the phase ``e^{iβ}`` or as a `Rotor` or other `Quaternion`.  The
+result is indexed as `d(β, ℓₘₐₓ)[ℓ][m′, m]`.  See [`D`](@ref) for details, including the
+keyword arguments and their ASCII spellings; this function is the real, ``β``-only analogue.
 
 A `Rotor` contributes the ``β ∈ [0, π]`` of its canonical Euler decomposition, as described
 under [`dCalculator`](@ref), so `d(R, ℓₘₐₓ)` equals `d(β, ℓₘₐₓ)` for the angle ``β`` used to
@@ -813,8 +813,8 @@ function D_series(
 end
 
 # `D` and `d` take one rotor.  A vector of them is what a calculator is for, and is refused
-# with that advice rather than with a bare `MethodError`; so is a quaternion that is not a
-# `Rotor`, with the advice of `not_a_rotor`.
+# with that advice rather than with a bare `MethodError`; so is a `QuatVec`, which denotes
+# a vector rather than a rotation, with the advice of `not_a_rotor`.
 function D(R⃗::AbstractVector{<:RotorLike}, ℓₘₐₓ; kwargs...)
     throw(ArgumentError(
         "`D` takes a single rotor; for a vector of $(length(R⃗)) "

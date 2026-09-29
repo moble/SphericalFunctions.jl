@@ -20,7 +20,7 @@ calculator was holding are discarded, so the next step of the recurrence starts 
 handles, which is required when the calculator was built from a vector of rotors; a vector
 of one rotor is accepted by a calculator built from a single one.  A `Quaternion` may also
 stand in for a rotor, as the rotation of its normalization; a `QuatVec` is refused, as
-[`not_a_rotor`](@ref) explains.  The reason we *must* accept `Quaternion`s is that they some
+[`not_a_rotor`](@ref) explains.  The reason we *must* accept `Quaternion`s is that some
 automatic-differentiation packages require the tangent of a type to have the same type; the
 tangent to the space of `Rotor`s is not a `Rotor`, but a `Quaternion`, so we must accept
 `Quaternion`s to begin with.  The number of rotors is fixed at construction and cannot be
@@ -99,13 +99,13 @@ end
 Replace the rotor data of `calc` with the angle `β`, and return `calc`.  Any results the
 calculator was holding are discarded.  `set_beta!` is an ASCII alias of the same function.
 
-`β` may be given as the angle itself, as the phase ``e^{iβ}``, or as a `Rotor`, of which
-only the ``β`` Euler angle is kept — the ``d`` matrices and the ``H`` wedge depend on
-nothing else.  A `Rotor` contributes the ``β ∈ [0, π]`` of its canonical Euler
-decomposition; if the rotor was built from a ``β`` outside that range, that ``β`` is folded
-into its ``α`` and ``γ``, which are discarded here.  For a calculator built from a vector,
-pass an `AbstractVector` of exactly as many of any one of those forms; a vector of one is
-accepted by a calculator built from a single value.
+`β` may be given as the angle itself, as the phase ``e^{iβ}``, or as a `Rotor` or other
+`Quaternion`, of which only the ``β`` Euler angle is kept — the ``d`` matrices and the
+``H`` wedge depend on nothing else.  A `Rotor` contributes the ``β ∈ [0, π]`` of its
+canonical Euler decomposition; if the rotor was built from a ``β`` outside that range, that
+``β`` is folded into its ``α`` and ``γ``, which are discarded here.  For a calculator built
+from a vector, pass an `AbstractVector` of exactly as many of any one of those forms; a
+vector of one is accepted by a calculator built from a single value.
 
 This applies to [`dCalculator`](@ref) and [`HCalculator`](@ref).  Wigner's ``𝔇`` matrices
 and the spin-weighted harmonics need the whole rotor, so their calculators take

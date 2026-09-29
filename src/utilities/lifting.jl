@@ -12,12 +12,12 @@
 # blocks of a calculator of that type.  `float_type` is the type at the bottom of that
 # chain, in which the recurrence finally runs.
 value_type(::Type{T}) where {T<:Real} = T
+float_type(::Type{T}) where {T<:Real} = value_type(T) === T ? T : float_type(value_type(T))
 
 # The real type in which a calculator works, given the float type `T` of its rotor data's
 # components: `T` itself, unless a tool's numbers come in several types that a calculator
 # cannot store together, in which case the tool's extension names the one it uses.
 working_type(::Type{T}) where {T<:Real} = T
-float_type(::Type{T}) where {T<:Real} = value_type(T) === T ? T : float_type(value_type(T))
 
 # The value of a number that holds derivatives, and the number itself otherwise; the
 # rotation of those values; the number of directions in which a number of type `T` holds

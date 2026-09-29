@@ -322,6 +322,34 @@ end
 end
 
 
+@testitem "Derivatives: ReverseDiff's angles give one calculator type" setup=[DerivativeTools] begin
+    import ReverseDiff
+    import SphericalFunctions: rotor_basetype, set_θ!
+    # ReverseDiff records in the type of each of its numbers where the number came from, but
+    # a calculator stores its rotor data in one type, that of an element of a tracked
+    # `Vector`.  So an angle that is an input of the tape and one computed on it, each alone
+    # or in a vector, give a calculator of that one type, and a calculator built from one of
+    # them accepts any other through `set_θ!`.
+    x = ReverseDiff.track([0.3, 1.1])
+    types = (
+        rotor_basetype(x[1]), rotor_basetype(2x[1]), rotor_basetype([x[1]]),
+        rotor_basetype([2x[1]])
+    )
+    @test all(==(first(types)), types)
+    total(c) = sum(Y -> sum(z -> real(z) + 2imag(z), array_view(Y)), values(c))
+    function f(x)
+        c = sYlmCalculator(2x[1], 4, -1)
+        s = total(c)
+        for θ ∈ (x[2], 3x[2])
+            set_θ!(c, θ)
+            s += total(c)
+        end
+        s
+    end
+    @test ReverseDiff.gradient(f, [0.3, 1.1]) ≈ ForwardDiff.gradient(f, [0.3, 1.1])
+end
+
+
 @testitem "Derivatives: ChainRules rules" setup=[DerivativeTools] begin
     import ChainRulesCore
     using ChainRulesCore: NoTangent, ZeroTangent, Tangent, @thunk

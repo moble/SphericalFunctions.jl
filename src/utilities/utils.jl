@@ -79,7 +79,7 @@ abstract, such as a `Complex{Real}` or a `Vector{Rotor{Real}}`, or a vector whos
 type is abstract or a `Union`, is refused with an `ArgumentError` rather than guessed at.
 """
 rotor_basetype(R::RotorLike) = concrete_float(Quaternionic.basetype(R), R)
-rotor_basetype(β::Real) = float(typeof(β))
+rotor_basetype(β::Real) = concrete_float(typeof(β), β)
 rotor_basetype(z::Complex{T}) where {T<:Real} = concrete_float(T, z)
 rotor_basetype(R::AbstractVector{<:Rotor{T}}) where {T<:Real} = concrete_float(T, R)
 rotor_basetype(R::AbstractVector{<:Quaternionic.Quaternion{T}}) where {T<:Real} = concrete_float(T, R)

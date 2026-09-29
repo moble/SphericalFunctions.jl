@@ -10,14 +10,15 @@ The parameters of the type `HCalculator{IT, RT, ST}` are as follows:
 - `ST` is the storage type of the ``H`` wedge.
 
 The ``H`` matrix depends on the rotor only through ``β``, so the calculator stores one phase
-``e^{iβ}`` per rotor.  The first argument supplies them: an angle ``β``, a phase ``e^{iβ}``, a
-`Rotor`, or an `AbstractVector` of any one of those — and it is the vector case that makes the
-calculator handle `Nᵣ = length(β)` rotors at once.  A `Rotor` contributes the ``β ∈ [0, π]``
-of its canonical Euler decomposition; if the rotor was built from a ``β`` outside that range,
-that ``β`` is folded into its ``α`` and ``γ``, which this calculator does not see.  Later values are
-supplied by [`set_β!`](@ref).  The wedge is stored for ``|m′| ≤ m′ₘₐₓ`` and ``m ≥ |m′|``;
-every other element of the ``H`` matrix is obtained by symmetry through
-[`wedge_value`](@ref).  The keyword may also be spelled `mp_max`.
+``e^{iβ}`` per rotor.  The first argument supplies them: an angle ``β``, a phase ``e^{iβ}``,
+a `Rotor` or `Quaternion`, or an `AbstractVector` of any one of those — and it is the vector
+case that makes the calculator handle `Nᵣ = length(β)` rotors at once.  A `Rotor`
+contributes the ``β ∈ [0, π]`` of its canonical Euler decomposition; if the rotor was built
+from a ``β`` outside that range, that ``β`` is folded into its ``α`` and ``γ``, which this
+calculator does not see.  Later values are supplied by [`set_β!`](@ref).  The wedge is
+stored for ``|m′| ≤ m′ₘₐₓ`` and ``m ≥ |m′|``; every other element of the ``H`` matrix is
+obtained by symmetry through [`wedge_value`](@ref).  The keyword may also be spelled
+`mp_max`.
 
 The element type is the rotor data's own: an angle given as a `Float32` gives a `Float32`
 calculator, and there is no argument to override that.  To compute in another type, convert
@@ -504,10 +505,9 @@ Compute the quantities for index ``ℓ`` in the calculator `calc`, and return th
 them.
 
 In the first form, the rotor data `R` is stored in the calculator first.  For a calculator
-with `Nᵣ` rotors, `R` is an `AbstractVector` of length `Nᵣ`; for `Nᵣ = 1` a single element is
-also accepted.  The elements may be `Rotor`s, or — for
-quantities that depend only on ``β``, such as ``d`` and ``H`` — the angle ``β`` or the phase
-``e^{iβ}``.
+with `Nᵣ` rotors, `R` is an `AbstractVector` of length `Nᵣ`; for `Nᵣ = 1` a single element
+is also accepted.  The elements may be `Rotor`s or `Quaternion`s, or — for quantities that
+depend only on ``β``, such as ``d`` and ``H`` — the angle ``β`` or the phase ``e^{iβ}``.
 
 In the second form, the rotor data from the previous call is reused.  Successive calls with
 ``ℓ, ℓ+1, ℓ+2, …`` are the cheap path: each costs ``O(N_r ℓ^2)``.  Requesting a smaller ``ℓ``
