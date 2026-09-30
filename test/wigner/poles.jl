@@ -1,11 +1,12 @@
 # Tests of 𝔇 and the harmonics at and near the poles β = 0 and β = π, where the
 # recurrence's split of the rotor into half angles and phases is singular or
 # ill-conditioned.  The values are accurate there, and the derivatives come from the rules
-# for automatic differentiation, which form them from the values (see `src/derivatives.jl`),
-# so they are accurate there too.  The references are the full polynomial `D_polynomial` of
-# the `ExplicitWignerMatrices` module, evaluated in `BigFloat`, which shares no code with
-# the package; and, at large ℓ, where the polynomial's coefficients overflow, the product
-# 𝔇(R) = 𝔇(R Q⁻¹) 𝔇(Q) with Q = 1 + 𝐣, which moves the pole to β = π/2.
+# for automatic differentiation, which form them from the values (see
+# `src/derivatives/kernels.jl`), so they are accurate there too.  The references are the
+# full polynomial `D_polynomial` of the `ExplicitWignerMatrices` module, evaluated in
+# `BigFloat`, which shares no code with the package; and, at large ℓ, where the polynomial's
+# coefficients overflow, the product 𝔇(R) = 𝔇(R Q⁻¹) 𝔇(Q) with Q = 1 + 𝐣, which moves the
+# pole to β = π/2.
 #
 # The tolerances all follow one error model: ε times the size √(ℓ+1) (ℓ+1)ᵏ of a k-th
 # derivative, at any distance from a pole.  A single constant multiplies that model for

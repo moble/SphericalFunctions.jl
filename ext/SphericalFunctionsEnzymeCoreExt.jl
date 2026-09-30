@@ -1,9 +1,9 @@
 module SphericalFunctionsEnzymeCoreExt
 
 # Enzyme's rules for the calculators of 𝔇 and of the harmonics, from the generators, as
-# described in `src/derivatives.jl`.  They are defined in EnzymeCore, which is all that a
-# rule needs.  `D`, `sYlm`, and `sYlm_matrix` are computed by calculators, which Enzyme
-# follows, so these rules serve them too.
+# described in `src/derivatives/kernels.jl`.  They are defined in EnzymeCore, which is all
+# that a rule needs.  `D`, `sYlm`, and `sYlm_matrix` are computed by calculators, which
+# Enzyme follows, so these rules serve them too.
 #
 # A calculator keeps a copy of its rotors, and everything else it derives from them is
 # computed by `set_rotor_data!`, which is declared here to have no derivatives.  So Enzyme

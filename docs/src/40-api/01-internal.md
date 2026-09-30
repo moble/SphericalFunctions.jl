@@ -46,7 +46,7 @@ interchangeable.
     element outside it is supplied by the symmetries, including the
     sign ``σ``, when a block is assembled from the wedge, or when an
     element is read through [`wedge_value`](@ref).  They are internal
-    to `src/wigner/wigner_H_calculator.jl` and have no docstrings.
+    to `src/recurrence/h_calculator.jl` and have no docstrings.
   - The methods documented below take a single
     [`AbstractWignerMatrix`](@ref) holding one whole ``H^ℓ`` for one
     rotor, with ``\cos β`` and ``\sin β`` passed explicitly, and are
@@ -61,7 +61,7 @@ filled ``H^ℓ`` in place into ``d^ℓ`` or ``𝔇^ℓ``.  They are the
 unbatched counterpart of the calculator's `materialize!`, which is
 where the ``ϵ`` signs and the Euler phases ``e^{-im'α}``, ``e^{-imγ}``
 actually enter for the engine (and, for ``{}_{s}Y_{ℓ,m}``, in
-`src/sYlm/sYlm.jl`).
+`src/calculators/harmonics.jl`).
 
 ```@docs
 SphericalFunctions.recurrence_step1!

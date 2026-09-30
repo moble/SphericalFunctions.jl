@@ -2,10 +2,10 @@ module SphericalFunctionsForwardDiffExt
 
 # ForwardDiff has no rule system of its own: a rule is a method for dual numbers.  Here the
 # methods are those that tell the calculators how to read and build dual numbers (see
-# `src/utilities/lifting.jl`).  A calculator of 𝔇 or of the harmonics whose rotors are dual
-# numbers then runs the recurrence on the values of those rotors, and gives each block its
-# partial derivatives from the angular-momentum operators, as described in
-# `src/derivatives.jl`; the recurrence is never differentiated.  `D`, `sYlm`, and
+# `src/derivatives/lifting.jl`).  A calculator of 𝔇 or of the harmonics whose rotors are
+# dual numbers then runs the recurrence on the values of those rotors, and gives each block
+# its partial derivatives from the angular-momentum operators, as described in
+# `src/derivatives/kernels.jl`; the recurrence is never differentiated.  `D`, `sYlm`, and
 # `sYlm_matrix` are computed by calculators, so they are differentiated the same way.
 #
 # The values are computed by a calculator of the dual numbers' values, which are themselves

@@ -1,6 +1,0 @@
-include("accessors.jl")
-include("wigner_matrix.jl")
-include("wigner_H.jl")
-include("recurrence.jl")
-include("wigner_H_calculator.jl")
-include("wigner_calculator.jl")

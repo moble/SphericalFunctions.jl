@@ -239,7 +239,7 @@ end
 # no options.
 #
 # The fields that describe the plans come first, and are what the plans are remade from when
-# a transform is deserialized (see "serialization.jl").
+# a transform is deserialized (see "rings.jl").
 #
 # `T` is the real type the transform works in, and `P` and `BP` are the types of the forward
 # and backward plans.
@@ -281,7 +281,7 @@ ring_fft_plans(buffer, flags, timelimit) = (plan_fft!(buffer), plan_bfft!(buffer
 # the same time.
 Base.deepcopy_internal(p::RingPlans, ::IdDict) = p
 
-include("serialization.jl")
+include("rings.jl")
 
 # The sample points of a transform on rings, ring by ring, with the azimuth ``ϕ_k = 2πk/N``
 # for ``k = 0, …, N-1`` on a ring of ``N`` points.

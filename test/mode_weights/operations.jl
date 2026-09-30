@@ -1,4 +1,4 @@
-# Tests of the container products in `src/mode_weights/operations.jl`:
+# Tests of the container products in `src/mode_weights/products.jl`:
 #
 #     𝔇 * w   rotates mode weights
 #     Y * w   evaluates the function at the rotor(s)

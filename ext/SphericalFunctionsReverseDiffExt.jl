@@ -1,13 +1,13 @@
 module SphericalFunctionsReverseDiffExt
 
 # ReverseDiff's rules for `D_array`, `sYlm_array`, and `sYlm_matrix_array`, from the
-# generators, as described in `src/derivatives.jl`.  ReverseDiff tracks only real numbers
-# and arrays of them, and a rule is an instruction recorded on its tape by `@grad`, whose
-# inputs and output must be of those kinds.  So a rotor is passed to the instruction as its
-# four tracked components, and the instruction's output is the real array of the values'
-# real and imaginary parts, interleaved.  The complex values are then assembled from the
-# elements of that tracked array, each of which sends its derivative back to the array, and
-# so to the instruction.  The harmonics of a vector of rotors are recorded as one
+# generators, as described in `src/derivatives/kernels.jl`.  ReverseDiff tracks only real
+# numbers and arrays of them, and a rule is an instruction recorded on its tape by `@grad`,
+# whose inputs and output must be of those kinds.  So a rotor is passed to the instruction
+# as its four tracked components, and the instruction's output is the real array of the
+# values' real and imaginary parts, interleaved.  The complex values are then assembled from
+# the elements of that tracked array, each of which sends its derivative back to the array,
+# and so to the instruction.  The harmonics of a vector of rotors are recorded as one
 # instruction for each rotor, since an instruction with every rotor's components as its
 # inputs would have to be compiled anew for every number of rotors.
 #
@@ -16,14 +16,14 @@ module SphericalFunctionsReverseDiffExt
 # rotor is not; hence the separate rules.
 #
 # A calculator of tracked rotors runs the recurrence in a calculator of their values, as a
-# calculator of ForwardDiff's dual numbers does (see `src/utilities/lifting.jl`), and each
+# calculator of ForwardDiff's dual numbers does (see `src/derivatives/lifting.jl`), and each
 # of its steps records one instruction for each rotor, whose output is that rotor's block
-# and whose pullback is the kernel of `src/derivatives.jl`.  The instruction is given a copy
-# of the block of values, which the next step overwrites.  The elements of a block are
-# assembled from the instruction's output, as above, and so are of the type of an element of
-# a tracked `Vector`; a calculator stores only that type, and its rotors' components are
-# passed through an instruction of their own, so that they are of that type too, whatever
-# the type of the tracked numbers they were given as.
+# and whose pullback is the kernel of `src/derivatives/kernels.jl`.  The instruction is
+# given a copy of the block of values, which the next step overwrites.  The elements of a
+# block are assembled from the instruction's output, as above, and so are of the type of an
+# element of a tracked `Vector`; a calculator stores only that type, and its rotors'
+# components are passed through an instruction of their own, so that they are of that type
+# too, whatever the type of the tracked numbers they were given as.
 #
 # ReverseDiff replays a recorded tape by running each instruction's function again on the
 # new inputs, but it keeps the pullback of the first run.  A rule defined by `@grad` then

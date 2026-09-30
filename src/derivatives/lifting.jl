@@ -3,9 +3,10 @@
 # A calculator of 𝔇 or of the harmonics whose rotors hold derivatives — dual numbers, say —
 # runs the recurrence on the values of those rotors, and lifts each block of values into a
 # block that holds the derivatives, which the angular-momentum operators give in terms of
-# the values (see `src/derivatives.jl`).  This file holds what that needs to know about a
-# number type, as functions that an extension for a tool such as ForwardDiff extends, and
-# the data that a lifting calculator keeps; `lift!` itself is in `src/derivatives.jl`.
+# the values (see `src/derivatives/kernels.jl`).  This file holds what that needs to know
+# about a number type, as functions that an extension for a tool such as ForwardDiff
+# extends, and the data that a lifting calculator keeps; `lift!` itself is in
+# `src/derivatives/kernels.jl`.
 
 # The type of the values of a real type that holds derivatives, and the type itself for one
 # that does not.  A calculator whose real type differs from its `value_type` lifts the

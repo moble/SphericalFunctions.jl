@@ -1,7 +1,7 @@
 module SphericalFunctionsChainRulesCoreExt
 
 # `frule` and `rrule` for `D_array`, `sYlm_array`, and `sYlm_matrix_array`, from the
-# generators, as described in `src/derivatives.jl`.  These serve the tools that read
+# generators, as described in `src/derivatives/kernels.jl`.  These serve the tools that read
 # ChainRules directly, such as Zygote and Diffractor, which cannot follow the mutation in a
 # calculator, and so differentiate `D`, `sYlm`, and `sYlm_matrix` of rotors through these
 # functions instead.

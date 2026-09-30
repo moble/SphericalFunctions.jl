@@ -1,4 +1,4 @@
-# Tests of the helpers in `src/utilities/utils.jl`: the combinatorial functions, and the
+# Tests of the helpers in `src/calculators/rotors.jl`: the combinatorial functions, and the
 # functions that read the element type and the number of rotors from rotor data.
 #
 # `sqrtbinomial` is published on `docs/src/20-interface/05-utilities.md` as the way to form

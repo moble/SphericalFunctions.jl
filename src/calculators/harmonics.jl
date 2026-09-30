@@ -198,8 +198,8 @@ See also [`sλlm`](@ref) and [`sλlm_matrix`](@ref) for simpler interfaces, and
 const sλlmCalculator{IT, RT, ST, S, B} =
     HarmonicCalculator{IT, RT, RT, ST, S, B, RT, Nothing} where {IT, RT<:Real, ST, S, B}
 # A calculator of the real harmonics never lifts the blocks of another, since it is given
-# angles, whose recurrence is differentiated as it runs (see `src/derivatives.jl`), so the
-# last two parameters above are fixed, and the type is concrete once the others are.
+# angles, whose recurrence is differentiated as it runs (see `src/derivatives/kernels.jl`),
+# so the last two parameters above are fixed, and the type is concrete once the others are.
 
 # The spin-weight argument is typed `IndexOrRange` rather than left open, so that a call
 # whose arguments are in the wrong order — `sYlmCalculator(3, 1, Float64)`, say — is still
@@ -397,7 +397,8 @@ end
 # The `HCalculator` validates everything before it replaces anything, so if it refuses the
 # angles this calculator is left exactly as it was, and its own state is reset only once the
 # new data are in place.  A calculator of ₛYₗₘ also keeps the rotors of the points (θ, 0),
-# which are what the rules for automatic differentiation read (see `src/derivatives.jl`).
+# which are what the rules for automatic differentiation read (see
+# `src/derivatives/kernels.jl`).
 #
 # As for a `WignerCalculator`, setting the rotor data is two steps: the rotors are copied by
 # `store_rotors!` or `store_point_rotors!`, and everything else is computed by
@@ -918,8 +919,8 @@ end
 # The values of `sYlm` for a single rotor, as the bare array that `HarmonicValues` labels: a
 # vector of modes for one spin weight, or a matrix of spin weights by modes for a range of
 # them.  Like `D_array`, this is the function to which the rules for automatic
-# differentiation are attached (see `src/derivatives.jl`), because it takes the rotor and
-# returns a plain array.
+# differentiation are attached (see `src/derivatives/kernels.jl`), because it takes the
+# rotor and returns a plain array.
 sYlm_array(R::RotorLike, ℓₘₐₓ::IT, s, ℓₘᵢₙ::IT) where {IT<:IntegerHalf} =
     harmonic_array(sYlmCalculator_helper, R, ℓₘₐₓ, s, ℓₘᵢₙ)
 

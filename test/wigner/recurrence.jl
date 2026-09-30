@@ -1,10 +1,10 @@
-# Tests of the unbatched, single-matrix form of the `H` recurrence in `src/wigner/recurrence.jl`
+# Tests of the unbatched, single-matrix form of the `H` recurrence in `src/recurrence/dense.jl`
 # — `recurrence_step1!` … `recurrence_step6!`, `convert_H_to_d!` and `convert_H_to_D!`, the
 # functions documented on `docs/src/40-api/01-internal.md`.
 #
 # Why this exists.  These functions take an `AbstractWignerMatrix` holding one whole `Hˡ`
 # for one rotor; the engine that the package actually runs (`HCalculator`) has its own,
-# separate methods of the same names in `src/wigner/wigner_H_calculator.jl`, which work on a
+# separate methods of the same names in `src/recurrence/h_calculator.jl`, which work on a
 # batched quarter-wedge.  Nothing in the package calls the single-matrix path, so this item
 # is its test, and it cross-checks the two directly: the single-matrix path is a truly
 # independent second implementation of the same recurrence (different loop structure,

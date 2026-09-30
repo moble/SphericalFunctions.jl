@@ -386,7 +386,7 @@ The various pixelizations may be computed as follows:
 
 ```@autodocs
 Modules = [SphericalFunctions]
-Pages   = ["utilities/pixelizations.jl"]
+Pages   = ["sampling/pixelizations.jl"]
 ```
 
 
@@ -399,6 +399,6 @@ corresponding pixelizations:
 
 ```@autodocs
 Modules = [SphericalFunctions]
-Pages   = ["utilities/weights.jl"]
+Pages   = ["sampling/quadrature.jl"]
 Order   = [:module, :type, :constant, :function, :macro]
 ```

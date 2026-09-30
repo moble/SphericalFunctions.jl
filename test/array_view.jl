@@ -1,5 +1,5 @@
 # Tests of `array_view` and `relabel` — the explicit route between the labelled containers
-# and ordinary 1-based arrays, in `src/array_view.jl`.
+# and ordinary 1-based arrays, in `src/containers/array_view.jl`.
 #
 # The reason this route exists at all is the first test item below.  A block with integer
 # indices could be an `OffsetArray`, but an `OffsetArray` with non-trivial offsets accepts

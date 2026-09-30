@@ -524,7 +524,7 @@ every ``m′``.
 
 ```@autodocs
 Modules = [SphericalFunctions]
-Pages = ["mode_weights/operations.jl"]
+Pages = ["mode_weights/products.jl"]
 ```
 
 ## Docstrings

@@ -1,4 +1,4 @@
-# Tests of the parts of `src/utilities/operators.jl` that compute no numbers.
+# Tests of the parts of `src/mode_weights/operators.jl` that compute no numbers.
 #
 # `test/operators.jl` checks what the operators compute, with the help of the explicit
 # derivatives in `test/utilities/explicit_operators.jl`.  The items here check what each

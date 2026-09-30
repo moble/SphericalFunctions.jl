@@ -1,4 +1,4 @@
-# Tests of the angular-momentum operators in `src/utilities/operators.jl`, against the
+# Tests of the angular-momentum operators in `src/mode_weights/operators.jl`, against the
 # settled conventions documented in `docs/src/30-conventions/01-summary.md`:
 #
 #     L_𝐮 f(𝐑) =  i d/dϵ f(e^{-ϵ𝐮/2} 𝐑),      R_𝐮 f(𝐑) = -i d/dϵ f(𝐑 e^{-ϵ𝐮/2}),
@@ -141,8 +141,8 @@ end
     # pole.  There the recurrence's split of the rotor into the half angles of β and the
     # phases of α ± γ is singular, and derivatives taken through it would be NaN, so the
     # calculators give the derivatives from their values instead, by the rules for automatic
-    # differentiation (see `src/derivatives.jl`); these two check the ForwardDiff-based
-    # operators through those rules.
+    # differentiation (see `src/derivatives/kernels.jl`); these two check the
+    # ForwardDiff-based operators through those rules.
     Qs = [
         [from_spherical_coordinates(T(θ), T(ϕ)) for (θ, ϕ) ∈ ((0.4, 0.9), (1.0, 2.0), (2.5, -1.5), (0.0, 0.9))];
         [Rotor{T}(zero(T), T(0.6), T(0.8), zero(T))];
@@ -388,12 +388,12 @@ end
                             ≈ -2Rz(s, ℓₘᵢₙ, ℓₘₐₓ, T)
                         ) atol=ϵ rtol=ϵ
                         # ð = R₊ and ð̄ = -R₋.  These hold by construction — `ð` *is*
-                        # defined as `R₊` and `ð̄` as `-R₋` in `src/utilities/operators.jl`
-                        # — so they cannot fail; they are here to pin the aliasing itself,
-                        # i.e. that a future definition of `ð` in its own right would still
-                        # have to agree.  The thing that actually confirms the ð sign
-                        # convention against something outside the package is the
-                        # Newman–Penrose finite-difference item below.
+                        # defined as `R₊` and `ð̄` as `-R₋` in
+                        # `src/mode_weights/operators.jl` — so they cannot fail; they are
+                        # here to pin the aliasing itself, i.e. that a future definition of
+                        # `ð` in its own right would still have to agree.  The thing that
+                        # actually confirms the ð sign convention against something outside
+                        # the package is the Newman–Penrose finite-difference item below.
                         @test ð(s, ℓₘᵢₙ, ℓₘₐₓ, T) == R₊(s, ℓₘᵢₙ, ℓₘₐₓ, T)
                         @test ð̄(s, ℓₘᵢₙ, ℓₘₐₓ, T) == -R₋(s, ℓₘᵢₙ, ℓₘₐₓ, T)
                     end

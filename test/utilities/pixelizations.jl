@@ -1,13 +1,14 @@
-# Tests of the pixelizations in `src/utilities/pixelizations.jl`.
+# Tests of the pixelizations in `src/sampling/pixelizations.jl`.
 #
-# The geometry of the golden-ratio spiral and of the sorted rings is exercised by the transform
-# tests in `test/ssht/`, which is where they matter.  This file covers the rest: the two
-# equiangular grids, Driscoll–Healy and McEwen–Wiaux, which no transform uses; the Leja
-# points, which are the default points of the "Matrix" transform; the two-argument entry
-# points whose only job is to supply `T=Float64`; and the promise that every pixelization is
-# the same set of points in every element type `T`, up to the rounding of each coordinate —
-# the spiral's azimuths reduced modulo 2π exactly, the Leja points chosen in `Float64`, and
-# the rings ordered by exact keys, so that the order for -s is the mirror image of that for s.
+# The geometry of the golden-ratio spiral and of the sorted rings is exercised by the
+# transform tests in `test/ssht/`, which is where they matter.  This file covers the rest:
+# the two equiangular grids, Driscoll–Healy and McEwen–Wiaux, which no transform uses; the
+# Leja points, which are the default points of the "Matrix" transform; the two-argument
+# entry points whose only job is to supply `T=Float64`; and the promise that every
+# pixelization is the same set of points in every element type `T`, up to the rounding of
+# each coordinate — the spiral's azimuths reduced modulo 2π exactly, the Leja points chosen
+# in `Float64`, and the rings ordered by exact keys, so that the order for -s is the mirror
+# image of that for s.
 #
 # Each grid is checked against the formula its docstring quotes from the paper it cites,
 # rather than against a stored table, so a change of convention has to be deliberate.
@@ -77,8 +78,8 @@ end
             for t ∈ 0:(L - 1) for q ∈ 0:(2L - 2)
         ] rtol=2eps(T)
 
-        # Every point is on the sphere: θ ∈ (0, π], with no sample at the north pole, and the
-        # last ring — 2L-1 points — exactly at the south pole
+        # Every point is on the sphere: θ ∈ (0, π], with no sample at the north pole, and
+        # the last ring — 2L-1 points — exactly at the south pole
         @test all(0 < q[1] ≤ T(π) for q ∈ p)
         @test count(q -> q[1] == T(π), p) == 2L - 1
 
@@ -133,8 +134,8 @@ end
         @test 0 ∉ θ2 && T(π) ∉ θ2
         @test first(θcc) == 0 && last(θcc) == T(π)
 
-        # Both Fejér rules are symmetric about the equator by construction, up to the rounding
-        # of π - θ
+        # Both Fejér rules are symmetric about the equator by construction, up to the
+        # rounding of π - θ
         @test all(abs.(θ1 .- reverse(T(π) .- θ1)) .≤ 2eps(T(π)))
         @test all(abs.(θ2 .- reverse(T(π) .- θ2)) .≤ 2eps(T(π)))
     end
@@ -201,11 +202,11 @@ end
     @test leja_pixels(2, 6) == leja_pixels(2, 6, Float64)
     @test leja_rotors(2, 6) == leja_rotors(2, 6, Float64)
 
-    # The candidates are chosen in `Float64` for every T, so every type gets the same points:
-    # the same positions in the spiral, each point computed in T.  (Were they chosen in each
-    # type, with Julia's generic LU for the types that LAPACK does not handle, only 58 of the
-    # 121 points would be shared by Double64 and Float64 at ℓₘₐₓ = 10, and Float32 would depart
-    # from Float64 at ℓₘₐₓ = 32.)
+    # The candidates are chosen in `Float64` for every T, so every type gets the same
+    # points: the same positions in the spiral, each point computed in T.  (Were they chosen
+    # in each type, with Julia's generic LU for the types that LAPACK does not handle, only
+    # 58 of the 121 points would be shared by Double64 and Float64 at ℓₘₐₓ = 10, and Float32
+    # would depart from Float64 at ℓₘₐₓ = 32.)
     for (s, ℓₘₐₓ, types) ∈ (
         (0, 10, (Float32, Double64, BigFloat)), (2, 8, (Float32, Double64)),
         (1//2, 9//2, (Float32, Double64)), (0, 32, (Float32,)), (2, 32, (Float32,)),
@@ -219,25 +220,25 @@ end
         end
     end
 
-    # The point of them: the harmonics on them are well conditioned where those on the spiral
-    # of the same number of points are not.  Measured condition numbers: 71 and 100 against
-    # 9.0e4 and 5.8e4 at ℓₘₐₓ = 32 for s = 0 and 2, and 19 against 4540 at ℓₘₐₓ = 31/2 for
-    # s = 1/2.
+    # The point of them: the harmonics on them are well conditioned where those on the
+    # spiral of the same number of points are not.  Measured condition numbers: 71 and 100
+    # against 9.0e4 and 5.8e4 at ℓₘₐₓ = 32 for s = 0 and 2, and 19 against 4540 at ℓₘₐₓ =
+    # 31/2 for s = 1/2.
     for (s, ℓₘₐₓ) ∈ ((0, 32), (2, 32), (1//2, 31//2))
         @test cond(sYlm_matrix(leja_rotors(s, ℓₘₐₓ), ℓₘₐₓ, s)) < 250
         @test cond(sYlm_matrix(golden_ratio_spiral_rotors(s, ℓₘₐₓ), ℓₘₐₓ, s)) > 1000
     end
-    # ... which is what the "Matrix" transform's accuracy depends on: a round trip on them at
-    # ℓₘₐₓ = 32 measured 2.2e-13, against 1.9e-10 on its default spiral
+    # ... which is what the "Matrix" transform's accuracy depends on: a round trip on them
+    # at ℓₘₐₓ = 32 measured 2.2e-13, against 1.9e-10 on its default spiral
     let s = 2, ℓₘₐₓ = 32
         𝒯 = SSHT(s, ℓₘₐₓ; method="Matrix", Rθϕ=leja_rotors(s, ℓₘₐₓ), inplace=false)
         f̃ = randn(Random.Xoshiro(3), ComplexF64, Ysize(abs(s), ℓₘₐₓ))
         @test collect(𝒯 \ (𝒯 * f̃)) ≈ f̃ atol=5e-12 rtol=0
     end
 
-    # `oversampling`: with no extra candidates every one is chosen, and the spiral comes back;
-    # more candidates still give the right number of points; fewer than the number of points,
-    # or infinitely many, is refused
+    # `oversampling`: with no extra candidates every one is chosen, and the spiral comes
+    # back; more candidates still give the right number of points; fewer than the number of
+    # points, or infinitely many, is refused
     @test leja_pixels(0, 8; oversampling=1) == golden_ratio_spiral_pixels(0, 8)
     @test length(leja_pixels(2, 6; oversampling=3.5)) == Ysize(2, 6)
     for oversampling ∈ (0.5, Inf, NaN)
@@ -257,8 +258,8 @@ end
     using DoubleFloats: Double64
     using Quaternionic: from_spherical_coordinates
 
-    # The azimuth of point k is 2π times the fractional part of k(2-φ), which lies in
-    # [0, 2π), computed here from a 400-bit reference.  Measured: correctly rounded in Float64
+    # The azimuth of point k is 2π times the fractional part of k(2-φ), which lies in [0,
+    # 2π), computed here from a 400-bit reference.  Measured: correctly rounded in Float64
     # at every point of ℓₘₐₓ = 64 (4225 points), within half an ulp in Float32 and Float16,
     # and within 1.2 ulps in BigFloat; in Double64 the absolute error is below 2.4e-31.  (As
     # k Δϕ in T, unreduced, the azimuths reached 10137 rad at ℓₘₐₓ = 64, and the Float32 and
@@ -294,12 +295,12 @@ end
     end
 
     # The rings fill the slots from those farthest from the equator to the nearest, the
-    # distance of slot i being |2i - (n+1)| half slot spacings, and of the two rings assigned
-    # to a pair of mirror-image slots the larger goes north for s ≥ 0 and south for s < 0.
-    # The order is decided by the slots, not by their rounded colatitudes, so it is the same
-    # in every T.  (An order decided by the rounded colatitudes would differ between Float32
-    # and Float64 at 196 of the ℓₘₐₓ in 1:200 for s = 0, and for s = ±1 would fail to be the
-    # mirror image at 58 of them.)
+    # distance of slot i being |2i - (n+1)| half slot spacings, and of the two rings
+    # assigned to a pair of mirror-image slots the larger goes north for s ≥ 0 and south for
+    # s < 0.  The order is decided by the slots, not by their rounded colatitudes, so it is
+    # the same in every T.  (An order decided by the rounded colatitudes would differ
+    # between Float32 and Float64 at 196 of the ℓₘₐₓ in 1:200 for s = 0, and for s = ±1
+    # would fail to be the mirror image at 58 of them.)
     for s ∈ (0, 1, -1, 2, -3, 1//2, -1//2, 5//2), ℓₘₐₓ ∈ abs(s) .+ (0:40)
         n = Int(ℓₘₐₓ - abs(s) + 1)
         order = slots(sorted_rings(s, ℓₘₐₓ), n, Float64)
@@ -316,8 +317,8 @@ end
     end
 
     # For s ≠ 0, the order for -s is exactly the mirror image of that for s, out to large
-    # ℓₘₐₓ, where an order decided by the rounded colatitudes would differ (first at ℓₘₐₓ = 42
-    # for s = 1, and 83/2 for s = 1/2)
+    # ℓₘₐₓ, where an order decided by the rounded colatitudes would differ (first at ℓₘₐₓ =
+    # 42 for s = 1, and 83/2 for s = 1/2)
     for s ∈ (1//2, 1, 3//2, 2), ℓₘₐₓ ∈ abs(s) .+ (0:100)
         n = Int(ℓₘₐₓ - abs(s) + 1)
         @test slots(sorted_rings(-s, ℓₘₐₓ), n, Float64) == (n + 1) .- slots(sorted_rings(s, ℓₘₐₓ), n, Float64)

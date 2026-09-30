@@ -35,7 +35,7 @@ needed for them.
 
 ```@autodocs
 Modules = [SphericalFunctions]
-Pages   = ["mode_weights/indexing.jl", "mode_weights/mode_weights.jl"]
+Pages   = ["indices/mode_ordering.jl", "mode_weights/mode_weights.jl"]
 Order   = [:module, :type, :constant, :function, :macro]
 ```
 
@@ -50,7 +50,7 @@ refusals.
 
 ```@autodocs
 Modules = [SphericalFunctions]
-Pages   = ["utilities/utils.jl"]
+Pages   = ["calculators/rotors.jl"]
 Filter  = f -> f !== SphericalFunctions.sqrtbinomial
 ```
 

@@ -1,4 +1,4 @@
-# Tests of the containers in `src/wigner/wigner_matrix.jl`.
+# Tests of the containers in `src/containers/blocks.jl`.
 #
 # The calculators in `test/wigner/calculators.jl` and the harmonics in `test/sYlm/` build
 # these containers constantly, so the parts that hold numbers are well covered already.

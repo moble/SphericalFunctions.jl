@@ -4,9 +4,9 @@
 #
 # together with the spin weight `s` (see `src/mode_weights/mode_weights.jl`).  The oracles
 # are the closed-form indexing functions `Ysize`, `Yindex` and `Yrange` (tested in
-# `indexing.jl`), the operator matrices of `src/utilities/operators.jl` applied to the raw
-# storage (tested against explicit differential operators in `test/operators.jl`), and — for
-# the evaluation `w(R)` — `sYlm_closed_form(s, ℓ, m, θ, ϕ)` from the `Utilities` module,
+# `indexing.jl`), the operator matrices of `src/mode_weights/operators.jl` applied to the
+# raw storage (tested against explicit differential operators in `test/operators.jl`), and —
+# for the evaluation `w(R)` — `sYlm_closed_form(s, ℓ, m, θ, ϕ)` from the `Utilities` module,
 # which is the explicit sum from `docs/src/30-conventions/01-summary.md` and shares no code
 # with the package.
 #

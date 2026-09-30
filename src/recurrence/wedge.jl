@@ -224,7 +224,7 @@ end
     end
     @inbounds Base.parent(w)[i]
 end
-# As a block container of `wigner_matrix.jl` may be, a half-integer wedge may be indexed by
+# As a block container of `blocks.jl` may be, a half-integer wedge may be indexed by
 # `Rational`s, which are converted to `HalfOddInteger`s.
 @propagate_inbounds Base.getindex(w::HWedge{IT}, iᵣ::Int, m′::Rational, m::Rational) where
     {IT<:HalfOddInteger} = w[iᵣ, HalfOddInteger(m′), HalfOddInteger(m)]
@@ -391,7 +391,7 @@ an `ArgumentError`.
     @inbounds σ * parent(H)[wedge_offset(H, a, b, m′ₘᵢₙ(H)) + iᵣ]
 end
 # Indices spelled otherwise, such as `1//2` or an `Int8`, are checked against the wedge's
-# own kind of index and converted to it; see `check_index_kind` in `wigner_H_calculator.jl`.
+# own kind of index and converted to it; see `check_index_kind` in `h_calculator.jl`.
 @propagate_inbounds function wedge_value(
     H::HWedge{IT}, iᵣ::Integer, m′::IndexType, m::IndexType
 ) where {IT}

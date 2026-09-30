@@ -37,5 +37,5 @@ makes, is also spelled `Deltaspin`.
 
 ```@autodocs
 Modules = [SphericalFunctions]
-Pages   = ["utilities/operators.jl"]
+Pages   = ["mode_weights/operators.jl"]
 ```

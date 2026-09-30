@@ -104,7 +104,7 @@ end
 # -ℓ:ℓ, and are then given as zero rather than as the square root of zero, whose derivative
 # is infinite: when `T` is a dual number, the zero partials of the constant would be
 # multiplied by that infinity, and give `NaN`.  They are computed in `float_type(T)`, the
-# floating-point type underneath any dual numbers (see `src/utilities/lifting.jl`), since
+# floating-point type underneath any dual numbers (see `src/derivatives/lifting.jl`), since
 # they are constants.
 @inline function ladder_coefficient(n::Int, ::Type{T}) where {T}
     let F = float_type(T)
@@ -374,8 +374,8 @@ end
 ## Lifting the blocks of a calculator of values
 #
 # A calculator whose rotors hold derivatives holds a calculator of their values (see
-# `src/utilities/lifting.jl`), and after each of that calculator's steps it writes into its
-# own block each value together with its derivatives, from the generators of its rotors'
+# `src/derivatives/lifting.jl`), and after each of that calculator's steps it writes into
+# its own block each value together with its derivatives, from the generators of its rotors'
 # tangents.  Those generators depend only on the rotors, so they are computed when the
 # rotors are set, and a step allocates nothing.  This is how forward-mode numbers are
 # lifted; an extension for a reverse-mode tool defines methods of `set_generators!` and

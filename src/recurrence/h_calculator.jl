@@ -307,10 +307,10 @@ term.  Near a pole the derivatives are finite but inaccurate, the ``k``-th by ab
 r^{-k}`` relative to their size at a distance ``r`` from it.  The values are accurate at
 every rotor, the poles included, so the calculators of ``𝔇`` and of ``{}_sY_{ℓ,m}``, which
 are smooth there, are never differentiated through this: the rules for automatic
-differentiation give their derivatives in terms of their values (see `src/derivatives.jl`).
-The ``d`` and ``H`` of a rotor have no such rules, and keep the `NaN`: they see the rotor
-only through ``β``, which has a cone-shaped singularity at each pole, so that some of their
-elements actually have no derivative there.
+differentiation give their derivatives in terms of their values (see
+`src/derivatives/kernels.jl`).  The ``d`` and ``H`` of a rotor have no such rules, and keep
+the `NaN`: they see the rotor only through ``β``, which has a cone-shaped singularity at
+each pole, so that some of their elements actually have no derivative there.
 
 The optional second argument is the real type the phases are computed in; it defaults to
 `float(eltype(R))`.  Pass the *calculator's* type whenever that is more precise than the

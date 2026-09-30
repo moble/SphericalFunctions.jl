@@ -1,10 +1,10 @@
-# Tests of the rules for automatic differentiation (see `src/derivatives.jl`): the rules for
-# the calculators' steps, which ForwardDiff, Enzyme, and Mooncake use, and through which
-# they differentiate `D`, `sYlm`, and `sYlm_matrix` too; and the rules for those functions'
-# arrays, which ChainRules and ReverseDiff use.  The references are the explicit polynomial
-# of the `ExplicitWignerMatrices` module, which shares no code with the package, evaluated
-# in `BigFloat` and differentiated by ForwardDiff.  The polynomial is smooth everywhere, so
-# its derivatives are good references at the poles too.
+# Tests of the rules for automatic differentiation (see `src/derivatives/kernels.jl`): the
+# rules for the calculators' steps, which ForwardDiff, Enzyme, and Mooncake use, and through
+# which they differentiate `D`, `sYlm`, and `sYlm_matrix` too; and the rules for those
+# functions' arrays, which ChainRules and ReverseDiff use.  The references are the explicit
+# polynomial of the `ExplicitWignerMatrices` module, which shares no code with the package,
+# evaluated in `BigFloat` and differentiated by ForwardDiff.  The polynomial is smooth
+# everywhere, so its derivatives are good references at the poles too.
 
 @testsnippet DerivativeTools begin
     import ForwardDiff

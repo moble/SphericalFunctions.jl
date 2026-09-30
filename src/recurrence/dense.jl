@@ -1,10 +1,10 @@
-# `sgn`, `ϵ` and `δ²` are defined in `wigner_H.jl`.
+# `sgn`, `ϵ` and `δ²` are defined in `wedge.jl`.
 
 # The functions in this file loop over every m of a block's ℓ, and take m′ₘᵢₙ to be -m′ₘₐₓ,
 # under `@inbounds`, and the `WignerMatrix` accessors are `@propagate_inbounds`, so the
 # container's own bounds check is elided along with the storage's.  Each function therefore
 # refuses, before it writes anything, a block that does not have the full range of m and a
-# symmetric range of m′.  (The batched engine in `wigner_H_calculator.jl`, which is what the
+# symmetric range of m′.  (The batched engine in `h_calculator.jl`, which is what the
 # package itself runs, has no such restriction.)
 function check_dense_block(Hˡ::WignerMatrix, name::Symbol)
     if !(mₘᵢₙ(Hˡ) == -ℓ(Hˡ) && mₘₐₓ(Hˡ) == ℓ(Hˡ) && m′ₘᵢₙ(Hˡ) == -m′ₘₐₓ(Hˡ))

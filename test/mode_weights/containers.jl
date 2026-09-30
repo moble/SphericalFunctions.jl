@@ -1,5 +1,5 @@
 # Tests of `HarmonicValues`, the container `sYlm` returns —
-# `src/mode_weights/containers.jl`.
+# `src/containers/series.jl`.
 #
 # The point of the container is that one loop reads the same whichever of the four shapes it
 # was handed, and that the flat array the transforms use can be obtained with `array_view`.

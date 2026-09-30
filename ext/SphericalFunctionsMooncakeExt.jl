@@ -1,8 +1,8 @@
 module SphericalFunctionsMooncakeExt
 
 # Mooncake's rules for the calculators of 𝔇 and of the harmonics, from the generators, as
-# described in `src/derivatives.jl`, in forward and in reverse mode.  They are the same
-# rules as Enzyme's, and the comments at the top of that extension describe them: a
+# described in `src/derivatives/kernels.jl`, in forward and in reverse mode.  They are the
+# same rules as Enzyme's, and the comments at the top of that extension describe them: a
 # calculator's copy of its rotors is differentiated as Mooncake finds it, `set_rotor_data!`
 # has no derivatives, and each `compute_block!` gives its block's derivatives from those of
 # the rotors, or adds its block's cotangents into the rotors' and zeroes them.  `D`, `sYlm`,

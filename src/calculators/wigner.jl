@@ -33,8 +33,8 @@ was built from a vector of rotor data.
 
 A calculator of ``𝔇`` whose rotors hold derivatives, such as dual numbers, runs the
 recurrence on the values of those rotors, in `FT`, and gives each block its derivatives
-from the angular-momentum operators, as described in `src/derivatives.jl`; the recurrence
-itself is never differentiated.
+from the angular-momentum operators, as described in `src/derivatives/kernels.jl`; the
+recurrence itself is never differentiated.
 
 Because `B` is a type parameter, the type of the block is known at compile time, and a loop
 over the blocks is inferrable.
@@ -88,15 +88,15 @@ end
 
 # The limits of the rows and columns that a calculator of 𝔇 stores for the block it
 # returns.  The derivatives of the block, which the rules for automatic differentiation give
-# in terms of its values (see `src/derivatives.jl`), couple each element either to its
-# neighbors in the same column (from the left) or to those in the same row (from the right).
-# A block whose rows are all of -ℓ:ℓ is differentiated from the left, and one whose columns
-# are, from the right, so that every neighbor needed is in the block already.  Only a block
-# restricted in both needs values beyond its limits, and for that one, one row or column
-# more is stored on each side, within ±ℓₘₐₓ, along whichever axis is the wider, so that the
-# wedge, whose width is that of the narrower (see `allocate_W`), is widened only when the
-# two are equally wide.  The widened limits still bracket ±ℓₘᵢₙ, as the originals do.  A
-# calculator of `d` stores exactly its block.
+# in terms of its values (see `src/derivatives/kernels.jl`), couple each element either to
+# its neighbors in the same column (from the left) or to those in the same row (from the
+# right).  A block whose rows are all of -ℓ:ℓ is differentiated from the left, and one whose
+# columns are, from the right, so that every neighbor needed is in the block already.  Only
+# a block restricted in both needs values beyond its limits, and for that one, one row or
+# column more is stored on each side, within ±ℓₘₐₓ, along whichever axis is the wider, so
+# that the wedge, whose width is that of the narrower (see `allocate_W`), is widened only
+# when the two are equally wide.  The widened limits still bracket ±ℓₘᵢₙ, as the originals
+# do.  A calculator of `d` stores exactly its block.
 function stored_limits(ℓₘₐₓ::IT, m′ₘₐₓ::IT, m′ₘᵢₙ::IT, mₘₐₓ::IT, mₘᵢₙ::IT) where {IT}
     full(hi, lo) = hi == ℓₘₐₓ && lo == -ℓₘₐₓ
     widened(hi, lo) = (min(hi + 1, ℓₘₐₓ), max(lo - 1, -ℓₘₐₓ))
@@ -424,7 +424,7 @@ end
 
 # For 𝔇 we need the full rotor: eⁱᵝ for the recurrence, and the powers of z₊ and z₋ for the
 # phases.  The rotors are kept too, as quaternions, which is what the rules for automatic
-# differentiation read (see `src/derivatives.jl`).  A quaternion that is not a unit
+# differentiation read (see `src/derivatives/kernels.jl`).  A quaternion that is not a unit
 # quaternion denotes the rotation of its normalization, as it does throughout.
 #
 # Setting the rotors is two steps: `store_rotors!` copies them, and `set_rotor_data!`
@@ -792,7 +792,8 @@ end
 # then labelled without being copied.  This split is for automatic differentiation:
 # `D_array` takes the rotor and returns plain arrays, which every tool can handle, so it is
 # the function to which the extensions for ChainRulesCore and ReverseDiff attach their rules
-# (see `src/derivatives.jl`); the other tools differentiate it through the calculator.
+# (see `src/derivatives/kernels.jl`); the other tools differentiate it through the
+# calculator.
 function D_array(
     R::RotorLike, ℓₘₐₓ::IT, m′ₘₐₓ::IT, m′ₘᵢₙ::IT, mₘₐₓ::IT, mₘᵢₙ::IT
 ) where {IT<:IntegerHalf}
