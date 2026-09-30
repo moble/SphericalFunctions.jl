@@ -54,7 +54,7 @@ function Ysize end
 end
 # The one-argument form starts the ordering at the floor of the index type: 0 for an integer
 # ℓₘₐₓ, and 1/2 for a half-odd one.
-@index_methods Ysize(ℓₘₐₓ::IT) where {IT<:IndexType} = Ysize(ℓₘᵢₙ(IT), ℓₘₐₓ)
+@index_methods Ysize(ℓₘₐₓ::IT) where {IT<:IndexType} = Ysize(lowest_index(IT), ℓₘₐₓ)
 
 """
     Yindex(ℓ, m)
@@ -78,7 +78,7 @@ function Yindex end
 # indices, which reach the work methods directly, and `@inline` applies to every generated
 # method.  The default of `ℓₘᵢₙ` is evaluated after the indices have been converted, so it may
 # use `IT`; the call without `ℓₘᵢₙ` has its own methods, generated from the default.
-@index_methods @inline function Yindex(ℓ::IT, m::IT, ℓₘᵢₙ::IT=ℓₘᵢₙ(IT)) where {IT<:IndexType}
+@index_methods @inline function Yindex(ℓ::IT, m::IT, ℓₘᵢₙ::IT=lowest_index(IT)) where {IT<:IndexType}
     if IT === Int
         ℓ*(ℓ+1) - ℓₘᵢₙ^2 + m + 1
     else
@@ -122,4 +122,4 @@ function mode_pairs!(ordering, ℓₘᵢₙ, ℓₘₐₓ)
     end
     ordering
 end
-@index_methods Yrange(ℓₘₐₓ::IT) where {IT<:IndexType} = Yrange(ℓₘᵢₙ(IT), ℓₘₐₓ)
+@index_methods Yrange(ℓₘₐₓ::IT) where {IT<:IndexType} = Yrange(lowest_index(IT), ℓₘₐₓ)

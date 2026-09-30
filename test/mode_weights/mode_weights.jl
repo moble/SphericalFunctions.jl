@@ -29,10 +29,11 @@
         data = randn(rng, ComplexF64, n)
         w = ModeWeights(data, s, ℓₘᵢₙ, ℓₘₐₓ)
         @test w isa ModeWeights{ComplexF64}
-        # This is an `AbstractModeContainer`, not an `AbstractVector`: `array_view` is the
-        # route to the flat storage, and array semantics come with it.
-        @test w isa SphericalFunctions.AbstractModeContainer{ComplexF64, Int}
+        # This is not an `AbstractVector`: `array_view` is the route to the flat storage,
+        # and array semantics come with it.  The element type is the number type.
         @test !(w isa AbstractVector)
+        @test eltype(w) === eltype(typeof(w)) === ComplexF64
+        @test !SphericalFunctions.ishalfinteger(w)
         @test array_view(w) === parent(w)
         @test parent(w) === data
         @test spin(w) == s
@@ -894,8 +895,9 @@ end
         data = randn(rng, ComplexF64, n)
         for w in (ModeWeights(data, s, ℓₘᵢₙ, ℓₘₐₓ), ModeWeights(data, h(s), h(ℓₘᵢₙ), h(ℓₘₐₓ)))
             @test w isa ModeWeights{ComplexF64, HalfOddInteger, Vector{ComplexF64}}
-            @test w isa SphericalFunctions.AbstractModeContainer{ComplexF64, HalfOddInteger}
             @test !(w isa AbstractVector)
+            @test eltype(w) === eltype(typeof(w)) === ComplexF64
+            @test SphericalFunctions.ishalfinteger(w)
             @test parent(w) === data
             @test spin(w) === h(s)
             @test SphericalFunctions.ℓₘᵢₙ(w) === h(ℓₘᵢₙ)
@@ -1728,16 +1730,17 @@ end
     # The keywords must be indices of the kind of `w`'s own, and the range must be valid
     w = ModeWeights(randn(rng, ComplexF64, Ysize(1, 4)), 1)
     wh = ModeWeights(randn(rng, ComplexF64, Ysize(1//2, 7//2)), 1//2)
-    kind = "must be an index of the kind of `w`'s own"
+    integers = "The indices of this `ModeWeights` are integers of type `Int`, like 3; got"
+    halves = "The indices of this `ModeWeights` are half-odd-integers, each a "
     @test_throws ArgumentError ModeWeights(w; ℓₘᵢₙ=1//2)
-    @test_throws kind ModeWeights(w; ℓₘᵢₙ=1//2)
-    @test_throws kind ModeWeights(wh; ℓₘᵢₙ=1)
-    @test_throws kind ModeWeights(wh; ell_max=4)
+    @test_throws integers ModeWeights(w; ℓₘᵢₙ=1//2)
+    @test_throws halves ModeWeights(wh; ℓₘᵢₙ=1)
+    @test_throws halves ModeWeights(wh; ell_max=4)
     @test_throws "`Int32` is narrower than `Int`" ModeWeights(w; ℓₘᵢₙ=Int32(1))
     # ... and a refusal names the spelling of the keyword that the caller wrote
-    @test_throws "The keyword argument `ell_min`" ModeWeights(w; ell_min=Int32(1))
-    @test_throws "The keyword argument `ell_max`" ModeWeights(w; ell_max=Int32(3))
-    @test_throws "The keyword argument `ℓₘₐₓ`" ModeWeights(w; ℓₘₐₓ=Int32(3))
+    @test_throws "$integers ell_min = 1::Int32." ModeWeights(w; ell_min=Int32(1))
+    @test_throws "$integers ell_max = 3::Int32." ModeWeights(w; ell_max=Int32(3))
+    @test_throws "$integers ℓₘₐₓ = 3::Int32." ModeWeights(w; ℓₘₐₓ=Int32(3))
     @test_throws "`Float64` is not an index type" ModeWeights(w; ℓₘₐₓ=4.0)
     @test_throws "1//3 is neither an integer nor a half-odd-integer" ModeWeights(wh; ℓₘᵢₙ=1//3)
     @test_throws "ℓₘᵢₙ=-1 must be non-negative" ModeWeights(w; ℓₘᵢₙ=-1)

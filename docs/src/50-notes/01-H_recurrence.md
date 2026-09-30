@@ -541,10 +541,9 @@ SphericalFunctions.wedge_value) or `wedge_source`, or, when a
 calculator assembles a block of ``d``, ``𝔇`` or the harmonics, in runs
 along the rows of the wedge.  Each run lies within one of the four
 cases above, so the case and the row are settled once for the whole
-run, rather than once for each element.  Only the unbatched,
-integer-only reference implementation, [`recurrence_step6!`](@ref
-SphericalFunctions.recurrence_step6!), fills in the rest of the matrix
-explicitly.
+run, rather than once for each element.  Only the dense, integer-only
+implementation with which the test suite checks the engine fills in
+the rest of the matrix explicitly.
 
 
 ### Step 7: Include phases to obtain ``d`` or ``𝔇``

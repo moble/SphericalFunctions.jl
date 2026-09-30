@@ -17,8 +17,8 @@
     import ForwardDiff
     using Quaternionic: Quaternion, Rotor, from_euler_angles
     import SphericalFunctions
-    import SphericalFunctions: D, d, sYlm, sλlm, DCalculator, dCalculator, sYlmCalculator,
-        recurrence!, array_view, Yindex
+    import SphericalFunctions: D, d, sYlm, DCalculator, dCalculator, sYlmCalculator,
+        sλlmCalculator, recurrence!, array_view, Yindex
 
     # The direction in which derivatives are taken, which crosses the pole when the path passes
     # through it, and a path through a rotor R₀ in that direction, R₀ exp(t𝐮/2).  The path is
@@ -47,6 +47,7 @@
     Dblock(n, R) = Dblock(n, Rotor(R))
     Pblock(n, R) = [ExplicitWignerMatrices.D_polynomial(n, m′, m, R)[1] for m′ ∈ -n:n, m ∈ -n:n]
     Yrow(n, s, R) = (Y = sYlm(Rotor(R), n, s); [Y[n][m] for m ∈ -n:n])
+    λrow(n, s, θ) = (λ = recurrence!(sλlmCalculator(θ, n, s), n); [λ[m] for m ∈ -n:n])
     Prow(n, s, R) = [ExplicitWignerMatrices.sYlm_polynomial(n, m, s, R)[1] for m ∈ -n:n]
 
     # The distance of a rotor from the nearer pole, and whether that is the north pole
@@ -361,7 +362,7 @@ end
         @test maximum(abs, fromphase - ref) ≤ 8eps() * (n + 1)^1.5
         s = n isa Integer ? -1 : 1//2
         # ₛλₗₘ(θ) = ₛYₗₘ(θ, 0) for integer s, and ₛYₗₘ(θ, 0) / i^{2s} for half-odd s
-        λ = ForwardDiff.derivative(θ -> [sλlm(θ, n, s)[n][m] for m ∈ -n:n], β₀)
+        λ = ForwardDiff.derivative(θ -> λrow(n, s, θ), β₀)
         phase = s isa Integer ? 1 : (1, im, -1, -im)[mod(Int(2s), 4) + 1]
         Y = ForwardDiff.derivative(θ -> Yrow(n, s, rotor(θ)), β₀) ./ phase
         @test maximum(abs, λ - real.(Y)) ≤ 8eps() * (n + 1)^1.5

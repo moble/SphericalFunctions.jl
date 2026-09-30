@@ -122,12 +122,17 @@ end
     ) == (2, 3, 5)
 end
 
-@testitem "Bounds: the dense reference recurrence refuses a restricted block" tags=[:bounds] begin
+@testitem "Bounds: the dense reference recurrence refuses a restricted block" setup=[DenseRecurrence] tags=[:bounds] begin
     import SphericalFunctions: WignerMatrix
-    import SphericalFunctions:
+    import .DenseRecurrence:
         recurrence_step2!, recurrence_step3!, recurrence_step4!, recurrence_step5!,
         recurrence_step6!, convert_H_to_d!, convert_H_to_D!
 
+    # This item applies the same kind of check to the dense implementation of the recurrence
+    # in the test module `DenseRecurrence` (in `test/wigner/recurrence.jl`), against which
+    # the suite checks the engine.  No user calls these functions, but their `@inbounds`
+    # loops rely on the block they are given just as the package's kernels do.
+    #
     # These functions loop over every m of the block's ℓ, and take m′ₘᵢₙ to be -m′ₘₐₓ, under
     # `@inbounds`, so they need a block with the full range of m and a symmetric range of m′.
     # Each block here lies in the middle of a larger buffer, whose padding holds a value the
@@ -272,17 +277,13 @@ end
 end
 
 @testitem "Bounds: HAxis refuses a largest ℓ below the smallest" tags=[:bounds] begin
-    import SphericalFunctions: HAxis, HalfOddInteger
+    import SphericalFunctions: HAxis
 
-    # An axis starts at its smallest ℓ, and the natural-index accessors check an index only
-    # against the current ℓ, so the storage must hold at least that one order.  With ℓₘₐₓ one
-    # below the smallest ℓ it would hold nothing.
-    @test_throws ArgumentError HAxis(Float64, 1, -1)[1, 0]
-    @test_throws ArgumentError HAxis(Float64, 2, -1)[2, 0, 0]
-    let h = HalfOddInteger
-        @test_throws ArgumentError HAxis(Float64, 3, h(-1//2))[2, h(1//2)]
-        @test_throws ArgumentError HAxis(Float64, 3, h(-1//2))[3, h(1//2), h(1//2)]
-    end
+    # An axis starts at order 0, whose elements the recurrence writes under `@inbounds`, so
+    # the storage must hold at least that one order.  With ℓₘₐₓ one below 0 it would hold
+    # nothing.
+    @test_throws ArgumentError HAxis(Float64, 1, -1)
+    @test_throws ArgumentError HAxis(Float64, 2, -1)
 end
 
 @testitem "Bounds: a WignerSeries refuses to index blocks removed from it" tags=[:bounds] begin
@@ -379,7 +380,7 @@ end
 end
 
 @testitem "Bounds: the Wigner and harmonic calculators refuse buffers too small for them" tags=[:bounds] begin
-    import SphericalFunctions: DCalculator, sYlmCalculator
+    import SphericalFunctions: DCalculator, sYlmCalculator, SphericalFunctionsEngine
     using Quaternionic: Rotor
     import Random
 
@@ -389,28 +390,32 @@ end
     # every rotor, every (m′, m) or (s, m) the calculator serves, and every power up to
     # 2ℓₘₐₓ, so the calculators' own constructors compare the buffers they are given with
     # all of those.  Each buffer is replaced here by one too small in a single dimension:
-    # the power tables are laid out [iᵣ, k+1], with a row for each of the 4 rotors and 7
-    # columns.  The calculator's copy of its rotors must likewise hold one for each.
+    # the power tables of the engine are laid out [iᵣ, k+1], with a row for each of the 4
+    # rotors and 7 columns.  The calculator's copy of its rotors must likewise hold one for
+    # each.
     R⃗ = randn(rng, Rotor{Float64}, 4)
     c = DCalculator(R⃗, 3)
     C = typeof(c)
+    e = c.engine
+    with_tables(e, Z₊, Z₋) = SphericalFunctionsEngine(e.H, Z₊, Z₋)
     limits = (c.m′ₘₐₓ, c.m′ₘᵢₙ, c.mₘₐₓ, c.mₘᵢₙ, c.m′ₘₐₓˢ, c.m′ₘᵢₙˢ, c.mₘₐₓˢ, c.mₘᵢₙˢ)
-    @test C(c.H, c.Wˡ, c.Z₊, c.Z₋, c.rotors, limits..., c.ℓ, c.lift) isa C
-    @test_throws DimensionMismatch C(c.H, zeros(ComplexF64, 1, 7, 7), c.Z₊, c.Z₋, c.rotors, limits..., c.ℓ, c.lift)
-    @test_throws DimensionMismatch C(c.H, zeros(ComplexF64, 4, 7, 6), c.Z₊, c.Z₋, c.rotors, limits..., c.ℓ, c.lift)
-    @test_throws DimensionMismatch C(c.H, c.Wˡ, zeros(ComplexF64, 3, 7), c.Z₋, c.rotors, limits..., c.ℓ, c.lift)
-    @test_throws DimensionMismatch C(c.H, c.Wˡ, c.Z₊, zeros(ComplexF64, 4, 6), c.rotors, limits..., c.ℓ, c.lift)
-    @test_throws DimensionMismatch C(c.H, c.Wˡ, c.Z₊, c.Z₋, c.rotors[1:3], limits..., c.ℓ, c.lift)
+    @test C(e, c.Wˡ, c.rotors, limits..., c.ℓ, c.lift) isa C
+    @test_throws DimensionMismatch C(e, zeros(ComplexF64, 1, 7, 7), c.rotors, limits..., c.ℓ, c.lift)
+    @test_throws DimensionMismatch C(e, zeros(ComplexF64, 4, 7, 6), c.rotors, limits..., c.ℓ, c.lift)
+    @test_throws DimensionMismatch C(with_tables(e, zeros(ComplexF64, 3, 7), e.Z₋), c.Wˡ, c.rotors, limits..., c.ℓ, c.lift)
+    @test_throws DimensionMismatch C(with_tables(e, e.Z₊, zeros(ComplexF64, 4, 6)), c.Wˡ, c.rotors, limits..., c.ℓ, c.lift)
+    @test_throws DimensionMismatch C(e, c.Wˡ, c.rotors[1:3], limits..., c.ℓ, c.lift)
 
     y = sYlmCalculator(R⃗, 3, -1:1)
     Y = typeof(y)
+    e = y.engine
     state = (y.s, y.ℓ, y.phases, y.lift)
-    @test Y(y.H, y.Yˡ, y.Z₊, y.Z₋, y.rotors, state...) isa Y
-    @test_throws DimensionMismatch Y(y.H, zeros(ComplexF64, 4, 1, 7), y.Z₊, y.Z₋, y.rotors, state...)
-    @test_throws DimensionMismatch Y(y.H, zeros(ComplexF64, 4, 3, 5), y.Z₊, y.Z₋, y.rotors, state...)
-    @test_throws DimensionMismatch Y(y.H, y.Yˡ, zeros(ComplexF64, 3, 7), y.Z₋, y.rotors, state...)
-    @test_throws DimensionMismatch Y(y.H, y.Yˡ, y.Z₊, zeros(ComplexF64, 4, 6), y.rotors, state...)
-    @test_throws DimensionMismatch Y(y.H, y.Yˡ, y.Z₊, y.Z₋, y.rotors[1:3], state...)
+    @test Y(e, y.Yˡ, y.rotors, state...) isa Y
+    @test_throws DimensionMismatch Y(e, zeros(ComplexF64, 4, 1, 7), y.rotors, state...)
+    @test_throws DimensionMismatch Y(e, zeros(ComplexF64, 4, 3, 5), y.rotors, state...)
+    @test_throws DimensionMismatch Y(with_tables(e, zeros(ComplexF64, 3, 7), e.Z₋), y.Yˡ, y.rotors, state...)
+    @test_throws DimensionMismatch Y(with_tables(e, e.Z₊, zeros(ComplexF64, 4, 6)), y.Yˡ, y.rotors, state...)
+    @test_throws DimensionMismatch Y(e, y.Yˡ, y.rotors[1:3], state...)
 end
 
 
@@ -508,21 +513,16 @@ end
 end
 
 @testitem "Bounds: sYlm refuses a narrow ℓₘᵢₙ whose square would overflow" tags=[:bounds, :narrow_integers] setup=[IndexTypeRefusals] begin
-    import SphericalFunctions: sYlm, sYlm!, sYlm_matrix, sYlmCalculator, Ysize
+    import SphericalFunctions: sYlm, sYlm_matrix
     using Quaternionic: Rotor
 
     # The harmonic values would be allocated with the overflowed `Ysize`, 316 entries for
     # ℓ ∈ 14:15 in `Int8` rather than 60, and each would be written at the overflowed
-    # `Yindex`, which leaves the first 256 entries unwritten; a buffer of the right length
-    # would be refused as too short.
+    # `Yindex`, which leaves the first 256 entries unwritten.
     R = Rotor(1.0, 2.0, 3.0, 4.0)
     @test_throws narrow_refusal sYlm(R, Int8(15), Int8(2); ℓₘᵢₙ=Int8(14))
     @test_throws narrow_refusal sYlm(R, Int16(201), Int16(2); ℓₘᵢₙ=Int16(200))
     @test_throws narrow_refusal sYlm_matrix([R], Int8(15), Int8(2); ℓₘᵢₙ=Int8(14))
-    @test_throws narrow_refusal sYlm!(
-        zeros(ComplexF64, Ysize(14, 15)), sYlmCalculator(R, Int8(15), Int8(2)), R;
-        ℓₘᵢₙ=Int8(14)
-    )
 end
 
 @testitem "Bounds: the harmonics refuse Int8 indices at ℓ ≥ 64" tags=[:bounds, :narrow_integers] setup=[IndexTypeRefusals] begin

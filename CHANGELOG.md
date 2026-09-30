@@ -91,24 +91,20 @@ are relative to version 2.2.9.
   `0:1:4` or `Base.OneTo(4)`.  The index arithmetic is not closed
   under those types: ``ℓ^2`` overflows an `Int8` at ``ℓ = 12``, and
   ``-m`` wraps around in a `UInt`.  All the indices of one call must
-  be of one kind, integer or half-odd.  The exceptions are
-  `recurrence!` and `wedge_value`, which are given a calculator or a
-  wedge whose kind of index is fixed, and which convert an index of
-  any integer type, or a half-odd-integer `Rational` of any integer
-  type, to that kind.
+  be of one kind, integer or half-odd.
 * **The element type of a result is that of its input.**  Version 2
   chose the type through arguments such as `D_prep(ℓₘₐₓ, T)`; now
   there is no such argument, and to compute in another type the rotor
-  (or angle) must be converted.  A mismatch between the input and a
-  preallocated output, as in `sYlm!`, is an error rather than a silent
-  conversion.  The transforms, the pixelizations, the quadrature
-  weights and the operator matrices take a positional `T` argument,
-  since they construct their own numbers.  Sample points passed to a
-  transform must be `Rotor`s or `Quaternion`s of its type, and
-  colatitudes or weights must be of its type or integers, where
+  (or angle) must be converted.  A mismatch between new rotor data and
+  the type of an existing calculator, as in `set_R!`, is an error
+  rather than a silent conversion.  The transforms, the pixelizations,
+  the quadrature weights, and the operator matrices take a positional
+  `T` argument, since they construct their own numbers.  Sample points
+  passed to a transform must be `Rotor`s or `Quaternion`s of its type,
+  and colatitudes or weights must be of its type or integers, where
   version 2 converted them.
 * **The differential operators are objects rather than functions.**
-  `L²`, `Lz`, `L₊`, `L₋`, `R²`, `Rz`, `R₊`, `R₋`, `ð` and `ð̄` are now
+  `L²`, `Lz`, `L₊`, `L₋`, `R²`, `Rz`, `R₊`, `R₋`, `ð`, and `ð̄` are now
   singleton instances of subtypes of `DifferentialOperator`.  Calling
   one as in version 2, `ð(s, ℓₘᵢₙ, ℓₘₐₓ, [T])`, still returns a
   matrix; what is new is described under "Added".
@@ -182,9 +178,10 @@ are relative to version 2.2.9.
   `Yrange(…)[i][1]` and `Yrange(…)[i][2]`; `stack(Yrange(…); dims=1)`
   gives the old matrix.
 * The dependencies `AbstractFFTs`, `FastTransforms`, `Hwloc`,
-  `LoopVectorization`, `OffsetArrays`, `ProgressMeter` and `Random`
-  are dropped, and `FixedSizeArrays`, `GenericFFT`, `PrecompileTools`
-  and `Serialization` are added.  `DoubleFloats` becomes a weak
+  `LoopVectorization`, `OffsetArrays`, `ProgressMeter`, `Random`,
+  `SpecialFunctions`, and `TestItems` are dropped, and
+  `FixedSizeArrays`, `GenericFFT`, `PrecompileTools`, and
+  `Serialization` are added.  `DoubleFloats` becomes a weak
   dependency: loading it adds exact conversions of a `HalfOddInteger`
   to its types.
 
@@ -200,10 +197,10 @@ are relative to version 2.2.9.
 | `H!`, `H_recursion_coefficients` | `HCalculator(β, ℓₘₐₓ)` |
 | `sYlm_values(R, ℓₘₐₓ, s)` + `sYlm_iterator` | `sYlm(R, ℓₘₐₓ, s)`, indexed `Y[ℓ][m]` |
 | `sYlm_values(θ, ϕ, ℓₘₐₓ, s)` | `sYlm(θ, ϕ, ℓₘₐₓ, s)` |
-| `sYlm_prep` + `sYlm_values!` | `sYlmCalculator(R, ℓₘₐₓ, s)` + `sYlm!(Y, calc, R; ℓₘᵢₙ=0)`, or for several spin weights `sYlmCalculator(R, ℓₘₐₓ, -sₘₐₓ:sₘₐₓ)` + `sYlm!(Y, calc, R, s; ℓₘᵢₙ=0)` (see below) |
+| `sYlm_prep` + `sYlm_values!` | `sYlmCalculator(R, ℓₘₐₓ, s)`, or for several spin weights `sYlmCalculator(R, ℓₘₐₓ, -sₘₐₓ:sₘₐₓ)`, reused with `set_R!` and iterated; or `array_view(sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ=0))` for the flat layout from ``ℓ = 0`` (see below) |
 | `ₛ𝐘(s, ℓₘₐₓ, T, R⃗)` | `sYlm_matrix(R⃗, ℓₘₐₓ, s)` |
-| `λ_iterator` | `SphericalFunctions.sλlm` or `SphericalFunctions.sλlmCalculator` |
-| `ALFcompute` and relatives | no direct replacement; `sλlm(θ, ℓₘₐₓ, 0)` gives ``Y_{ℓ,m}(θ, 0)`` |
+| `λ_iterator` | `SphericalFunctions.sλlmCalculator` |
+| `ALFcompute` and relatives | no direct replacement; `SphericalFunctions.sλlmCalculator(θ, ℓₘₐₓ, 0)` gives ``Y_{ℓ,m}(θ, 0)`` |
 | `WignerDindex`, `WignerHsize`, … | not needed: blocks are indexed by ``(ℓ, m′, m)`` directly |
 | `SSHT(s, ℓₘₐₓ; T=T, method)` | `SSHT(s, ℓₘₐₓ, T; method)` |
 | `SSHTDirect` | `SSHTMatrix` |
@@ -211,12 +208,12 @@ are relative to version 2.2.9.
 | `plan_map2salm` + `map2salm!` | `𝒯 = SphericalFunctions.map2salm_plan(map, s, ℓₘₐₓ)` + `map2salm(map, 𝒯)` |
 
 The `ℓₘᵢₙ=0` in the `sYlm_prep` row matters.  Version 2's `sYlm_prep`
-allocated storage starting at ``ℓ = 0``, while `sYlm!` starts at
-``ℓₘᵢₙ = |s|`` unless told otherwise, and accepts a longer vector,
-writing only its first `Ysize(ℓₘᵢₙ, ℓₘₐₓ)` elements.  A version-2
-buffer, indexed with `Yindex(ℓ, m)` as before, would therefore be read
-at the wrong modes without any error.  (The other `sYlm` functions of
-version 2 already started at ``ℓ = |s|``.)
+allocated storage starting at ``ℓ = 0``, while `sYlm` starts at
+``ℓₘᵢₙ = |s|`` unless told otherwise.  Its flat values, indexed with
+`Yindex(ℓ, m)` as a version-2 buffer was, would therefore be read at
+the wrong modes.  (The other `sYlm` functions of version 2 already
+started at ``ℓ = |s|``.)  A calculator of integer indices starts at
+``ℓ = 0``, and its blocks are indexed by ``ℓ`` and ``m`` directly.
 
 ### Added
 
@@ -239,10 +236,10 @@ version 2 already started at ``ℓ = |s|``.)
   test suite, as well as being rendered in the documentation, so a
   change that breaks agreement with any of these sources is caught.
 * **Half-integer indices.**  `D`, `d`, the calculators, `sYlm`,
-  `sYlm!`, `sYlm_matrix`, `Ysize`, `Yindex`, `Yrange`, `ModeWeights`,
-  the differential operators, the golden-ratio, Leja and sorted-ring
+  `sYlm_matrix`, `Ysize`, `Yindex`, `Yrange`, `ModeWeights`, the
+  differential operators, the golden-ratio, Leja, and sorted-ring
   pixelizations, and the `"RS"` and `"Matrix"` transforms (with
-  `map2salm` and `salm2map`) all accept half-integer ``ℓ``, ``m`` and
+  `map2salm` and `salm2map`) all accept half-integer ``ℓ``, ``m``, and
   ``s``, passed as `Rational{Int}`s with denominator 2 — as in `D(R,
   7//2)` or `SSHT(1//2, 7//2)` — or as `HalfOddInteger`s, the type to
   which such a `Rational` is converted.  The results are indexed
@@ -366,8 +363,7 @@ version 2 already started at ``ℓ = |s|``.)
   half-integer indices.
 * The real harmonics ``{}_sλ_{ℓ,m}(θ)`` — ``{}_sY_{ℓ,m}(θ, 0)`` for
   integer ``s``, and ``{}_sY_{ℓ,m}(θ, 0) / i^{2s}`` for half-odd ``s``
-  — through the public but unexported `sλlm`, `sλlm!`, `sλlm_matrix`
-  and `sλlmCalculator`.
+  — through the public but unexported `sλlmCalculator`.
 * The angular-momentum operators `Lx` and `Ly`.  (There is
   deliberately no `Rx` or `Ry`; see the `Lx` docstring.)
 * `salm2map`, the inverse of `map2salm`, which also takes a
@@ -386,10 +382,6 @@ version 2 already started at ``ℓ = |s|``.)
   points it loses about 3.
 * `ComplexPowers`, an iterator over the powers of a unit complex
   number, which runs the same recurrence as `complex_powers!`.
-* `sqrtbinomial`, the square root of a binomial coefficient, computed
-  through the logarithm of the beta function so that it stays finite
-  and accurate where the coefficient itself overflows; it is public
-  but not exported.
 * **Transforms from several tasks.**  `copy(𝒯)` gives a transform
   that shares the read-only tables and FFT plans of `𝒯` with new
   workspace, for a small fraction of the cost of constructing one, and
@@ -408,8 +400,7 @@ version 2 already started at ``ℓ = |s|``.)
   whose names are not ASCII: `L2`, `Lplus`, `Lminus`, `R2`, `Rplus`,
   `Rminus`, `eth` and `ethbar` for the operators, `Deltaspin` for
   `Δspin`, `set_beta!` and `set_theta!` for the setters, and
-  `slambdalm`, `slambdalm!`, `slambdalm_matrix` and
-  `slambdalmCalculator` for the real harmonics.
+  `slambdalmCalculator` for the calculator of the real harmonics.
 
 ### Fixed
 

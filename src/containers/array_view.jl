@@ -85,17 +85,14 @@ function relabel end
 
 ### `array_view`
 
-# The index tuple is built with a `Val` so that its length is known to the compiler and the
-# view is free; `size(w)` is the extent of the *block*, which may be smaller than the
-# storage it sits in.
-@inline block_axes(w, ::Val{N}) where {N} = ntuple(d -> Base.OneTo(size(w, d)), Val(N))
-
-@inline array_view(w::WignerMatrix) = view(parent(w), block_axes(w, Val(2))...)
-@inline array_view(w::WignerMatrixBatch) = view(parent(w), block_axes(w, Val(3))...)
-@inline array_view(w::DegreeBlock) = view(parent(w), block_axes(w, Val(1))...)
-@inline array_view(w::DegreeBlockBatch) = view(parent(w), block_axes(w, Val(2))...)
-@inline array_view(w::SpinMatrix) = view(parent(w), block_axes(w, Val(2))...)
-@inline array_view(w::SpinMatrixBatch) = view(parent(w), block_axes(w, Val(3))...)
+# `size(w)` is the extent of the *block*, which may be smaller than the storage it sits in,
+# and a tuple whose length is fixed by the type of the block, so the index tuple is known to
+# the compiler and the view is free.  The storage of a `DegreeBlock` is compared with the
+# block first, since it may have been resized (see `check_storage`).
+@inline function array_view(w::AbstractBlock)
+    check_storage(w)
+    view(parent(w), map(Base.OneTo, size(w))...)
+end
 
 # The mode containers store their data flat and 1-based already, so their storage *is* the
 # flat 1-based form already; there is nothing to view.  For a `ModeWeights` this is what the
@@ -130,29 +127,12 @@ function check_relabel_shape(w, A)
     end
 end
 
-function relabel(w::WignerMatrix, A::AbstractMatrix)
+# The array must have the rank of the block's storage, which is that of the block.
+function relabel(
+    w::AbstractBlock{IT, NT, <:AbstractArray{<:Any, N}}, A::AbstractArray{<:Any, N}
+) where {IT, NT, N}
     check_relabel_shape(w, A)
-    WignerMatrix(A, ℓ(w); m′ₘₐₓ=m′ₘₐₓ(w), m′ₘᵢₙ=m′ₘᵢₙ(w), mₘₐₓ=mₘₐₓ(w), mₘᵢₙ=mₘᵢₙ(w))
-end
-function relabel(w::WignerMatrixBatch, A::AbstractArray{<:Any, 3})
-    check_relabel_shape(w, A)
-    WignerMatrixBatch(A, ℓ(w); m′ₘₐₓ=m′ₘₐₓ(w), m′ₘᵢₙ=m′ₘᵢₙ(w), mₘₐₓ=mₘₐₓ(w), mₘᵢₙ=mₘᵢₙ(w))
-end
-function relabel(w::DegreeBlock, A::AbstractVector)
-    check_relabel_shape(w, A)
-    DegreeBlock(A, ℓ(w); mₘₐₓ=mₘₐₓ(w), mₘᵢₙ=mₘᵢₙ(w))
-end
-function relabel(w::DegreeBlockBatch, A::AbstractMatrix)
-    check_relabel_shape(w, A)
-    DegreeBlockBatch(A, ℓ(w); mₘₐₓ=mₘₐₓ(w), mₘᵢₙ=mₘᵢₙ(w))
-end
-function relabel(w::SpinMatrix, A::AbstractMatrix)
-    check_relabel_shape(w, A)
-    SpinMatrix(A, ℓ(w); sₘₐₓ=sₘₐₓ(w), sₘᵢₙ=sₘᵢₙ(w), mₘₐₓ=mₘₐₓ(w), mₘᵢₙ=mₘᵢₙ(w))
-end
-function relabel(w::SpinMatrixBatch, A::AbstractArray{<:Any, 3})
-    check_relabel_shape(w, A)
-    SpinMatrixBatch(A, ℓ(w); sₘₐₓ=sₘₐₓ(w), sₘᵢₙ=sₘᵢₙ(w), mₘₐₓ=mₘₐₓ(w), mₘᵢₙ=mₘᵢₙ(w))
+    rewrap(w, A)
 end
 function relabel(w::ModeWeights, A::AbstractVector)
     if length(A) != length(w)
@@ -207,15 +187,15 @@ Base.IndexStyle(::Type{<:LabelledArray{T, N, A}}) where {T, N, A} = IndexStyle(A
 Base.dataids(x::LabelledArray) = Base.dataids(x.data)
 Base.unaliascopy(x::LabelledArray) = LabelledArray(Base.unaliascopy(x.data), x.container)
 
-const LabelledContainer = Union{BlockContainer, HarmonicValues}
+const LabelledContainer = Union{AbstractBlock, HarmonicValues}
 Base.Broadcast.broadcastable(c::LabelledContainer) = LabelledArray(array_view(c), c)
 
 # The labels that two containers combined in a broadcast must share.  Those of a block are its
 # kind, its ℓ and its axes (see `block_labels`), and those of harmonic values say which spin
 # weights, which ℓ and how many rotors the values are for.
-container_labels(w::BlockContainer) = block_labels(w)
+container_labels(w::AbstractBlock) = block_labels(w)
 container_labels(Y::HarmonicValues) = (:HarmonicValues, Y.s, Y.ℓₘᵢₙ, Y.ℓₘₐₓ, Y.Nᵣ)
-container_description(w::BlockContainer) = sprint(summary, w)
+container_description(w::AbstractBlock) = sprint(summary, w)
 container_description(Y::HarmonicValues) = sprint(show, Y)
 
 # The containers among the operands of a broadcast, however deeply nested, as a tuple.

@@ -72,7 +72,7 @@ struct SSHTRS{T<:Real, ST, P, BP, B, IT<:IntegerHalf} <: SSHT{T}
     θ::Vector{T}
     quadrature_weights::Vector{T}
     Nϕ::Vector{Int}
-    iθ::Vector{UnitRange{Int}}  # index range of each ring in the pixel vector
+    ring_ranges::Vector{UnitRange{Int}}  # index range of each ring in the pixel vector
     plans::RingPlans{T, P, BP}  # FFT plans for each distinct ring size (see `RingPlans`)
     synthesis_phases::Vector{Vector{Complex{T}}}  # for each ring size (see `ring_phases`)
     analysis_phases::Vector{Vector{Complex{T}}}
@@ -149,7 +149,7 @@ function rs_transform(
         throw(ArgumentError("Every ring needs at least one point; got Nϕ=$Nϕ."))
     end
     Nθ = length(θ)
-    iθ = let stops = cumsum(Nϕ)
+    ring_ranges = let stops = cumsum(Nϕ)
         [(stop - n + 1):stop for (n, stop) ∈ zip(Nϕ, stops)]
     end
     plans = ring_plans(TT, Nϕ; flags=plan_fft_flags, timelimit=plan_fft_timelimit)
@@ -158,9 +158,9 @@ function rs_transform(
     F = [Matrix{Complex{TT}}(undef, Nθ, 2ℓₘₐₓ + 1)]
     G = [Vector{Complex{TT}}(undef, N) for N ∈ plans.sizes]
     P, BP = eltype(plans.forward), eltype(plans.backward)
-    SSHTRS{TT, typeof(parent(λ.H.Hˡ)), P, BP, isbatched(λ), IT}(
-        s, ℓₘₐₓ, θ, quadrature_weights, Nϕ, iθ, plans, synthesis_phases, analysis_phases,
-        λ, F, G
+    SSHTRS{TT, typeof(parent(λ.engine.H.Hˡ)), P, BP, isbatched(λ), IT}(
+        s, ℓₘₐₓ, θ, quadrature_weights, Nϕ, ring_ranges, plans,
+        synthesis_phases, analysis_phases, λ, F, G
     )
 end
 
@@ -168,7 +168,7 @@ end
 # are shared, since no transform modifies them, and the workspace is new.
 function Base.copy(𝒯::SSHTRS{T, ST, P, BP, B, IT}) where {T, ST, P, BP, B, IT}
     SSHTRS{T, ST, P, BP, B, IT}(
-        𝒯.s, 𝒯.ℓₘₐₓ, 𝒯.θ, 𝒯.quadrature_weights, 𝒯.Nϕ, 𝒯.iθ, 𝒯.plans,
+        𝒯.s, 𝒯.ℓₘₐₓ, 𝒯.θ, 𝒯.quadrature_weights, 𝒯.Nϕ, 𝒯.ring_ranges, 𝒯.plans,
         𝒯.synthesis_phases, 𝒯.analysis_phases,
         similar(𝒯.λ), [similar(𝒯.F[1])], [similar(g) for g ∈ 𝒯.G]
     )
@@ -224,7 +224,7 @@ end
 
 pixels(𝒯::SSHTRS) = ring_pixels(𝒯.θ, 𝒯.Nϕ)
 rotors(𝒯::SSHTRS) = from_spherical_coordinates.(pixels(𝒯))
-npixels(𝒯::SSHTRS) = 𝒯.iθ[end].stop
+npixels(𝒯::SSHTRS) = 𝒯.ring_ranges[end].stop
 
 function Base.:*(𝒯::SSHTRS, f̃::SSHTData)
     d = synthesis_modes(𝒯, f̃)
@@ -297,10 +297,10 @@ function rs_synthesis!(f, 𝒯::SSHTRS{T}, f̃) where {T}
             Gy, Nϕy = G[j], 𝒯.Nϕ[y]
             fill!(Gy, zero(Complex{T}))
             for m ∈ -ℓₘₐₓ:ℓₘₐₓ
-                Gy[1 + mod(fourier_index(m), Nϕy)] += Fₖ[y, m + ℓₘₐₓ + 1]
+                Gy[1 + mod(floor_int(m), Nϕy)] += Fₖ[y, m + ℓₘₐₓ + 1]
             end
             plans.backward[j] * Gy  # unnormalized inverse FFT: Σₘ Gₘ e^{+imϕₖ}
-            ring_values!(view(fₖ, 𝒯.iθ[y]), Gy, 𝒯.synthesis_phases[j], s)
+            ring_values!(view(fₖ, 𝒯.ring_ranges[y]), Gy, 𝒯.synthesis_phases[j], s)
         end
     end
     f
@@ -341,10 +341,10 @@ function rs_analysis!(f̃, 𝒯::SSHTRS{T}, f) where {T}
             j = plans.index[y]
             Gy, Nϕy = G[j], 𝒯.Nϕ[y]
             factor = 𝒯.quadrature_weights[y] * twoπ / Nϕy
-            ring_samples!(Gy, view(fₖ, 𝒯.iθ[y]), factor, 𝒯.analysis_phases[j], s)
+            ring_samples!(Gy, view(fₖ, 𝒯.ring_ranges[y]), factor, 𝒯.analysis_phases[j], s)
             plans.forward[j] * Gy
             for m ∈ -ℓₘₐₓ:ℓₘₐₓ
-                Fₖ[y, m + ℓₘₐₓ + 1] = Gy[1 + mod(fourier_index(m), Nϕy)]
+                Fₖ[y, m + ℓₘₐₓ + 1] = Gy[1 + mod(floor_int(m), Nϕy)]
             end
         end
     end

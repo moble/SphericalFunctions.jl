@@ -116,8 +116,8 @@ there is no table of correspondences to learn:
 | call | what comes back |
 |---|---|
 | `D(R, ℓₘₐₓ)`, `d(β, ℓₘₐₓ)` | a [`WignerSeries`](@ref) of blocks |
-| a block of `D` | [`WignerDMatrix`](@ref) |
-| a block of `d` | [`WignerdMatrix`](@ref) |
+| a block of `D` | a [`WignerMatrix`](@ref) of complex numbers |
+| a block of `d` | a [`WignerMatrix`](@ref) of real numbers |
 | a block of a `DCalculator` or `dCalculator` built from a vector of rotors | [`WignerMatrixBatch`](@ref) |
 | `sYlm(R, ℓₘₐₓ, s)` | [`HarmonicValues`](@ref) |
 | a block of an `sYlmCalculator`, one spin weight | [`DegreeBlock`](@ref) |
@@ -178,8 +178,8 @@ indices ``H`` is symmetric only up to the sign ``σ =
 transposes it by hand will get the wrong sign for half of the
 elements; use [`wedge_value`](@ref SphericalFunctions.wedge_value),
 which applies ``σ`` for you, and accepts the indices as
-`HalfOddInteger`s or as `Rational`s with denominator 2.  See the notes
-on the [``H`` recursion](@ref "Algorithm for computing ``H``").
+`HalfOddInteger`s or as `Rational{Int}`s with denominator 2.  See the
+notes on the [``H`` recursion](@ref "Algorithm for computing ``H``").
 
 ## Half-integer spin weight
 
@@ -259,13 +259,9 @@ rather than by the other arguments of the call.  Indexing a container,
 as in `w[ℓ, m]`, `𝔇[ℓ]` or `𝔇[ℓ][m′, m]`, follows the rules above,
 and in addition requires each index to be of the container's own kind;
 a position in the flat storage, as in `w[i]`, is an ordinary array
-index.  The forms of `sYlm!` and `sλlm!` that take a calculator treat
-their indices in the same way, as indices of the calculator.  Only
-`recurrence!(calc, ℓ)` and `wedge_value(Hˡ, iᵣ, m′, m)` are more
-lenient: each requires its indices to be of the kind that the
-calculator or the wedge was built for, and converts them to the
-object's own index type, so that there an integer of any type serves
-an integer calculator.
+index.  The other kind, `recurrence!(calc, ℓ)` and `wedge_value(Hˡ,
+iᵣ, m′, m)`, follows the same rules, and requires its indices to be of
+the kind that the calculator or the wedge was built for.
 
 
 ## Docstrings

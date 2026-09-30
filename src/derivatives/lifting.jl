@@ -3,22 +3,18 @@
 # A calculator of 𝔇 or of the harmonics whose rotors hold derivatives — dual numbers, say —
 # runs the recurrence on the values of those rotors, and lifts each block of values into a
 # block that holds the derivatives, which the angular-momentum operators give in terms of
-# the values (see `src/derivatives/kernels.jl`).  This file holds what that needs to know
-# about a number type, as functions that an extension for a tool such as ForwardDiff
-# extends, and the data that a lifting calculator keeps; `lift!` itself is in
-# `src/derivatives/kernels.jl`.
+# the values (see `src/derivatives/kernels.jl`).  This file holds, in order, what that needs
+# to know about a number type, as functions that an extension for a tool such as ForwardDiff
+# extends; the data that a lifting calculator keeps; the copying of rotor data into its
+# storage; and the view of a vector of rotor data that holds derivatives as a vector of
+# their values.  `lift!` itself is in `src/derivatives/kernels.jl`.
 
 # The type of the values of a real type that holds derivatives, and the type itself for one
 # that does not.  A calculator whose real type differs from its `value_type` lifts the
-# blocks of a calculator of that type.  `float_type` is the type at the bottom of that
+# blocks of a calculator of that type.  `recurrence_type` is the type at the bottom of that
 # chain, in which the recurrence finally runs.
 value_type(::Type{T}) where {T<:Real} = T
-float_type(::Type{T}) where {T<:Real} = value_type(T) === T ? T : float_type(value_type(T))
-
-# The real type in which a calculator works, given the float type `T` of its rotor data's
-# components: `T` itself, unless a tool's numbers come in several types that a calculator
-# cannot store together, in which case the tool's extension names the one it uses.
-working_type(::Type{T}) where {T<:Real} = T
+recurrence_type(::Type{T}) where {T<:Real} = value_type(T) === T ? T : recurrence_type(value_type(T))
 
 # The value of a number that holds derivatives, and the number itself otherwise; the
 # rotation of those values; the number of directions in which a number of type `T` holds

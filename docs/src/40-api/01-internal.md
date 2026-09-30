@@ -10,7 +10,7 @@ signatures may change without a breaking release.  They are documented
 because the public docstrings refer to them, and because anyone
 reading the recurrence or the raw storage of a calculator needs them.
 
-Everything here belongs to one machine.  A [`HCalculator`](@ref) holds
+Everything here belongs to one machine.  An [`HCalculator`](@ref) holds
 two kinds of buffer — an [`HWedge`](@ref) holding about a quarter of
 ``H^ℓ`` for a batch of rotors, and two [`HAxis`](@ref) buffers holding
 successive orders of the ``m'=0``, ``m ≥ 0`` axis that seeds it — and
@@ -35,43 +35,32 @@ the ``m'=0`` axis, steps 3–5 run the ``m'`` ladders at fixed ``ℓ`` to
 fill the wedge ``m ≥ |m'|``, and step 6 uses the symmetries to fill
 the rest of the requested ``m'`` range.
 
-Each step name below has **two** methods, and they are not
-interchangeable.
-
-  - The methods taking a [`HCalculator`](@ref) are what the engine
-    runs.  They work on the batched quarter-wedge for all `Nᵣ` rotors
-    at once, with the rotor index innermost, and they handle
-    half-integer as well as integer ``ℓ``.  There are only five of
-    them: step 6 is *never* applied to the wedge, because every
-    element outside it is supplied by the symmetries, including the
-    sign ``σ``, when a block is assembled from the wedge, or when an
-    element is read through [`wedge_value`](@ref).  They are internal
-    to `src/recurrence/h_calculator.jl` and have no docstrings.
-  - The methods documented below take a single
-    [`AbstractWignerMatrix`](@ref) holding one whole ``H^ℓ`` for one
-    rotor, with ``\cos β`` and ``\sin β`` passed explicitly, and are
-    restricted to integer indices.  They are the unbatched reference
-    form of the same recurrence — a second implementation, useful for
-    checking the engine, and tested against it by the "Dense H
-    recurrence vs the batched engine" test item — but nothing in the
-    package calls them.
-
-The final two functions apply the phases of step 7, converting a
-filled ``H^ℓ`` in place into ``d^ℓ`` or ``𝔇^ℓ``.  They are the
-unbatched counterpart of the calculator's `materialize!`, which is
-where the ``ϵ`` signs and the Euler phases ``e^{-im'α}``, ``e^{-imγ}``
-actually enter for the engine (and, for ``{}_{s}Y_{ℓ,m}``, in
-`src/calculators/harmonics.jl`).
+The steps documented below are what an `HCalculator` runs.  Each takes an
+[`HCalculator`](@ref) and works on its buffers for all `Nᵣ` rotors at
+once, with the rotor index innermost: steps 1 and 2 fill its two axis
+buffers, and steps 3–5 fill its batched quarter-wedge.  They handle
+half-integer as well as integer ``ℓ``; for half-integer ``ℓ``,
+[`recurrence_seed!`](@ref) takes the place of step 3.  Step 6 is
+*never* applied to the wedge, because every element outside it is
+supplied by the symmetries, including the sign ``σ``, when a block is
+assembled from the wedge, or when an element is read through
+[`wedge_value`](@ref).  The phases of step 7 — the ``ϵ`` signs and the
+Euler phases ``e^{-im'α}`` and ``e^{-imγ}`` — enter in the
+`materialize!` of each calculator, which writes every element of a
+block through the one `materialize_element!` of
+`src/calculators/engine.jl`.  The test suite, in
+`test/wigner/recurrence.jl`, checks the `HCalculator` against a second
+implementation of the same recurrence, which holds one whole ``H^ℓ``
+of integer order for one rotor in a dense matrix and applies all seven
+steps to it.
 
 ```@docs
 SphericalFunctions.recurrence_step1!
 SphericalFunctions.recurrence_step2!
 SphericalFunctions.recurrence_step3!
+SphericalFunctions.recurrence_seed!
 SphericalFunctions.recurrence_step4!
 SphericalFunctions.recurrence_step5!
-SphericalFunctions.recurrence_step6!
-SphericalFunctions.convert_H_to_d!
-SphericalFunctions.convert_H_to_D!
 ```
 
 
@@ -124,19 +113,15 @@ convert a half-integer index passed as a `Rational{Int}` to a
 `HalfOddInteger` before anything is computed, and refuse any other
 index that is not an `Int` with the message built by
 [`index_argument_error`](@ref
-SphericalFunctions.index_argument_error).  Indexing a container, and
-the forms of a function that take a calculator, are not written with
-the macro, because the kind of index they accept is fixed by the
-container or the calculator rather than by the arguments of the call.
-Indexing a container converts an index as the macro does, and refuses
-one that is not of the container's own kind with a message of the same
-form; so do the forms of [`sYlm!`](@ref) and [`sλlm!`](@ref) that take
-a calculator, which therefore accept exactly the indices that the
-functions defined with the macro accept.  Only [`recurrence!`](@ref)
-and [`wedge_value`](@ref), where an index arrives on its own beside a
-calculator or a wedge, check it against the kind of index of that
-object and convert it to that kind, so that an integer index may there
-be of any integer type but `Bool`.
+SphericalFunctions.index_argument_error).  Indexing a container is
+not written with the macro, and neither are [`recurrence!`](@ref) and
+[`wedge_value`](@ref), which take an index beside a calculator or a
+wedge, because the kind of index they accept is fixed by the
+container, the calculator, or the wedge rather than by the arguments
+of the call.  Each of them converts an index as the macro does, and
+refuses one that is not of the kind of the container, the calculator,
+or the wedge with a message of the same form, so that it accepts
+exactly the indices that the functions defined with the macro accept.
 
 ```@docs
 SphericalFunctions.index_argument_error

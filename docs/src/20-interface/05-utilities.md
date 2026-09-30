@@ -44,30 +44,15 @@ Order   = [:module, :type, :constant, :function, :macro]
 
 These functions report how the package reads the rotor data given to a
 calculator: the floating-point type it computes in, and the number of
-rotors.  `rotor_basetype`, `nrotors` and `floattype` are public; the
-others are the internal helpers that check the data and word the
-refusals.
+rotors.  [`floattype`](@ref SphericalFunctions.floattype), which is
+documented with the accessors, and `nrotors` are public; the others
+are the internal helpers that check the data and word the refusals.
+The same file holds `spinor_phases` and `half_angles`, which compute
+the phases that a calculator stores for each rotor; they are
+documented among the [internal functions](@ref "Rotor phases").
 
 ```@autodocs
 Modules = [SphericalFunctions]
 Pages   = ["calculators/rotors.jl"]
-Filter  = f -> f !== SphericalFunctions.sqrtbinomial
+Filter  = f -> f ∉ (SphericalFunctions.spinor_phases, SphericalFunctions.half_angles)
 ```
-
-## Combinatorics
-
-Spherical functions frequently involve binomial coefficients and
-similar terms, with arguments proportional to ``ℓ``, which we aim to
-allow to be very large — of order 1,000 or more.  Unfortunately, due
-to combinatorial explosions, this is frequently infeasible with naive
-methods.  The public [`sqrtbinomial`](@ref
-SphericalFunctions.sqrtbinomial) computes the square root of a
-binomial coefficient through the logarithm of the beta function, so
-that it stays finite and accurate where the coefficient itself would
-overflow.
-
-```@docs
-SphericalFunctions.sqrtbinomial
-```
-
-

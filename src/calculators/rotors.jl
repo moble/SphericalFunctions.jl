@@ -1,52 +1,11 @@
-# The logarithm of `binomial(n, k)`, computed in the float type `S`, which is what
-# `sqrtbinomial` exponentiates.  The general case is `-log(n+1) - log B(n-k+1, k+1)`, where
-# B is the beta function, as in `SpecialFunctions.logabsbinomial`.  In `Float64` this is
-# several times more accurate at large `n` than the difference of three `loggamma`s, which
-# are large and nearly cancel, and unlike `logabsbinomial` it accepts any float type.  The
-# coefficient is symmetric in `k ↔ n - k`, so the smaller of the two is used.
-function logbinomial(n::T, k::T, S=float(T)) where {T<:Integer}
-    if k == 0 || k == n
-        return zero(S)
-    end
-    if k > (n>>1)
-        k = n - k
-    end
-    if k == 1
-        return log(S(n))
-    else
-        return -log1p(S(n)) - SpecialFunctions.logbeta(S(n - k + 1), S(k + 1))
-    end
-end
-
-"""
-    sqrtbinomial(n, k, [T=Float64])
-
-The square root of the binomial coefficient `binomial(n, k)`, computed in the float type `T`
-from its logarithm, so that it is finite where the coefficient itself would overflow.
-
-For `Int` arguments, `binomial` overflows at about `n = 66` when `k ≈ n/2`, but the square
-root of the coefficient, which is what many normalization constants need, is representable
-in `Float64` up to about `n = 2050`.  The logarithm is computed through the beta function,
-as it is by [`logabsbinomial` in
-SpecialFunctions.jl](https://specialfunctions.juliamath.org/latest/functions_list/#SpecialFunctions.logabsbinomial),
-but in any float type `T` that `SpecialFunctions.logbeta` accepts, including `BigFloat` and
-`Double64`.  Exponentiating the logarithm magnifies its rounding error in proportion to its
-size, so the relative error is a few ulp for small coefficients and grows with their
-logarithm, to about a thousand ulp near `n = 2050` in `Float64`.  `n` and `k` are integers
-of one type, and the result is zero when `k` is negative or greater than `n`.
-"""
-function sqrtbinomial(n, k, ::Type{T}=Float64) where T
-    exp(logbinomial(n, k, T)/2)
-end
-
-
 ### Rotor data supplied to a calculator
 #
 # Every calculator takes its rotor data as a constructor argument, which fixes both the
 # floating-point type it works in and the number of rotors it handles at once.  The two
-# helpers below derive those from the argument.  Both dispatch on the argument's *type*: a
-# runtime reduction over a vector would infer only as `Type`, which would make the element
-# type a runtime value and cost the calculators their type stability.
+# functions below, `floattype` and `nrotors`, derive those from the argument.  The first is
+# defined on the argument's *type*: a runtime reduction over a vector would infer only as
+# `Type`, which would make the element type a runtime value and cost the calculators their
+# type stability.
 
 # The rotor data that denote rotations: a `Rotor`, or any other `Quaternion`, which denotes
 # the rotation of its normalization.  The recurrence divides out the norm in any case.
@@ -63,73 +22,17 @@ const rotor_input_forms = (
     * "`Union` element type, does not, and should be converted before it is passed)"
 )
 
-"""
-    rotor_basetype(R)
-
-The floating-point type in which to work, given the rotor data `R`: the `float` of its
-component type.  This is the *only* thing that decides the element type a calculator works
-in, so that a `Rotor{Float32}` gives a `Float32` calculator and a `Rotor{Double64}` a
-`Double64` one.  A `Quaternion` counts as a rotor here; we always divide out by the norm,
-and accept `Quaternion` for compatibility with various automatic-differentiation packages.
-To compute in some other type, convert the rotor data — which is also the honest way to say
-it, since the type of the data is the claim being made about the points.
-
-The rotor data must therefore commit to a type to go on: data whose component type is
-abstract, such as a `Complex{Real}` or a `Vector{Rotor{Real}}`, or a vector whose element
-type is abstract or a `Union`, is refused with an `ArgumentError` rather than guessed at.
-"""
-rotor_basetype(R::RotorLike) = concrete_float(Quaternionic.basetype(R), R)
-rotor_basetype(β::Real) = concrete_float(typeof(β), β)
-rotor_basetype(z::Complex{T}) where {T<:Real} = concrete_float(T, z)
-rotor_basetype(R::AbstractVector{<:Rotor{T}}) where {T<:Real} = concrete_float(T, R)
-rotor_basetype(R::AbstractVector{<:Quaternionic.Quaternion{T}}) where {T<:Real} = concrete_float(T, R)
-rotor_basetype(β::AbstractVector{T}) where {T<:Real} = concrete_float(T, β)
-rotor_basetype(z::AbstractVector{<:Complex{T}}) where {T<:Real} = concrete_float(T, z)
-function rotor_basetype(R)
-    throw(ArgumentError(
-        "Cannot build a calculator from rotor data of type $(typeof(R)); $rotor_input_forms."
-    ))
-end
-# `Vector{Rotor}` and `Vector{Rotor{<:Real}}` hold rotations, but their element type does not
-# say in what precision, so they get the message above rather than the one below; so do the
-# vectors of `Quaternion`s like them.
-function rotor_basetype(R::AbstractVector{<:RotorLike})
-    throw(ArgumentError(
-        "Cannot build a calculator from rotor data of type $(typeof(R)); $rotor_input_forms."
-    ))
-end
-# A `QuatVec` is refused here, which is where the calculators catch it: the constructors
-# call this directly, and the setters through `check_rotor_type`.
-rotor_basetype(R::Union{QuatVec, AbstractVector{<:QuatVec}}) = throw(ArgumentError(not_a_rotor(R)))
-
-# The float type of rotor data `R` whose components are of type `T`.  `float(Real)` is
-# `Float64`, so without the check data of an abstract component type would be answered with
-# a guess — the one thing `rotor_basetype` is not allowed to do.  A concrete `T` is fine
-# even when it is not itself a float: `float(Int)` is a derivation, exactly as it is for a
-# single `Int` angle.  The check is on a type known when the method is compiled, so it folds
-# away.
-@inline function concrete_float(::Type{T}, R) where {T}
-    isconcretetype(T) || throw(abstract_components_error(T, R))
-    working_type(float(T))
-end
-@noinline function abstract_components_error(T, R)
-    ArgumentError(
-        "The rotor data, of type $(typeof(R)), has components of type $T, which does not say "
-        * "what floating-point type to work in; convert the data to a concrete type first."
-    )
-end
-
 # Quaternions that do not denote rotations — `QuatVec`s — singly or in a vector.  The
 # functions that take rotations — `D`, `d`, `sYlm`, `Ylm`, `sYlm_matrix`, `w(R)` and the
-# transforms — never reach `rotor_basetype` with these, so each has a method on this type
-# that refuses them with the message of `not_a_rotor` rather than a bare `MethodError`.
+# transforms — never reach `floattype` with these, so each has a method on this type that
+# refuses them with the message of `not_a_rotor` rather than a bare `MethodError`.
 const NonRotorData = Union{QuatVec, AbstractVector{<:QuatVec}}
 
 """
     not_a_rotor(R)
 
-The message for rotor data that is a quaternion but does not denote a rotation, which is to
-say a `QuatVec`.
+The message for rotor data `R`, or for rotor data of type `R`, that is a quaternion but does
+not denote a rotation, which is to say a `QuatVec`, or a vector of them.
 
 These functions are defined on the rotation group, so a rotation is what they take: a
 `Rotor`, or any other `Quaternion`, which denotes the rotation of its normalization, since
@@ -137,15 +40,63 @@ the recurrence divides out its magnitude.  A `QuatVec` is a different thing — 
 a vector, and reading one as a rotation by ``π`` about its own direction would be a category
 error rather than a convenience; `exp(v/2)` gives the rotation that a vector generates.
 """
-function not_a_rotor(R)
-    T = R isa AbstractVector ? eltype(R) : typeof(R)
+not_a_rotor(R) = not_a_rotor(typeof(R))
+function not_a_rotor(::Type{D}) where {D}
+    T = D <: AbstractVector ? eltype(D) : D
     (
         (
-            R isa AbstractVector ? "These are `$T`s, which are vectors, not rotations" :
+            D <: AbstractVector ? "These are `$T`s, which are vectors, not rotations" :
                 "A `$T` is a vector, not a rotation"
         )
         * ".  Rotations are taken as `Rotor`s or `Quaternion`s, and `exp(v/2)` gives the "
         * "rotation that a `QuatVec` generates."
+    )
+end
+
+floattype(x) = floattype(typeof(x))
+function floattype(::Type{D}) where {D}
+    T = component_type(D)
+    T === nothing && throw(not_rotor_data_error(D))
+    isconcretetype(T) || throw(abstract_components_error(T, D))
+    floattype(T)
+end
+# `float(Real)` is `Float64`, so without the check a type of rotor data whose components are
+# abstract would be answered with a guess — the one thing `floattype` is not allowed to do.
+# A concrete `T` is fine even when it is not itself a float: `float(Int)` is a derivation,
+# exactly as it is for a single `Int` angle.  The check is on a type known when the method
+# is compiled, so it folds away.
+function floattype(::Type{T}) where {T<:Real}
+    isconcretetype(T) || throw(abstract_components_error(T, T))
+    float(T)
+end
+
+# The type of the components of rotor data of type `D`, or `nothing` if `D` is not a type
+# of rotor data.  A vector is rotor data only if its element type says which kind of rotor
+# data it holds, and whether that type is concrete is left for `floattype` to check, so that
+# it can refuse an abstract one with a message of its own.  `Vector{Rotor}` and
+# `Vector{Rotor{<:Real}}` hold rotations, but their element type does not say in what
+# precision, so they are not rotor data here; neither are the vectors of `Quaternion`s like
+# them.
+component_type(::Type) = nothing
+component_type(::Type{T}) where {T<:Real} = T
+component_type(::Type{Complex{T}}) where {T<:Real} = T
+component_type(::Type{Q}) where {T<:Real, Q<:Union{Rotor{T}, Quaternion{T}}} =
+    Quaternionic.basetype(Q)
+component_type(::Type{<:AbstractVector{E}}) where {E<:Union{Real, Complex, RotorLike}} =
+    component_type(E)
+
+# A `QuatVec` is refused here, which is where the calculators catch it: the constructors
+# call `floattype` directly, and the setters through `check_rotor_type`.
+@noinline function not_rotor_data_error(::Type{D}) where {D}
+    ArgumentError(
+        D <: NonRotorData ? not_a_rotor(D) :
+            "Cannot build a calculator from rotor data of type $D; $rotor_input_forms."
+    )
+end
+@noinline function abstract_components_error(T, D)
+    ArgumentError(
+        "The rotor data, of type $D, has components of type $T, which does not say what "
+        * "floating-point type to work in; convert the data to a concrete type first."
     )
 end
 
@@ -177,18 +128,19 @@ end
 batched_data(::AbstractVector) = Val(true)
 batched_data(::Any) = Val(false)
 
-
-"""
-    floattype(calc)
-
-The floating-point type a calculator works in, which is the type of the rotor data it was
-constructed from.  Its results are that type, or `Complex` of it.
-
-There is no way to set this independently of the data: converting the data is how one asks
-for a different type, and the methods that replace a calculator's data — [`set_R!`](@ref),
-[`set_β!`](@ref), [`set_θ!`](@ref) — require the new data to agree with what this reports.
-"""
-function floattype end
+# The rotor data that replace a calculator's own, or that `similar(calc, R)` is given, must
+# describe as many rotors as the calculator handles.  A single rotor, angle, or phase fills
+# a calculator that handles exactly one, as a calculator built from a vector of one does,
+# and the message names it as a single rotor.
+function check_rotor_count(c, R)
+    if nrotors(R) != Nᵣ(c)
+        throw(DimensionMismatch(
+            "This calculator handles Nᵣ=$(Nᵣ(c)) rotors, but "
+            * (R isa AbstractVector ? "got $(length(R))." : "a single rotor was given.")
+        ))
+    end
+    nothing
+end
 
 """
     check_rotor_type(calc, data)
@@ -199,10 +151,11 @@ A calculator's element type is fixed by the data it was constructed from, so rep
 data later — through [`set_R!`](@ref), [`set_β!`](@ref), [`set_θ!`](@ref) or `similar(calc,
 data)` — cannot change it.  Rather than convert silently, which is how precision gets lost
 without anyone choosing to lose it, the mismatch is an error and the caller converts
-whichever side they meant.  `floattype` is defined alongside each calculator.
+whichever side they meant.  Both sides are given by [`floattype`](@ref), whose method for
+each calculator is defined alongside it.
 """
 function check_rotor_type(calc, data)
-    RT = rotor_basetype(data)
+    RT = floattype(data)
     if RT !== floattype(calc)
         throw(ArgumentError(
             "This calculator works in $(floattype(calc)), but the given data would give "
@@ -212,4 +165,85 @@ function check_rotor_type(calc, data)
         ))
     end
     nothing
+end
+
+
+### Rotor phases
+#
+# What the recurrence and the phases of 𝔇 and of the harmonics need from each rotor, which
+# every calculator stores when its rotors are set.
+
+"""
+    spinor_phases(R::AbstractQuaternion, [F])
+
+Return `(eⁱᵝ, z₊, z₋, cβ½, sβ½)` for the rotor `R`, where ``β`` is the Euler angle, ``z₊ =
+e^{i(α+γ)/2}``, ``z₋ = e^{i(α-γ)/2}``, ``cβ½ = \\cos(β/2)`` and ``sβ½ = \\sin(β/2)``.  These
+are the quantities the Wigner recurrences need: ``e^{i(m′α + mγ)} = z₊^{m′+m} z₋^{m′-m}``,
+with integer exponents even for half-integer ``m′, m``, while the half-angle pair seeds the
+half-integer recurrence.  At the poles ``β ∈ \\{0, π\\}`` the undefined phase is set to 1;
+the corresponding ``d`` elements vanish, so the choice is immaterial.
+
+The half-angles are taken as ``(\\sqrt{W²+Z²}, \\sqrt{X²+Y²})/\\|R\\|``, which is accurate
+near both poles and is non-negative, so ``β ∈ [0, π]``; a rotor's double-cover sign is
+encoded entirely in `z₊` and `z₋`, giving ``𝔇(-R) = -𝔇(R)`` for half-integer indices.
+
+Callers that need only the first few outputs may drop the rest: `eⁱᵝ, z₊, z₋ =
+spinor_phases(R, F)`.
+
+`R` need not be normalized.
+
+These phases are not differentiable at ``β = 0`` or ``β = π``, where `√b` or `√a` is taken
+of an exact zero, and a derivative taken through them there by automatic differentiation is
+`NaN`.  No local rule can repair this — `sβ½ * z₋` is smooth in the rotor, but `sβ½` and
+`z₋` separately are not, so treating the zero as exact would silently drop the first-order
+term.  Near a pole the derivatives are finite but inaccurate, the ``k``-th by about ``ε
+r^{-k}`` relative to their size at a distance ``r`` from it.  The values are accurate at
+every rotor, the poles included, so the calculators of ``𝔇`` and of ``{}_sY_{ℓ,m}``, which
+are smooth there, are never differentiated through this: the rules for automatic
+differentiation give their derivatives in terms of their values (see
+`src/derivatives/kernels.jl`).  The ``d`` and ``H`` of a rotor have no such rules, and keep
+the `NaN`: they see the rotor only through ``β``, which has a cone-shaped singularity at
+each pole, so that some of their elements actually have no derivative there.
+
+The optional second argument is the real type the phases are computed in; it defaults to
+`float(eltype(R))`.  Pass the *calculator's* type whenever that is more precise than the
+rotor's own — otherwise every later step inherits the rotor type's precision.
+"""
+function spinor_phases end
+
+spinor_phases(R::AbstractQuaternion{T}) where {T} = spinor_phases(R, float(T))
+function spinor_phases(R::AbstractQuaternion, ::Type{F}) where {F<:Real}
+    a = F(R[1])^2 + F(R[4])^2
+    b = F(R[2])^2 + F(R[3])^2
+    sqrta = √a
+    sqrtb = √b
+    z₊ = iszero(sqrta) ? one(Complex{F}) : Complex{F}(F(R[1]), F(R[4])) / sqrta  # exp[i(α+γ)/2]
+    z₋ = iszero(sqrtb) ? one(Complex{F}) : Complex{F}(F(R[3]), -F(R[2])) / sqrtb  # exp[i(α-γ)/2]
+    eⁱᵝ = Complex{F}(a - b, 2 * sqrta * sqrtb) / (a + b)
+    nrm = √(a + b)
+    cβ½ = sqrta / nrm
+    sβ½ = sqrtb / nrm
+    (eⁱᵝ, z₊, z₋, cβ½, sβ½)
+end
+
+"""
+    half_angles(eⁱᵝ)
+
+The pair ``(\\cos(β/2), \\sin(β/2))`` for the branch ``β ∈ (-π, π]`` of the phase
+``e^{iβ}``, computed without cancellation at either pole.
+
+A bare phase fixes ``β`` only modulo ``2π``, so for half-integer indices this fixes ``d``
+only up to the double-cover sign ``(-1)^{2ℓ}``; pass the angle ``β`` itself or a `Rotor` if
+that matters.
+"""
+@inline function half_angles(z::Complex{RT}) where {RT<:Real}
+    cosβ, sinβ = reim(z)
+    if cosβ ≥ 0
+        c = √((1 + cosβ) / 2)
+        s = sinβ / (2c)
+    else
+        s = copysign(√((1 - cosβ) / 2), sinβ)
+        c = sinβ / (2s)
+    end
+    (c, s)
 end

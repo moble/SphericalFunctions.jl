@@ -1,5 +1,5 @@
 @testitem "HWedge" setup=[EncodeDecode] begin
-    using SphericalFunctions: HWedge, HWedge_size, Nᵣ, ℓ, ℓₘᵢₙ, m′ₘᵢₙ, m′ₘₐₓ, minm′ₘᵢₙ,
+    using SphericalFunctions: HWedge, HWedge_size, Nᵣ, ℓ, lowest_index, m′ₘᵢₙ, m′ₘₐₓ,
         maxm′ₘₐₓ, HalfOddInteger
     using .EncodeDecode: encode, decode
 
@@ -64,18 +64,16 @@
 
     for ℓₘₐₓ ∈ (5, HalfOddInteger(9//2))  # an `Int` and a `HalfOddInteger`
         for Nᵣ ∈ (1, 2, 3, 7)
-            for m′ₘₐₓ ∈ ℓₘᵢₙ(ℓₘₐₓ):ℓₘₐₓ
+            for m′ₘₐₓ ∈ lowest_index(typeof(ℓₘₐₓ)):ℓₘₐₓ
                 RT = Float64
                 H = HWedge(RT, Nᵣ, ℓₘₐₓ, m′ₘₐₓ)
 
                 @test H.Nᵣ == Nᵣ
                 @test H.maxℓ == ℓₘₐₓ
                 @test maxm′ₘₐₓ(H) == m′ₘₐₓ
-                # The range of m′ is symmetric
-                @test minm′ₘᵢₙ(H) == -m′ₘₐₓ
 
                 # When first created, the indices should have their smallest values
-                @test H.ℓ == ℓₘᵢₙ(ℓₘₐₓ)
+                @test H.ℓ == lowest_index(typeof(ℓₘₐₓ))
                 @test H.m′ₘₐₓ == H.ℓ
                 @test m′ₘᵢₙ(H) == -H.ℓ
 
@@ -86,7 +84,7 @@
                 @test length(H.parent) == Nᵣ * expected_size
 
                 # Test changing ℓ
-                for new_ell in (ℓₘᵢₙ(ℓₘₐₓ):ℓₘₐₓ)
+                for new_ell in (lowest_index(typeof(ℓₘₐₓ)):ℓₘₐₓ)
                     H.ℓ = new_ell
                     @test H.ℓ == new_ell
                     @test H.m′ₘₐₓ == min(new_ell, m′ₘₐₓ)
@@ -120,8 +118,7 @@ end
 # of an element outside the stored wedge has to pass.
 
 @testitem "HWedge: construction and `ℓ` reassignment refuse bad arguments" setup=[RefusalChecks] begin
-    using SphericalFunctions: HWedge, ℓₘᵢₙ, m′ₘₐₓ, m′ₘᵢₙ, maxm′ₘₐₓ, minm′ₘᵢₙ,
-        HalfOddInteger
+    using SphericalFunctions: HWedge, lowest_index, m′ₘₐₓ, m′ₘᵢₙ, maxm′ₘₐₓ, HalfOddInteger
 
     # At least one rotor, always
     @test refuses(() -> HWedge(Float64, 0, 5, 5), ArgumentError, "must be at least 1")
@@ -132,15 +129,15 @@ end
     # ... and the limits are indices like any other: of one kind, and not of a narrow type
     @test refuses(() -> HWedge(Float64, 1, 7//2, 1), ArgumentError, "mixes integers")
     @test refuses(() -> HWedge(Float64, 1, Int8(4)), ArgumentError, "narrower than `Int`")
-    @test refuses(() -> HWedge(2, 7//3), ArgumentError, "neither an integer nor")
-    # (`validate_index_ranges` owns this message and its exception type)
+    @test refuses(() -> HWedge(Float64, 2, 7//3), ArgumentError, "neither an integer nor")
+    # (`validate_axis` owns this message and its exception type)
     @test_throws "is too large for ℓₘₐₓ" HWedge(Float64, 1, 4, 5)
 
     # A half-odd-integer may be spelled as a `Rational`, which gives the very same wedge
     @test HWedge(Float64, 2, 7//2, 3//2) isa HWedge{HalfOddInteger, Float64}
-    @test maxm′ₘₐₓ(HWedge(2, 7//2, 3//2)) === HalfOddInteger(3//2)
-    @test length(parent(HWedge(2, 7//2, 3//2))) ==
-        length(parent(HWedge(2, HalfOddInteger(7//2), HalfOddInteger(3//2))))
+    @test maxm′ₘₐₓ(HWedge(Float64, 2, 7//2, 3//2)) === HalfOddInteger(3//2)
+    @test length(parent(HWedge(Float64, 2, 7//2, 3//2))) ==
+        length(parent(HWedge(Float64, 2, HalfOddInteger(7//2), HalfOddInteger(3//2))))
 
     for ℓₘₐₓ ∈ (5, HalfOddInteger(9//2))
         IT = typeof(ℓₘₐₓ)
@@ -149,7 +146,7 @@ end
         # `ℓ` is the one property that may be reassigned, and only within its own type and
         # within the range the storage was allocated for.
         @test refuses(() -> H.ℓ = ℓₘₐₓ + 1, ArgumentError, "greater than maxℓ")
-        @test refuses(() -> H.ℓ = ℓₘᵢₙ(IT) - 1, ArgumentError, "less than ℓₘᵢₙ")
+        @test refuses(() -> H.ℓ = lowest_index(IT) - 1, ArgumentError, "less than ℓₘᵢₙ")
         for property ∈ (:Nᵣ, :maxℓ, :m′ₘₐₓ)
             @test refuses(
                 () -> setproperty!(H, property, ℓₘₐₓ), ArgumentError,
@@ -163,10 +160,10 @@ end
         @test refuses(() -> H.ℓ = other, ArgumentError, "they must be the same")
 
         # The assignment returns the new `ℓ`, and the `m′` bounds follow it
-        for new_ℓ ∈ ℓₘᵢₙ(IT):ℓₘₐₓ
+        for new_ℓ ∈ lowest_index(IT):ℓₘₐₓ
             @test (H.ℓ = new_ℓ) == new_ℓ
             @test m′ₘₐₓ(H) == min(new_ℓ, maxm′ₘₐₓ(H))
-            @test m′ₘᵢₙ(H) == max(-new_ℓ, minm′ₘᵢₙ(H))
+            @test m′ₘᵢₙ(H) == max(-new_ℓ, -maxm′ₘₐₓ(H))
         end
     end
 
@@ -175,7 +172,12 @@ end
     H = HWedge(Float64, 1, HalfOddInteger(9//2))
     H.ℓ = 5//2
     @test H.ℓ === HalfOddInteger(5//2)
-    @test refuses(() -> H.ℓ = 2//1, ArgumentError, "so ℓ must be one too; got ℓ = 2//1")
+    @test refuses(
+        () -> H.ℓ = 2//1, ArgumentError,
+        "The indices of this `HWedge` are half-odd-integers, each a `HalfOddInteger` or a "
+        * "`Rational{Int}` with denominator 2, like 7//2; got ℓ = 2//1"
+    )
+    @test refuses(() -> H.ℓ = 2//1, ArgumentError, "2//1 is a whole number")
     @test refuses(() -> H.m′ₘₐₓ = 1//2, ArgumentError, "only `ℓ` is allowed to be changed")
 
     # A wedge narrower than the full range clamps against the narrower bound, not against ℓ
@@ -259,7 +261,7 @@ end
     @test copy(Hb) isa HWedge{Int, BigFloat}
 end
 
-@testitem "HWedge: `Rational` indices reach the half-odd-integer wedge" begin
+@testitem "HWedge: indexing by any `IndexType` converts or refuses the index" begin
     using SphericalFunctions: HWedge, Nᵣ, ℓ, m′ₘᵢₙ, m′ₘₐₓ, HalfOddInteger
 
     # Indexing a half-odd-integer wedge with `Rational`s is a documented convenience, so
@@ -274,6 +276,16 @@ end
         H[iᵣ, q′, q] = -1.0
         @test H[iᵣ, m′, m] == -1.0
     end
+
+    # ... while an index that is not of the wedge's kind, or an integer that is not an
+    # `Int`, is refused with the reason, as it is by the blocks
+    @test_throws "The indices of this `HWedge` are half-odd-integers" H[1, 1, 2]
+    @test_throws "3//1 is a whole number" (H[1, 1//2, 3//1] = 0.0)
+    Hᵢ = HWedge(Float64, 1, 4)
+    Hᵢ.ℓ = 4
+    @test_throws "The indices of this `HWedge` are integers of type `Int`" Hᵢ[1, 1//2, 3//2]
+    @test_throws "`Int8` is narrower than `Int`" Hᵢ[1, Int8(0), 0]
+    @test_throws "`BigInt` is wider than `Int`" (Hᵢ[1, 0, big(0)] = 0.0)
 end
 
 @testitem "HWedge: `wedge_source` supplies every element from the stored wedge" setup=[RefusalChecks] begin
@@ -339,8 +351,8 @@ end
     @test refuses(() -> wedge_source_error(3, 4, 2), ArgumentError, "H[3, 4]")
 end
 
-@testitem "HWedge, HAxis and WignerMatrixBatch refuse two indices, and compare element by element" begin
-    import SphericalFunctions: HWedge, HAxis, HCalculator, DCalculator, recurrence!, Nᵣ
+@testitem "HWedge and WignerMatrixBatch refuse two indices, and compare element by element" begin
+    import SphericalFunctions: HWedge, HCalculator, DCalculator, recurrence!, Nᵣ
     using Quaternionic: from_euler_angles
 
     # Two indices mean `(m′, m)` only for a `WignerMatrix`.  These containers are indexed by
@@ -369,14 +381,4 @@ end
     @test H₁ != H₂
     @test recurrence!(HCalculator(0.3, 3), 2) != H₁  # a different ℓ
     @test recurrence!(HCalculator([0.3, 0.4], 3), 3) != H₁  # a different number of rotors
-
-    # ... and so does `==` for the m′ = 0 axis
-    a₁, a₂ = HAxis(Float64, 2, 4), HAxis(Float64, 2, 4)
-    a₁.ℓ = a₂.ℓ = 3
-    for m ∈ 0:3, iᵣ ∈ 1:2
-        a₁[iᵣ, m] = a₂[iᵣ, m] = 10iᵣ + m
-    end
-    @test a₁ == a₂
-    a₂[2, 3] = 0.0
-    @test a₁ != a₂
 end

@@ -119,6 +119,30 @@ end
 end
 
 
+@testitem "ComplexPowers" begin
+    using SphericalFunctions: ComplexPowers
+
+    # The error in zᵐ, measured here against the powers of the exact phase and so including
+    # the rounding of z itself, grows linearly in m, and so does the bound.  Over this grid
+    # the worst ratio of the error to (m+1) eps is 0.58 (at θ = 2.5, m = 10), so the bound
+    # of twice that leaves a margin of more than 3.  The errors are accumulated and asserted
+    # once per phase, rather than once per power.
+    mₘₐₓ = 10_000
+    for θ ∈ BigFloat(0):big(1//10):2big(π)
+        z¹ = cis(θ)
+        zᵐexact = one(z¹)
+        worst = 0.0
+        for (i, zᵐ) in enumerate(ComplexPowers(ComplexF64(z¹)))
+            m = i-1
+            worst = max(worst, Float64(abs(zᵐ - zᵐexact)) / (2(m+1) * eps(Float64)))
+            zᵐexact *= z¹
+            m == mₘₐₓ && break
+        end
+        @test worst < 1
+    end
+end
+
+
 @testitem "Complex powers: a phase near an axis is as accurate on either side of it" begin
     using SphericalFunctions: complex_powers
 

@@ -1,152 +1,81 @@
 @testitem "HAxis" setup=[EncodeDecode, RefusalChecks] begin
-    using SphericalFunctions: HAxis, Nᵣ, ℓ, ℓₘᵢₙ, maxℓ, m′ₘᵢₙ, m′ₘₐₓ, mₘᵢₙ, mₘₐₓ, HalfOddInteger
+    using SphericalFunctions: HAxis, Nᵣ, maxℓ, HalfOddInteger
     using .EncodeDecode: encode, decode
 
-    # HAxis stores only the m′=ℓₘᵢₙ axis (0 or 1/2), with m ranging from ℓₘᵢₙ to ℓₘₐₓ.  The
-    # data layout is `[value for iᵣ ∈ 1:Nᵣ, m ∈ ℓₘᵢₙ:ℓₘₐₓ]`.  We want inner loop over iᵣ,
-    # outer loop over m for vectorization.
-    
-    function fill_1index!(h::HAxis{IT}) where {IT}
-        let Nᵣ = Nᵣ(h), ℓ = ℓ(h), ℓₘᵢₙ = ℓₘᵢₙ(IT)
+    # HAxis stores only the m′=0 axis of an integer order, with m ranging from 0 to the
+    # current order.  The data layout is `[value for m ∈ 0:ℓ for iᵣ ∈ 1:Nᵣ]`, with the inner
+    # loop over iᵣ for vectorization, and the recurrence reads and writes it by the linear
+    # index.
+
+    function fill_linear!(h::HAxis)
+        let Nᵣ = Nᵣ(h), ℓ = h.ℓ
             i = 1
-            for m ∈ ℓₘᵢₙ:ℓ
+            for m ∈ 0:ℓ
                 for iᵣ ∈ 1:Nᵣ
-                    h[i] = encode(iᵣ, ℓₘᵢₙ, m)
+                    h[i] = encode(iᵣ, 0, m)
                     i += 1
                 end
             end
         end
         return h
     end
-    
-    function fill_2index!(h::HAxis{IT}) where {IT}
-        let Nᵣ = Nᵣ(h), ℓ = ℓ(h), ℓₘᵢₙ = ℓₘᵢₙ(IT)
-            for m ∈ ℓₘᵢₙ:ℓ
+
+    function test_linear(h::HAxis)
+        let Nᵣ = Nᵣ(h), ℓ = h.ℓ
+            for m ∈ 0:ℓ
                 for iᵣ ∈ 1:Nᵣ
-                    h[iᵣ, m] = encode(iᵣ, ℓₘᵢₙ, m)
-                end
-            end
-        end
-        return h
-    end
-    
-    function fill_3index!(h::HAxis{IT}) where {IT}
-        let Nᵣ = Nᵣ(h), ℓ = ℓ(h), ℓₘᵢₙ = ℓₘᵢₙ(IT)
-            for m ∈ ℓₘᵢₙ:ℓ
-                for iᵣ ∈ 1:Nᵣ
-                    h[iᵣ, ℓₘᵢₙ, m] = encode(iᵣ, ℓₘᵢₙ, m)
-                end
-            end
-        end
-        return h
-    end
-    
-    function test_1index(h::HAxis{IT}) where {IT}
-        let Nᵣ = Nᵣ(h), ℓ = ℓ(h), ℓₘᵢₙ = ℓₘᵢₙ(IT)
-            i = 1
-            for m ∈ ℓₘᵢₙ:ℓ
-                for iᵣ ∈ 1:Nᵣ
-                    @test decode(h[i]) == (iᵣ, numerator(ℓₘᵢₙ), numerator(m))
-                    i += 1
-                end
-            end
-        end
-    end
-    
-    function test_2index(h::HAxis{IT}) where {IT}
-        let Nᵣ = Nᵣ(h), ℓ = ℓ(h), ℓₘᵢₙ = ℓₘᵢₙ(IT)
-            for m ∈ ℓₘᵢₙ:ℓ
-                for iᵣ ∈ 1:Nᵣ
-                    @test decode(h[iᵣ, m]) == (iᵣ, numerator(ℓₘᵢₙ), numerator(m))
-                end
-            end
-        end
-    end
-    
-    function test_3index(h::HAxis{IT}) where {IT}
-        let Nᵣ = Nᵣ(h), ℓ = ℓ(h), ℓₘᵢₙ = ℓₘᵢₙ(IT)
-            for m ∈ ℓₘᵢₙ:ℓ
-                for iᵣ ∈ 1:Nᵣ
-                    @test decode(h[iᵣ, ℓₘᵢₙ, m]) == (iᵣ, numerator(ℓₘᵢₙ), numerator(m))
+                    @test decode(h[iᵣ + Nᵣ * m]) == (iᵣ, 0, m)
+                    @test decode(parent(h)[iᵣ + Nᵣ * m]) == (iᵣ, 0, m)
                 end
             end
         end
     end
 
-    # Test both integer and half-integer ℓ
-    for ℓₘₐₓ ∈ (5, HalfOddInteger(9//2))  # an `Int` and a `HalfOddInteger`
-        for Nᵣ ∈ (1, 2, 3, 7)
-            IT = typeof(ℓₘₐₓ)
+    for ℓₘₐₓ ∈ (0, 1, 5)
+        for n ∈ (1, 2, 3, 7)
             RT = Float64
-            h = HAxis(RT, Nᵣ, ℓₘₐₓ)
+            h = HAxis(RT, n, ℓₘₐₓ)
+            @test h isa HAxis{RT}
 
             # Check fields
-            @test h.Nᵣ == Nᵣ
-            @test h.maxℓ == ℓₘₐₓ
+            @test h.Nᵣ == n == Nᵣ(h)
+            @test h.maxℓ == ℓₘₐₓ == maxℓ(h)
 
             # When first created, ℓ should be at its minimum value
-            @test ℓ(h) == ℓₘᵢₙ(IT)
-
-            # Check index ranges
-            @test m′ₘᵢₙ(h) == ℓₘᵢₙ(IT)
-            @test m′ₘₐₓ(h) == ℓₘᵢₙ(IT)
-            @test mₘᵢₙ(h) == ℓₘᵢₙ(IT)
-            @test mₘₐₓ(h) == ℓₘᵢₙ(IT)  # mₘₐₓ should equal current ℓ, not ℓₘₐₓ
+            @test h.ℓ == 0
 
             # Check storage size (allocated for maximum ℓₘₐₓ)
-            expected_length = Nᵣ * (Int(ℓₘₐₓ - ℓₘᵢₙ(IT)) + 1)
-            @test length(h.parent) == expected_length
-
-            # The axes are those of the two-index form `h[iᵣ, m]`, while `length` and `size(h)`
-            # count the flat storage
-            @test axes(h) == (1:Nᵣ, ℓₘᵢₙ(IT):ℓₘᵢₙ(IT))
-            @test (size(h, 1), size(h, 2), size(h, 3)) == (Nᵣ, 1, 1)
-            @test length(h) == expected_length
+            expected_length = n * (ℓₘₐₓ + 1)
+            @test length(parent(h)) == expected_length
+            @test parent(h) === h.parent
 
             # Test changing ℓ
-            for new_ell in (ℓₘᵢₙ(IT):ℓₘₐₓ)
+            for new_ell in 0:ℓₘₐₓ
                 h.ℓ = new_ell
                 @test h.ℓ == new_ell
-                @test ℓ(h) == new_ell
-                @test mₘₐₓ(h) == new_ell  # mₘₐₓ should track current ℓ
-                @test axes(h, 2) == ℓₘᵢₙ(IT):new_ell
-                @test size(h, 2) == Int(new_ell - ℓₘᵢₙ(IT)) + 1
 
-                # Test all three indexing methods (1D, 2D, 3D)
-                fill_1index!(h)
-                test_2index(h)
-                test_3index(h)
-                
-                fill_2index!(h)
-                test_1index(h)
-                test_3index(h)
-                
-                fill_3index!(h)
-                test_1index(h)
-                test_2index(h)
+                # Linear indexing reads and writes the storage in place
+                fill_linear!(h)
+                test_linear(h)
 
-                # Test bounds checking for current ℓ; check just for the string, because
-                # some tests will throw a `FixedSizeArrays.BoundsErrorLight` instead of a
-                # standard `BoundsError`.
+                # Linear indexing runs over the whole allocation, so it is the storage that
+                # sets the bounds, whatever the current ℓ; check just for the string,
+                # because some tests will throw a `FixedSizeArrays.BoundsErrorLight` instead
+                # of a standard `BoundsError`.
+                @test checkbounds(Bool, h, 1) && checkbounds(Bool, h, expected_length)
+                @test !checkbounds(Bool, h, 0) && !checkbounds(Bool, h, expected_length + 1)
                 @test_throws "BoundsError" h[0]
                 @test_throws "BoundsError" h[length(h.parent) + 1]
-                @test_throws "BoundsError" h[0, ℓₘᵢₙ(IT)]
-                @test_throws "BoundsError" h[Nᵣ + 1, ℓₘᵢₙ(IT)]
-                @test_throws "BoundsError" h[1, ℓₘᵢₙ(IT) - 1]
-                @test_throws "BoundsError" h[1, new_ell + 1]  # Beyond current ℓ
-
-                # 3D indexing: m′ must equal ℓₘᵢₙ
-                @test_throws "BoundsError" h[1, ℓₘᵢₙ(IT) - 1, ℓₘᵢₙ(IT)]
-                @test_throws "BoundsError" h[1, ℓₘᵢₙ(IT) + 1, ℓₘᵢₙ(IT)]
-                @test_throws "BoundsError" h[1, ℓₘᵢₙ(IT), ℓₘᵢₙ(IT) - 1]
-                @test_throws "BoundsError" h[1, ℓₘᵢₙ(IT), new_ell + 1]  # Beyond current ℓ
+                @test_throws "BoundsError" h[0] = 1.0
+                @test_throws "BoundsError" h[length(h.parent) + 1] = 1.0
             end
 
             # Test error conditions for changing ℓ
             @test refuses(() -> h.ℓ = ℓₘₐₓ + 1, ArgumentError, "greater than maxℓ")
-            @test refuses(() -> h.ℓ = ℓₘᵢₙ(IT) - 1, ArgumentError, "less than ℓₘᵢₙ")
-            other = IT <: Integer ? HalfOddInteger(1//2) : 1
-            @test refuses(() -> h.ℓ = other, ArgumentError, "they must be the same")
+            @test refuses(() -> h.ℓ = -1, ArgumentError, "less than ℓₘᵢₙ")
+            @test refuses(
+                () -> h.ℓ = HalfOddInteger(1//2), ArgumentError, "they must be the same"
+            )
 
             # Test that we can't change other properties
             @test refuses(() -> h.Nᵣ = 10, ArgumentError, "only `ℓ` is allowed to be changed")
@@ -155,4 +84,8 @@
             )
         end
     end
+
+    # The constructor refuses an axis that could not hold its first order
+    @test refuses(() -> HAxis(Float64, 0, 3), ArgumentError, "must be at least 1")
+    @test refuses(() -> HAxis(Float64, 2, -1), ArgumentError, "must be at least ℓₘᵢₙ=0")
 end

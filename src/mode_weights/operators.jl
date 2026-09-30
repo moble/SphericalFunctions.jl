@@ -32,8 +32,7 @@
 # — together with its matrix elements, the coefficient functions below.  The coefficients
 # are evaluated both by `operator_matrix`, which builds the matrix, and by
 # `apply_operator!`, which applies the operator to the storage of a `ModeWeights` without
-# building one; `op * w`, `op(w)` and `mul!(w′, op, w)`, in `mode_weights.jl`, are written
-# with the latter.
+# building one; `op * w`, `op(w)` and `mul!(w′, op, w)` are written with the latter.
 
 const operator_signature_note = """
 The argument `ℓₘᵢₙ` may be omitted, in which case it defaults to `abs(s)`.  The result acts
@@ -167,7 +166,6 @@ function Δspin end
 @inline Δspin(::DifferentialOperator) = 0
 @inline Δspin(::Union{RightRaising,  SpinRaising})  =  1
 @inline Δspin(::Union{RightLowering, SpinLowering}) = -1
-const Deltaspin = Δspin
 
 # Which band of the matrix the operator occupies, and hence which builder and which kernel
 # apply.  A sub-diagonal entry takes `f[ℓ, m-1]` into `out[ℓ, m]`; a super-diagonal one
@@ -250,14 +248,30 @@ end
 @inline diagonal_coefficient(::SpinLowering, ::Type{T}, s, ℓ, m) where {T} =
     -diagonal_coefficient(RightLowering(), T, s, ℓ, m)
 
-# The ladder coefficients, indexed by the *output* mode `(ℓ, m)`.  Both vanish exactly at
-# the edge of their ℓ block — `√0` at `m = -ℓ` for the raising one and at `m = +ℓ` for the
-# lowering one — which is what keeps an ℓ block from coupling to its neighbors.
+# The coefficients a_m = √((ℓ-m+1)(ℓ+m)) and b_m = √((ℓ+m+1)(ℓ-m)) of the ladder operators,
+# in the real type `T`.  Both vanish exactly where the neighbor they multiply lies outside
+# -ℓ:ℓ, and are then given as zero rather than as the square root of zero, whose derivative
+# is infinite: when `T` is a dual number, the zero partials of the constant would be
+# multiplied by that infinity, and give `NaN`.  They are computed in `recurrence_type(T)`,
+# the floating-point type underneath any dual numbers (see `src/derivatives/lifting.jl`),
+# since they are constants.  The derivatives in `src/derivatives/kernels.jl` use them too.
+@inline function ladder_coefficient(n::Int, ::Type{T}) where {T}
+    let F = recurrence_type(T)
+        n == 0 ? zero(F) : √F(n)
+    end
+end
+@inline ladder_down(ℓ, m, ::Type{T}) where {T} = ladder_coefficient(Int(ℓ - m + 1) * Int(ℓ + m), T)
+@inline ladder_up(ℓ, m, ::Type{T}) where {T} = ladder_coefficient(Int(ℓ + m + 1) * Int(ℓ - m), T)
+
+# The matrix elements of L₊ and L₋, indexed by the *output* mode `(ℓ, m)`, are a_m and b_m.
+# Both vanish exactly at the edge of their ℓ block — at `m = -ℓ` for the raising one and at
+# `m = +ℓ` for the lowering one — which is what keeps an ℓ block from coupling to its
+# neighbors.
 @inline function subdiagonal_coefficient(op::LeftRaising, ::Type{T}, s, ℓ, m) where {T}
-    ℓ < support_ℓ(op, s) ? zero(T) : √T((ℓ+m)*(ℓ-m+1))
+    ℓ < support_ℓ(op, s) ? zero(T) : convert(T, ladder_down(ℓ, m, T))
 end
 @inline function superdiagonal_coefficient(op::LeftLowering, ::Type{T}, s, ℓ, m) where {T}
-    ℓ < support_ℓ(op, s) ? zero(T) : √T((ℓ-m)*(ℓ+m+1))
+    ℓ < support_ℓ(op, s) ? zero(T) : convert(T, ladder_up(ℓ, m, T))
 end
 @inline subdiagonal_coefficient(::LeftX, ::Type{T}, s, ℓ, m) where {T} =
     subdiagonal_coefficient(LeftRaising(), T, s, ℓ, m) / 2
@@ -349,7 +363,7 @@ end
 # and `NaN` where the weight is infinite or `NaN`, whereas the loop never reads the diagonal
 # at all.
 #
-# The ladder coefficients vanish *exactly* at the edge of each ℓ block — √0 at `m = -ℓ` for
+# The ladder coefficients vanish *exactly* at the edge of each ℓ block — at `m = -ℓ` for
 # the raising one and at `m = +ℓ` for the lowering one — so no block ever couples to its
 # neighbor and the loops need no per-block special case.  Only the very first and very last
 # position in the whole vector need a branch, because there the matrix has no band entry at
@@ -414,6 +428,69 @@ function apply_operator!(
     out
 end
 
+
+### Operators on mode weights
+#
+# One method covers all twelve: the operator is a value, so it says its own effect on the
+# spin weight through `Δspin`, and the container already holds three indices of one kind,
+# `Int` or `HalfOddInteger`.  The range of ℓ is unchanged even where the spin weight moves.
+# The entries of the result below the new |s| belong to no harmonic; each is the product of
+# an entry of the input with a coefficient that vanishes there, so it is zero where the
+# input is finite, and is not dropped.  `ModeWeights(w; ℓₘᵢₙ, ℓₘₐₓ)` is what changes the
+# range, and drops those entries.
+function Base.:*(op::DifferentialOperator, w::ModeWeights{T}) where {T}
+    # The result is allocated at the length of the input's storage, so this one check covers
+    # both of the vectors that the kernel indexes.
+    check_storage_length(w)
+    Treal = real(float(T))
+    out = similar(w.data, Base.promote_op(*, coefftype(op, Treal), T))
+    apply_operator!(out, op, bandstructure(op), w.data, w.s, w.ℓₘᵢₙ, w.ℓₘₐₓ, Treal)
+    ModeWeights(out, w.s + Δspin(op), w.ℓₘᵢₙ, w.ℓₘₐₓ)
+end
+(op::DifferentialOperator)(w::ModeWeights) = op * w
+
+# The in-place form, for a loop over many sets of weights.  Aliasing is refused for the
+# banded operators, whose kernels read a neighbor that an in-place write may already have
+# clobbered; it would be safe for the diagonal ones, but allowing it there only would be a
+# trap.
+function LinearAlgebra.mul!(
+    w′::ModeWeights, op::DifferentialOperator, w::ModeWeights{T}
+) where {T}
+    if spin(w′) != w.s + Δspin(op) || ℓₘᵢₙ(w′) != w.ℓₘᵢₙ || ℓₘₐₓ(w′) != w.ℓₘₐₓ
+        throw(operator_output_error(w′, op, w))
+    end
+    check_storage_length(w)
+    check_storage_length(w′)
+    if Base.mightalias(w′.data, w.data)
+        throw(ArgumentError(
+            "The output aliases the input.  $(nameof(op)) reads neighboring modes, so it "
+            * "cannot be applied in place; pass a separate destination, such as `similar(w)`."
+        ))
+    end
+    apply_operator!(
+        w′.data, op, bandstructure(op), w.data, w.s, w.ℓₘᵢₙ, w.ℓₘₐₓ, real(float(T))
+    )
+    w′
+end
+# The operators keep the range of ℓ of their input, so a destination allocated with the
+# default range of its own spin weight, `abs(s′):ℓₘₐₓ`, is refused whenever |s′| ≠ |s|; the
+# message says how to allocate one, and how to change the range of the result afterwards.
+@noinline function operator_output_error(w′::ModeWeights, op, w::ModeWeights{T}) where {T}
+    s′ = w.s + Δspin(op)
+    ArgumentError(
+        "The output has s=$(spin(w′)) and ℓ ∈ $(ℓₘᵢₙ(w′)):$(ℓₘₐₓ(w′)), but $(nameof(op)) "
+        * "applied to these weights gives s=$s′ and ℓ ∈ $(w.ℓₘᵢₙ):$(w.ℓₘₐₓ), since the "
+        * "operators keep the range of ℓ of their input.  Allocate the output with "
+        * "`ModeWeights{$T}(undef, $s′, $(w.ℓₘᵢₙ), $(w.ℓₘₐₓ))`, and use "
+        * "`ModeWeights(w′; ℓₘᵢₙ, ℓₘₐₓ)` to copy the result into another range of ℓ."
+    )
+end
+
+# Bare storage, at least as long as the result, is accepted as the output too, and the
+# result comes back labelled, as a `ModeWeights` over it (see `mode_weights_view`).
+function LinearAlgebra.mul!(w′::AbstractVector, op::DifferentialOperator, w::ModeWeights)
+    mul!(mode_weights_view(w′, w.s + Δspin(op), w.ℓₘᵢₙ, w.ℓₘₐₓ), op, w)
+end
 
 @doc splice_signature_note(raw"""
     L²(s, ℓₘᵢₙ, ℓₘₐₓ, [T=Float64])
@@ -785,68 +862,3 @@ See also [`ð`](@ref), [`L²`](@ref), [`Lz`](@ref), [`L₊`](@ref), [`L₋`](@re
 """)
 const ð̄ = SpinLowering()
 
-
-### ASCII aliases
-#
-# The operators whose names cannot be typed without Unicode input have ASCII aliases, which
-# are public but not exported, since names such as `L2` are generic enough to clash with a
-# user's own.  Each alias is the operator itself, so it shares its identity, its `nameof`
-# and its display.  An alias of a value, unlike one of a function or a type, does not lead
-# the documentation system to the value's docstring, so each has a short docstring of its
-# own.
-
-"""
-    L2
-
-An ASCII alias of the operator [`L²`](@ref), for use where the Unicode name is inconvenient.
-"""
-const L2 = L²
-
-"""
-    Lplus
-
-An ASCII alias of the operator [`L₊`](@ref), for use where the Unicode name is inconvenient.
-"""
-const Lplus = L₊
-
-"""
-    Lminus
-
-An ASCII alias of the operator [`L₋`](@ref), for use where the Unicode name is inconvenient.
-"""
-const Lminus = L₋
-
-"""
-    R2
-
-An ASCII alias of the operator [`R²`](@ref), for use where the Unicode name is inconvenient.
-"""
-const R2 = R²
-
-"""
-    Rplus
-
-An ASCII alias of the operator [`R₊`](@ref), for use where the Unicode name is inconvenient.
-"""
-const Rplus = R₊
-
-"""
-    Rminus
-
-An ASCII alias of the operator [`R₋`](@ref), for use where the Unicode name is inconvenient.
-"""
-const Rminus = R₋
-
-"""
-    eth
-
-An ASCII alias of the operator [`ð`](@ref), for use where the Unicode name is inconvenient.
-"""
-const eth = ð
-
-"""
-    ethbar
-
-An ASCII alias of the operator [`ð̄`](@ref), for use where the Unicode name is inconvenient.
-"""
-const ethbar = ð̄

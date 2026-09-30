@@ -13,9 +13,8 @@ parameters of the type `ModeWeights{T, IT, V}` are as follows:
 - `IT` is the index type, `Int` or [`HalfOddInteger`](@ref).
 - `V` is the type of the storage, a vector of `T`.
 
-A `ModeWeights` is an [`AbstractModeContainer`](@ref
-SphericalFunctions.AbstractModeContainer), not an `AbstractVector`; [`array_view`](@ref)
-gives the flat 1-based storage, which is what the transforms and the operator matrices take.
+A `ModeWeights` is not an `AbstractVector`; [`array_view`](@ref) gives the flat 1-based
+storage, which is what the transforms and the operator matrices take.
 It behaves as the vector of the weights in other respects: `w[i]`, for a position `i` in
 storage order, reads or writes one weight, `w[:]`, `w[r]` and `w[v]`, for a range `r` or a
 vector `v` of positions, read or write several, and iteration, `length`, `keys`, `sum`,
@@ -120,7 +119,7 @@ indexed by `m ∈ -ℓ:ℓ`, exactly as it is for integer indices.  The natural 
 m]` and `w[ℓ, :]` obey the same rules as those of the constructors: an integer `w` takes
 `Int`s, and an index of another kind or integer type is refused with the reason.
 """
-struct ModeWeights{T, IT<:IntegerHalf, V<:AbstractVector{T}} <: AbstractModeContainer{T, IT}
+struct ModeWeights{T, IT<:IntegerHalf, V<:AbstractVector{T}}
     data::V
     s::IT
     ℓₘᵢₙ::IT
@@ -222,11 +221,11 @@ function deduced_mode_weights(data::AbstractVector, s::HalfOddInteger, ℓₘᵢ
 end
 
 # Copying into another range of ℓ.  There is no positional index to dispatch on, so the two
-# keywords are normalized against the kind of `w` by hand, with a message that names `w`
-# rather than the positional indices of the call.  Each ASCII spelling is normalized under
-# its own name before it becomes the default of the Unicode one, so that a refusal names the
-# keyword the caller wrote.  The default of `ell_max` reads the field, since the keyword
-# `ℓₘₐₓ` shadows the accessor inside the method.
+# keywords are converted to the kind of `w` by `checked_index`, with a message that names
+# `w` rather than the positional indices of the call.  Each ASCII spelling is converted
+# under its own name before it becomes the default of the Unicode one, so that a refusal
+# names the keyword the caller wrote.  The default of `ell_max` reads the field, since the
+# keyword `ℓₘₐₓ` shadows the accessor inside the method.
 """
     ModeWeights(w::ModeWeights; ℓₘᵢₙ=abs(spin(w)), ℓₘₐₓ=ℓₘₐₓ(w))
 
@@ -252,12 +251,12 @@ w = SSHT(1, 8) \\ f                  # s = 1, ℓ ∈ 1:8
 ```
 """
 function ModeWeights(
-    w::ModeWeights;
-    ell_min=abs(w.s), ℓₘᵢₙ=range_keyword(w, :ell_min, ell_min),
-    ell_max=w.ℓₘₐₓ, ℓₘₐₓ=range_keyword(w, :ell_max, ell_max)
-)
-    lo = range_keyword(w, :ℓₘᵢₙ, ℓₘᵢₙ)
-    hi = range_keyword(w, :ℓₘₐₓ, ℓₘₐₓ)
+    w::ModeWeights{T, IT};
+    ell_min=abs(w.s), ℓₘᵢₙ=checked_index(IT, ell_min, w, "ell_min"),
+    ell_max=w.ℓₘₐₓ, ℓₘₐₓ=checked_index(IT, ell_max, w, "ell_max")
+) where {T, IT}
+    lo = checked_index(IT, ℓₘᵢₙ, w, "ℓₘᵢₙ")
+    hi = checked_index(IT, ℓₘₐₓ, w, "ℓₘₐₓ")
     check_storage_length(w)
     w′ = ModeWeights{eltype(w)}(undef, w.s, lo, hi)
     fill!(w′.data, zero(eltype(w)))
@@ -271,54 +270,21 @@ function ModeWeights(
     w′
 end
 
-# One keyword bound of `ModeWeights(w; …)`, as an index of `w`'s own kind.
-function range_keyword(w::ModeWeights{T, IT}, name::Symbol, x) where {T, IT}
-    if IT === Int
-        x isa Int && return x
-    else
-        x isa HalfOddInteger && return x
-        x isa Rational{Int} && denominator(x) == 2 && return half_odd_index(x)
-    end
-    kind = IT === Int ? "integers of type `Int`, like 3" : (
-        "half-odd-integers, each a `HalfOddInteger` or a `Rational{Int}` with denominator 2, "
-        * "like 7//2"
-    )
-    message = (
-        "The keyword argument `$name` of `ModeWeights(w; …)` must be an index of the kind of "
-        * "`w`'s own, which are $kind; got $name = $(typed_repr(x))."
-    )
-    index_kind(x) === nothing && (message *= "  " * index_problem(x))
-    throw(ArgumentError(message))
-end
-
 Base.parent(w::ModeWeights) = w.data
+ℓₘᵢₙ(w::ModeWeights) = w.ℓₘᵢₙ
+ℓₘₐₓ(w::ModeWeights) = w.ℓₘₐₓ
+ishalfinteger(::ModeWeights{T, IT}) where {T, IT<:Integer} = false
+ishalfinteger(::ModeWeights{T, IT}) where {T, IT<:HalfOddInteger} = true
+# The number type, since `w` iterates over its weights.
+Base.eltype(::ModeWeights{T}) where {T} = T
+Base.eltype(::Type{<:ModeWeights{T}}) where {T} = T
 
-"""
-    spin(w)
-
-The spin weight of a [`ModeWeights`](@ref) vector, of an [`SSHT`](@ref) transform, or of an
-[`sYlmCalculator`](@ref) built for a single one.  A calculator built for a range of spin
-weights has no single value to report, so it has no method here; ask it for [`spins`](@ref
-SphericalFunctions.spins) instead, which answers for either kind.
-
-A function of spin weight ``s`` has ``R_z f = s f``, and is expanded in the harmonics
-``{}_{s}Y_{ℓ,m}`` with ``ℓ ≥ |s|``.  The spin weight is kept alongside the numbers because
-nothing about the numbers themselves reveals it.
-
-```jldoctest
-julia> using SphericalFunctions
-
-julia> spin(ModeWeights(zeros(ComplexF64, 21), -2))
--2
-
-julia> spin(SSHT(1, 4))
-1
-```
-
-See also [`modes`](@ref), [`ModeWeights`](@ref), [`SSHT`](@ref), and
-[`spins`](@ref SphericalFunctions.spins).
-"""
-function spin end
+# The positions in the flat storage that one ℓ occupies, as for a `HarmonicValues`, whose
+# method in `series.jl` explains the arithmetic and the signature.
+@inline function mode_range(w::ModeWeights{T, IT}, ℓ::IT) where {T, IT}
+    i₀ = Yindex(ℓ, -ℓ, ℓₘᵢₙ(w))
+    i₀:(i₀ + 2ℓ)
+end
 
 spin(w::ModeWeights) = w.s
 
@@ -329,12 +295,11 @@ The `(ℓ, m)` pairs of `w`, in storage order (see [`Yrange`](@ref)).
 """
 modes(w::ModeWeights) = Yrange(w.ℓₘᵢₙ, w.ℓₘₐₓ)
 
-# The array-like interface, written out rather than inherited.  A `ModeWeights` is an
-# [`AbstractModeContainer`](@ref) like the rest, not an `AbstractVector`, so `op * w` and `w
-# .+ 1` do not come for free from the generic machinery; these are the methods that supply
-# the useful part of that behavior.  Forgoing the subtyping costs less than it appears to:
-# the transforms in `ssht/` reach for the raw storage before every `mul!` and `ldiv!`
-# anyway, through [`array_view`](@ref).
+# The array-like interface, written out rather than inherited.  A `ModeWeights` is not an
+# `AbstractVector`, so `op * w` and `w .+ 1` do not come for free from the generic
+# machinery; these are the methods that supply the useful part of that behavior.  Forgoing
+# the subtyping costs less than it appears to: the transforms in `ssht/` reach for the raw
+# storage before every `mul!` and `ldiv!` anyway, through [`array_view`](@ref).
 Base.size(w::ModeWeights) = size(w.data)
 Base.size(w::ModeWeights, d::Integer) = d ≤ 1 ? size(w)[d] : 1
 Base.length(w::ModeWeights) = length(w.data)
@@ -684,7 +649,7 @@ LinearAlgebra.dot(a::AbstractVector, b::ModeWeights) = LinearAlgebra.dot(a, b.da
 # Each of `w[ℓ, m]`, `w[ℓ, m] = v` and `w[ℓ, :]` has a method for each kind of container,
 # whose indices are of the container's own type, `Int` or `HalfOddInteger`, and a method
 # that accepts an index of any other type and converts it to the container's type with
-# `container_index`, under the rules of the index methods, before it re-dispatches.  That
+# `checked_index`, under the rules of the index methods, before it re-dispatches.  That
 # method is what admits `w[3//2, 1//2]`, and what turns an index of the wrong kind, such as
 # an integer applied to a half-integer `w`, or of the wrong type, such as an `Int32`, into
 # an explanation rather than an error from deep inside `Yindex`.  It is written by hand
@@ -726,12 +691,6 @@ end
     )
 end
 
-# The natural indices of `w` as its own index type, each refused with the reason if it
-# cannot be one.
-@inline natural_indices(w::ModeWeights{T, IT}, ℓ, m) where {T, IT} =
-    (container_index(IT, ℓ, w, "ℓ"), container_index(IT, m, w, "m"))
-@inline natural_index(w::ModeWeights{T, IT}, ℓ) where {T, IT} = container_index(IT, ℓ, w, "ℓ")
-
 """
     w[ℓ, m]
 
@@ -751,8 +710,10 @@ end
     @boundscheck check_mode(w, ℓ, m)
     @inbounds w.data[Yindex(ℓ, m, w.ℓₘᵢₙ)]
 end
-@propagate_inbounds function Base.getindex(w::ModeWeights, ℓ::IndexType, m::IndexType)
-    w[natural_indices(w, ℓ, m)...]
+@propagate_inbounds function Base.getindex(
+    w::ModeWeights{T, IT}, ℓ::IndexType, m::IndexType
+) where {T, IT}
+    w[checked_index(IT, ℓ, w, "ℓ"), checked_index(IT, m, w, "m")]
 end
 @propagate_inbounds function Base.setindex!(w::ModeWeights{T, Int}, v, ℓ::Int, m::Int) where {T}
     @boundscheck check_mode(w, ℓ, m)
@@ -764,12 +725,13 @@ end
     @boundscheck check_mode(w, ℓ, m)
     @inbounds w.data[Yindex(ℓ, m, w.ℓₘᵢₙ)] = v
 end
-@propagate_inbounds function Base.setindex!(w::ModeWeights, v, ℓ::IndexType, m::IndexType)
-    ℓ′, m′ = natural_indices(w, ℓ, m)
-    w[ℓ′, m′] = v
+@propagate_inbounds function Base.setindex!(
+    w::ModeWeights{T, IT}, v, ℓ::IndexType, m::IndexType
+) where {T, IT}
+    w[checked_index(IT, ℓ, w, "ℓ"), checked_index(IT, m, w, "m")] = v
 end
 
-# As for `w[ℓ, m]`, an index of another type is converted by `natural_index`, or refused,
+# As for `w[ℓ, m]`, an index of another type is converted by `checked_index`, or refused,
 # before the method for the container's own type is reached.
 """
     w[ℓ, :]
@@ -782,7 +744,8 @@ Writing through the view writes into `w`.
 Base.getindex(w::ModeWeights{T, Int}, ℓ::Int, ::Colon) where {T} = degree_block(w, ℓ)
 Base.getindex(w::ModeWeights{T, HalfOddInteger}, ℓ::HalfOddInteger, ::Colon) where {T} =
     degree_block(w, ℓ)
-Base.getindex(w::ModeWeights, ℓ::IndexType, ::Colon) = w[natural_index(w, ℓ), :]
+Base.getindex(w::ModeWeights{T, IT}, ℓ::IndexType, ::Colon) where {T, IT} =
+    w[checked_index(IT, ℓ, w, "ℓ"), :]
 function degree_block(w::ModeWeights{T, IT}, ℓ::IT) where {T, IT}
     if !(w.ℓₘᵢₙ ≤ ℓ ≤ w.ℓₘₐₓ)
         throw(BoundsError(w, (ℓ, :)))
@@ -801,71 +764,6 @@ function Base.show(io::IO, ::MIME"text/plain", w::ModeWeights)
     show(io, w)
     println(io, ":")
     Base.print_array(io, w.data)
-end
-
-
-
-### Operators on mode weights
-#
-# One method covers all twelve: the operator is a value, so it says its own effect on the
-# spin weight through `Δspin`, and the container already holds three indices of one kind,
-# `Int` or `HalfOddInteger`.  The range of ℓ is unchanged even where the spin weight moves.
-# The entries of the result below the new |s| belong to no harmonic; each is the product of
-# an entry of the input with a coefficient that vanishes there, so it is zero where the
-# input is finite, and is not dropped.  `ModeWeights(w; ℓₘᵢₙ, ℓₘₐₓ)` is what changes the
-# range, and drops those entries.
-function Base.:*(op::DifferentialOperator, w::ModeWeights{T}) where {T}
-    # The result is allocated at the length of the input's storage, so this one check covers
-    # both of the vectors that the kernel indexes.
-    check_storage_length(w)
-    Treal = real(float(T))
-    out = similar(w.data, Base.promote_op(*, coefftype(op, Treal), T))
-    apply_operator!(out, op, bandstructure(op), w.data, w.s, w.ℓₘᵢₙ, w.ℓₘₐₓ, Treal)
-    ModeWeights(out, w.s + Δspin(op), w.ℓₘᵢₙ, w.ℓₘₐₓ)
-end
-(op::DifferentialOperator)(w::ModeWeights) = op * w
-
-# The in-place form, for a loop over many sets of weights.  Aliasing is refused for the
-# banded operators, whose kernels read a neighbor that an in-place write may already have
-# clobbered; it would be safe for the diagonal ones, but allowing it there only would be a
-# trap.
-function LinearAlgebra.mul!(
-    w′::ModeWeights, op::DifferentialOperator, w::ModeWeights{T}
-) where {T}
-    if spin(w′) != w.s + Δspin(op) || ℓₘᵢₙ(w′) != w.ℓₘᵢₙ || ℓₘₐₓ(w′) != w.ℓₘₐₓ
-        throw(operator_output_error(w′, op, w))
-    end
-    check_storage_length(w)
-    check_storage_length(w′)
-    if Base.mightalias(w′.data, w.data)
-        throw(ArgumentError(
-            "The output aliases the input.  $(nameof(op)) reads neighboring modes, so it "
-            * "cannot be applied in place; pass a separate destination, such as `similar(w)`."
-        ))
-    end
-    apply_operator!(
-        w′.data, op, bandstructure(op), w.data, w.s, w.ℓₘᵢₙ, w.ℓₘₐₓ, real(float(T))
-    )
-    w′
-end
-# The operators keep the range of ℓ of their input, so a destination allocated with the
-# default range of its own spin weight, `abs(s′):ℓₘₐₓ`, is refused whenever |s′| ≠ |s|; the
-# message says how to allocate one, and how to change the range of the result afterwards.
-@noinline function operator_output_error(w′::ModeWeights, op, w::ModeWeights{T}) where {T}
-    s′ = w.s + Δspin(op)
-    ArgumentError(
-        "The output has s=$(spin(w′)) and ℓ ∈ $(ℓₘᵢₙ(w′)):$(ℓₘₐₓ(w′)), but $(nameof(op)) "
-        * "applied to these weights gives s=$s′ and ℓ ∈ $(w.ℓₘᵢₙ):$(w.ℓₘₐₓ), since the "
-        * "operators keep the range of ℓ of their input.  Allocate the output with "
-        * "`ModeWeights{$T}(undef, $s′, $(w.ℓₘᵢₙ), $(w.ℓₘₐₓ))`, and use "
-        * "`ModeWeights(w′; ℓₘᵢₙ, ℓₘₐₓ)` to copy the result into another range of ℓ."
-    )
-end
-
-# Bare storage, at least as long as the result, is accepted as the output too, and the
-# result comes back labelled, as a `ModeWeights` over it (see `mode_weights_view`).
-function LinearAlgebra.mul!(w′::AbstractVector, op::DifferentialOperator, w::ModeWeights)
-    mul!(mode_weights_view(w′, w.s + Δspin(op), w.ℓₘᵢₙ, w.ℓₘₐₓ), op, w)
 end
 
 # The in-place operations that write mode weights accept, as their output, a bare vector at

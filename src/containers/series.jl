@@ -1,74 +1,278 @@
-### Containers laid out in the canonical mode ordering.
+### Series of blocks, indexed by ℓ.
+#
+# A `WignerSeries` holds the blocks of a Wigner matrix for a range of ℓ, and a
+# `HarmonicValues` the values of the spin-weighted harmonics, whose blocks are views of one
+# flat array.  Both are indexed, iterated and counted by ℓ, as the calculators are, and that
+# interface is written once, on their supertype, in terms of the `ℓₘᵢₙ`, `ℓₘₐₓ` and
+# `getindex(s, ℓ)` that each supplies.
+
+"""
+    AbstractDegreeSeries{IT}
+
+Supertype of the series of blocks indexed by the degree ``ℓ``: [`WignerSeries`](@ref), the
+blocks of a Wigner matrix, and [`HarmonicValues`](@ref), the values of the spin-weighted
+spherical harmonics.
+- `IT` is the index type, `Int` or [`HalfOddInteger`](@ref).
+
+A series `s` holds one block for each ``ℓ`` from `ℓₘᵢₙ(s)` to `ℓₘₐₓ(s)`, and `s[ℓ]` is the
+block of degree ``ℓ``; for a half-integer series `ℓ` may be written as a
+[`HalfOddInteger`](@ref) or as a `Rational{Int}` with denominator 2, and for an integer
+series it is an `Int`.  Like a calculator, a series iterates as `ℓ => block` pairs, so
+`eltype(s)` is that pair type; `keys(s)` is the range of ``ℓ``, and `length(s)` counts the
+blocks.  `first(s)` and `last(s)` are the first and last blocks, as indexing gives them, and
+so are `first(s, n)` and `last(s, n)`, which give vectors of the first or last `n` blocks,
+and `only(s)`, the one block of a series that has only one.  [`ishalfinteger`](@ref) says
+which kind of index the series takes.
+
+A series is not an `AbstractVector`: ``ℓ`` may be a half-odd-integer, and the `axes` of an
+`AbstractVector` must be integer ranges.
+"""
+abstract type AbstractDegreeSeries{IT<:IntegerHalf} end
+
+Base.keys(s::AbstractDegreeSeries) = ℓₘᵢₙ(s):ℓₘₐₓ(s)
+Base.length(s::AbstractDegreeSeries) = Int(ℓₘₐₓ(s) - ℓₘᵢₙ(s)) + 1
+Base.firstindex(s::AbstractDegreeSeries) = ℓₘᵢₙ(s)
+Base.lastindex(s::AbstractDegreeSeries) = ℓₘₐₓ(s)
+ishalfinteger(::AbstractDegreeSeries{IT}) where {IT<:Integer} = false
+ishalfinteger(::AbstractDegreeSeries{IT}) where {IT<:HalfOddInteger} = true
+
+# A series iterates as `ℓ => block` pairs, as a calculator does, so that a loop over
+# `D(R, ℓₘₐₓ)` reads exactly as one over `DCalculator(R, ℓₘₐₓ)`; the element type is
+# therefore that of the pairs, rather than the number type of the blocks, and a disagreement
+# between the two makes `collect` throw.  Indexing, `first` and `last` give blocks, as
+# `s[ℓ]` does, and so do the forms of `first` and `last` that take a count, which `Base`
+# would otherwise derive from the iteration, as pairs.
+@inline function Base.iterate(s::AbstractDegreeSeries{IT}, ℓ::IT=ℓₘᵢₙ(s)) where {IT}
+    ℓ > ℓₘₐₓ(s) && return nothing
+    (ℓ => s[ℓ], ℓ + 1)
+end
+Base.IteratorSize(::Type{<:AbstractDegreeSeries}) = Base.HasLength()
+Base.IteratorEltype(::Type{<:AbstractDegreeSeries}) = Base.HasEltype()
+Base.pairs(s::AbstractDegreeSeries) = s
+Base.eltype(::Type{S}) where {IT, S<:AbstractDegreeSeries{IT}} =
+    Pair{IT, Base.promote_op(getindex, S, IT)}
+Base.eltype(s::AbstractDegreeSeries) = eltype(typeof(s))
+Base.first(s::AbstractDegreeSeries) = s[ℓₘᵢₙ(s)]
+Base.last(s::AbstractDegreeSeries) = s[ℓₘₐₓ(s)]
+function Base.first(s::AbstractDegreeSeries, n::Integer)
+    n < 0 && throw(ArgumentError("Number of elements must be non-negative"))
+    [s[ℓₘᵢₙ(s) + (i - 1)] for i ∈ 1:min(n, length(s))]
+end
+function Base.last(s::AbstractDegreeSeries, n::Integer)
+    n < 0 && throw(ArgumentError("Number of elements must be non-negative"))
+    k = min(n, length(s))
+    [s[ℓₘₐₓ(s) - (k - i)] for i ∈ 1:k]
+end
+
+# The degree `ℓ` asked of a series, converted to the series' own index type as the index
+# methods convert, so that an index of the wrong kind or type is told what the series takes,
+# and then checked to be one of the degrees the series holds.  Indexing a `HarmonicValues`
+# begins with this.
+@inline function series_ℓ(s::AbstractDegreeSeries{IT}, ℓ) where {IT}
+    ℓ′ = checked_index(IT, ℓ, s, "ℓ")
+    if ℓ′ < ℓₘᵢₙ(s) || ℓ′ > ℓₘₐₓ(s)
+        throw(BoundsError(s, ℓ))
+    end
+    ℓ′
+end
+
+function Base.show(io::IO, ::MIME"text/plain", s::AbstractDegreeSeries)
+    show(io, s)
+    println(io, ":")
+    show_blocks(io, s)
+end
+
+# The blocks of a series, one after another with their ℓ.  Where the output is limited, as
+# at the REPL, only the first two and the last two are printed when there are more than
+# four, as `Base` elides the middle of a long array.
+function show_blocks(io::IO, s::AbstractDegreeSeries)
+    n = Int(ℓₘₐₓ(s) - ℓₘᵢₙ(s)) + 1
+    elide = get(io, :limit, false)::Bool && n > 4
+    for (i, ℓ) ∈ enumerate(ℓₘᵢₙ(s):ℓₘₐₓ(s))
+        if elide && 2 < i ≤ n - 2
+            i == 3 && println(io, " ⋮")
+            continue
+        end
+        println(io, " ℓ = ", ℓ, ":")
+        show(io, MIME("text/plain"), s[ℓ])
+        println(io)
+    end
+end
+
+
+"""
+    WignerSeries{IT, VT}
+    WignerSeries(blocks, ℓₘᵢₙ, ℓₘₐₓ)
+
+The blocks of a Wigner matrix for every ``ℓ`` from `ℓₘᵢₙ` to `ℓₘₐₓ`, indexed by ``ℓ``:
+`s[ℓ]` is the block of degree `ℓ`, and `s[ℓ][m′, m]` an element of it.  For a half-integer
+series `ℓ` may be written as a [`HalfOddInteger`](@ref) or as a `Rational{Int}` with
+denominator 2, and for an integer series it is an `Int`.
+- `IT` is the index type, `Int` or [`HalfOddInteger`](@ref).
+- `VT` is the type of the vector of blocks.
+
+This is what [`D`](@ref) and [`d`](@ref) return, for either kind of index.  Like a
+calculator, it iterates as `ℓ => block` pairs, so that `for (ℓ, 𝔇ˡ) ∈ D(R, ℓₘₐₓ)` reads
+exactly as the same loop over a [`DCalculator`](@ref); `keys` is the range of ``ℓ``,
+`values` gives the blocks alone, and `length` counts them.  `first` and `last` give the
+first and last blocks, as indexing does, and so do `first(s, n)` and `last(s, n)`, which
+give vectors of the first or last `n` blocks, and `only(s)`, the one block of a series that
+has only one.
+
+Two series are `==`, `isequal` or `≈` when they have the same range of ``ℓ`` and their
+blocks are, block by block; `≈` applies its tolerances to each block separately.
+
+The constructor takes a 1-based vector of blocks without copying it, and requires block `i`
+to have ``ℓ = ℓₘᵢₙ + i - 1``, with the index type of the bounds.  The bounds must both be
+integers of type `Int`, or both half-odd-integers, each a [`HalfOddInteger`](@ref) or a
+`Rational{Int}` with denominator 2.
+
+See also [`WignerMatrix`](@ref) and [`WignerMatrixBatch`](@ref).
+"""
+struct WignerSeries{IT<:IntegerHalf, VT<:AbstractVector} <: AbstractDegreeSeries{IT}
+    blocks::VT  # 1-based; blocks[i] is the block for ℓ = ℓₘᵢₙ + (i-1)
+    ℓₘᵢₙ::IT
+    ℓₘₐₓ::IT
+    # Indexing finds the block of each ℓ at the position its label gives, so each block is
+    # compared with its position once, here, rather than on every access.
+    @index_methods function WignerSeries(
+        blocks::VT, ℓₘᵢₙ::IT, ℓₘₐₓ::IT
+    ) where {IT<:IndexType, VT<:AbstractVector}
+        Base.require_one_based_indexing(blocks)  # `blocks[i]` is the block for ℓₘᵢₙ + (i-1)
+        if length(blocks) != (ℓₘₐₓ - ℓₘᵢₙ) + 1
+            throw(DimensionMismatch(
+                "Got $(length(blocks)) blocks, but ℓ ∈ $ℓₘᵢₙ:$ℓₘₐₓ needs "
+                * "$(max(0, (ℓₘₐₓ - ℓₘᵢₙ) + 1))."
+            ))
+        end
+        for (i, block) ∈ enumerate(blocks)
+            check_series_block(block, i, ℓₘᵢₙ)
+        end
+        new{IT, VT}(blocks, ℓₘᵢₙ, ℓₘₐₓ)
+    end
+end
+
+@inline function check_series_block(block::AbstractBlock{IT}, i, ℓₘᵢₙ::IT) where {IT}
+    ℓ(block) == ℓₘᵢₙ + (i - 1) || throw(series_block_error(block, i, ℓₘᵢₙ))
+    nothing
+end
+check_series_block(block, i, ℓₘᵢₙ) = throw(series_block_error(block, i, ℓₘᵢₙ))
+@noinline function series_block_error(block, i, ℓₘᵢₙ)
+    if !(block isa AbstractBlock)
+        ArgumentError(
+            "The blocks of a `WignerSeries` are Wigner blocks such as `WignerMatrix`es; block "
+            * "$i is a `$(typeof(block))`."
+        )
+    elseif !isa(ℓ(block), typeof(ℓₘᵢₙ))
+        ArgumentError(
+            "Block $i has ℓ=$(ℓ(block)), of type `$(typeof(ℓ(block)))`, but the bounds of the "
+            * "series are of type `$(typeof(ℓₘᵢₙ))`, and so must the ℓ of every block be."
+        )
+    else
+        ArgumentError(
+            "Block $i is for ℓ=$(ℓ(block)), but in a series starting at ℓₘᵢₙ=$ℓₘᵢₙ block $i "
+            * "must be for ℓ=$(ℓₘᵢₙ + (i - 1)), since block i is for ℓ = ℓₘᵢₙ + i - 1."
+        )
+    end
+end
+
+ℓₘᵢₙ(s::WignerSeries) = s.ℓₘᵢₙ
+ℓₘₐₓ(s::WignerSeries) = s.ℓₘₐₓ
+Base.parent(s::WignerSeries) = s.blocks
+Base.axes(s::WignerSeries) = (WignerRange(s.ℓₘᵢₙ:s.ℓₘₐₓ),)
+Base.axes(s::WignerSeries, d::Integer) = d ≤ 1 ? axes(s)[d] : Base.OneTo(1)
+Base.ndims(::WignerSeries) = 1
+Base.ndims(::Type{<:WignerSeries}) = 1
+Base.size(s::WignerSeries) = (length(s),)
+Base.size(s::WignerSeries, d::Integer) = d ≤ 1 ? length(s) : 1
+Base.values(s::WignerSeries) = s.blocks
+
+# The blocks of a `WignerSeries` are held in a vector, and these methods read that vector
+# directly, where the methods of every series index it ℓ by ℓ.  They give the same blocks
+# while the vector has the length that the labels give, which `check_blocks` below confirms
+# before any block is read; `length` counts the blocks in the vector, `first(s, n)` and
+# `last(s, n)` return vectors of its element type, and `only` refuses a series of other than
+# one block with the message `Base` gives for a vector.  The iteration is over the series'
+# own position, rather than handing an integer state to the storage's own `iterate`: for
+# storage other than a `Vector`, such as a view, that state is not an integer, and a series
+# on a view would stop after its first block while its `length` still counted them all — so
+# that a comprehension over it would return uninitialized memory.
+Base.length(s::WignerSeries) = length(s.blocks)
+function Base.iterate(s::WignerSeries, i::Int=1)
+    i == 1 && check_blocks(s)
+    i > length(s.blocks) && return nothing
+    ((s.ℓₘᵢₙ + (i - 1)) => s.blocks[i], i + 1)
+end
+Base.first(s::WignerSeries, n::Integer) = (check_blocks(s); first(s.blocks, n))
+Base.last(s::WignerSeries, n::Integer) = (check_blocks(s); last(s.blocks, n))
+Base.only(s::WignerSeries) = (check_blocks(s); only(s.blocks))
+
+@propagate_inbounds function Base.getindex(s::WignerSeries{IT}, ℓ) where {IT}
+    # Deliberately *not* inside `@boundscheck`: an index of the wrong kind, such as a whole
+    # number asked of a half-integer series, is told what the series takes.
+    let ℓ = checked_index(IT, ℓ, s, "ℓ")
+        @boundscheck begin
+            if ℓ < s.ℓₘᵢₙ || ℓ > s.ℓₘₐₓ
+                throw(BoundsError(s, ℓ))
+            end
+            check_blocks(s)
+        end
+        @inbounds s.blocks[Int(ℓ - s.ℓₘᵢₙ) + 1]
+    end
+end
+
+# `values(s)` and `parent(s)` hand out the series' own vector of blocks, which can be
+# resized, while indexing and iteration find the block of each ℓ at the position its label
+# gives; a vector of any other length would put the wrong block, or none, at that position.
+@inline function check_blocks(s::WignerSeries)
+    if length(s.blocks) != Int(s.ℓₘₐₓ - s.ℓₘᵢₙ) + 1
+        throw(blocks_error(s))
+    end
+    nothing
+end
+@noinline function blocks_error(s::WignerSeries)
+    DimensionMismatch(
+        "A series for ℓ ∈ $(s.ℓₘᵢₙ):$(s.ℓₘₐₓ) needs $(Int(s.ℓₘₐₓ - s.ℓₘᵢₙ) + 1) blocks, but "
+        * "its vector of blocks has length $(length(s.blocks)); it was resized after the "
+        * "series was built."
+    )
+end
+
+Base.copy(s::WignerSeries) = WignerSeries(map(copy, s.blocks), s.ℓₘᵢₙ, s.ℓₘₐₓ)
+Base.similar(s::WignerSeries) = WignerSeries(map(similar, s.blocks), s.ℓₘᵢₙ, s.ℓₘₐₓ)
+# Block by block, after the range of ℓ.  The blocks' own comparisons count their labels, and
+# `hash` agrees with `isequal`, since it is built from the range and the blocks' hashes.
+same_range(s1::WignerSeries, s2::WignerSeries) =
+    ℓₘᵢₙ(s1) == ℓₘᵢₙ(s2) && ℓₘₐₓ(s1) == ℓₘₐₓ(s2) && length(s1.blocks) == length(s2.blocks)
+Base.:(==)(s1::WignerSeries, s2::WignerSeries) =
+    same_range(s1, s2) && all(b1 == b2 for (b1, b2) ∈ zip(s1.blocks, s2.blocks))
+Base.isequal(s1::WignerSeries, s2::WignerSeries) =
+    same_range(s1, s2) && all(isequal(b1, b2) for (b1, b2) ∈ zip(s1.blocks, s2.blocks))
+Base.isapprox(s1::WignerSeries, s2::WignerSeries; kwargs...) = same_range(s1, s2) &&
+    all(isapprox(b1, b2; kwargs...) for (b1, b2) ∈ zip(s1.blocks, s2.blocks))
+function Base.hash(s::WignerSeries, h::UInt)
+    h = hash(:WignerSeries, hash(s.ℓₘᵢₙ, hash(s.ℓₘₐₓ, h)))
+    foldl((h, b) -> hash(b, h), s.blocks; init=h)
+end
+
+function Base.show(io::IO, s::WignerSeries{IT}) where {IT}
+    print(io, "WignerSeries{$IT} for ℓ ∈ $(s.ℓₘᵢₙ):$(s.ℓₘₐₓ)")
+end
+
+
+### Harmonic values, laid out in the canonical mode ordering.
 #
 # Two things in this package are stored as `[x(ℓ, m) for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ for m ∈ -ℓ:ℓ]` — the
 # weights of a spin-weighted function, and the values of the spin-weighted harmonics
 # themselves — and they share the flat storage, the labels ℓₘᵢₙ and ℓₘₐₓ, and the block
 # accessor `x[ℓ, :]`.  They differ in meaning, and so in the rest of their interfaces: a
 # `ModeWeights` is the vector of the weights, indexed, iterated and counted by mode, while a
-# `HarmonicValues` is indexed, iterated and counted by ℓ, as the calculators are.  The shared
-# supertype is what lets the machinery that depends only on the layout be written once.
+# `HarmonicValues` is a series, indexed, iterated and counted by ℓ, as the calculators are.
 #
 # The mode axis is always the *last* axis of the storage, so that a single ``ℓ`` is a view over
 # a contiguous run of it with every leading axis taken whole.  That is what keeps the flat form
 # usable for the products these containers exist to feed: a synthesis matrix times a vector of
 # mode weights.
-
-"""
-    AbstractModeContainer{T, IT}
-
-Supertype of the containers stored in the canonical mode ordering — [`ModeWeights`](@ref) and
-[`HarmonicValues`](@ref).
-- `T` is the number type.
-- `IT` is the index type, `Int` or [`HalfOddInteger`](@ref).
-
-The supertype promises only what the layout determines: the labels `ℓₘᵢₙ(c)` and `ℓₘₐₓ(c)`,
-[`ishalfinteger`](@ref), the block of one ``ℓ`` as `c[ℓ, :]`, and the flat storage as
-[`array_view`](@ref)`(c)`.  The rest of the interface differs between the two, because they
-mean different things.  A `ModeWeights` is the vector of the weights of a function: `w[i]` is
-the `i`-th weight in storage order, `length(w)` counts the modes, `keys(w)` are the linear
-positions, and iteration yields the weights, so that `sum`, `maximum` and the other reductions
-see numbers.  A `HarmonicValues` is indexed by ``ℓ``, as a calculator is: `Y[ℓ]` is the block
-of degree ``ℓ``, `length(Y)` counts the blocks, `keys(Y)` is the range of ``ℓ``, and iteration
-yields `ℓ => block` pairs.  `eltype` is the number type of a `ModeWeights` and that pair type
-for a `HarmonicValues`.
-
-These are *not* `AbstractArray`s.  A container indexed by ``ℓ`` cannot be one, because ``ℓ``
-may be a half-odd-integer and `axes` must be integer ranges; and for the ones that could be,
-being an array would let `*` and `mul!` accept them, and those return silently wrong answers
-for an array with non-trivial offsets, such as an `OffsetArray`.  [`array_view`](@ref) is the
-explicit route to the flat 1-based storage,
-and is what the transforms and the operator matrices take.
-"""
-abstract type AbstractModeContainer{T, IT<:IntegerHalf} end
-
-Base.eltype(::AbstractModeContainer{T}) where {T} = T
-Base.eltype(::Type{<:AbstractModeContainer{T}}) where {T} = T
-ℓₘᵢₙ(c::AbstractModeContainer) = c.ℓₘᵢₙ
-ℓₘₐₓ(c::AbstractModeContainer) = c.ℓₘₐₓ
-ishalfinteger(::AbstractModeContainer{T, IT}) where {T, IT<:Integer} = false
-ishalfinteger(::AbstractModeContainer{T, IT}) where {T, IT<:HalfOddInteger} = true
-
-# The positions in the flat storage that one ℓ occupies.  `Yindex` counts from `ℓₘᵢₙ`, so this
-# is the same arithmetic for either kind of index.  Every caller has converted `ℓ` to the
-# container's own index type, `Int` or `HalfOddInteger`, and for either of those `2ℓ` is an
-# `Int`; the signature insists on it, so that an index of another type is a `MethodError`
-# rather than a range of another type.
-@inline function mode_range(c::AbstractModeContainer{T, IT}, ℓ::IT) where {T, IT}
-    i₀ = Yindex(ℓ, -ℓ, ℓₘᵢₙ(c))
-    i₀:(i₀ + 2ℓ)
-end
-
-# Shared by `getindex(c, ℓ)` on every such container: `ℓ` is converted to the container's own
-# index type as the index methods convert, so that an index of the wrong kind or type is told
-# what the container takes, and must then be one of the values the container holds.
-@inline function check_ℓ(c::AbstractModeContainer{T, IT}, ℓ) where {T, IT}
-    ℓ′ = container_index(IT, ℓ, c, "ℓ")
-    if ℓ′ < ℓₘᵢₙ(c) || ℓ′ > ℓₘₐₓ(c)
-        throw(BoundsError(c, ℓ))
-    end
-    ℓ′
-end
-
 
 """
     HarmonicValues
@@ -129,7 +333,7 @@ to agree, since it pairs the numbers by position.
 See also [`ModeWeights`](@ref), which shares this layout but holds the weights of a function
 rather than the values of the harmonics.
 """
-struct HarmonicValues{T, IT<:IntegerHalf, S, A<:AbstractArray{T}} <: AbstractModeContainer{T, IT}
+struct HarmonicValues{T, IT<:IntegerHalf, S, A<:AbstractArray{T}} <: AbstractDegreeSeries{IT}
     data::A
     s::S          # one `IT`, or an ascending range of them
     ℓₘᵢₙ::IT
@@ -140,7 +344,7 @@ struct HarmonicValues{T, IT<:IntegerHalf, S, A<:AbstractArray{T}} <: AbstractMod
     # them in place of the storage's own shape: the rank of the storage says whether there is
     # a rotor axis and a spin axis, which must agree with `Nᵣ` and with the spin weights, and
     # the index kind of the spin weights must be that of the ℓ range, which the index
-    # methods ensure.  Every block, product and refill relies on these.
+    # methods ensure.  Every block and product relies on these.
     @index_methods function HarmonicValues(
         data::A, s::IndexOrRange, ℓₘᵢₙ::IT, ℓₘₐₓ::IT, Nᵣ::Int
     ) where {T, IT<:IndexType, A<:AbstractArray{T}}
@@ -194,6 +398,8 @@ function check_harmonic_storage(data::AbstractArray, s, Nᵣ::Int)
     nothing
 end
 
+ℓₘᵢₙ(Y::HarmonicValues) = Y.ℓₘᵢₙ
+ℓₘₐₓ(Y::HarmonicValues) = Y.ℓₘₐₓ
 Base.parent(Y::HarmonicValues) = Y.data
 Nᵣ(Y::HarmonicValues) = Y.Nᵣ
 # Batched when the storage has a rotor axis — one more dimension than the modes (and the spin
@@ -204,25 +410,9 @@ spins(Y::HarmonicValues{T, IT, S}) where {T, IT, S<:IntegerHalf} = Y.s:Y.s
 spins(Y::HarmonicValues{T, IT, S}) where {T, IT, S<:AbstractUnitRange} = Y.s
 spin(Y::HarmonicValues{T, IT, S}) where {T, IT, S<:IntegerHalf} = Y.s
 
-# `length` counts the blocks, as it does for a `WignerSeries`; the number of modes is
+# `length(Y)` counts the blocks, as it does for every series; the number of modes is
 # `length(array_view(Y))` for the unbatched single-spin case, and `Ysize` in general.
-Base.length(Y::HarmonicValues) = Int(ℓₘₐₓ(Y) - ℓₘᵢₙ(Y)) + 1
-Base.keys(Y::HarmonicValues) = ℓₘᵢₙ(Y):ℓₘₐₓ(Y)
-Base.firstindex(Y::HarmonicValues) = ℓₘᵢₙ(Y)
-Base.lastindex(Y::HarmonicValues) = ℓₘₐₓ(Y)
-# `first` and `last`, with or without a count, and `only` give blocks, as indexing does and as
-# they do for a `WignerSeries`, rather than the pairs of the iteration.
-Base.first(Y::HarmonicValues) = Y[ℓₘᵢₙ(Y)]
-Base.last(Y::HarmonicValues) = Y[ℓₘₐₓ(Y)]
-function Base.first(Y::HarmonicValues, n::Integer)
-    n < 0 && throw(ArgumentError("Number of elements must be non-negative"))
-    [Y[ℓₘᵢₙ(Y) + (i - 1)] for i ∈ 1:min(n, length(Y))]
-end
-function Base.last(Y::HarmonicValues, n::Integer)
-    n < 0 && throw(ArgumentError("Number of elements must be non-negative"))
-    k = min(n, length(Y))
-    [Y[ℓₘₐₓ(Y) - (k - i)] for i ∈ 1:k]
-end
+# `only` gives the one block, as indexing does.
 function Base.only(Y::HarmonicValues)
     length(Y) == 1 || throw(ArgumentError(
         "These harmonic values hold $(length(Y)) blocks, for ℓ ∈ $(ℓₘᵢₙ(Y)):$(ℓₘₐₓ(Y)), "
@@ -231,26 +421,37 @@ function Base.only(Y::HarmonicValues)
     Y[ℓₘᵢₙ(Y)]
 end
 
+# The positions in the flat storage that one ℓ occupies.  `Yindex` counts from `ℓₘᵢₙ`, so
+# this is the same arithmetic for either kind of index.  Every caller has converted `ℓ` to
+# the container's own index type, `Int` or `HalfOddInteger`, and for either of those `2ℓ` is
+# an `Int`; the signature insists on it, so that an index of another type is a
+# `MethodError` rather than a range of another type.  `ModeWeights` has the same method, in
+# `mode_weights.jl`.
+@inline function mode_range(Y::HarmonicValues{T, IT}, ℓ::IT) where {T, IT}
+    i₀ = Yindex(ℓ, -ℓ, ℓₘᵢₙ(Y))
+    i₀:(i₀ + 2ℓ)
+end
+
 # The four shapes.  Which one applies is fixed by the rank of the storage and by whether `S` is
 # a single spin weight or a range, so each of these has a single concrete return type.
 @propagate_inbounds function Base.getindex(
     Y::HarmonicValues{T, IT, S, <:AbstractVector}, ℓ
 ) where {T, IT, S<:IntegerHalf}
-    let ℓ = check_ℓ(Y, ℓ)
+    let ℓ = series_ℓ(Y, ℓ)
         DegreeBlock(view(Y.data, mode_range(Y, ℓ)), ℓ)
     end
 end
 @propagate_inbounds function Base.getindex(
     Y::HarmonicValues{T, IT, S, <:AbstractMatrix}, ℓ
 ) where {T, IT, S<:IntegerHalf}
-    let ℓ = check_ℓ(Y, ℓ)
+    let ℓ = series_ℓ(Y, ℓ)
         DegreeBlockBatch(view(Y.data, :, mode_range(Y, ℓ)), ℓ)
     end
 end
 @propagate_inbounds function Base.getindex(
     Y::HarmonicValues{T, IT, S, <:AbstractMatrix}, ℓ
 ) where {T, IT, S<:AbstractUnitRange}
-    let ℓ = check_ℓ(Y, ℓ), sr = Y.s
+    let ℓ = series_ℓ(Y, ℓ), sr = Y.s
         SpinMatrix(
             view(Y.data, :, mode_range(Y, ℓ)), ℓ;
             sₘₐₓ=last(sr), sₘᵢₙ=first(sr), mₘₐₓ=ℓ, mₘᵢₙ=-ℓ
@@ -260,7 +461,7 @@ end
 @propagate_inbounds function Base.getindex(
     Y::HarmonicValues{T, IT, S, <:AbstractArray{T, 3}}, ℓ
 ) where {T, IT, S<:AbstractUnitRange}
-    let ℓ = check_ℓ(Y, ℓ), sr = Y.s
+    let ℓ = series_ℓ(Y, ℓ), sr = Y.s
         SpinMatrixBatch(
             view(Y.data, :, :, mode_range(Y, ℓ)), ℓ;
             sₘₐₓ=last(sr), sₘᵢₙ=first(sr), mₘₐₓ=ℓ, mₘᵢₙ=-ℓ
@@ -271,23 +472,6 @@ end
 # `Y[ℓ, :]` is the same block, so that the block of one ℓ is written the same way for both mode
 # containers, as `w[ℓ, :]` is for a `ModeWeights`.
 @propagate_inbounds Base.getindex(Y::HarmonicValues, ℓ, ::Colon) = Y[ℓ]
-
-# Iteration yields `ℓ => block`, matching the calculators, so that a loop written against one
-# reads the same against the other.
-@inline function Base.iterate(Y::HarmonicValues{T, IT}, ℓ::IT=ℓₘᵢₙ(Y)) where {T, IT}
-    ℓ > ℓₘₐₓ(Y) && return nothing
-    (ℓ => Y[ℓ], ℓ + 1)
-end
-Base.IteratorSize(::Type{<:HarmonicValues}) = Base.HasLength()
-Base.pairs(Y::HarmonicValues) = Y
-# So the element type is that of the iteration, as it is for a calculator and a `WignerSeries`,
-# rather than the number type that `AbstractModeContainer` reports for a `ModeWeights`, which
-# iterates over its numbers; a disagreement makes `collect` throw.  The number type is
-# `eltype(array_view(Y))`.
-Base.eltype(::Type{H}) where {T, IT, H<:HarmonicValues{T, IT}} =
-    Pair{IT, Base.promote_op(getindex, H, IT)}
-Base.eltype(Y::HarmonicValues) = eltype(typeof(Y))
-Base.IteratorEltype(::Type{<:HarmonicValues}) = Base.HasEltype()
 
 Base.copy(Y::HarmonicValues) = HarmonicValues(copy(Y.data), Y.s, Y.ℓₘᵢₙ, Y.ℓₘₐₓ, Y.Nᵣ)
 Base.similar(Y::HarmonicValues) = HarmonicValues(similar(Y.data), Y.s, Y.ℓₘᵢₙ, Y.ℓₘₐₓ, Y.Nᵣ)
@@ -321,9 +505,4 @@ function Base.show(io::IO, Y::HarmonicValues{T, IT, S}) where {T, IT, S}
     spin_text = S <: AbstractUnitRange ? "s ∈ $(Y.s)" : "s=$(Y.s)"
     rotor_text = isbatched(Y) ? ", $(Y.Nᵣ) rotor" * (Y.Nᵣ == 1 ? "" : "s") : ""
     print(io, "HarmonicValues{$T} for ℓ ∈ $(Y.ℓₘᵢₙ):$(Y.ℓₘₐₓ), $spin_text$rotor_text")
-end
-function Base.show(io::IO, ::MIME"text/plain", Y::HarmonicValues)
-    show(io, Y)
-    println(io, ":")
-    show_blocks(io, Y, ℓₘᵢₙ(Y), ℓₘₐₓ(Y))
 end

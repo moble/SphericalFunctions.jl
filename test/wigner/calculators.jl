@@ -358,14 +358,16 @@ end
         # Wrong number of rotors
         batched = DCalculator(rotors, ℓₘₐₓ)
         @test refuses(
-            () -> recurrence!(batched, rotors[1:N-1], 0), DimensionMismatch, "Expected 5 rotors"
+            () -> recurrence!(batched, rotors[1:N-1], 0), DimensionMismatch,
+            "This calculator handles Nᵣ=5 rotors, but got 4."
         )
         @test refuses(
-            () -> recurrence!(batched, rotors[1], 0), DimensionMismatch, "expects Nᵣ=5 rotors"
+            () -> recurrence!(batched, rotors[1], 0), DimensionMismatch,
+            "This calculator handles Nᵣ=5 rotors, but a single rotor was given."
         )
         @test refuses(
             () -> recurrence!(DCalculator(first(rotors), ℓₘₐₓ), rotors, 0), DimensionMismatch,
-            "Expected 1 rotors"
+            "This calculator handles Nᵣ=1 rotors, but got 5."
         )
     end
 
@@ -384,14 +386,16 @@ end
         # Wrong number of angles
         batched = dCalculator(βs, ℓₘₐₓ)
         @test refuses(
-            () -> recurrence!(batched, βs[1:2], 0), DimensionMismatch, "Expected 5 rotors"
+            () -> recurrence!(batched, βs[1:2], 0), DimensionMismatch,
+            "This calculator handles Nᵣ=5 rotors, but got 2."
         )
         @test refuses(
-            () -> recurrence!(batched, βs[1], 0), DimensionMismatch, "expects Nᵣ=5 rotors"
+            () -> recurrence!(batched, βs[1], 0), DimensionMismatch,
+            "This calculator handles Nᵣ=5 rotors, but a single rotor was given."
         )
         @test refuses(
             () -> recurrence!(dCalculator(first(βs), ℓₘₐₓ), βs, 0), DimensionMismatch,
-            "Expected 1 rotors"
+            "This calculator handles Nᵣ=1 rotors, but got 5."
         )
     end
 end
@@ -507,12 +511,14 @@ end
             blk = recurrence!(calc, R, 2)
             @test SphericalFunctions.ℓ(calc) == 2
             @test size(blk) == (5, 5)
-            # ℓ out of range for this calculator, or not an integer at all; the failed call
-            # leaves the current block in place
+            # ℓ out of range for this calculator, or not an `Int`; the failed call leaves
+            # the current block in place
             @test refuses(() -> recurrence!(calc, ℓₘₐₓ + 1), ArgumentError, "out of bounds")
             @test refuses(() -> recurrence!(calc, -1), ArgumentError, "out of bounds")
-            @test refuses(() -> recurrence!(calc, 2.0), ArgumentError, "so ℓ must be one too")
-            @test refuses(() -> recurrence!(calc, 5//2), ArgumentError, "so ℓ must be one too")
+            kind = "The indices of this `$name` are integers of type `Int`, like 3; got ℓ ="
+            @test refuses(() -> recurrence!(calc, 2.0), ArgumentError, "$kind 2.0::Float64")
+            @test refuses(() -> recurrence!(calc, 5//2), ArgumentError, "$kind 5//2::")
+            @test refuses(() -> recurrence!(calc, R, Int8(2)), ArgumentError, "$kind 2::")
             @test SphericalFunctions.ℓ(calc) == 2
             reference = copy(blk)
             # Recomputing from NaN-filled storage reproduces the result exactly, so no
@@ -537,7 +543,7 @@ end
     # ... whereas a dCalculator accepts any of the three forms
     calcd = dCalculator(R, ℓₘₐₓ)
     for input in (0.3, cis(0.3), R)
-        # Deliberately *not* an `AbstractMatrix`: see the note on `AbstractWignerMatrix`.
+        # Deliberately *not* an `AbstractMatrix`: see the note on `AbstractBlock`.
         blk = recurrence!(calcd, input, 1)
         @test blk isa WignerMatrix && eltype(blk) === Float64
     end
@@ -805,9 +811,22 @@ end
     # A `Rational` that is not a half-odd-integer of `Int`s is refused as well
     @test refuses(() -> D(R, 3//1), ArgumentError, "is a whole number")
     @test refuses(() -> D(R, big(7)//2), ArgumentError, "is not `Rational{Int}`")
-    # ... while an index that the calculator converts, such as the ℓ of `recurrence!`, may be
-    # of any integer type, because it is compared with the calculator's own limits
-    @test recurrence!(DCalculator(R, 3), Int8(2)) == recurrence!(DCalculator(R, 3), 2)
+    # ... and so is an ℓ of another type given to `recurrence!`, with the message that names
+    # the calculator
+    for (IT, sentence) ∈ (
+        (Int8, "narrower than `Int`"), (UInt, "is unsigned"), (Int128, "wider than `Int`"),
+        (BigInt, "wider than `Int`"), (Bool, "A `Bool` is not an index"),
+    )
+        n = IT === Bool ? true : IT(2)
+        for (name, Ctor) ∈ (("DCalculator", DCalculator), ("dCalculator", dCalculator))
+            calc = Ctor(R, 3)
+            @test refuses(() -> recurrence!(calc, n), ArgumentError, sentence)
+            @test refuses(
+                () -> recurrence!(calc, n), ArgumentError,
+                "The indices of this `$name` are integers of type `Int`, like 3; got ℓ = "
+            )
+        end
+    end
 end
 
 @testitem "Calculators: a vector of rotor data is a batch, however short" begin
@@ -850,6 +869,12 @@ end
     @inferred recurrence!(DCalculator([R], 2), 2)
     @inferred DCalculator(R, 7//2; m′ₘₐₓ=1//2)
     @inferred DCalculator(R, 4; mp_max=2)
+    @inferred dCalculator([0.7], 2)
+    @inferred dCalculator(R, 7//2)
+    @inferred sYlmCalculator([R], 2, -1:1)
+    @inferred sYlmCalculator(R, 7//2, 1//2)
+    @inferred sλlmCalculator([0.7], 2, 0)
+    @inferred recurrence!(sYlmCalculator([R], 2, -1:1), 2)
 end
 
 
@@ -876,7 +901,7 @@ end
         RT = SphericalFunctions.floattype(calc)
         dᵐ′ᵐ = convert(RT, ϵ(m′) * ϵ(-m)) * wedge_value(H, iᵣ, m′, m)
         if eltype(calc.Wˡ) <: Complex
-            dᵐ′ᵐ * conj(zpower(calc.Z₊, iᵣ, m′ + m) * zpower(calc.Z₋, iᵣ, m′ - m))
+            dᵐ′ᵐ * conj(zpower(calc.engine.Z₊, iᵣ, m′ + m) * zpower(calc.engine.Z₋, iᵣ, m′ - m))
         else
             dᵐ′ᵐ
         end
@@ -897,7 +922,7 @@ end
         calc = Ctor(data, ℓmax; lim...)
         for ℓ ∈ ℓₘᵢₙ(calc):ℓₘₐₓ(calc)
             blk = recurrence!(calc, ℓ)
-            H = calc.H.Hˡ
+            H = calc.engine.H.Hˡ
             good = true
             for m′ ∈ axes(blk, isbatched(calc) ? 2 : 1), m ∈ axes(blk, isbatched(calc) ? 3 : 2),
                     iᵣ ∈ 1:Nᵣ(calc)
@@ -929,17 +954,17 @@ end
         full = DCalculator(R⃗, ℓmax)
         by_columns = DCalculator(R⃗, ℓmax; mₘₐₓ=narrow)
         by_rows = DCalculator(R⃗, ℓmax; m′ₘₐₓ=narrow)
-        @test maxm′ₘₐₓ(by_columns.H.Hˡ) == maxm′ₘₐₓ(by_rows.H.Hˡ) == narrow
-        @test maxm′ₘₐₓ(full.H.Hˡ) == wide
-        @test length(parent(by_columns.H.Hˡ)) == length(parent(by_rows.H.Hˡ))
-        @test length(parent(by_columns.H.Hˡ)) < length(parent(full.H.Hˡ)) ÷ 5
+        @test maxm′ₘₐₓ(by_columns.engine.H.Hˡ) == maxm′ₘₐₓ(by_rows.engine.H.Hˡ) == narrow
+        @test maxm′ₘₐₓ(full.engine.H.Hˡ) == wide
+        @test length(parent(by_columns.engine.H.Hˡ)) == length(parent(by_rows.engine.H.Hˡ))
+        @test length(parent(by_columns.engine.H.Hˡ)) < length(parent(full.engine.H.Hˡ)) ÷ 5
         # `similar` builds the same narrow wedge
-        @test maxm′ₘₐₓ(similar(by_columns).H.Hˡ) == narrow
+        @test maxm′ₘₐₓ(similar(by_columns).engine.H.Hˡ) == narrow
         # An asymmetric range is as wide as its larger end, and the narrower of the two
         # ranges decides; a lower limit alone narrows nothing
-        @test maxm′ₘₐₓ(DCalculator(R⃗, ℓmax; mₘₐₓ=narrow, mₘᵢₙ=-narrow - 2).H.Hˡ) == narrow + 2
-        @test maxm′ₘₐₓ(DCalculator(R⃗, ℓmax; mₘₐₓ=narrow + 2, m′ₘₐₓ=narrow).H.Hˡ) == narrow
-        @test maxm′ₘₐₓ(DCalculator(R⃗, ℓmax; mₘᵢₙ=-narrow).H.Hˡ) == wide
+        @test maxm′ₘₐₓ(DCalculator(R⃗, ℓmax; mₘₐₓ=narrow, mₘᵢₙ=-narrow - 2).engine.H.Hˡ) == narrow + 2
+        @test maxm′ₘₐₓ(DCalculator(R⃗, ℓmax; mₘₐₓ=narrow + 2, m′ₘₐₓ=narrow).engine.H.Hˡ) == narrow
+        @test maxm′ₘₐₓ(DCalculator(R⃗, ℓmax; mₘᵢₙ=-narrow).engine.H.Hˡ) == wide
         for (ℓ, blk) ∈ by_columns
             ref = recurrence!(full, ℓ)
             @test all(
@@ -949,7 +974,7 @@ end
         end
         cβ = dCalculator([0.3, 2.1], ℓmax; mₘₐₓ=narrow, mₘᵢₙ=-narrow)
         fβ = dCalculator([0.3, 2.1], ℓmax)
-        @test maxm′ₘₐₓ(cβ.H.Hˡ) == narrow
+        @test maxm′ₘₐₓ(cβ.engine.H.Hˡ) == narrow
         for (ℓ, blk) ∈ cβ
             ref = recurrence!(fβ, ℓ)
             @test all(

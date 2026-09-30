@@ -23,15 +23,12 @@
 # The index type of a calculator, which is also its key type.  The value method is restricted
 # to calculators, so that a type which is not a calculator of one index type — such as the
 # `UnionAll` `DCalculator` — is not passed on to `typeof` again and again.
-indextype(::Type{<:WignerCalculator{IT}}) where {IT} = IT
-indextype(::Type{<:HarmonicCalculator{IT}}) where {IT} = IT
-indextype(::Type{<:HCalculator{IT}}) where {IT} = IT
-indextype(c::Union{WignerCalculator, HarmonicCalculator, HCalculator}) = indextype(typeof(c))
+indextype(::Type{<:AbstractCalculator{IT}}) where {IT} = IT
+indextype(c::AbstractCalculator) = indextype(typeof(c))
 
 # Like a container's, a calculator's kind of index is a type parameter, so this is known at
 # compile time.
-ishalfinteger(c::Union{WignerCalculator, HarmonicCalculator, HCalculator}) =
-    indextype(c) === HalfOddInteger
+ishalfinteger(c::AbstractCalculator) = indextype(c) === HalfOddInteger
 
 # The calculators that yield one block per ℓ.  An `sYlmCalculator` belongs here because it is
 # built for the spin weights it serves: its block is the whole of what it holds, whether that
@@ -51,11 +48,7 @@ blocktype(::Type{C}) where {C} = Base.promote_op(recurrence!, C, indextype(C))
 # These are `@inline`d because the extra call layer is not always seen through, and when it is
 # not, the block is heap-allocated once per ℓ instead of being elided.
 
-@inline function Base.iterate(c::WignerCalculator{IT}, ℓ::IT=ℓₘᵢₙ(c)) where {IT}
-    ℓ > ℓₘₐₓ(c) && return nothing
-    (ℓ => recurrence!(c, ℓ), ℓ + 1)
-end
-@inline function Base.iterate(c::HarmonicCalculator{IT}, ℓ::IT=ℓₘᵢₙ(c)) where {IT}
+@inline function Base.iterate(c::IterableCalculator{IT}, ℓ::IT=ℓₘᵢₙ(c)) where {IT}
     ℓ > ℓₘₐₓ(c) && return nothing
     (ℓ => recurrence!(c, ℓ), ℓ + 1)
 end
@@ -81,15 +74,12 @@ end
 # that serves as an axis of a block.  `length` subtracts the two limits rather than measuring
 # `keys`, because `Int(ℓ)` throws for a half-integer ℓ while the difference of two of them is
 # an `Int` by construction.
-Base.keys(c::WignerCalculator) = ℓₘᵢₙ(c):ℓₘₐₓ(c)
-Base.keys(c::HarmonicCalculator) = ℓₘᵢₙ(c):ℓₘₐₓ(c)
-Base.length(c::WignerCalculator) = Int(ℓₘₐₓ(c) - ℓₘᵢₙ(c)) + 1
-Base.length(c::HarmonicCalculator) = Int(ℓₘₐₓ(c) - ℓₘᵢₙ(c)) + 1
+Base.keys(c::IterableCalculator) = ℓₘᵢₙ(c):ℓₘₐₓ(c)
+Base.length(c::IterableCalculator) = Int(ℓₘₐₓ(c) - ℓₘᵢₙ(c)) + 1
 
 # Only a type with a fixed index type has a known element type; any other, such as the
 # `UnionAll` `DCalculator`, falls through to Base's `eltype(::Type) = Any`.
-Base.eltype(::Type{C}) where {IT, C<:WignerCalculator{IT}} = Pair{IT, blocktype(C)}
-Base.eltype(::Type{C}) where {IT, C<:HarmonicCalculator{IT}} = Pair{IT, blocktype(C)}
+Base.eltype(::Type{C}) where {IT, C<:IterableCalculator{IT}} = Pair{IT, blocktype(C)}
 Base.eltype(c::IterableCalculator) = eltype(typeof(c))
 
 # Both are already Base's defaults for a type it knows nothing else about; they are stated

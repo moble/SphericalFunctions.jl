@@ -317,13 +317,16 @@ end
     @test_throws "integers" sYlmCalculator(R, ℓₘₐₓ, s) * wh
     @test_throws "half-odd-integers" sYlmCalculator(R, HalfOddInteger(7//2), HalfOddInteger(1//2)) * w
 
-    # The real harmonics are refused, whether flat or as a calculator, and for either kind
-    # of index: they omit the phase i^{2s}, and depend on θ alone.  (For a half-odd spin
-    # weight they would give f(θ, 0) times a constant ±i.)
-    import SphericalFunctions: sλlm, sλlmCalculator
-    @test_throws "real harmonics" sλlm(0.9, ℓₘₐₓ, s; ℓₘᵢₙ) * w
+    # The real harmonics are refused, from a calculator or in a `HarmonicValues` of real
+    # numbers built directly, and for either kind of index: they omit the phase i^{2s}, and
+    # depend on θ alone.  (For a half-odd spin weight they would give f(θ, 0) times a
+    # constant ±i.)
+    import SphericalFunctions: sλlmCalculator, HarmonicValues
+    Λ = HarmonicValues(zeros(Ysize(ℓₘᵢₙ, ℓₘₐₓ)), s, ℓₘᵢₙ, ℓₘₐₓ, 1)
+    Λₕ = HarmonicValues(zeros(Ysize(1//2, 7//2)), 1//2, 1//2, 7//2, 1)
+    @test_throws "real harmonics" Λ * w
     @test_throws "real harmonics" sλlmCalculator(0.9, ℓₘₐₓ, s) * w
-    @test_throws "real harmonics" sλlm(0.9, 7//2, 1//2) * wh
+    @test_throws "real harmonics" Λₕ * wh
     @test_throws "real harmonics" sλlmCalculator(0.9, 7//2, 1//2) * wh
 end
 

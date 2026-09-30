@@ -376,13 +376,10 @@ the operators on them, and by the transforms.  Pass a `Rational{Int}`
 with denominator 2, as in `D(R, 7//2)` or `SSHT(1//2, 7//2)`, or a
 [`HalfOddInteger`](@ref SphericalFunctions.HalfOddInteger).  An
 integer index is an `Int`; narrower, wider, and unsigned integer types
-are rejected.  The exceptions are [`recurrence!`](@ref) and
-[`wedge_value`](@ref SphericalFunctions.wedge_value), which convert an
-index of any integer type to that of the calculator or wedge they are
-given.  See [Half-integer indices](@ref interface_half_integers), and
-the [half-integer section of the transforms page](@ref
-transformations_half_integer) for what a function of half-integer spin
-weight is a function *of*.
+are rejected.  See [Half-integer indices](@ref
+interface_half_integers), and the [half-integer section of the
+transforms page](@ref transformations_half_integer) for what a
+function of half-integer spin weight is a function *of*.
 
 ## What's new in version 3
 

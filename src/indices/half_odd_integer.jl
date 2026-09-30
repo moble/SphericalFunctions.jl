@@ -62,9 +62,9 @@ struct HalfOddInteger <: Real
 end
 
 # These constructors take a *value*, not a numerator, so that `HalfOddInteger(x)` and
-# `convert(HalfOddInteger, x)` agree — Julia's `Number` machinery assumes they do, and
-# `convert` is what the calculators call on a user-supplied `ℓ`.  Build one from a numerator
-# with `unsafe_half_odd_integer`, or from a value with `HalfOddInteger(7//2)`.
+# `convert(HalfOddInteger, x)` agree, as Julia's `Number` machinery assumes they do.  Build
+# one from a numerator with `unsafe_half_odd_integer`, or from a value with
+# `HalfOddInteger(7//2)`.
 HalfOddInteger(x::HalfOddInteger) = x
 
 # The numerator is converted to the stored `Int`, so that a `Rational` of any integer type —
@@ -101,6 +101,14 @@ values, and the two cases dispatch to separate code.
 See also [`HalfOddInteger`](@ref).
 """
 const IntegerHalf = Union{Integer, HalfOddInteger}
+
+# The smallest degree of an index type: 0 for integers and 1//2 for half-odd-integers.  The
+# accessor `ℓₘᵢₙ` gives this for a block or a calculator, whose degrees are all of one index
+# type, but it has no method for an index type or an index, and much of the code that needs
+# this has an argument or a keyword named `ℓₘᵢₙ`, which would shadow the accessor anyway.
+# The result depends on the type alone, so every call folds to a constant.
+lowest_index(::Type{IT}) where {IT<:Integer} = zero(IT)
+lowest_index(::Type{IT}) where {IT<:HalfOddInteger} = unsafe_half_odd_integer(1)
 
 
 ### Arithmetic.

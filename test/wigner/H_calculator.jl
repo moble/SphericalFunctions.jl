@@ -327,9 +327,14 @@ end
     R = Quaternionic.from_euler_angles(0.1, 0.2, 0.3)
 
     # Invalid construction
-    m′range = "must satisfy 0 ≤ m′ₘₐₓ ≤ ℓₘₐₓ"
-    @test refuses(() -> HCalculator(0.3, ℓₘₐₓ; m′ₘₐₓ=ℓₘₐₓ+1), ArgumentError, m′range)
-    @test refuses(() -> HCalculator(0.3, ℓₘₐₓ; m′ₘₐₓ=-1), ArgumentError, m′range)
+    @test refuses(
+        () -> HCalculator(0.3, ℓₘₐₓ; m′ₘₐₓ=ℓₘₐₓ+1), ArgumentError,
+        "|m′ₘₐₓ|=|5| is too large for ℓₘₐₓ=4"
+    )
+    @test refuses(
+        () -> HCalculator(0.3, ℓₘₐₓ; m′ₘₐₓ=-1), ArgumentError,
+        "m′ₘₐₓ=-1 is less than m′ₘᵢₙ=1"
+    )
     # A bad ℓₘₐₓ is named as such, rather than as the `m′ₘₐₓ` that defaults to it
     @test refuses(() -> HCalculator(0.3, -1), ArgumentError, "ℓₘₐₓ=-1 must be non-negative")
     @test refuses(
@@ -337,7 +342,7 @@ end
     )
     @test refuses(
         () -> HCalculator(0.3, 7//2; m′ₘₐₓ=9//2), ArgumentError,
-        "must satisfy 1//2 ≤ m′ₘₐₓ ≤ ℓₘₐₓ"
+        "|m′ₘₐₓ|=|9//2| is too large for ℓₘₐₓ=7//2"
     )
     # Nᵣ is implied by the rotor data, and an empty batch would be a request for no rotors,
     # which is refused.  (`nrotors` owns this message and its exception type.)
@@ -355,29 +360,39 @@ end
     recurrence!(calc, 0.3, 2)
     @test refuses(() -> recurrence!(calc, -1), ArgumentError, "out of bounds")
     @test refuses(() -> recurrence!(calc, ℓₘₐₓ + 1), ArgumentError, "out of bounds")
-    # ... and an ℓ that is not an index of this calculator's kind at all
-    @test refuses(() -> recurrence!(calc, 2.0), ArgumentError, "so ℓ must be one too")
-    @test refuses(() -> recurrence!(calc, 3//2), ArgumentError, "so ℓ must be one too")
-    @test refuses(() -> recurrence!(calc, 2//1), ArgumentError, "so ℓ must be one too")
-    @test refuses(() -> recurrence!(calc, true), ArgumentError, "so ℓ must be one too")
+    # ... and an ℓ that is not an index of this calculator's kind at all, which includes an
+    # integer of any type but `Int`, as at every other entry point
+    kind = "The indices of this `HCalculator` are integers of type `Int`, like 3; got ℓ = "
+    @test refuses(() -> recurrence!(calc, 2.0), ArgumentError, kind * "2.0::Float64")
+    @test refuses(() -> recurrence!(calc, 3//2), ArgumentError, kind * "3//2::Rational")
+    @test refuses(() -> recurrence!(calc, 2//1), ArgumentError, "2//1 is a whole number")
+    @test refuses(() -> recurrence!(calc, true), ArgumentError, "A `Bool` is not an index")
+    @test refuses(() -> recurrence!(calc, Int8(3)), ArgumentError, kind * "3::Int8")
+    @test refuses(() -> recurrence!(calc, Int8(3)), ArgumentError, "narrower than `Int`")
+    @test refuses(() -> recurrence!(calc, 0.3, Int128(3)), ArgumentError, "wider than")
+    @test refuses(() -> recurrence!(calc, big(3)), ArgumentError, "wider than `Int`")
+    @test refuses(() -> recurrence!(calc, UInt(3)), ArgumentError, "is unsigned")
     @test calc.Hˡ.ℓ == 2  # the rejected requests left the calculator where it was
-    # An integer of another type is the same index
-    @test recurrence!(calc, Int8(3)) == recurrence!(HCalculator(0.3, ℓₘₐₓ), 3)
 
     # Wrong number of rotors
     calc₄ = HCalculator(β⃗, ℓₘₐₓ)
-    @test refuses(() -> recurrence!(calc₄, β⃗[1:3], 0), DimensionMismatch, "Expected 4 rotors")
-    @test refuses(() -> recurrence!(calc₄, [β⃗; 0.5], 0), DimensionMismatch, "Expected 4 rotors")
+    count₄ = "This calculator handles Nᵣ=4 rotors, but got "
+    @test refuses(() -> recurrence!(calc₄, β⃗[1:3], 0), DimensionMismatch, count₄ * "3.")
+    @test refuses(() -> recurrence!(calc₄, [β⃗; 0.5], 0), DimensionMismatch, count₄ * "5.")
     @test refuses(
-        () -> recurrence!(calc₄, cis.(β⃗[1:2]), 0), DimensionMismatch, "Expected 4 rotors"
+        () -> recurrence!(calc₄, cis.(β⃗[1:2]), 0), DimensionMismatch, count₄ * "2."
     )
-    @test refuses(() -> recurrence!(calc₄, fill(R, 3), 0), DimensionMismatch, "Expected 4 rotors")
-    @test refuses(() -> recurrence!(calc, β⃗[1:2], 0), DimensionMismatch, "Expected 1 rotors")
+    @test refuses(() -> recurrence!(calc₄, fill(R, 3), 0), DimensionMismatch, count₄ * "3.")
+    @test refuses(
+        () -> recurrence!(calc, β⃗[1:2], 0), DimensionMismatch,
+        "This calculator handles Nᵣ=1 rotors, but got 2."
+    )
 
     # A single rotor for a calculator with Nᵣ>1
     for single ∈ (0.3, cis(0.3), R)
         @test refuses(
-            () -> recurrence!(calc₄, single, 0), DimensionMismatch, "A single rotor was given"
+            () -> recurrence!(calc₄, single, 0), DimensionMismatch,
+            "This calculator handles Nᵣ=4 rotors, but a single rotor was given."
         )
     end
 
@@ -398,14 +413,22 @@ end
         () -> wedge_value(calc₁.Hˡ, 1, 2, 3), ArgumentError, "both |m′| and |m| exceed"
     )
     @test wedge_value(calc₁.Hˡ, 1, 3, 1) == calc₁.Hˡ[1, 1, 3]  # unlike |m| ≤ m′ₘₐₓ < |m′|
-    # The indices of `wedge_value` must be of the wedge's kind, in any spelling of it
-    @test wedge_value(calc₁.Hˡ, 1, Int8(3), 1) == wedge_value(calc₁.Hˡ, 1, 3, 1)
-    @test refuses(() -> wedge_value(calc₁.Hˡ, 1, 1//2, 1), ArgumentError, "so m′ must be one too")
+    # The indices of `wedge_value` must be of the wedge's kind, in any spelling of it, and
+    # an integer must be an `Int`, as it must at every other entry point
+    integers = "The indices of this `HWedge` are integers of type `Int`, like 3; got"
+    halves = "The indices of this `HWedge` are half-odd-integers, each a `HalfOddInteger`"
+    H₁ = calc₁.Hˡ
+    @test refuses(() -> wedge_value(H₁, 1, Int8(3), 1), ArgumentError, "$integers m′ = 3")
+    @test refuses(() -> wedge_value(H₁, 1, Int8(3), 1), ArgumentError, "narrower than")
+    @test refuses(() -> wedge_value(H₁, 1, 3, big(1)), ArgumentError, "`BigInt` is wider")
+    @test refuses(() -> wedge_value(H₁, 1, 1, true), ArgumentError, "A `Bool` is not")
+    @test refuses(() -> wedge_value(H₁, 1, 1//2, 1), ArgumentError, "$integers m′ = 1//2")
     Hₕ = recurrence!(HCalculator(0.3, 7//2), 7//2)
     @test wedge_value(Hₕ, 1, 1//2, -3//2) ==
         wedge_value(Hₕ, 1, HalfOddInteger(1//2), HalfOddInteger(-3//2))
-    @test refuses(() -> wedge_value(Hₕ, 1, 1, 2), ArgumentError, "so m′ must be one too")
-    @test refuses(() -> wedge_value(Hₕ, 1, 1//2, 1//1), ArgumentError, "so m must be one too")
+    @test refuses(() -> wedge_value(Hₕ, 1, 1, 2), ArgumentError, halves)
+    @test refuses(() -> wedge_value(Hₕ, 1, 1, 2), ArgumentError, "got m′ = 1::Int")
+    @test refuses(() -> wedge_value(Hₕ, 1, 1//2, 1//1), ArgumentError, "got m = 1//1")
 end
 
 
@@ -652,7 +675,7 @@ end
         f̃ = randn(rng, ComplexF64, nmodes(𝒯))
         ϵ = 500 * eps()
         @test array_view(𝒯 \ (𝒯 * f̃)) ≈ f̃ atol=ϵ rtol=ϵ
-        H = 𝒯.λ.H
+        H = 𝒯.λ.engine.H
         SF.h⃗ˡ(H).ℓ = SF.axis_ℓ(H, abs(𝒯.s))
         SF.h⃗ˡ⁺¹(H).ℓ = 5
         @test array_view(𝒯 \ (𝒯 * f̃)) ≈ f̃ atol=ϵ rtol=ϵ

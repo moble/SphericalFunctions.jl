@@ -1,3 +1,10 @@
+# The supertype of the calculators: `HCalculator`, and `WignerCalculator` and
+# `HarmonicCalculator`, which are built on one.  `IT` is the index type, `Int` or
+# `HalfOddInteger`.
+abstract type AbstractCalculator{IT} end
+
+ℓₘᵢₙ(::AbstractCalculator{IT}) where {IT} = lowest_index(IT)
+
 """
     HCalculator(β, ℓₘₐₓ; m′ₘₐₓ=ℓₘₐₓ)
 
@@ -25,8 +32,9 @@ calculator, and there is no argument to override that.  To compute in another ty
 the data — `HCalculator(Double64(β), ℓₘₐₓ)` — which says what is meant, that these are
 the values to treat as exact.  `floattype(calc)` reports the type in use.
 
-This is the low-level engine shared by [`DCalculator`](@ref), [`dCalculator`](@ref)
-and the spin-weighted spherical harmonics; most users will want one of those instead.
+This is the low-level calculator of ``H`` shared by [`DCalculator`](@ref),
+[`dCalculator`](@ref), and the spin-weighted spherical harmonics; most users will want one
+of those instead.
 
 # Usage
 
@@ -68,11 +76,11 @@ Because half-integer ``d`` has period ``4π`` in ``β``, a rotor or an angle ``�
 it unambiguously, but a bare phase ``e^{iβ}`` determines ``β`` only modulo ``2π`` and hence
 ``d`` only up to the double-cover sign ``(-1)^{2ℓ}``; the branch ``β ∈ (-π, π]`` is used.
 """
-struct HCalculator{IT, RT<:Real, ST}
+struct HCalculator{IT, RT<:Real, ST} <: AbstractCalculator{IT}
     # The axes are always *integer*-indexed: for half-integer ℓ they encode the order
     # j = ℓ - 1/2, and `OffsetArray`-like half-integer labels would buy nothing.
-    h⃗ᵃ::HAxis{Int, RT}
-    h⃗ᵇ::HAxis{Int, RT}
+    h⃗ᵃ::HAxis{RT}
+    h⃗ᵇ::HAxis{RT}
     Hˡ::HWedge{IT, RT, ST}
     eⁱᵝ::FixedSizeVectorDefault{Complex{RT}}
     cβ½::FixedSizeVectorDefault{RT}  # cos(β/2) per rotor; length 0 unless IT <: HalfOddInteger
@@ -90,7 +98,7 @@ struct HCalculator{IT, RT<:Real, ST}
     function HCalculator{IT, RT, ST}(
         h⃗ᵃ, h⃗ᵇ, Hˡ, eⁱᵝ, cβ½, sβ½, d̄ₗ, ℓₘₐₓ, m′ₘₐₓ, swapH, axes_valid
     ) where {IT, RT<:Real, ST}
-        let n = Nᵣ(Hˡ), nₕ = IT <: HalfOddInteger ? Nᵣ(Hˡ) : 0, nₗ = Int(maxℓ(Hˡ) - ℓₘᵢₙ(IT))
+        let n = Nᵣ(Hˡ), nₕ = IT <: HalfOddInteger ? Nᵣ(Hˡ) : 0, nₗ = Int(maxℓ(Hˡ) - lowest_index(IT))
             if !(
                 Nᵣ(h⃗ᵃ) == n && Nᵣ(h⃗ᵇ) == n && length(eⁱᵝ) == n
                 && length(cβ½) == nₕ && length(sβ½) == nₕ && length(d̄ₗ) ≥ nₗ
@@ -111,10 +119,9 @@ end
 @index_methods function HCalculator(
     β, ℓₘₐₓ::IT; mp_max::IndexType=ℓₘₐₓ, m′ₘₐₓ::IndexType=mp_max
 ) where {IT<:IndexType}
-    # `rotor_basetype` is called in argument position so that the element type reaches
-    # `allocate_H` as a type rather than as a value, which is what keeps the result
-    # inferrable.
-    set_rotors!(allocate_H(IT, rotor_basetype(β), ℓₘₐₓ, m′ₘₐₓ, nrotors(β)), β)
+    # `floattype` is computed from the type of `β` alone, so the compiler settles it, and
+    # with it the concrete type of the calculator.
+    set_rotors!(allocate_H(IT, floattype(β), ℓₘₐₓ, m′ₘₐₓ, nrotors(β)), β)
 end
 
 # Allocate the buffers without touching them.  PRIVATE, and deliberately so: the returned
@@ -125,21 +132,12 @@ end
 function allocate_H(
     ::Type{IT}, ::Type{RT}, ℓₘₐₓ::IT, m′ₘₐₓ::IT, Nᵣ::Int
 ) where {IT<:IntegerHalf, RT<:Real}
-    # `ℓₘₐₓ` is checked first, because `m′ₘₐₓ` defaults to it, and a bad `ℓₘₐₓ` would
-    # otherwise be reported as a bad `m′ₘₐₓ` that the caller never gave.
-    if ℓₘₐₓ < ℓₘᵢₙ(IT)
-        throw(ArgumentError("ℓₘₐₓ=$ℓₘₐₓ must be non-negative."))
-    end
-    if m′ₘₐₓ < ℓₘᵢₙ(IT) || m′ₘₐₓ > ℓₘₐₓ
-        throw(ArgumentError(
-            "m′ₘₐₓ=$m′ₘₐₓ must satisfy $(ℓₘᵢₙ(IT)) ≤ m′ₘₐₓ ≤ ℓₘₐₓ=$ℓₘₐₓ."
-        ))
-    end
-    validate_index_ranges(ℓₘₐₓ, m′ₘₐₓ, -m′ₘₐₓ)
+    validate_degree(ℓₘₐₓ)
+    validate_axis(ℓₘₐₓ, m′ₘₐₓ, -m′ₘₐₓ, "m′")
     # The axis buffers hold the *integer* orders 0:axisℓₘₐₓ.  For integer ℓ that is
     # 0:ℓₘₐₓ+1, one extra because step 3 reads the ℓ+1 axis; for half-integer ℓ it is
     # 0:jₘₐₓ+1 with jₘₐₓ = ℓₘₐₓ - 1/2, one extra because the axis advance computes it anyway.
-    axisℓₘₐₓ = Int(ℓₘₐₓ - ℓₘᵢₙ(IT)) + 1
+    axisℓₘₐₓ = Int(ℓₘₐₓ - lowest_index(IT)) + 1
     h⃗ᵃ = HAxis(RT, Nᵣ, axisℓₘₐₓ)
     h⃗ᵇ = HAxis(RT, Nᵣ, axisℓₘₐₓ)
     h⃗ᵇ.ℓ = 1
@@ -152,7 +150,7 @@ function allocate_H(
     sβ½ = FixedSizeVector{RT}(undef, Nₕ)
     # The table of the m-side coefficients of steps 4 and 5, refilled by every `recurrence!`,
     # so that it is not rotor data and is not copied by `copy_rotor_data!`.
-    d̄ₗ = FixedSizeVector{RT}(undef, Int(ℓₘₐₓ - ℓₘᵢₙ(IT)))
+    d̄ₗ = FixedSizeVector{RT}(undef, Int(ℓₘₐₓ - lowest_index(IT)))
     HCalculator{IT, RT, typeof(parent(Hˡ))}(
         h⃗ᵃ, h⃗ᵇ, Hˡ, eⁱᵝ, cβ½, sβ½, d̄ₗ, ℓₘₐₓ, m′ₘₐₓ, Ref(false), Ref(false)
     )
@@ -162,8 +160,8 @@ end
 # no calculator stores the rotor it was given: `eⁱᵝ` alone would fix `β` only modulo 2π, and
 # so would flip the double-cover sign (-1)^{2ℓ} on the half-integer path.  The half-angle
 # copies are no-ops on the integer path, where those buffers have length zero.  Every
-# calculator built on this engine copies its rotor data through this, so that anything added
-# to the engine's rotor data is copied everywhere.
+# calculator built on an `HCalculator` copies its rotor data through this, so that anything
+# added to the rotor data of an `HCalculator` is copied everywhere.
 function copy_rotor_data!(w′::HCalculator, w::HCalculator)
     copyto!(w′.eⁱᵝ, w.eⁱᵝ)
     copyto!(w′.cβ½, w.cβ½)
@@ -179,26 +177,15 @@ function Base.similar(w::HCalculator{IT, RT}, β) where {IT, RT}
     set_rotors!(allocate_H(IT, RT, w.ℓₘₐₓ, w.m′ₘₐₓ, Nᵣ(w)), β)
 end
 
-# The rotor data given to `similar(calc, R)` must describe as many rotors as `calc` handles.
-function check_rotor_count(c, R)
-    if nrotors(R) != Nᵣ(c)
-        throw(DimensionMismatch(
-            "This calculator handles Nᵣ=$(Nᵣ(c)) rotors, but got $(nrotors(R))."
-        ))
-    end
-    nothing
-end
-
 # The wedge's own `ℓ` field says which order its storage was last laid out for, which is not
 # the same thing: it starts at ℓₘᵢₙ before anything is computed, and it keeps its value when
 # `set_β!` or `fill!` leaves the stored numbers stale.  `axes_valid` is what records whether the
 # current rotor data have been taken through the recurrence at all (it is also what `show`
 # consults), so it decides, as the other calculators' `ℓ` fields do.
 ℓ(w::HCalculator) = w.axes_valid[] ? Hˡ(w).ℓ : ℓₘᵢₙ(w) - 1
-ℓₘᵢₙ(w::HCalculator{IT}) where {IT} = ℓₘᵢₙ(IT)
 ℓₘₐₓ(w::HCalculator) = w.ℓₘₐₓ
 m′ₘₐₓ(w::HCalculator) = w.m′ₘₐₓ
-floattype(::HCalculator{IT, RT}) where {IT, RT} = RT
+floattype(::Type{<:HCalculator{IT, RT}}) where {IT, RT} = RT
 m′ₘᵢₙ(w::HCalculator) = -w.m′ₘₐₓ
 Nᵣ(w::HCalculator) = Nᵣ(Hˡ(w))
 
@@ -247,7 +234,7 @@ Label of the integer axis that seeds the wedge of order `ℓ`: ``ℓ`` itself fo
 indices, and ``ℓ - 1/2`` for half-integer ones.  The axis buffers are always labelled by
 this `Int`, never by `ℓ`.
 """
-@inline axis_ℓ(::HCalculator{IT}, ℓ) where {IT} = Int(ℓ - ℓₘᵢₙ(IT))
+@inline axis_ℓ(::HCalculator{IT}, ℓ) where {IT} = Int(ℓ - lowest_index(IT))
 
 # Copy the m′ = 0 row of the wedge from the integer axis.  Integer indices only: for
 # half-integer ℓ there is no m′ = 0 row, and `recurrence_seed!` writes the rows m′ = ±1/2
@@ -279,81 +266,10 @@ Base.show(io::IO, ::MIME"text/plain", w::HCalculator) = show(io, w)
 
 
 ### Rotor data
-
-"""
-    spinor_phases(R::AbstractQuaternion, [F])
-
-Return `(eⁱᵝ, z₊, z₋, cβ½, sβ½)` for the rotor `R`, where ``β`` is the Euler angle, ``z₊ =
-e^{i(α+γ)/2}``, ``z₋ = e^{i(α-γ)/2}``, ``cβ½ = \\cos(β/2)`` and ``sβ½ = \\sin(β/2)``.  These
-are the quantities the Wigner recurrences need: ``e^{i(m′α + mγ)} = z₊^{m′+m} z₋^{m′-m}``,
-with integer exponents even for half-integer ``m′, m``, while the half-angle pair seeds the
-half-integer recurrence.  At the poles ``β ∈ \\{0, π\\}`` the undefined phase is set to 1;
-the corresponding ``d`` elements vanish, so the choice is immaterial.
-
-The half-angles are taken as ``(\\sqrt{W²+Z²}, \\sqrt{X²+Y²})/\\|R\\|``, which is accurate
-near both poles and is non-negative, so ``β ∈ [0, π]``; a rotor's double-cover sign is
-encoded entirely in `z₊` and `z₋`, giving ``𝔇(-R) = -𝔇(R)`` for half-integer indices.
-
-Callers that need only the first few outputs may drop the rest: `eⁱᵝ, z₊, z₋ =
-spinor_phases(R, F)`.
-
-`R` need not be normalized.
-
-These phases are not differentiable at ``β = 0`` or ``β = π``, where `√b` or `√a` is taken
-of an exact zero, and a derivative taken through them there by automatic differentiation is
-`NaN`.  No local rule can repair this — `sβ½ * z₋` is smooth in the rotor, but `sβ½` and
-`z₋` separately are not, so treating the zero as exact would silently drop the first-order
-term.  Near a pole the derivatives are finite but inaccurate, the ``k``-th by about ``ε
-r^{-k}`` relative to their size at a distance ``r`` from it.  The values are accurate at
-every rotor, the poles included, so the calculators of ``𝔇`` and of ``{}_sY_{ℓ,m}``, which
-are smooth there, are never differentiated through this: the rules for automatic
-differentiation give their derivatives in terms of their values (see
-`src/derivatives/kernels.jl`).  The ``d`` and ``H`` of a rotor have no such rules, and keep
-the `NaN`: they see the rotor only through ``β``, which has a cone-shaped singularity at
-each pole, so that some of their elements actually have no derivative there.
-
-The optional second argument is the real type the phases are computed in; it defaults to
-`float(eltype(R))`.  Pass the *calculator's* type whenever that is more precise than the
-rotor's own — otherwise every later step inherits the rotor type's precision.
-"""
-function spinor_phases end
-
-spinor_phases(R::AbstractQuaternion{T}) where {T} = spinor_phases(R, float(T))
-function spinor_phases(R::AbstractQuaternion, ::Type{F}) where {F<:Real}
-    a = F(R[1])^2 + F(R[4])^2
-    b = F(R[2])^2 + F(R[3])^2
-    sqrta = √a
-    sqrtb = √b
-    z₊ = iszero(sqrta) ? one(Complex{F}) : Complex{F}(F(R[1]), F(R[4])) / sqrta  # exp[i(α+γ)/2]
-    z₋ = iszero(sqrtb) ? one(Complex{F}) : Complex{F}(F(R[3]), -F(R[2])) / sqrtb  # exp[i(α-γ)/2]
-    eⁱᵝ = Complex{F}(a - b, 2 * sqrta * sqrtb) / (a + b)
-    nrm = √(a + b)
-    cβ½ = sqrta / nrm
-    sβ½ = sqrtb / nrm
-    (eⁱᵝ, z₊, z₋, cβ½, sβ½)
-end
-
-"""
-    half_angles(eⁱᵝ)
-
-The pair ``(\\cos(β/2), \\sin(β/2))`` for the branch ``β ∈ (-π, π]`` of the phase
-``e^{iβ}``, computed without cancellation at either pole.
-
-A bare phase fixes ``β`` only modulo ``2π``, so for half-integer indices this fixes ``d``
-only up to the double-cover sign ``(-1)^{2ℓ}``; pass the angle ``β`` itself or a `Rotor` if
-that matters.
-"""
-@inline function half_angles(z::Complex{RT}) where {RT<:Real}
-    cosβ, sinβ = reim(z)
-    if cosβ ≥ 0
-        c = √((1 + cosβ) / 2)
-        s = sinβ / (2c)
-    else
-        s = copysign(√((1 - cosβ) / 2), sinβ)
-        c = sinβ / (2s)
-    end
-    (c, s)
-end
+#
+# The rotor data of an `HCalculator` are the phase e^{iβ} of each rotor and, on the
+# half-integer path, its half angles, as `spinor_phases` and `half_angles` compute them (see
+# `src/calculators/rotors.jl`).
 
 # Store the half-angle pair for rotor `i`.  Each of these is a no-op — emitting no code at
 # all, and not even evaluating its source — for integer index types, whose buffers have
@@ -385,18 +301,10 @@ end
     end
 end
 
-# The number of rotors in a vector of rotor data, which must be the calculator's own.
-function check_rotor_length(c, R::AbstractVector)
-    if length(R) != Nᵣ(c)
-        throw(DimensionMismatch("Expected $(Nᵣ(c)) rotors (Nᵣ), but got $(length(R))."))
-    end
-    nothing
-end
-
-# Store the rotor `R` as rotor `i` of the engine — the phase e^{iβ} and, on the half-integer
-# path, the half angles — and return the phases z₊ and z₋ that a calculator of 𝔇 or of the
-# harmonics also needs.  Every calculator built on this engine stores a rotor through this,
-# so that anything added to the engine's rotor data is stored everywhere.
+# Store the rotor `R` as rotor `i` of the calculator — the phase e^{iβ} and, on the
+# half-integer path, the half angles — and return the phases z₊ and z₋ that a calculator of
+# 𝔇 or of the harmonics also needs.  Every calculator built on an `HCalculator` stores a
+# rotor through this, so that anything added to its rotor data is stored everywhere.
 @inline function store_rotor!(w::HCalculator{IT, RT}, i::Int, R) where {IT, RT}
     eⁱᵝ, z₊, z₋, cβ½, sβ½ = spinor_phases(R, RT)
     @inbounds w.eⁱᵝ[i] = eⁱᵝ
@@ -408,7 +316,7 @@ function set_rotors!(w::HCalculator{IT, RT}, eⁱᵝ::AbstractVector{<:Complex})
     # The loops below write the calculator's 1-based buffers at the input's own indices, under
     # `@inbounds`, so an offset vector would write outside them.
     Base.require_one_based_indexing(eⁱᵝ)
-    check_rotor_length(w, eⁱᵝ)
+    check_rotor_count(w, eⁱᵝ)
     # The phase must be a unit complex number; anything else is almost certainly a mistake
     # (e.g., passing β itself as a complex number), so we refuse it rather than silently
     # producing garbage.  The comparison is written so that a NaN phase is refused too.  The
@@ -448,7 +356,7 @@ function set_rotors!(w::HCalculator, R)
 end
 function set_rotors!(w::HCalculator{IT, RT}, β::AbstractVector{<:Real}) where {IT, RT<:Real}
     Base.require_one_based_indexing(β)  # as for eⁱᵝ above
-    check_rotor_length(w, β)
+    check_rotor_count(w, β)
     # As for the phases above, everything is validated before anything is replaced.  An
     # infinite angle has no phase — `cis`, and the `cos` and `sin` of the half angle, throw for
     # one in some types, such as `Float64` and `Double64`, and return NaN in others, such as
@@ -469,7 +377,7 @@ function set_rotors!(w::HCalculator{IT, RT}, β::AbstractVector{<:Real}) where {
 end
 function set_rotors!(w::HCalculator{IT, RT}, R::AbstractVector{<:RotorLike}) where {IT, RT<:Real}
     Base.require_one_based_indexing(R)  # as for eⁱᵝ above
-    check_rotor_length(w, R)
+    check_rotor_count(w, R)
     # There is nothing further to validate: `spinor_phases` accepts every rotor, giving NaNs
     # for one with non-finite components rather than throwing.
     w.axes_valid[] = false  # as for the phases above
@@ -479,19 +387,8 @@ function set_rotors!(w::HCalculator{IT, RT}, R::AbstractVector{<:RotorLike}) whe
     w
 end
 function set_rotors!(w::HCalculator{IT, RT}, R::Union{Real, Complex, RotorLike}) where {IT, RT<:Real}
-    check_single_rotor(w)
+    check_rotor_count(w, R)
     set_rotors!(w, @SVector [R])
-end
-
-# A single rotor, angle or phase fills a calculator that handles exactly one rotor, which a
-# calculator built from a vector of one also does.
-function check_single_rotor(c)
-    if Nᵣ(c) != 1
-        throw(DimensionMismatch(
-            "A single rotor was given, but this calculator expects Nᵣ=$(Nᵣ(c)) rotors."
-        ))
-    end
-    nothing
 end
 
 
@@ -548,11 +445,13 @@ weight of a block that holds several is `ₛYₗ[s, :]`.
     gives an independent wedge that survives the next step; the wedge itself belongs to the
     calculator, and its `ℓ` must not be reassigned.
 
-`ℓ` must be an index of the calculator's own kind — an integer for a calculator built with
-integer indices, and a half-odd-integer, as a [`HalfOddInteger`](@ref) or a `Rational` with
-denominator 2, for one built with half-integer indices — and must lie between `ℓₘᵢₙ(calc)`
-and `ℓₘₐₓ(calc)`; anything else, including a floating-point number such as `2.0`, is refused
-with an `ArgumentError`.
+`ℓ` must be an index of the calculator's own kind — an `Int` for a calculator built with
+integer indices, and a half-odd-integer, as a [`HalfOddInteger`](@ref) or a `Rational{Int}`
+with denominator 2, for one built with half-integer indices — and must lie between
+`ℓₘᵢₙ(calc)` and `ℓₘₐₓ(calc)`; anything else is refused with an `ArgumentError`.  An index
+that is not of the calculator's kind, including an integer of another type such as an `Int8`
+and a floating-point number such as `2.0`, is refused with a message that says how to write
+it, as it is by every function that takes an index.
 
 The rotor data given this way must be of the calculator's own floating-point type, exactly as
 for [`set_R!`](@ref), [`set_β!`](@ref) and [`set_θ!`](@ref), and anything else is refused
@@ -569,54 +468,19 @@ function recurrence!(w::HCalculator, R, ℓ)
 end
 # Every `recurrence!(calc, R, ℓ)` runs this *before* `set_rotors!`, so that a bad `ℓ` leaves
 # the calculator's stored rotor data untouched ("validate everything before mutating
-# anything"; see `set_rotors!` below).  It is also what rejects an `ℓ` of the wrong kind — a
-# whole number for a half-integer calculator, `5//3` or `2.0` for either.  It returns `ℓ`
-# converted to the calculator's index type.
-function check_ℓ(w::HCalculator{IT}, ℓ) where {IT}
-    ℓ = calculator_index(IT, ℓ, "ℓ")
+# anything"; see `set_rotors!` below).  It is also what refuses an `ℓ` that is not an index
+# of the calculator's kind, with the message of `checked_index`, which names `owner`: this
+# calculator, or, when this is the `HCalculator` of a calculator of 𝔇, of `d`, or of the
+# harmonics, that calculator, which is the one the caller holds.  It returns `ℓ` converted
+# to the calculator's index type.
+function check_ℓ(w::HCalculator{IT}, ℓ, owner=w) where {IT}
+    ℓ = checked_index(IT, ℓ, owner, "ℓ")
     if ℓ < ℓₘᵢₙ(w) || ℓ > ℓₘₐₓ(w)
         throw(ArgumentError(
             "Requested ℓ=$(ℓ) is out of bounds [$(ℓₘᵢₙ(w)), $(ℓₘₐₓ(w))] for this calculator."
         ))
     end
     ℓ
-end
-
-# The kind of an index is fixed by the calculator (or wedge) it is given to, rather than by
-# dispatch on the call, wherever the call names the calculator and one index: `recurrence!`,
-# `wedge_value`, and the worker behind the calculator forms of `sYlm!` and `sλlm!`, whose
-# indices have by then been checked as those of the forms defined with `@index_methods` are.
-# `convert(IT, x)` would refuse an index of the other kind, but with a bare `InexactError`
-# about the type, and would accept a floating-point number such as `2.0` for an integer
-# calculator; this says what the calculator's indices are instead.  An integer index given to
-# `recurrence!` or `wedge_value` may be of any integer type but `Bool`, and a half-odd-integer
-# may be a `HalfOddInteger` or a `Rational` with denominator 2; an integer-valued `Rational`
-# such as `3//1` is refused, as it is at every other entry point.
-function check_index_kind(::Type{IT}, x, name, owner="calculator") where {IT<:IntegerHalf}
-    acceptable = if IT <: Integer
-        x isa Integer && !(x isa Bool)
-    else
-        x isa HalfOddInteger || (x isa Rational && denominator(x) == 2)
-    end
-    if !acceptable
-        kind, example = IT <: Integer ? ("integers", "3") : ("half-odd-integers", "7//2")
-        throw(ArgumentError(
-            "This $owner's indices are $kind, like $example, so $name must be one too; got "
-            * "$name = $(typed_repr(x))."
-        ))
-    end
-    nothing
-end
-
-# The index `x` of a calculator (or wedge) whose index type is `IT`, converted to that type
-# after `check_index_kind`, which leaves only an integer for an integer `IT` and a
-# `HalfOddInteger` or a `Rational` with denominator 2 for a half-integer one; `convert` gives
-# an `Int` or a `HalfOddInteger` of each.  An index already of that type is returned as it
-# is, which is the path every step of an iteration takes.
-@inline calculator_index(::Type{IT}, x::IT, name, owner="calculator") where {IT} = x
-function calculator_index(::Type{IT}, x, name, owner="calculator") where {IT}
-    check_index_kind(IT, x, name, owner)
-    convert(IT, x)
 end
 
 # Advance (or restart) the integer axis buffers so that h⃗ˡ holds order `j` and h⃗ˡ⁺¹ holds
@@ -707,10 +571,16 @@ end
 
 # The axis buffers are integer-indexed for every index type (for half-integer ℓ they encode
 # the order j = ℓ - 1/2), so steps 1 and 2 are shared verbatim and never see a `Rational`.
+"""
+    recurrence_step1!(w::HCalculator)
+
+Step 1 of the ``H`` recursion: set ``H^{0}_{0,0} = 1`` for every rotor, in the lower axis
+buffer of `w`, `h⃗ˡ(w)`, whose order must be 0.
+"""
 function recurrence_step1!(w::HCalculator{IT}) where {IT}
     let h⃗⁰ = h⃗ˡ(w)
-        if h⃗⁰.ℓ ≠ ℓₘᵢₙ(h⃗⁰)
-            error("recurrence_step1! can only be called for ℓ=$(ℓₘᵢₙ(h⃗⁰)); current ℓ=$(h⃗⁰.ℓ).")
+        if h⃗⁰.ℓ ≠ 0
+            error("recurrence_step1! can only be called for ℓ=0; current ℓ=$(h⃗⁰.ℓ).")
         end
         @inbounds for i ∈ 1:Nᵣ(h⃗⁰)
             h⃗⁰[i] = 1  # h⃗⁰[i, 0, 0] = 1
@@ -719,9 +589,15 @@ function recurrence_step1!(w::HCalculator{IT}) where {IT}
     w
 end
 
-# Compute h⃗ⁿ₀ₘ = Hⁿ₀ₘ for m ∈ 0:n from h⃗ⁿ⁻¹₀ₘ = Hⁿ⁻¹₀ₘ, where n = ℓ+1 is the ℓ value of
-# h⃗ˡ⁺¹.  This is the recurrence of Xing et al. (2020) for the normalized associated Legendre
-# functions, in the notation of Gumerov and Duraiswami's step 2.
+"""
+    recurrence_step2!(w::HCalculator)
+
+Step 2 of the ``H`` recursion: compute the axis ``H^{n}_{0,m}``, for ``0 ≤ m ≤ n``, from
+``H^{n-1}_{0,m}``, for every rotor, where ``n`` is the order of the upper axis buffer of
+`w`, `h⃗ˡ⁺¹(w)`, and ``n-1`` that of the lower one, `h⃗ˡ(w)`.  This is the recurrence of
+Xing et al. (2020) for the normalized associated Legendre functions, in the notation of
+Gumerov and Duraiswami's step 2.
+"""
 function recurrence_step2!(w::HCalculator{IT, RT}) where {IT, RT}
     let h⃗ⁿ⁻¹ = h⃗ˡ(w), h⃗ⁿ = h⃗ˡ⁺¹(w), eⁱᵝ = eⁱᵝ(w)
         n = h⃗ⁿ⁻¹.ℓ + 1
@@ -807,22 +683,31 @@ function recurrence_step2!(w::HCalculator{IT, RT}) where {IT, RT}
     w
 end
 
-# Compute Hᴶ_{±1/2, m} for m ∈ 1/2:J from the integer axis h⃗ʲ₀ₖ = d^j_{0,k}(β), j = J - 1/2.
-# This is the half-integer replacement for `fillHˡ₀ₘ!` together with step 3: it seeds the two
-# rows the m′ ladder needs, at a cost of O(Nᵣ J), from Varshalovich Eqs. 4.8.2(14) and (15),
+# The rows H^J_{±1/2, m} of the wedge of half-integer order J, for m ∈ 1/2:J, are computed
+# at a cost of O(Nᵣ J) from the axis h⃗ʲ of the integer order j = J - 1/2, by Varshalovich
+# Eqs. 4.8.2(14) and (15),
 #
 #     H^J_{+1/2, m} = [ √(J+m) c h_{m-1/2} - √(J-m) s h_{m+1/2} ] / √(J + 1/2),
 #     H^J_{-1/2, m} = [ √(J+m) s h_{m-1/2} + √(J-m) c h_{m+1/2} ] / √(J + 1/2),
 #
-# with c = cos(β/2), s = sin(β/2).  Both rows are mandatory: the corner H_{-1/2,1/2} cannot
-# be reached from the +1/2 row without leaving the wedge.  (See "Step 3 for half-integer ℓ" in
-# `docs/src/50-notes/01-H_recurrence.md`.)
+# with c = cos(β/2), s = sin(β/2), and h_k = h⃗ʲ₀ₖ = d^j_{0,k}(β).  Both rows are mandatory:
+# the corner H_{-1/2,1/2} cannot be reached from the +1/2 row without leaving the wedge.
+# (See "Step 3 for half-integer ℓ" in `docs/src/50-notes/01-H_recurrence.md`.)
+"""
+    recurrence_seed!(w::HCalculator{HalfOddInteger})
+
+The half-integer form of step 3 of the ``H`` recursion: compute the rows
+``H^{J}_{±1/2,m}`` of the wedge of `w`, for ``1/2 ≤ m ≤ J``, from the axis ``H^{j}_{0,k}``
+of the integer order ``j = J - 1/2`` in the lower axis buffer, `h⃗ˡ(w)`, for every rotor.
+These are the two rows from which steps 4 and 5 begin; for integer indices, those rows are
+the row ``m' = 0``, copied from the axis, and the row ``m' = 1`` of step 3.
+"""
 function recurrence_seed!(w::HCalculator{IT, RT}) where {IT<:HalfOddInteger, RT}
     let Hˡ = Hˡ(w), h⃗ʲ = h⃗ˡ(w), cβ½ = w.cβ½, sβ½ = w.sβ½
         @inbounds let √=sqrt∘RT, Nᵣ=Nᵣ(Hˡ), Hp=parent(Hˡ), hp=parent(h⃗ʲ)
             J = Hˡ.ℓ
-            half = ℓₘᵢₙ(IT)  # the index 1/2, as a `HalfOddInteger`
-            j = J - half     # an `Int`: the order of the integer axis
+            half = lowest_index(IT)  # the index 1/2, as a `HalfOddInteger`
+            j = J - half             # an `Int`: the order of the integer axis
             if h⃗ʲ.ℓ ≠ j
                 error("Inconsistent axis in recurrence_seed!: ℓ(h⃗ˡ)=$(h⃗ʲ.ℓ), j=$j.")
             end
@@ -872,8 +757,14 @@ function recurrence_seed!(w::HCalculator{IT, RT}) where {IT<:HalfOddInteger, RT}
     w
 end
 
-# Compute Hˡ₁ₘ for m ∈ 1:ℓ from Hˡ⁺¹₀ₘ (Gumerov and Duraiswami's step 3).  Integer indices
-# only; the half-integer route uses `recurrence_seed!` instead and never calls this.
+"""
+    recurrence_step3!(w::HCalculator{Int})
+
+Step 3 of the ``H`` recursion, for integer indices: compute the row ``H^{ℓ}_{1,m}`` of the
+wedge of `w`, for ``1 ≤ m ≤ ℓ``, from the axis ``H^{ℓ+1}_{0,m}`` in the upper axis buffer,
+`h⃗ˡ⁺¹(w)`, for every rotor.  For half-integer indices, [`recurrence_seed!`](@ref) takes its
+place.
+"""
 function recurrence_step3!(w::HCalculator{Int, RT}) where {RT}
     let Hˡ = Hˡ(w), h⃗ˡ⁺¹ = h⃗ˡ⁺¹(w), eⁱᵝ = eⁱᵝ(w)
         @inbounds let √=sqrt∘RT, ℓ=Hˡ.ℓ, Nᵣ = Nᵣ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
@@ -927,10 +818,10 @@ end
 # runs.
 function recurrence_coefficients!(w::HCalculator{IT, RT}) where {IT, RT}
     let Hˡ = Hˡ(w), d̄ₗ = w.d̄ₗ
-        if m′ₘₐₓ(Hˡ) > ℓₘᵢₙ(IT)
+        if m′ₘₐₓ(Hˡ) > lowest_index(IT)
             @inbounds let √=sqrt∘RT, ℓ = Hˡ.ℓ
-                for m ∈ ℓₘᵢₙ(IT):(ℓ - 1)
-                    d̄ₗ[(m - ℓₘᵢₙ(IT)) + 1] = √(δ²(ℓ, m))
+                for m ∈ lowest_index(IT):(ℓ - 1)
+                    d̄ₗ[(m - lowest_index(IT)) + 1] = √(δ²(ℓ, m))
                 end
             end
         end
@@ -938,18 +829,26 @@ function recurrence_coefficients!(w::HCalculator{IT, RT}) where {IT, RT}
     w
 end
 
-# Compute Hˡₘ′₊₁,ₘ for m′ ∈ (1-ℓₘᵢₙ):m′ₘₐₓ-1 and m ∈ m′+1:ℓ from the rows m′-1 and m′
-# (Gumerov and Duraiswami's step 4).  The index arithmetic is the same for integer and
-# half-integer ℓ; only the starting m′ differs (1 or 1/2), and it is a compile-time constant
-# for each index type.  The coefficients d̄ₗᵐ on the m side are read from the table that
-# `recurrence_coefficients!` fills, at position m - ℓₘᵢₙ + 1.
+# The index arithmetic is the same for integer and half-integer ℓ; only the starting m′
+# differs (1 or 1/2), and it is a compile-time constant for each index type.  The
+# coefficients d̄ₗᵐ on the m side are read from the table that `recurrence_coefficients!`
+# fills, at position m - ℓₘᵢₙ + 1.
+"""
+    recurrence_step4!(w::HCalculator)
+
+Step 4 of the ``H`` recursion: compute the rows ``H^{ℓ}_{m'+1,m}`` of the wedge of `w`, for
+``m'`` from ``1`` (or ``1/2`` for half-integer indices) up to ``m'_{\\mathrm{max}} - 1`` and
+``m'+1 ≤ m ≤ ℓ``, from ``H^{ℓ}_{m'-1,m}``, ``H^{ℓ}_{m',m-1}``, and ``H^{ℓ}_{m',m+1}``, for
+every rotor.  The first rows read are ``m' = 0`` and ``1`` for integer indices, and
+``m' = ±1/2`` for half-integer ones.
+"""
 function recurrence_step4!(w::HCalculator{IT, RT}) where {IT, RT}
     let Hˡ = Hˡ(w), d̄ₗ = w.d̄ₗ
-        @inbounds let √=sqrt∘RT, Nᵣ=Nᵣ(Hˡ), ri=row_index(Hˡ), k₀ = ℓₘᵢₙ(IT)
+        @inbounds let √=sqrt∘RT, Nᵣ=Nᵣ(Hˡ), ri=row_index(Hˡ), k₀ = lowest_index(IT)
             ℓ = Hˡ.ℓ
             m′ₘₐₓw = m′ₘₐₓ(Hˡ)
             m′ₘᵢₙw = m′ₘᵢₙ(Hˡ)
-            for m′ ∈ (1 - ℓₘᵢₙ(IT)):(m′ₘₐₓw - 1)
+            for m′ ∈ (1 - lowest_index(IT)):(m′ₘₐₓw - 1)
                 # The m-side signs sgn(m) and sgn(m-1) are +1 throughout the range visited
                 # here (m ≥ m′+1 ≥ 3/2 > 0), so they are left out.  The m′-side sign is
                 # *not* always +1: at m′ = 1/2 the coefficient of Hˡ[m′-1, m] picks up
@@ -1035,17 +934,24 @@ function recurrence_step4!(w::HCalculator{IT, RT}) where {IT, RT}
     w
 end
 
-# Compute Hˡₘ′₋₁,ₘ for m′ ∈ -ℓₘᵢₙ:-1:m′ₘᵢₙ+1 and m ∈ -m′+1:ℓ from the rows m′ and m′+1
-# (Gumerov and Duraiswami's step 5).  As in step 4, the code is shared between index types;
-# only the starting m′ differs (0 or -1/2).  The m-side signs sgn(m) and sgn(m-1) are +1
-# throughout the range visited here (m ≥ -m′+1 ≥ 1, so m - 1 ≥ 0), and the coefficients
-# themselves are read from the table, as in step 4.
+# As in step 4, the code is shared between index types; only the starting m′ differs
+# (0 or -1/2).  The m-side signs sgn(m) and sgn(m-1) are +1 throughout the range visited
+# here (m ≥ -m′+1 ≥ 1, so m - 1 ≥ 0), and the coefficients themselves are read from the
+# table, as in step 4.
+"""
+    recurrence_step5!(w::HCalculator)
+
+Step 5 of the ``H`` recursion: compute the rows ``H^{ℓ}_{m'-1,m}`` of the wedge of `w`, for
+``m'`` from ``0`` (or ``-1/2`` for half-integer indices) down to ``m'_{\\mathrm{min}} + 1``
+and ``1 - m' ≤ m ≤ ℓ``, from ``H^{ℓ}_{m'+1,m}``, ``H^{ℓ}_{m',m-1}``, and
+``H^{ℓ}_{m',m+1}``, for every rotor.
+"""
 function recurrence_step5!(w::HCalculator{IT, RT}) where {IT, RT}
     let Hˡ = Hˡ(w), d̄ₗ = w.d̄ₗ
-        @inbounds let √=sqrt∘RT, Nᵣ=Nᵣ(Hˡ), ri=row_index(Hˡ), k₀ = ℓₘᵢₙ(IT)
+        @inbounds let √=sqrt∘RT, Nᵣ=Nᵣ(Hˡ), ri=row_index(Hˡ), k₀ = lowest_index(IT)
             ℓ = Hˡ.ℓ
             m′ₘᵢₙw = m′ₘᵢₙ(Hˡ)
-            for m′ ∈ (-ℓₘᵢₙ(IT)):-1:(m′ₘᵢₙw + 1)
+            for m′ ∈ (-lowest_index(IT)):-1:(m′ₘᵢₙw + 1)
                 d̄ₗᵐ′ = sgn(m′) * √(δ²(ℓ, m′))
                 d̄ₗᵐ′⁻¹ = sgn(m′ - 1) * √(δ²(ℓ, m′ - 1))
                 inv_d̄ₗᵐ′⁻¹ = inv(d̄ₗᵐ′⁻¹)

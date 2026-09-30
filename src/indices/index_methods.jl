@@ -7,9 +7,9 @@
 # two kinds.  The macro `@index_methods` writes that boundary for one function definition:
 # the definition is written once, with its index arguments annotated by one of the markers
 # below, and the macro generates the methods that convert, refuse and re-dispatch.
-# Containers' `getindex` and `setindex!` are not written this way; they check their
-# arguments against the container's own kind, which dispatch on the arguments alone cannot
-# know.
+# Containers' `getindex` and `setindex!`, `recurrence!`, and `wedge_value` are not written
+# this way; they check their indices, with `checked_index` below, against the kind of the
+# object they are given, which dispatch on the arguments alone cannot determine.
 
 
 ### Markers
@@ -123,6 +123,27 @@ const index_marker_names = (:IndexType, :IndexRange, :IndexOrRange)
     half_odd_index(x)
 end
 index_keyword(f, name, x, ::Type{K}) where {K} = throw(index_keyword_error(f, name, x, K))
+
+# The index `x` of an object whose kind of index is fixed — a container, a calculator, or a
+# wedge, whose index type is `IT` — converted to that type.  Wherever a call names such an
+# object and its indices, as indexing a container, `recurrence!(calc, ℓ)`, and `wedge_value`
+# do, the kind of index is that of the object rather than one that dispatch on the arguments
+# could choose, so these calls are written by hand rather than with `@index_methods`; but
+# they accept what the index methods accept: an `Int` for an object with integer indices,
+# and a `HalfOddInteger` or a `Rational{Int}` with denominator 2 for one with half-integer
+# indices.  Anything else is refused with the reason the index methods give; a narrow
+# integer, in particular, is told to be converted, because the arithmetic that finds an
+# element's position is not closed under it.  The message names the index by `name` and the
+# object `owner` by `container_name`.  An index already of the object's own type is returned
+# as it is, which is the path that every loop over the elements takes.
+@inline checked_index(::Type{Int}, x::Int, owner, name) = x
+@inline checked_index(::Type{HalfOddInteger}, x::HalfOddInteger, owner, name) = x
+@inline function checked_index(::Type{HalfOddInteger}, x::Rational{Int}, owner, name)
+    is_half_odd_index(x) || throw(checked_index_error(HalfOddInteger, x, owner, name))
+    half_odd_index(x)
+end
+checked_index(::Type{IT}, x, owner, name) where {IT} =
+    throw(checked_index_error(IT, x, owner, name))
 
 
 ### Errors
@@ -310,6 +331,46 @@ end
         message *= "  " * index_problem(x)
     end
     ArgumentError(message)
+end
+
+# The error for an index that is not of the kind of the object it is given with, or which is
+# not an index at all; see `checked_index`.
+@noinline function checked_index_error(::Type{IT}, x, owner, name) where {IT}
+    kind = IT === HalfOddInteger ? (
+        "half-odd-integers, each a `HalfOddInteger` or a `Rational{Int}` with denominator 2, "
+        * "like 7//2"
+    ) : "integers of type `Int`, like 3"
+    message = (
+        "The indices of this `$(container_name(owner))` are $kind; got $name = "
+        * "$(typed_repr(x))."
+    )
+    index_kind(x) === nothing && (message *= "  " * index_problem(x))
+    ArgumentError(message)
+end
+
+# What a message calls the owner of an index: the name of its type, or, for a calculator
+# whose struct serves two constructors, the name of the constructor that the caller wrote,
+# which the methods beside those calculators give.
+container_name(owner) = nameof(typeof(owner))
+
+# The kinds of index of two objects, which must agree when one is applied to the other.
+# `HalfOddInteger` and `Integer` deliberately do not promote — but `≤` between them is well
+# defined and returns an ordinary `Bool`, so a mismatch of kinds sails straight through a
+# test of a range of ℓ, and surfaces much later as an `InexactError` from `convert`, or as a
+# complaint from inside a loop.  The products of the labelled containers therefore compare
+# the kind of the mode weights `w`, which is the type of their degrees, with the kind `IT`
+# of the series or the calculator applied to them, which `what` names, before anything else.
+index_kind_name(::Type{<:Integer}) = "integers"
+index_kind_name(::Type{HalfOddInteger}) = "half-odd-integers"
+
+function check_same_kind(::Type{IT}, w, what) where {IT<:IntegerHalf}
+    JT = typeof(ℓₘᵢₙ(w))
+    (IT <: Integer) === (JT <: Integer) && return nothing
+    throw(ArgumentError(
+        "These mode weights are indexed by $(index_kind_name(JT)) — "
+        * "ℓ ∈ $(ℓₘᵢₙ(w)):$(ℓₘₐₓ(w)) — but $what is indexed by $(index_kind_name(IT)); "
+        * "the two must be of one kind."
+    ))
 end
 
 

@@ -48,7 +48,7 @@ const TrackedElement{V, D} = TrackedReal{V, D, TrackedArray{V, D, 1, Vector{V}, 
 SphericalFunctions.value_type(::Type{<:TrackedReal{V}}) where {V} = V
 SphericalFunctions.real_value(x::TrackedReal) = value(x)
 SphericalFunctions.ndirections(::Type{<:TrackedReal}) = 0
-SphericalFunctions.working_type(::Type{<:TrackedReal{V}}) where {V} = TrackedElement{V, V}
+SphericalFunctions.floattype(::Type{<:TrackedReal{V}}) where {V} = TrackedElement{V, V}
 
 # The rotor of the values of four tracked components, built without normalizing it.
 function value_rotor(w, x, y, z)
@@ -74,7 +74,7 @@ function SphericalFunctions.D_array(
 ) where {IT<:IntegerHalf}
     y = tracked_D_array(R[1], R[2], R[3], R[4], ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
     o = 0
-    map(SphericalFunctions.ℓₘᵢₙ(IT):ℓₘₐₓ) do ℓ
+    map(SphericalFunctions.lowest_index(IT):ℓₘₐₓ) do ℓ
         dims = (length(max(-ℓ, m′ₘᵢₙ):min(ℓ, m′ₘₐₓ)), length(max(-ℓ, mₘᵢₙ):min(ℓ, mₘₐₓ)))
         b = assembled(y, dims, o)
         o += 2prod(dims)

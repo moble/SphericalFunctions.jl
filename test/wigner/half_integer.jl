@@ -498,7 +498,7 @@ end
 @testitem "Half-integer index validation and error messages" setup=[RefusalChecks] begin
     import Quaternionic: Rotor
     import SphericalFunctions: D, d, DCalculator, dCalculator,
-        HCalculator, WignerMatrix, WignerDMatrix, recurrence!,
+        HCalculator, WignerMatrix, recurrence!,
         HalfOddInteger
 
     # Half-integer indices may be spelled as `Rational`s with denominator exactly 2, which
@@ -530,7 +530,7 @@ end
     @test DCalculator(𝟙, 7//2; mp_max=HalfOddInteger(3//2)) isa DCalculator{HalfOddInteger}
 
     # Both rows m′ = ±1/2 are needed to seed the half-integer ladder, so the m′ and m
-    # windows must bracket ±ℓₘᵢₙ.  (`validate_index_ranges` owns these messages.)
+    # windows must bracket ±ℓₘᵢₙ.  (`validate_axis` owns these messages.)
     small, large = "too small for this index type", "too large for this index type"
     @test refuses(() -> DCalculator(𝟙, 7//2; m′ₘₐₓ=3//2, m′ₘᵢₙ=1//2), ArgumentError, large)
     @test refuses(() -> DCalculator(𝟙, 7//2; m′ₘₐₓ=-1//2, m′ₘᵢₙ=-3//2), ArgumentError, small)
@@ -545,14 +545,20 @@ end
     # `recurrence!` rejects the wrong parity of ℓ, and ℓ out of range, and says what the
     # calculator's indices are
     calc = DCalculator(𝟙, 5//2)
-    parity = "indices are half-odd-integers, like 7//2, so ℓ must be one too"
+    parity = (
+        "The indices of this `DCalculator` are half-odd-integers, each a `HalfOddInteger` "
+        * "or a `Rational{Int}` with denominator 2, like 7//2; got ℓ = "
+    )
     @test refuses(() -> recurrence!(calc, 𝟙, 2), ArgumentError, parity)
     @test refuses(() -> recurrence!(calc, 𝟙, 7//2), ArgumentError, "out of bounds")
     recurrence!(calc, 𝟙, 5//2)
     @test refuses(() -> recurrence!(calc, 9//2), ArgumentError, "out of bounds")
     @test refuses(() -> recurrence!(calc, 3), ArgumentError, parity)
     @test refuses(() -> recurrence!(calc, 1.5), ArgumentError, parity)
-    @test refuses(() -> recurrence!(DCalculator(𝟙, 3), 3//2), ArgumentError, "indices are integers")
+    @test refuses(
+        () -> recurrence!(DCalculator(𝟙, 3), 3//2), ArgumentError,
+        "The indices of this `DCalculator` are integers of type `Int`, like 3; got ℓ = 3//2"
+    )
 
     # An integer ℓ on a half-integer `WignerSeries` must say so, rather than throwing a bare
     # `InexactError` out of the index arithmetic (or, under `@inbounds`, quietly returning a
@@ -579,8 +585,10 @@ end
         () -> WignerMatrix(zeros(ComplexF64, 3, 3), HalfOddInteger(1//2); m′ₘₐₓ=1),
         ArgumentError, "keyword argument `m′ₘₐₓ`"
     )
-    @test refuses(() -> WignerDMatrix(ComplexF64, 5//3), ArgumentError, "neither an integer nor")
-    @test WignerDMatrix(ComplexF64, 5//2) isa WignerMatrix{HalfOddInteger}
+    @test refuses(
+        () -> WignerMatrix(zeros(ComplexF64, 4, 4), 5//3), ArgumentError, "neither an integer nor"
+    )
+    @test WignerMatrix(Matrix{ComplexF64}(undef, 6, 6), 5//2) isa WignerMatrix{HalfOddInteger}
 end
 
 
@@ -623,7 +631,7 @@ end
 @testitem "Half-integer containers" setup=[HalfIntegerOracle] begin
     import SphericalFunctions: D, d, DCalculator, recurrence!, sYlmCalculator,
         WignerMatrix, WignerMatrixBatch, DegreeBlock, DegreeBlockBatch, WignerSeries,
-        WignerDMatrix, WignerdMatrix, WignerRange, HalfOddInteger,
+        WignerRange, HalfOddInteger,
         SpinMatrix, SpinMatrixBatch,
         ℓ, ℓₘᵢₙ, ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, sₘₐₓ, sₘᵢₙ, spins
     import .HalfIntegerOracle: rotors
@@ -642,7 +650,7 @@ end
         @test 3//2 ∈ keys(𝔇) && 2 ∉ keys(𝔇)  # membership by value, however ℓ is spelled
         @test firstindex(𝔇) == 1//2 && lastindex(𝔇) == J
         @test collect(𝔇) == [ℓ => 𝔇[ℓ] for ℓ ∈ 1//2:1:J]   # iteration, as ℓ => block
-        @test eltype(values(𝔇)) <: WignerDMatrix && eltype(𝔇) <: Pair
+        @test eltype(values(𝔇)) <: WignerMatrix{HalfOddInteger, ComplexF64} && eltype(𝔇) <: Pair
 
         # copy is deep: mutating the copy must not touch the original
         𝔇c = copy(𝔇)
@@ -661,7 +669,7 @@ end
         # d gives the real sibling
         𝔡 = d(1.1, J)
         @test 𝔡 isa WignerSeries
-        @test eltype(values(𝔡)) <: WignerdMatrix
+        @test eltype(values(𝔡)) <: WignerMatrix{HalfOddInteger, Float64}
         @test occursin("WignerSeries", sprint(show, 𝔇))
         @test occursin("ℓ ∈ 1//2:5//2", sprint(show, 𝔇))
         @test occursin("ℓ = 5//2", sprint(show, MIME("text/plain"), 𝔇))
@@ -669,7 +677,7 @@ end
 
     @testset "WignerMatrix" begin
         w = D(R, J)[J]
-        @test w isa WignerMatrix && w isa WignerDMatrix
+        @test w isa WignerMatrix{HalfOddInteger, ComplexF64}
         @test !(w isa AbstractMatrix)   # half-integer axes cannot satisfy that interface
         @test ndims(w) == 2
         @test ℓ(w) == J && ℓₘᵢₙ(w) == 1//2

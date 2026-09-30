@@ -74,47 +74,44 @@
     @test 2 ∉ k && 9//2 ∉ k && 1//4 ∉ k
 end
 
-@testitem "Wigner containers: `validate_index_ranges` refuses every bad range" begin
-    import SphericalFunctions: validate_index_ranges, HalfOddInteger
+@testitem "Wigner containers: the validation of the limits refuses every bad range" begin
+    import SphericalFunctions: validate_degree, validate_axis, HalfOddInteger
 
-    # The five-argument form, used by the two-dimensional containers
-    @test validate_index_ranges(3, 3, -3, 3, -3) === nothing
-    @test_throws "must be non-negative" validate_index_ranges(-1, 0, 0, 0, 0)
-    @test_throws "is less than" validate_index_ranges(3, -1, 1, 3, -3)
-    @test_throws "is less than" validate_index_ranges(3, 3, -3, -1, 1)
-    @test_throws "too small for this index type" validate_index_ranges(3, -1, -3, 3, -3)
-    @test_throws "too large for this index type" validate_index_ranges(3, 3, 1, 3, -3)
-    @test_throws "too small for this index type" validate_index_ranges(3, 3, -3, -1, -3)
-    @test_throws "too large for this index type" validate_index_ranges(3, 3, -3, 3, 1)
-    @test_throws "too large for ℓₘₐₓ" validate_index_ranges(2, 3, -2, 2, -2)
-    @test_throws "too large for ℓₘₐₓ" validate_index_ranges(2, 2, -3, 2, -2)
-    @test_throws "too large for ℓₘₐₓ" validate_index_ranges(2, 2, -2, 3, -2)
-    @test_throws "too large for ℓₘₐₓ" validate_index_ranges(2, 2, -2, 2, -3)
+    # The degree, which is checked before either axis
+    @test validate_degree(3) === nothing && validate_degree(0) === nothing
+    @test_throws "ℓₘₐₓ=-1 must be non-negative." validate_degree(-1)
 
-    # The three-argument form, used where only the m′ range is constrained
-    @test validate_index_ranges(3, 3, -3) === nothing
-    @test_throws "must be non-negative" validate_index_ranges(-1, 0, 0)
-    @test_throws "is less than" validate_index_ranges(3, -1, 1)
-    @test_throws "too small for this index type" validate_index_ranges(3, -1, -3)
-    @test_throws "too large for this index type" validate_index_ranges(3, 3, 1)
-    @test_throws "too large for ℓₘₐₓ" validate_index_ranges(2, 3, -2)
-    @test_throws "too large for ℓₘₐₓ" validate_index_ranges(2, 2, -3)
+    # Each axis, the m′ axis of every container with one and the m axis of the
+    # two-dimensional ones, is checked by the same function under its own name
+    for n ∈ ("m′", "m")
+        @test validate_axis(3, 3, -3, n) === nothing
+        @test_throws "$(n)ₘₐₓ=-1 is less than $(n)ₘᵢₙ=1." validate_axis(3, -1, 1, n)
+        @test_throws "$(n)ₘₐₓ=-1 is too small for this index" validate_axis(3, -1, -3, n)
+        @test_throws "$(n)ₘᵢₙ=1 is too large for this index" validate_axis(3, 3, 1, n)
+        @test_throws "|$(n)ₘₐₓ|=|3| is too large for ℓₘₐₓ=2." validate_axis(2, 3, -2, n)
+        @test_throws "|$(n)ₘᵢₙ|=|-3| is too large for ℓₘₐₓ=2." validate_axis(2, 2, -3, n)
+    end
 
     # Half-odd-integer indices must bracket ±1/2, not 0: the recurrence seeds from both rows
     h(x) = HalfOddInteger(x)
-    @test validate_index_ranges(h(5//2), h(5//2), h(-5//2)) === nothing
-    @test_throws "too small for this index type" validate_index_ranges(h(5//2), h(-1//2), h(-5//2))
-    @test_throws "too large for this index type" validate_index_ranges(h(5//2), h(5//2), h(1//2))
+    @test validate_degree(h(1//2)) === nothing
+    @test_throws "ℓₘₐₓ=-1//2 must be non-negative." validate_degree(h(-1//2))
+    @test validate_axis(h(5//2), h(5//2), h(-5//2), "m′") === nothing
+    @test validate_axis(h(5//2), h(1//2), h(-1//2), "m") === nothing
+    small, large = "too small for this index type", "too large for this index type"
+    @test_throws small validate_axis(h(5//2), h(-1//2), h(-5//2), "m′")
+    @test_throws large validate_axis(h(5//2), h(5//2), h(1//2), "m′")
 
     # Every refusal is an `ArgumentError`, and the bracketing refusals state the rule
-    @test_throws ArgumentError validate_index_ranges(-1, 0, 0, 0, 0)
-    @test_throws ArgumentError validate_index_ranges(3, -1, 1, 3, -3)
-    @test_throws ArgumentError validate_index_ranges(2, 3, -2, 2, -2)
-    @test_throws ArgumentError validate_index_ranges(-1, 0, 0)
-    @test_throws "the range of m′ must include 0, where the recurrence starts" validate_index_ranges(3, 3, 1)
-    @test_throws "the range of m must include 0, where the recurrence starts" validate_index_ranges(3, 3, -3, -1, -3)
-    @test_throws "the range of m′ must include both -1//2 and 1//2" validate_index_ranges(h(5//2), h(5//2), h(1//2))
-    @test_throws "the range of m must include both -1//2 and 1//2" validate_index_ranges(h(5//2), h(5//2), h(-5//2), h(5//2), h(1//2))
+    @test_throws ArgumentError validate_degree(-1)
+    @test_throws ArgumentError validate_axis(3, -1, 1, "m′")
+    @test_throws ArgumentError validate_axis(2, 3, -2, "m")
+    integer_rule = "must include 0, where the recurrence starts"
+    half_rule = "must include both -1//2 and 1//2, where the recurrence starts"
+    @test_throws "the range of m′ $integer_rule" validate_axis(3, 3, 1, "m′")
+    @test_throws "the range of m $integer_rule" validate_axis(3, -1, -3, "m")
+    @test_throws "the range of m′ $half_rule" validate_axis(h(5//2), h(5//2), h(1//2), "m′")
+    @test_throws "the range of m $half_rule" validate_axis(h(5//2), h(5//2), h(1//2), "m")
 end
 
 @testitem "WignerMatrix: the container interface" begin
@@ -236,6 +233,104 @@ end
     end
     # The bracketing rule is stated when a range that misses the recurrence's seed is asked for
     @test_throws "the range of m′ must include 0" WignerMatrix(view(rand(5, 5), 4:5, :), 2; m′ₘₐₓ=2, m′ₘᵢₙ=1)
+end
+
+@testitem "WignerMatrix" begin
+    import SphericalFunctions: WignerMatrix,
+        parent, ell, mp_max, mp_min, m_max, m_min, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, lowest_index,
+        HalfOddInteger
+
+    # Check that a negative ℓ value throws an error
+    @test_throws ArgumentError WignerMatrix(rand(ComplexF64, 3, 3), -1)
+    @test_throws "ℓₘₐₓ=-1 must be non-negative." WignerMatrix(rand(ComplexF64, 3, 3), -1)
+    @test_throws "ℓₘₐₓ=-1 must be non-negative." WignerMatrix(rand(Float64, 3, 3), -1)
+    @test_throws "ℓₘₐₓ=-1//2 must be non-negative." WignerMatrix(rand(ComplexF64, 2, 2), -1//2)
+    @test_throws "ℓₘₐₓ=-1//2 must be non-negative." WignerMatrix(rand(Float64, 2, 2), -1//2)
+
+    # A `Rational` ℓ that is not a half-odd-integer is refused before anything is built:
+    # `1//3` has the wrong denominator, and `2//2`, which is `1//1`, is a whole number,
+    # which is written as the integer 1.
+    for T ∈ (ComplexF64, Float64), n ∈ (2, 3)
+        @test_throws ArgumentError WignerMatrix(rand(T, n, n), 1//3)
+        @test_throws "1//3 is neither an integer nor a half-odd-integer" WignerMatrix(rand(T, n, n), 1//3)
+        @test_throws "1//1 is a whole number; write it as the integer 1" WignerMatrix(rand(T, n, n), 2//2)
+    end
+
+    ℓₘₐₓ = 2
+    # Encode on twice-indices, so that the arithmetic is `Int` for both index types (a
+    # `HalfOddInteger` may only be multiplied by an even integer).  `2x + 6` is in `1:11`
+    # for every index used here, so base 25 keeps the encoding injective.
+    code(x) = 2x + 6
+    encode(ℓ, m′, m) = code(ℓ) + code(m′)*25 + code(m)*625
+    for ℓ ∈ Any[collect(0:ℓₘₐₓ); HalfOddInteger.(collect(1//2:(ℓₘₐₓ+1//2)))]
+        # The input must be at least as big as the block along each axis, and may be bigger
+        @test_throws "The extent of the first dimension" WignerMatrix(Array{ComplexF64}(undef, 2ℓ, 2ℓ + 1), ℓ)
+        @test_throws "The extent of the first dimension" WignerMatrix(Array{Float64}(undef, 2ℓ, 2ℓ + 1), ℓ)
+        @test_throws "The extent of the second dimension" WignerMatrix(Array{ComplexF64}(undef, 2ℓ + 1, 2ℓ), ℓ)
+        @test_throws "The extent of the second dimension" WignerMatrix(Array{Float64}(undef, 2ℓ + 1, 2ℓ), ℓ)
+        @test WignerMatrix(Array{ComplexF64}(undef, 2ℓ + 2, 2ℓ + 3), ℓ) isa WignerMatrix
+
+        # Check that a data array with a dimension of 0 extent throws an error.
+        @test_throws r"The extent of the second dimension.*; it is 0." WignerMatrix(Array{ComplexF64}(undef, 2ℓ + 1, 0), ℓ)
+        @test_throws r"The extent of the first dimension.*; it is 0." WignerMatrix(Array{ComplexF64}(undef, 0, 2ℓ + 1), ℓ)
+        @test_throws r"The extent of the second dimension.*; it is 0." WignerMatrix(Array{Float64}(undef, 2ℓ + 1, 0), ℓ)
+        @test_throws r"The extent of the first dimension.*; it is 0." WignerMatrix(Array{Float64}(undef, 0, 2ℓ + 1), ℓ)
+
+        # Every symmetric restriction of either axis, with the limits given in both
+        # spellings
+        for m′ₘ ∈ lowest_index(typeof(ℓ)):ℓ, mₘ ∈ lowest_index(typeof(ℓ)):ℓ
+            # Make a big, dumb array full of the explicit indices.
+            data = [
+                encode(ℓ, m′, m)
+                for m′ ∈ -m′ₘ:m′ₘ, m ∈ -mₘ:mₘ
+            ]
+            # Check that indexing works as expected.
+            for NT ∈ (ComplexF64, Float64)
+                w = WignerMatrix(NT.(data), ℓ; m′ₘₐₓ=m′ₘ, m′ₘᵢₙ=-m′ₘ, mₘₐₓ=mₘ, mₘᵢₙ=-mₘ)
+                @test Base.parent(w) == data
+                @test ell(w) == ℓ
+                @test mp_max(w) == m′ₘ
+                @test m_max(w) == mₘ
+                @test mp_min(w) == -mp_max(w)
+                @test m_min(w) == -m_max(w)
+                for m ∈ -mₘ:mₘ
+                    for m′ ∈ -m′ₘ:m′ₘ
+                        @test w[m′, m] == encode(ℓ, m′, m)
+                    end
+                end
+                # The ASCII spellings of the keywords, and the default lower limits, which
+                # are minus the upper ones, give the same block
+                @test WignerMatrix(NT.(data), ℓ; mp_max=m′ₘ, mp_min=-m′ₘ, m_max=mₘ, m_min=-mₘ) == w
+                @test WignerMatrix(NT.(data), ℓ; m′ₘₐₓ=m′ₘ, mₘₐₓ=mₘ) == w
+                @test WignerMatrix(NT.(data), ℓ; mp_max=m′ₘ, m_max=mₘ) == w
+            end
+        end
+
+        for m′ₘ ∈ lowest_index(typeof(ℓ)):ℓ
+            for NT ∈ (ComplexF64, Float64)
+                data = rand(NT, 2m′ₘ + 1, 2ℓ + 1)
+                w = WignerMatrix(data, ℓ; m′ₘₐₓ=m′ₘ, m′ₘᵢₙ=-m′ₘ)
+
+                # Check that the data array is stored correctly.
+                @test Base.parent(w) == data
+                @test ell(w) == ℓ
+                @test m′ₘₐₓ(w) == m′ₘ
+                @test mₘₐₓ(w) == ℓ
+                @test m′ₘᵢₙ(w) == -m′ₘₐₓ(w)
+                @test mₘᵢₙ(w) == -mₘₐₓ(w)
+
+                # These containers are deliberately not `AbstractArray`s, and their axes
+                # deliberately do not meet the array interface's demand for an
+                # `AbstractUnitRange{<:Integer}` that is its own axis — a half-odd axis
+                # cannot be an index set at all.  A `WignerRange` is instead an ordinary
+                # range of index values, indexed by position as `Base`'s ranges are, so that
+                # its values can be collected and broadcast over.
+                @test typeof(axes(w)) <: NTuple{2, AbstractUnitRange}
+                @test axes.(axes(w), 1) == map(a -> Base.OneTo(length(a)), axes(w))
+                @test all(collect(a) == [first(a) + k for k ∈ 0:length(a)-1] for a ∈ axes(w))
+            end
+        end
+    end
 end
 
 @testitem "WignerMatrixBatch: the container interface" begin
@@ -574,7 +669,7 @@ end
 end
 
 @testitem "Wigner containers: uninitialized BigFloat storage shows as #undef" begin
-    import SphericalFunctions: WignerDMatrix, WignerMatrix, WignerMatrixBatch, DegreeBlock,
+    import SphericalFunctions: WignerMatrix, WignerMatrixBatch, DegreeBlock,
         DegreeBlockBatch, SpinMatrix, SpinMatrixBatch, HCalculator, HalfOddInteger
 
     # Storage of a non-bits type starts out unassigned, and reading such an element throws
@@ -582,7 +677,7 @@ end
     for L ∈ (2, HalfOddInteger(3//2))
         n = Int(2L + 1)
         for x ∈ (
-            WignerDMatrix(Complex{BigFloat}, L),
+            WignerMatrix(Matrix{Complex{BigFloat}}(undef, n, n), L),
             WignerMatrix(Matrix{BigFloat}(undef, n, n), L),
             WignerMatrixBatch(Array{BigFloat}(undef, 2, n, n), L),
             DegreeBlock(Vector{BigFloat}(undef, n), L),
@@ -596,7 +691,7 @@ end
     @test occursin("#undef", sprint(show, MIME("text/plain"), HCalculator(big(0.3), 3).Hˡ))
 
     # Assigned elements print as usual, in the order of `Array(w)`
-    w = WignerDMatrix(Complex{BigFloat}, 1)
+    w = WignerMatrix(Matrix{Complex{BigFloat}}(undef, 3, 3), 1)
     w[0, 1] = 7
     shown = sprint(show, MIME("text/plain"), w)
     @test occursin("#undef", shown) && occursin("7.0", shown)
@@ -712,12 +807,13 @@ end
     @test_throws "are half-odd-integers, each a `HalfOddInteger`" hs[1]
 end
 
-@testitem "WignerDMatrix and WignerdMatrix: the complex and real aliases" begin
-    import SphericalFunctions: WignerDMatrix, WignerdMatrix, WignerMatrix
+@testitem "WignerMatrix: blocks of complex and of real numbers" begin
+    import SphericalFunctions: WignerMatrix
     import SphericalFunctions: ℓ, m′ₘᵢₙ, m′ₘₐₓ, mₘᵢₙ, mₘₐₓ, HalfOddInteger
 
-    # Both are aliases for `WignerMatrix`, so `show` names the underlying type
-    D = WignerDMatrix(ComplexF64, 2)
+    # A block of 𝔇 is a `WignerMatrix` of complex numbers, and a block of d one of real
+    # numbers, and `summary` names that type
+    D = WignerMatrix(Matrix{ComplexF64}(undef, 5, 5), 2)
     @test D isa WignerMatrix
     @test eltype(D) == ComplexF64
     @test ℓ(D) == 2
@@ -726,60 +822,50 @@ end
     @test D[1, -2] == 3.0 + 0im
     @test occursin("WignerMatrix", sprint(summary, D))
 
-    d = WignerdMatrix(Float64, 2)
+    d = WignerMatrix(Matrix{Float64}(undef, 5, 5), 2)
     @test d isa WignerMatrix
     @test eltype(d) == Float64
     @test ℓ(d) == 2
     d[1, -2] = 3.0
     @test d[1, -2] == 3.0
 
-    # A restricted m′ range narrows the first axis only
-    Dm = WignerDMatrix(ComplexF64, 3, 1)
+    # A restricted m′ range narrows the first axis only, with its lower limit defaulting to
+    # minus the upper one
+    Dm = WignerMatrix(Matrix{ComplexF64}(undef, 3, 7), 3; m′ₘₐₓ=1)
     @test m′ₘᵢₙ(Dm) == -1 && m′ₘₐₓ(Dm) == 1
     @test mₘᵢₙ(Dm) == -3 && mₘₐₓ(Dm) == 3
     @test size(Dm) == (3, 7)
-    # ... and the m range is given by keyword, in either spelling, with its lower limit
-    # defaulting to minus the upper one; the storage is sized to the block
-    Dmm = WignerDMatrix(ComplexF64, 3, 1; mₘₐₓ=2)
-    @test axes(Dmm) == (-1:1, -2:2) && size(parent(Dmm)) == (3, 5)
-    @test axes(WignerdMatrix(Float64, 3, 2; m_max=1, m_min=0)) == (-2:2, 0:1)
-    @test axes(WignerdMatrix(Float64, 3//2, 1//2; mₘᵢₙ=-1//2)) == (-1//2:1//2, -1//2:3//2)
-    # m′ₘₐₓ is positional in this form, so it is not a keyword; a symmetric m′ range is the
-    # only one this form builds
-    @test_throws MethodError WignerDMatrix(ComplexF64, 2; m′ₘₐₓ=1)
-    @test_throws "m′ₘₐₓ=-1 is less than m′ₘᵢₙ=1" WignerDMatrix(ComplexF64, 2, -1)
-    @test_throws "`Int8` is narrower than `Int`" WignerdMatrix(Float64, 2, Int8(1))
+    # ... and the m range is restricted in the same way, in either spelling
+    Dmm = WignerMatrix(Matrix{ComplexF64}(undef, 3, 5), 3; m′ₘₐₓ=1, mₘₐₓ=2)
+    @test axes(Dmm) == (-1:1, -2:2)
+    @test axes(WignerMatrix(Matrix{Float64}(undef, 5, 2), 3; m′ₘₐₓ=2, m_max=1, m_min=0)) ==
+        (-2:2, 0:1)
+    @test axes(WignerMatrix(Matrix{Float64}(undef, 2, 3), 3//2; m′ₘₐₓ=1//2, mₘᵢₙ=-1//2)) ==
+        (-1//2:1//2, -1//2:3//2)
+    @test_throws "m′ₘₐₓ=-1 is less than m′ₘᵢₙ=1" WignerMatrix(Matrix{ComplexF64}(undef, 5, 5), 2; m′ₘₐₓ=-1)
+    @test_throws "`Int8` is narrower than `Int`" WignerMatrix(Matrix{Float64}(undef, 3, 5), 2; m′ₘₐₓ=Int8(1))
 
     # A `Rational` ℓ builds a half-odd-integer block
-    Dh = WignerDMatrix(ComplexF64, 3//2)
+    Dh = WignerMatrix(Matrix{ComplexF64}(undef, 4, 4), 3//2)
     @test ℓ(Dh) == HalfOddInteger(3//2)
     @test size(Dh) == (4, 4)
     Dh[1//2, -1//2] = 1.0 + 2im
     @test Dh[1//2, -1//2] == 1.0 + 2im
-    dh = WignerdMatrix(Float64, 3//2)
+    dh = WignerMatrix(Matrix{Float64}(undef, 4, 4), 3//2)
     @test ℓ(dh) == HalfOddInteger(3//2)
     @test size(dh) == (4, 4)
 
-    # Wrapping existing storage, and the cross-type errors that catch the obvious mistake
-    @test WignerDMatrix(zeros(ComplexF64, 5, 5), 2) isa WignerMatrix
-    @test WignerdMatrix(zeros(5, 5), 2) isa WignerMatrix
-    @test_throws "only supports complex types" WignerDMatrix(zeros(5, 5), 2)
-    @test_throws "Perhaps you meant to use WignerdMatrix" WignerDMatrix(zeros(5, 5), 2)
-    @test_throws "only supports real types" WignerdMatrix(zeros(ComplexF64, 5, 5), 2)
-    @test_throws "Perhaps you meant to use WignerDMatrix" WignerdMatrix(zeros(ComplexF64, 5, 5), 2)
-
-    # The storage-wrapping forms take the limits of `WignerMatrix`, in either spelling
-    @test axes(WignerDMatrix(zeros(ComplexF64, 5, 5), 2; mp_max=1, m_max=0, m_min=-2)) ==
+    # The limits may be given in either spelling
+    @test axes(WignerMatrix(zeros(ComplexF64, 5, 5), 2; mp_max=1, m_max=0, m_min=-2)) ==
         (-1:1, -2:0)
-    @test axes(WignerdMatrix(zeros(4, 4), 3//2; m′ₘₐₓ=1//2)) == (-1//2:1//2, -3//2:3//2)
+    @test axes(WignerMatrix(zeros(4, 4), 3//2; m′ₘₐₓ=1//2)) == (-1//2:1//2, -3//2:3//2)
 
-    # An ℓ that is neither integer nor half-odd-integer is refused before the storage is
-    # sized, rather than with a bare `InexactError`.  (The message is matched, not just
-    # `Exception`, which the `InexactError` would satisfy too.)
-    @test_throws ArgumentError WignerDMatrix(ComplexF64, 5//3)
-    @test_throws "5//3 is neither an integer nor a half-odd-integer" WignerDMatrix(ComplexF64, 5//3)
-    @test_throws "5//3 is neither an integer nor a half-odd-integer" WignerdMatrix(Float64, 5//3)
-    @test_throws "only supports complex types" WignerDMatrix(zeros(5, 5), 2.5)
+    # An ℓ that is neither an integer nor a half-odd-integer is refused with an
+    # `ArgumentError`, rather than with a bare `InexactError`.  (The message is matched, not
+    # just `Exception`, which the `InexactError` would satisfy too.)
+    @test_throws ArgumentError WignerMatrix(zeros(ComplexF64, 4, 4), 5//3)
+    @test_throws "5//3 is neither an integer nor a half-odd-integer" WignerMatrix(zeros(ComplexF64, 4, 4), 5//3)
+    @test_throws "5//3 is neither an integer nor a half-odd-integer" WignerMatrix(zeros(4, 4), 5//3)
 end
 
 @testitem "SpinMatrix: the generic search functions agree with the dense matrix, or refuse" begin
@@ -855,7 +941,8 @@ end
 
 @testitem "Wigner containers: the labels in comparison, hashing, bounds and broadcasting" setup=[RefusalChecks] begin
     import SphericalFunctions: WignerMatrix, WignerMatrixBatch, DegreeBlock, DegreeBlockBatch,
-        SpinMatrix, SpinMatrixBatch, isbatched, HalfOddInteger, m′ₘₐₓ, m′ₘᵢₙ, ℓₘᵢₙ, ℓ
+        SpinMatrix, SpinMatrixBatch, isbatched, HalfOddInteger, m′ₘₐₓ, m′ₘᵢₙ, ℓₘᵢₙ, ℓ,
+        lowest_index
 
     h = HalfOddInteger
     # For each block, the same storage under two sets of labels, of the same shape: another
@@ -935,12 +1022,15 @@ end
         @test refuses(() -> m′ₘₐₓ(v), ArgumentError, "has no m′ axis")
         @test refuses(() -> m′ₘᵢₙ(v), ArgumentError, "has no m′ axis")
     end
-    # `ℓₘᵢₙ` is defined for the index types, their values and the containers, and for nothing
-    # else
-    @test ℓₘᵢₙ(3) === 0 && ℓₘᵢₙ(h(5//2)) === h(1//2) && ℓₘᵢₙ(Int) === 0
+    # `ℓₘᵢₙ` is defined for the containers, the calculators, and the transforms, but not for
+    # an index or an index type; the smallest degree of an index type is the internal
+    # `lowest_index`
     @test ℓₘᵢₙ(WignerMatrix(zeros(4, 4), 3//2)) === h(1//2)
+    @test ℓₘᵢₙ(WignerMatrix(zeros(3, 3), 1)) === 0
+    @test lowest_index(Int) === 0 && lowest_index(HalfOddInteger) === h(1//2)
     @test_throws MethodError ℓₘᵢₙ([1, 2])
     @test !applicable(ℓₘᵢₙ, "x") && !applicable(ℓₘᵢₙ, 1//2)
+    @test !applicable(ℓₘᵢₙ, 3) && !applicable(ℓₘᵢₙ, h(5//2)) && !applicable(ℓₘᵢₙ, Int)
 
     # A half-integer index may be written as a `Rational{Int}` with denominator 2 or as a
     # `HalfOddInteger`, either way for each index, reading and writing; any other `Rational`

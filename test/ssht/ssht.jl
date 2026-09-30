@@ -24,7 +24,7 @@
 
 @testitem "SSHT construction" begin
     import SphericalFunctions: SSHT, SSHTRS, SSHTMinimal, SSHTMatrix, pixels, rotors, spin, Ysize
-    import SphericalFunctions: nmodes, npixels  # unexported
+    import SphericalFunctions: nmodes, npixels, floattype  # unexported
     import SphericalFunctions: golden_ratio_spiral_rotors
     using DoubleFloats: Double64
     using LinearAlgebra: lu
@@ -41,6 +41,8 @@
             @test 𝒯 isa SSHT{T}
             @test typeof(Type(s, ℓₘₐₓ, T)) === typeof(𝒯)  # the concrete constructor agrees
             @test spin(𝒯) == s
+            @test floattype(𝒯) === T
+            @test floattype(typeof(𝒯)) === T
             @test SphericalFunctions.ℓₘₐₓ(𝒯) == ℓₘₐₓ
             @test SphericalFunctions.ℓₘᵢₙ(𝒯) == abs(s)
             @test nmodes(𝒯) == Ysize(abs(s), ℓₘₐₓ) == (ℓₘₐₓ + 1)^2 - s^2
@@ -1331,8 +1333,10 @@ end
     # workspace, so that the copy and the original may be used by two tasks at once.  Its
     # results are those of the original to the last bit.
     shared = Dict(
-        "RS" => (:θ, :quadrature_weights, :Nϕ, :iθ, :synthesis_phases, :analysis_phases),
-        "Minimal" => (:θ, :Nϕ, :centers, :θindices, :mode_m, :Λ, :blocks),
+        "RS" => (
+            :θ, :quadrature_weights, :Nϕ, :ring_ranges, :synthesis_phases, :analysis_phases
+        ),
+        "Minimal" => (:θ, :Nϕ, :centers, :ring_ranges, :mode_m, :Λ, :blocks),
     )
     workspace = Dict("RS" => (:F, :G), "Minimal" => (:F, :f̃, :rhs))
     for (method, s, ℓₘₐₓ, kw) in (

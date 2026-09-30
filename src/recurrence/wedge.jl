@@ -38,8 +38,8 @@ single expression below serves both index types.
 @inline ϵ(m) = ifelse(m > 0 && isodd(floor_int(m)), -1, 1)
 
 """
-    HWedge{IT, RT, ST} <: AbstractWignerMatrix{IT, RT, ST}
-    HWedge([RT=Float64,] Nᵣ, ℓₘₐₓ, m′ₘₐₓ=ℓₘₐₓ)
+    HWedge{IT, RT, ST}
+    HWedge(RT, Nᵣ, ℓₘₐₓ, m′ₘₐₓ=ℓₘₐₓ)
 
 A compact, real-valued workspace holding the ``Hˡ`` matrix of one ``ℓ`` for `Nᵣ` rotors at
 once.
@@ -102,7 +102,7 @@ numbers, which survives the calculator's next step.
     uses.  Give each task its own wedge, or its own calculator.
 
 """
-mutable struct HWedge{IT, RT<:Real, ST} <: AbstractWignerMatrix{IT, RT, ST}
+mutable struct HWedge{IT<:IntegerHalf, RT<:Real, ST<:AbstractArray{RT}}
     const parent::ST
     const row_index::FixedSizeVectorDefault{Int}
     const Nᵣ::Int
@@ -116,7 +116,8 @@ mutable struct HWedge{IT, RT<:Real, ST} <: AbstractWignerMatrix{IT, RT, ST}
         if Nᵣ < 1
             throw(ArgumentError("Number of rotors Nᵣ=$Nᵣ must be at least 1."))
         end
-        validate_index_ranges(ℓₘₐₓ, m′ₘₐₓ, -m′ₘₐₓ)
+        validate_degree(ℓₘₐₓ)
+        validate_axis(ℓₘₐₓ, m′ₘₐₓ, -m′ₘₐₓ, "m′")
 
         # Set up storage for the biggest these values will ever be
         parent = FixedSizeVector{RT}(undef, Nᵣ * HWedge_size(ℓₘₐₓ, m′ₘₐₓ, -m′ₘₐₓ))
@@ -125,27 +126,32 @@ mutable struct HWedge{IT, RT<:Real, ST} <: AbstractWignerMatrix{IT, RT, ST}
         # But start out assuming ℓ is the smallest it can be
         maxℓ = ℓₘₐₓ
         maxm′ₘₐₓ = m′ₘₐₓ
-        ℓ = ℓₘᵢₙ(ℓₘₐₓ)
+        ℓ = lowest_index(IT)
         m′ₘₐₓ = min(ℓ, m′ₘₐₓ)
         HWedge_row_index!(row_index, Nᵣ, ℓ, m′ₘₐₓ, -m′ₘₐₓ)
 
         new{IT, RT, typeof(parent)}(parent, row_index, Nᵣ, maxℓ, maxm′ₘₐₓ, ℓ, m′ₘₐₓ)
     end
-    @index_methods HWedge(Nᵣ::Int, ℓₘₐₓ::IT, m′ₘₐₓ::IT=ℓₘₐₓ) where {IT<:IndexType} =
-        HWedge(Float64, Nᵣ, ℓₘₐₓ, m′ₘₐₓ)
 end
 
+Base.parent(w::HWedge) = w.parent
+ℓ(w::HWedge{IT}) where {IT} = w.ℓ
+ℓₘᵢₙ(::HWedge{IT}) where {IT} = lowest_index(IT)
 # The range of m′ is symmetric, so its lower limits are not stored.
+m′ₘₐₓ(w::HWedge{IT}) where {IT} = w.m′ₘₐₓ
 m′ₘᵢₙ(w::HWedge{IT}) where {IT} = -w.m′ₘₐₓ
 mₘₐₓ(w::HWedge{IT}) where {IT} = ℓ(w)
 mₘᵢₙ(w::HWedge{IT}) where {IT} = ℓₘᵢₙ(w)
+ishalfinteger(::HWedge{IT}) where {IT<:Integer} = false
+ishalfinteger(::HWedge{IT}) where {IT<:HalfOddInteger} = true
+Base.eltype(::HWedge{IT, RT, ST}) where {IT, RT, ST} = RT
+Base.eltype(::Type{<:HWedge{IT, RT, ST}}) where {IT, RT, ST} = RT
 
 row_index(w::HWedge{IT}) where {IT} = w.row_index
 row_index(w::HWedge{IT}, m′::IT) where {IT} = row_index(w)[Int(m′ - m′ₘᵢₙ(w)) + 1]
 Nᵣ(w::HWedge{IT}) where {IT} = w.Nᵣ
 maxℓ(w::HWedge{IT}) where {IT} = w.maxℓ
 maxm′ₘₐₓ(w::HWedge{IT}) where {IT} = w.maxm′ₘₐₓ
-minm′ₘᵢₙ(w::HWedge{IT}) where {IT} = -w.maxm′ₘₐₓ
 
 function Base.setproperty!(H::HWedge{IT}, s::Symbol, ℓ::IIT) where {IT, IIT}
     if s === :ℓ
@@ -154,8 +160,8 @@ function Base.setproperty!(H::HWedge{IT}, s::Symbol, ℓ::IIT) where {IT, IIT}
                 "Cannot change ℓ from type $IT to type $IIT; they must be the same."
             ))
         end
-        if ℓ < ℓₘᵢₙ(IT)
-            throw(ArgumentError("Cannot set ℓ=$ℓ less than ℓₘᵢₙ=$(ℓₘᵢₙ(IT))."))
+        if ℓ < lowest_index(IT)
+            throw(ArgumentError("Cannot set ℓ=$ℓ less than ℓₘᵢₙ=$(lowest_index(IT))."))
         end
         if ℓ > maxℓ(H)
             throw(ArgumentError("Cannot set ℓ=$ℓ greater than maxℓ=$(maxℓ(H))."))
@@ -176,7 +182,7 @@ function Base.setproperty!(H::HWedge{HalfOddInteger}, s::Symbol, ℓ::Rational)
     s === :ℓ || throw(ArgumentError(
         "Cannot set property `$s` on HWedge; only `ℓ` is allowed to be changed."
     ))
-    setproperty!(H, :ℓ, calculator_index(HalfOddInteger, ℓ, "ℓ", "wedge"))
+    setproperty!(H, :ℓ, checked_index(HalfOddInteger, ℓ, H, "ℓ"))
 end
 
 # Recompute the row offsets; called once per `H.ℓ = ℓ` assignment, hence once per
@@ -193,7 +199,7 @@ function HWedge_row_index!(row_index, Nᵣ::Int, ℓ::IT, m′ₘₐₓ::IT, m�
 end
 
 function HWedge_size(ℓ::IT, m′ₘₐₓ::IT, m′ₘᵢₙ::IT) where {IT}
-    let ℓₘᵢₙ = ℓₘᵢₙ(IT)
+    let ℓₘᵢₙ = lowest_index(IT)
         (
             (ℓₘᵢₙ - m′ₘᵢₙ) * ((2ℓ + 1) + (m′ₘᵢₙ + ℓₘᵢₙ))
             - (ℓₘᵢₙ - m′ₘₐₓ - 1) * ((2ℓ + 2) - (m′ₘₐₓ + ℓₘᵢₙ))
@@ -203,13 +209,18 @@ end
 
 # A wedge is indexed by three indices, `[iᵣ, m′, m]`, which is what `axes`, `ndims` and
 # `size(w, d)` describe; `length` and `size(w)` describe the flat storage that linear
-# indexing runs over, since not every `(m′, m)` of the axes is stored.
+# indexing runs over, since not every `(m′, m)` of the axes is stored.  Trailing dimensions
+# behave as they do for `AbstractArray`: `axes(w, d)` is `OneTo(1)` for `d > 3`, and so
+# `size(w, d)` is `1`.
 function Base.axes(w::HWedge{IT}) where {IT}
     (1:Nᵣ(w), WignerRange(m′ₘᵢₙ(w):m′ₘₐₓ(w)), WignerRange(mₘᵢₙ(w):mₘₐₓ(w)))
 end
+Base.axes(w::HWedge, d::Integer) = d ≤ ndims(w) ? axes(w)[d] : Base.OneTo(1)
 Base.ndims(::HWedge) = 3
 Base.ndims(::Type{<:HWedge}) = 3
+Base.size(w::HWedge) = size(parent(w))
 Base.size(w::HWedge, d::Integer) = length(axes(w, d))
+Base.length(w::HWedge) = length(parent(w))
 
 function Base.checkbounds(::Type{Bool}, w::HWedge, i::Int)
     i ≥ 1 && i ≤ length(w)
@@ -224,14 +235,20 @@ end
     end
     @inbounds Base.parent(w)[i]
 end
-# As a block container of `blocks.jl` may be, a half-integer wedge may be indexed by
-# `Rational`s, which are converted to `HalfOddInteger`s.
-@propagate_inbounds Base.getindex(w::HWedge{IT}, iᵣ::Int, m′::Rational, m::Rational) where
-    {IT<:HalfOddInteger} = w[iᵣ, HalfOddInteger(m′), HalfOddInteger(m)]
-@propagate_inbounds Base.setindex!(w::HWedge{IT}, v, iᵣ::Int, m′::Rational, m::Rational) where
-    {IT<:HalfOddInteger} = (w[iᵣ, HalfOddInteger(m′), HalfOddInteger(m)] = v)
+# As a block of `blocks.jl` may be, a wedge may be indexed by any `IndexType`, which is
+# converted to the wedge's own index type by `checked_index`, or refused with the reason;
+# see the note on indexing with indices of other types there, which also explains the bound
+# `IT<:IntegerHalf` on the accessors below.
+@propagate_inbounds Base.getindex(
+    w::HWedge{IT}, iᵣ::Int, m′::IndexType, m::IndexType
+) where {IT} = w[iᵣ, checked_index(IT, m′, w, "m′"), checked_index(IT, m, w, "m")]
+@propagate_inbounds Base.setindex!(
+    w::HWedge{IT}, v, iᵣ::Int, m′::IndexType, m::IndexType
+) where {IT} = (w[iᵣ, checked_index(IT, m′, w, "m′"), checked_index(IT, m, w, "m")] = v)
 
-@propagate_inbounds function Base.getindex(w::HWedge{IT}, iᵣ::Int, m′::IT, m::IT) where {IT}
+@propagate_inbounds function Base.getindex(
+    w::HWedge{IT}, iᵣ::Int, m′::IT, m::IT
+) where {IT<:IntegerHalf}
     @boundscheck if !checkbounds(Bool, w, iᵣ, m′, m)
         throw(BoundsError(w, (iᵣ, m′, m)))
     end
@@ -245,7 +262,9 @@ end
     end
     @inbounds Base.parent(w)[i] = v
 end
-@propagate_inbounds function Base.setindex!(w::HWedge{IT}, v, iᵣ::Int, m′::IT, m::IT) where {IT}
+@propagate_inbounds function Base.setindex!(
+    w::HWedge{IT}, v, iᵣ::Int, m′::IT, m::IT
+) where {IT<:IntegerHalf}
     @boundscheck if !checkbounds(Bool, w, iᵣ, m′, m)
         throw(BoundsError(w, (iᵣ, m′, m)))
     end
@@ -253,9 +272,9 @@ end
     @inbounds Base.parent(w)[i] = v
 end
 
-# A wedge is not a matrix, so the generic `==`, which compares `Matrix` views, does not
-# apply: two wedges are equal when they describe the same ℓ, range of m′ and rotors, and
-# agree on every element they hold.
+# A wedge is not a matrix, and its storage holds entries beyond those of the current ℓ, so
+# two wedges are equal when they describe the same ℓ, range of m′ and rotors, and agree on
+# every element they hold.
 function Base.:(==)(w1::HWedge{IT}, w2::HWedge{IT}) where {IT}
     ℓ(w1) == ℓ(w2) && Nᵣ(w1) == Nᵣ(w2) &&
         m′ₘᵢₙ(w1) == m′ₘᵢₙ(w2) && m′ₘₐₓ(w1) == m′ₘₐₓ(w2) &&
@@ -313,8 +332,7 @@ H_{-m,-m′} = σ H_{m,m′} = σ H_{-m′,-m}`` of the ``H`` matrix supply an e
 stored wedge, and a read of such an element should go through it or through
 [`wedge_value`](@ref).  The functions that assemble the blocks of the calculators apply the
 same cases, in the same order, a whole run of elements at a time, and are tested against
-`wedge_value` element by element.  (The dense reference functions apply the integer
-symmetries themselves, in [`recurrence_step6!`](@ref).)
+`wedge_value` element by element.
 
 An `ArgumentError` is thrown if no stored element can supply the requested one, which
 happens only when both ``|m′|`` and ``|m|`` exceed `m′ₘₐₓ`.
@@ -373,12 +391,13 @@ symmetry sign ``σ`` of half-integer indices.  This is the way to read an elemen
 that the wedge does not store, and the only correct one for half-integer indices, where
 transposing the stored elements by hand gets the sign of half of them wrong.
 
-`m′` and `m` must be of the wedge's own kind: integers for an integer wedge, and
-half-odd-integers — [`HalfOddInteger`](@ref)s, or `Rational`s with denominator 2 such as
-`1//2` — for a half-integer one.  An index of the other kind is refused with an
-`ArgumentError` rather than floored onto a neighboring element, and an element that the
-wedge cannot supply is a `BoundsError` or, when both ``|m′|`` and ``|m|`` exceed `m′ₘₐₓ(H)`,
-an `ArgumentError`.
+`m′` and `m` must be of the wedge's own kind: `Int`s for an integer wedge, and
+half-odd-integers — [`HalfOddInteger`](@ref)s, or `Rational{Int}`s with denominator 2 such
+as `1//2` — for a half-integer one.  An index of the other kind is refused with an
+`ArgumentError` rather than floored onto a neighboring element, and so is an integer of
+another type, such as an `Int8`, as it is by every function that takes an index.  An element
+that the wedge cannot supply is a `BoundsError` or, when both ``|m′|`` and ``|m|`` exceed
+`m′ₘₐₓ(H)`, an `ArgumentError`.
 """
 @inline function wedge_value(H::HWedge{IT}, iᵣ::Int, m′::IT, m::IT) where {IT<:IntegerHalf}
     @boundscheck if !(iᵣ > 0 && iᵣ ≤ Nᵣ(H))
@@ -390,14 +409,12 @@ an `ArgumentError`.
     end
     @inbounds σ * parent(H)[wedge_offset(H, a, b, m′ₘᵢₙ(H)) + iᵣ]
 end
-# Indices spelled otherwise, such as `1//2` or an `Int8`, are checked against the wedge's
-# own kind of index and converted to it; see `check_index_kind` in `h_calculator.jl`.
+# Indices spelled otherwise, such as `1//2`, are converted to the wedge's own index type by
+# `checked_index`, which refuses any index that is not of the wedge's kind.
 @propagate_inbounds function wedge_value(
     H::HWedge{IT}, iᵣ::Integer, m′::IndexType, m::IndexType
 ) where {IT}
-    wedge_value(
-        H, Int(iᵣ), calculator_index(IT, m′, "m′", "wedge"), calculator_index(IT, m, "m", "wedge")
-    )
+    wedge_value(H, Int(iᵣ), checked_index(IT, m′, H, "m′"), checked_index(IT, m, H, "m"))
 end
 
 
@@ -410,63 +427,56 @@ end
 
 
 """
-    HAxis{IT, RT} <: AbstractWignerMatrix{IT, RT, FixedSizeVectorDefault{RT}}
+    HAxis{RT}
+    HAxis(RT, Nᵣ, ℓₘₐₓ)
 
-The `HAxis` type represents the ``m'=0``, ``m≥0`` axis of the `Hˡ` matrix used in
-calculation of the Wigner `D` and `d` matrices.
-- `IT` is the index type, `Int` or [`HalfOddInteger`](@ref).  The two axes inside an
-  [`HCalculator`](@ref) are always `Int`, even for half-integer ``ℓ``, because they hold the
-  axis of the integer order ``j = ℓ - 1/2``.
+The ``m'=0``, ``m≥0`` axis ``H^n_{0,m}``, ``m = 0, …, n``, of the `Hˡ` matrix used in
+calculation of the Wigner `D` and `d` matrices, for `Nᵣ` rotors at once.  The order ``n`` is
+always an integer: the two axes inside an [`HCalculator`](@ref) hold successive orders, and
+for half-integer ``ℓ`` they hold the axis of the integer order ``j = ℓ - 1/2``.
 - `RT` is the real type of the elements.
 
-As with [`HWedge`](@ref), the data is stored as a 1-dimensional vector, though it can be
-indexed as if it were a two-dimensional array, with the first dimension indexing `Nᵣ`
-different rotors, and the second dimension indexing `m` — or alternatively as if it were a
-three-dimensional array with the second dimension indexing `m′` and the third indexing `m`.
-Thus, this object can be indexed as `Hˡ₀[iᵣ, m]` or `Hˡ[iᵣ, m′, m]` to get the `Hˡ` value
-for rotor index `iᵣ`, and matrix element `(m′, m)`.  Its `axes` are those of the first form,
-`(1:Nᵣ, m-range)`, while `length` counts the flat storage.
+The storage `parent(h)` is a 1-dimensional vector holding `[H[iᵣ, 0, m] for m ∈ 0:n for
+iᵣ ∈ 1:Nᵣ]`, with the rotors innermost, as in an [`HWedge`](@ref), and the recurrence reads
+and writes it by that linear index, `h[i]`.  It is allocated for orders up to `ℓₘₐₓ`, which
+`maxℓ(h)` reports; `h.ℓ = n` sets the current order, which must be an `Int` in `0:ℓₘₐₓ`,
+and no other field may be changed.
 
 This is scratch space of the recurrence inside an [`HCalculator`](@ref), which holds two of
 them, and is not part of the public interface.
 """
-mutable struct HAxis{IT, RT} <: AbstractWignerMatrix{IT, RT, FixedSizeVectorDefault{RT}}
+mutable struct HAxis{RT}
     const parent::FixedSizeVectorDefault{RT}
     const Nᵣ::Int
-    const maxℓ::IT
-    ℓ::IT
-    function HAxis(::Type{RT}, Nᵣ::Int, ℓₘₐₓ::IT) where {IT, RT<:Real}
-        # An axis starts at ℓₘᵢₙ, and the natural-index accessors check an index only
-        # against the current ℓ before reading the storage under `@inbounds`, so the storage
-        # must hold at least that one order, for at least one rotor.
+    const maxℓ::Int
+    ℓ::Int
+    function HAxis(::Type{RT}, Nᵣ::Int, ℓₘₐₓ::Int) where {RT<:Real}
+        # An axis starts at order 0, whose elements the recurrence writes under `@inbounds`,
+        # so the storage must hold at least that one order, for at least one rotor.
         if Nᵣ < 1
             throw(ArgumentError("Number of rotors Nᵣ=$Nᵣ must be at least 1."))
         end
-        if ℓₘₐₓ < ℓₘᵢₙ(IT)
-            throw(ArgumentError("ℓₘₐₓ=$ℓₘₐₓ must be at least ℓₘᵢₙ=$(ℓₘᵢₙ(IT))."))
+        if ℓₘₐₓ < 0
+            throw(ArgumentError("ℓₘₐₓ=$ℓₘₐₓ must be at least ℓₘᵢₙ=0."))
         end
-        H = FixedSizeVector{RT}(undef, Nᵣ * (Int(ℓₘₐₓ - ℓₘᵢₙ(IT)) + 1))
-        new{IT, RT}(H, Nᵣ, ℓₘₐₓ, ℓₘᵢₙ(IT))
+        H = FixedSizeVector{RT}(undef, Nᵣ * (ℓₘₐₓ + 1))
+        new{RT}(H, Nᵣ, ℓₘₐₓ, 0)
     end
 end
 
-m′ₘₐₓ(w::HAxis{IT}) where {IT} = ℓₘᵢₙ(IT)
-m′ₘᵢₙ(w::HAxis{IT}) where {IT} = ℓₘᵢₙ(IT)
-mₘₐₓ(w::HAxis{IT}) where {IT} = ℓ(w)
-mₘᵢₙ(w::HAxis{IT}) where {IT} = ℓₘᵢₙ(IT)
+Base.parent(w::HAxis) = w.parent
+Nᵣ(w::HAxis) = w.Nᵣ
+maxℓ(w::HAxis) = w.maxℓ
 
-Nᵣ(w::HAxis{IT}) where {IT} = w.Nᵣ
-maxℓ(w::HAxis{IT}) where {IT} = w.maxℓ
-
-function Base.setproperty!(H::HAxis{IT}, s::Symbol, ℓ::IIT) where {IT, IIT}
+function Base.setproperty!(H::HAxis, s::Symbol, ℓ::IIT) where {IIT}
     if s === :ℓ
-        if IIT !== IT
+        if IIT !== Int
             throw(ArgumentError(
-                "Cannot change ℓ from type $IT to type $IIT; they must be the same."
+                "Cannot change ℓ from type $Int to type $IIT; they must be the same."
             ))
         end
-        if ℓ < ℓₘᵢₙ(IT)
-            throw(ArgumentError("Cannot set ℓ=$ℓ less than ℓₘᵢₙ=$(ℓₘᵢₙ(IT))."))
+        if ℓ < 0
+            throw(ArgumentError("Cannot set ℓ=$ℓ less than ℓₘᵢₙ=0."))
         end
         if ℓ > maxℓ(H)
             throw(ArgumentError("Cannot set ℓ=$ℓ greater than maxℓ=$(maxℓ(H))."))
@@ -480,19 +490,9 @@ function Base.setproperty!(H::HAxis{IT}, s::Symbol, ℓ::IIT) where {IT, IIT}
     end
 end
 
-# An axis is indexed `[iᵣ, m]`; as for `HWedge`, `length` and `size(w)` describe the flat
-# storage.
-Base.axes(w::HAxis{IT}) where {IT} = (1:Nᵣ(w), WignerRange(ℓₘᵢₙ(w):ℓ(w)))
-Base.size(w::HAxis, d::Integer) = length(axes(w, d))
-
+# Linear indexing runs over the whole storage, as the recurrence reads and writes it.
 function Base.checkbounds(::Type{Bool}, w::HAxis, i::Int)
-    i ≥ 1 && i ≤ length(w)
-end
-function Base.checkbounds(::Type{Bool}, w::HAxis{IT}, iᵣ::Int, m::IT) where {IT}
-    iᵣ > 0 && iᵣ ≤ Nᵣ(w) && ℓₘᵢₙ(w) ≤ m ≤ ℓ(w)
-end
-function Base.checkbounds(::Type{Bool}, w::HAxis{IT}, iᵣ::Int, m′::IT, m::IT) where {IT}
-    iᵣ > 0 && iᵣ ≤ Nᵣ(w) && m′ == ℓₘᵢₙ(w) && ℓₘᵢₙ(w) ≤ m ≤ ℓ(w)
+    i ≥ 1 && i ≤ length(parent(w))
 end
 
 @propagate_inbounds function Base.getindex(w::HAxis, i::Int)
@@ -501,55 +501,10 @@ end
     end
     @inbounds Base.parent(w)[i]
 end
-@propagate_inbounds function Base.getindex(w::HAxis{IT}, iᵣ::Int, m::IT) where {IT}
-    @boundscheck if !checkbounds(Bool, w, iᵣ, m)
-        throw(BoundsError(w, (iᵣ, m)))
-    end
-    i = iᵣ + Nᵣ(w) * Int(m - ℓₘᵢₙ(w))
-    @inbounds Base.parent(w)[i]
-end
-@propagate_inbounds function Base.getindex(w::HAxis{IT}, iᵣ::Int, m′::IT, m::IT) where {IT}
-    @boundscheck if !checkbounds(Bool, w, iᵣ, m′, m)
-        throw(BoundsError(w, (iᵣ, m′, m)))
-    end
-    i = iᵣ + Nᵣ(w) * Int(m - ℓₘᵢₙ(w))
-    @inbounds Base.parent(w)[i]
-end
 
 @propagate_inbounds function Base.setindex!(w::HAxis, v, i::Int)
     @boundscheck if !checkbounds(Bool, w, i)
         throw(BoundsError(w, i))
     end
     @inbounds Base.parent(w)[i] = v
-end
-@propagate_inbounds function Base.setindex!(w::HAxis{IT}, v, iᵣ::Int, m::IT) where {IT}
-    @boundscheck if !checkbounds(Bool, w, iᵣ, m)
-        throw(BoundsError(w, (iᵣ, m)))
-    end
-    i = iᵣ + Nᵣ(w) * Int(m - ℓₘᵢₙ(w))
-    @inbounds Base.parent(w)[i] = v
-end
-@propagate_inbounds function Base.setindex!(w::HAxis{IT}, v, iᵣ::Int, m′::IT, m::IT) where {IT}
-    @boundscheck if !checkbounds(Bool, w, iᵣ, m′, m)
-        throw(BoundsError(w, (iᵣ, m′, m)))
-    end
-    i = iᵣ + Nᵣ(w) * Int(m - ℓₘᵢₙ(w))
-    @inbounds Base.parent(w)[i] = v
-end
-
-# As for `HWedge`: equal when they describe the same ℓ and rotors, and agree on every
-# element
-function Base.:(==)(w1::HAxis{IT}, w2::HAxis{IT}) where {IT}
-    ℓ(w1) == ℓ(w2) && Nᵣ(w1) == Nᵣ(w2) &&
-        all(w1[iᵣ, m] == w2[iᵣ, m] for m ∈ ℓₘᵢₙ(w1):ℓ(w1) for iᵣ ∈ 1:Nᵣ(w1))
-end
-
-function Base.summary(io::IO, H::HAxis{IT, RT}) where {IT, RT}
-    print(io, "HAxis{$IT, $RT} for ℓ=$(ℓ(H)) with m=$(ℓₘᵢₙ(H)):$(ℓ(H)), and iᵣ=1:$(Nᵣ(H))")
-end
-Base.show(io::IO, H::HAxis) = summary(io, H)
-function Base.show(io::IO, ::MIME"text/plain", H::HAxis{IT, RT}) where {IT, RT}
-    summary(io, H)
-    print(io, "\nStored in ")
-    show(io, MIME("text/plain"), parent(H))
 end

@@ -197,7 +197,3 @@ function set_θ!(::HCalculator, ::Any)
         * "HCalculator's setter is `set_β!`."
     ))
 end
-
-# ASCII aliases, for use where the Greek letters are inconvenient.
-const set_beta! = set_β!
-const set_theta! = set_θ!

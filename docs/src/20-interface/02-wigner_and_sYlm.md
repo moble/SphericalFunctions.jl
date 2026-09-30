@@ -383,13 +383,11 @@ for (ℓ, ₛλₗ) ∈ calculator
     # ₛλₗ[iᵣ, m] for iᵣ ∈ 1:length(θ⃗), m ∈ -ℓ:ℓ
 end
 ```
-An [`sλlmCalculator`](@ref) stores its values as *real* numbers, and
-[`sλlm`](@ref), [`sλlm!`](@ref) and [`sλlm_matrix`](@ref) are the flat
-forms of it.  These names are public but not exported, and each has an
-ASCII alias, `slambdalmCalculator`, `slambdalm`, `slambdalm!` and
-`slambdalm_matrix`.  Everything else is as it is for the complex
-family: the same blocks, the same iteration, the same half-integer
-types, and the same containers, which are generic in the number type.
+An [`sλlmCalculator`](@ref) stores its values as *real* numbers.  The
+name is public but not exported, and has an ASCII alias,
+`slambdalmCalculator`.  Everything else is as it is for the complex
+family: the same blocks, which are generic in the number type, the
+same iteration, and the same half-integer types.
 
 The two flavors share one struct, [`HarmonicCalculator`](@ref),
 exactly as [`DCalculator`](@ref) and [`dCalculator`](@ref) do — and
@@ -428,7 +426,7 @@ a `BigFloat` calculator takes `big(θ)` rather than a bare literal.
 
 ## The underlying ``H`` recursion
 
-All of these calculators are built on a [`HCalculator`](@ref),
+All of these calculators are built on an [`HCalculator`](@ref),
 which computes the real, symmetric ``H`` wedge that the
 [Gumerov–Duraiswami](@cite Gumerov_2015) recursion produces before any
 phases are applied.  It is available directly for the rare cases where
@@ -533,7 +531,6 @@ Pages = ["mode_weights/products.jl"]
 D
 d
 sYlm
-sYlm!
 Ylm
 sYlm_matrix
 DCalculator
@@ -541,9 +538,6 @@ dCalculator
 HCalculator
 sYlmCalculator
 YlmCalculator
-sλlm
-sλlm!
-sλlm_matrix
 sλlmCalculator
 HarmonicCalculator
 recurrence!
@@ -556,15 +550,18 @@ set_θ!
 ## [Containers](@id interface_containers)
 
 The types that `D`, `d`, `sYlm` and [`recurrence!`](@ref) return, for
-either kind of index, and the abstract types they share with the workspaces below.
+either kind of index, and their abstract supertypes:
+[`AbstractBlock`](@ref) for the blocks of one ``ℓ``, and
+[`AbstractDegreeSeries`](@ref SphericalFunctions.AbstractDegreeSeries)
+for the series of blocks indexed by ``ℓ``.
 
 These containers are deliberately **not** `AbstractArray`s.  Half-odd
 indices cannot satisfy that interface at all — `axes` must be integer
 ranges, and `-3//2:3//2` is not one — but the reason they are not
 arrays on the integer path either is a sharper one.  There the natural
 array would be an `OffsetArray`, and an `OffsetArray` with non-trivial
-offsets *accepts* `*` and `mul!` and returns silently wrong answers:
-a product of two blocks comes back as a 1-based `Matrix` of mostly
+offsets *accepts* `*` and `mul!` and returns silently wrong answers: a
+product of two blocks comes back as a 1-based `Matrix` of mostly
 zeros, and an adjoint product comes back holding uninitialized memory.
 
 !!! note "How to get results as `Array`s"
@@ -578,18 +575,16 @@ zeros, and an adjoint product comes back holding uninitialized memory.
 ```@docs
 array_view
 relabel
-AbstractWignerMatrix
+AbstractBlock
 WignerMatrix
-WignerDMatrix
-WignerdMatrix
 WignerMatrixBatch
 DegreeBlock
 DegreeBlockBatch
 SpinMatrix
 SpinMatrixBatch
+SphericalFunctions.AbstractDegreeSeries
 WignerSeries
 HarmonicValues
-SphericalFunctions.AbstractModeContainer
 WignerCalculator
 ```
 
@@ -627,19 +622,20 @@ Base.Matrix
 
 ## Accessors
 
-The same handful of names reports the index ranges of every container
-and calculator in the package.  Each has an ASCII alias, given in its
-docstring, for use where the subscripted Unicode names are
-inconvenient: `ell`, `ell_min`, `ell_max`, `mp_max`, `mp_min`,
-`m_max`, `m_min`, `s_max`, `s_min` and `Nr`.  The keyword arguments of
-the same names are spelled the same way in ASCII, so that `D(R, ℓₘₐₓ;
-mp_max=2)` is `D(R, ℓₘₐₓ; m′ₘₐₓ=2)` and `sYlm(R, ℓₘₐₓ, s; ell_min=0)`
-is `sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ=0)`.  The functions whose names are not
-ASCII have aliases too — `set_beta!`, `set_theta!`, `slambdalm`,
-`slambdalm!`, `slambdalm_matrix` and `slambdalmCalculator` here, and
-those of the [differential operators](@ref
-interface_differential_operators) — which are public but not exported,
-and are mentioned in the docstrings of the functions they name.
+The same handful of names reports the index ranges, the spin weights,
+the sizes, and the floating-point type of every container, calculator,
+and transform in the package.  Those whose names are not ASCII have
+ASCII aliases, given in their docstrings, for use where the
+subscripted Unicode names are inconvenient: `ell`, `ell_min`,
+`ell_max`, `mp_max`, `mp_min`, `m_max`, `m_min`, `s_max`, `s_min`, and
+`Nr`.  The keyword arguments of the same names are spelled the same
+way in ASCII, so that `D(R, ℓₘₐₓ; mp_max=2)` is `D(R, ℓₘₐₓ; m′ₘₐₓ=2)`
+and `sYlm(R, ℓₘₐₓ, s; ell_min=0)` is `sYlm(R, ℓₘₐₓ, s; ℓₘᵢₙ=0)`.  The
+functions whose names are not ASCII have aliases too — `set_beta!`,
+`set_theta!`, and `slambdalmCalculator` here, and those of the
+[differential operators](@ref interface_differential_operators) —
+which are public but not exported, and are mentioned in the
+docstrings of the functions they name.
 
 ```@docs
 SphericalFunctions.ℓ
@@ -652,7 +648,11 @@ SphericalFunctions.mₘᵢₙ
 SphericalFunctions.spins
 SphericalFunctions.sₘₐₓ
 SphericalFunctions.sₘᵢₙ
+SphericalFunctions.spin
 SphericalFunctions.Nᵣ
+SphericalFunctions.floattype
+SphericalFunctions.nmodes
+SphericalFunctions.npixels
 SphericalFunctions.ishalfinteger
 SphericalFunctions.isbatched
 ```

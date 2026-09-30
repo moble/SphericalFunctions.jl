@@ -15,7 +15,9 @@
 # the rounding of each coordinate: the golden-ratio spiral's colatitudes and azimuths are
 # formed from exact integers, the Leja points are chosen in `Float64` whatever `T` is, and
 # the rings are ordered by exact integer keys.  The Driscoll–Healy and McEwen–Wiaux grids
-# further down are defined for integer indices only, and no transform defaults to them.
+# further down are defined for integer indices only, and no transform defaults to them.  The
+# rings of `minimal_rings`, which the "Minimal" transform uses, are also defined for integer
+# indices only, as that transform is.
 
 # Refuse a spin outside the band limit of ℓₘₐₓ; for integer indices this includes every
 # negative ℓₘₐₓ.
@@ -290,6 +292,91 @@ function equatorward_order(n::Int, s)
 end
 
 
+@doc raw"""
+    minimal_rings(s, ℓₘₐₓ, [T=Float64])
+
+The rings on which [`SSHTMinimal`](@ref) samples a function of spin weight `s` band-limited
+at `ℓₘₐₓ`, as a named tuple `(; Nϕ, centers, θ)`.  Its entries are the number of points on
+each ring, the center of each ring's window of frequencies, and the default colatitude of
+each ring.  The rings are listed in order of size (for rings of equal size, the northern
+first), and there are ``ℓₘₐₓ-|s|+1`` of them, holding ``(ℓₘₐₓ+1)^2 - s^2`` points in all —
+exactly the number of modes.
+
+A ring of ``N = 2k+1`` points cannot distinguish frequencies ``m`` that differ by a multiple
+of ``N``; the analysis treats its Fourier coefficients as measuring the ``N`` consecutive
+frequencies ``|m - c| ≤ k`` of its window, centered on ``c``, and removes the aliases of all
+other frequencies from them.  For each ``m`` there must be as many rings whose windows
+include ``m`` as there are modes with that ``m``, namely ``ℓₘₐₓ - \max(|m|, |s|) + 1``.  The
+windows ``|m| ≤ a`` for ``a ∈ |s|:ℓₘₐₓ``, one ring for each, satisfy this, and are what is
+used for ``s = 0``, with the colatitudes of [`sorted_rings`](@ref).
+
+For ``s ≠ 0`` that arrangement is badly conditioned (see [`SSHTMinimal`](@ref)).  Instead,
+pairs of those windows are recentered.  The two windows ``|m| ≤ a`` and ``|m| ≤ a+2d`` cover
+every ``m`` exactly as often as the two windows ``|m + d| ≤ a+d`` and ``|m - d| ≤ a+d`` do,
+and the latter become a ring of ``2(a+d)+1`` points in the northern hemisphere, whose window
+is centered on ``-d\,\mathrm{sign}(s)``, and one of the same size in the southern
+hemisphere, centered on ``+d\,\mathrm{sign}(s)`` — toward the frequencies ``∓s`` that
+dominate near each pole.  The pairs are chosen greedily, first with ``d = |s|`` and ``a`` in
+increasing order, whenever both windows are still available, and then with successively
+smaller ``d`` down to 1, which matters when ``ℓₘₐₓ < 3|s|`` and no window has a partner
+``2|s|`` larger.  The windows left unpaired — the largest ones — remain centered on 0, and
+become the rings nearest the equator.  The default colatitudes are equally spaced, ``θ =
+iπ/(n+1)`` for ``i ∈ 1:n`` with ``n`` the number of rings; the northern rings take the slots
+nearest the north pole, smallest first, and likewise in the south, and the rings centered on
+0 take the remaining slots in the order [`sorted_rings`](@ref) uses.  For ``s = 0`` this
+reproduces [`sorted_rings`](@ref) exactly.  The order is decided by the positions of the
+slots, not by their rounded colatitudes, so the rings are the same for every `T`.
+
+Like [`SSHTMinimal`](@ref), this is defined for integer indices only.
+"""
+@index_methods integer_only (
+    "The \"Minimal\" s-SHT method, whose rings these are, is defined only for integer "
+    * "indices; `sorted_rings` and `sorted_ring_pixels` accept half-integer ones."
+) function minimal_rings(s::IndexType, ℓₘₐₓ::IndexType, ::Type{T}=Float64) where {T}
+    check_band_limit(s, ℓₘₐₓ)
+    # Pair the windows |m| ≤ a and |m| ≤ a+2d, as described above, with the largest shift d
+    # available first
+    rings = Tuple{Int, Int}[]  # (k, center), for a ring of 2k+1 points
+    used = falses(ℓₘₐₓ + 1)
+    for d ∈ abs(s):-1:1, a ∈ abs(s):ℓₘₐₓ
+        b = a + 2d
+        if !used[a+1] && b ≤ ℓₘₐₓ && !used[b+1]
+            used[a+1] = used[b+1] = true
+            push!(rings, (a + d, -sign(s) * d), (a + d, sign(s) * d))  # north, then south
+        end
+    end
+    for a ∈ abs(s):ℓₘₐₓ
+        used[a+1] || push!(rings, (a, 0))
+    end
+    north(center) = center * s < 0  # centered on the side of -s
+    south(center) = center * s > 0
+    sort!(rings, by=((k, c),) -> (k, north(c) ? 0 : south(c) ? 2 : 1))
+
+    # Equally spaced slots: northern rings from the north pole inward, southern rings from
+    # the south pole inward, and the rest in the middle, arranged as `sorted_rings` arranges
+    # its rings (so that for s = 0 the result is identical to it)
+    n = length(rings)
+    slots = collect(LinRange{T}(0, π, n + 2))[begin+1:end-1]
+    northern = [i for (i, (k, c)) ∈ enumerate(rings) if north(c)]
+    southern = [i for (i, (k, c)) ∈ enumerate(rings) if south(c)]
+    middle = [i for (i, (k, c)) ∈ enumerate(rings) if c == 0]
+    θ = Vector{T}(undef, n)
+    for (q, i) ∈ enumerate(northern)  # already in order of size
+        θ[i] = slots[q]
+    end
+    for (q, i) ∈ enumerate(southern)
+        θ[i] = slots[n + 1 - q]
+    end
+    let np = length(northern), middle_slots = slots[np+1:n-np]
+        order = equatorward_order(length(middle_slots), s)
+        for (q, i) ∈ enumerate(middle)  # in order of size, smallest farthest from π/2
+            θ[i] = middle_slots[order[q]]
+        end
+    end
+    (; Nϕ=[2k+1 for (k, c) ∈ rings], centers=[c for (k, c) ∈ rings], θ)
+end
+
+
 """
     sorted_ring_pixels(s, ℓₘₐₓ, [T=Float64])
 
@@ -326,68 +413,6 @@ the corresponding spherical coordinates.
 @index_methods sorted_ring_rotors(
     s::IndexType, ℓₘₐₓ::IndexType, ::Type{T}=Float64
 ) where {T} = from_spherical_coordinates.(sorted_ring_pixels(s, ℓₘₐₓ, T))
-
-"""
-    fejer1_rings(N, [T=Float64])
-
-Values of the colatitude coordinate (``θ``) appropriate for quadrature by Fejér's first
-rule, using weights provided by [`fejer1`](@ref).
-
-Note that the first argument to this function is `N`, rather than the `ℓₘₐₓ` used in some
-other functions.  For spin-weighted spherical harmonics, you may want to use `N=2ℓₘₐₓ+1`.
-The number of rings `N` must be at least 1.
-"""
-function fejer1_rings(N, ::Type{T}=Float64) where T
-    if N < 1
-        throw(ArgumentError("`fejer1_rings` needs at least one ring; got N=$N."))
-    end
-    # Eq. (12) of Reinecke and Seljebotn
-    let π = T(π)
-        [(2n+1)*π/2N for n ∈ 0:N-1]
-    end
-end
-
-"""
-    fejer2_rings(N, [T=Float64])
-
-Values of the colatitude coordinate (``θ``) appropriate for quadrature by Fejér's second
-rule, using weights provided by [`fejer2`](@ref).
-
-Note that the first argument to this function is `N`, rather than the `ℓₘₐₓ` used in some
-other functions.  For spin-weighted spherical harmonics, you may want to use `N=2ℓₘₐₓ+1`.
-The number of rings `N` must be at least 1.
-"""
-function fejer2_rings(N, ::Type{T}=Float64) where T
-    if N < 1
-        throw(ArgumentError("`fejer2_rings` needs at least one ring; got N=$N."))
-    end
-    # Eq. (13) of Reinecke and Seljebotn, with N adjusted to reflect actual number of elements
-    let π = T(π)
-        [n*π/(N+1) for n ∈ 1:N]
-    end
-end
-
-"""
-    clenshaw_curtis_rings(N, [T=Float64])
-
-Values of the colatitude coordinate (``θ``) appropriate for quadrature by the
-Clenshaw-Curtis rule, using weights provided by [`clenshaw_curtis`](@ref).
-
-Note that the first argument to this function is `N`, rather than the `ℓₘₐₓ` used in some
-other functions.  For spin-weighted spherical harmonics, you may want to use `N=2ℓₘₐₓ+1`.
-The number of rings `N` must be at least 2, since the rings include both poles.
-"""
-function clenshaw_curtis_rings(N, ::Type{T}=Float64) where T
-    if N < 2
-        throw(ArgumentError(
-            "`clenshaw_curtis_rings` needs at least two rings, one at each pole; got N=$N."
-        ))
-    end
-    # Eq. (14) of Reinecke and Seljebotn, with N adjusted to reflect actual number of elements
-    let π = T(π)
-        [n*π/(N-1) for n ∈ 0:N-1]
-    end
-end
 
 # The two equiangular grids below are defined for integer indices only, which
 # `@index_methods integer_only` enforces for the spin weight as well as the band limit,

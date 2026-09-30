@@ -39,3 +39,14 @@ makes, is also spelled `Deltaspin`.
 Modules = [SphericalFunctions]
 Pages   = ["mode_weights/operators.jl"]
 ```
+
+```@docs
+SphericalFunctions.L2
+SphericalFunctions.Lplus
+SphericalFunctions.Lminus
+SphericalFunctions.R2
+SphericalFunctions.Rplus
+SphericalFunctions.Rminus
+SphericalFunctions.eth
+SphericalFunctions.ethbar
+```

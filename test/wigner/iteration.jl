@@ -751,8 +751,8 @@ end
 @testitem "A calculator's element type is fixed by its data" begin
     import SphericalFunctions
     import SphericalFunctions: DCalculator, dCalculator, HCalculator,
-        sYlmCalculator, D, d, sYlm, sYlm!, sYlm_matrix, Ylm, Ysize, floattype,
-        set_R!, set_β!, set_θ!, array_view, recurrence!
+        sYlmCalculator, D, d, sYlm, sYlm_matrix, Ylm, floattype, set_R!, set_β!, set_θ!,
+        array_view, recurrence!
     using Quaternionic: Rotor, Quaternion, QuatVec, rotor
     using StaticArrays: SVector
     using Random
@@ -812,22 +812,18 @@ end
     @test floattype(set_θ!(sYlmCalculator(0.25, 3, -1:1), 0.5)) === Float64
     @test floattype(similar(DCalculator(rotorsb[1], 3), rotorsb[2])) === BigFloat
 
-    # `sYlm!` writes into a buffer the caller supplies, and the same rule reaches that
-    # buffer: the working type comes from the rotor (or from the calculator), so `Y` must be
-    # `Complex` of it, and `Y` does not decide what arithmetic is done.
-    Y64 = Vector{ComplexF64}(undef, Ysize(1, 4))
-    Y32 = Vector{ComplexF32}(undef, Ysize(1, 4))
-    @test_throws "must be Complex{Float64}" sYlm!(Y32, rotors[1], 4, 1)
-    @test_throws "must be Complex{Float32}" sYlm!(Y64, rotors32[1], 4, 1)
-    @test_throws "must be Complex{Float64}" sYlm!(
-        Y32, sYlmCalculator(rotors[1], 4, -1:1), rotors[1], 1
+    # A calculator of `Float32` cannot be pointed at a `Float64` rotor, either, and one
+    # pointed at a rotor of its own type gives what `sYlm` gives, in that type
+    @test_throws "works in Float32" set_R!(sYlmCalculator(rotors32[1], 4, -1:1), rotors[1])
+    for (c, Y) ∈ (
+        (set_R!(sYlmCalculator(rotors[2], 4, 1), rotors[1]), sYlm(rotors[1], 4, 1)),
+        (set_R!(sYlmCalculator(rotors32[2], 4, 1), rotors32[1]), sYlm(rotors32[1], 4, 1)),
     )
-    # A calculator of one type cannot be pointed at a rotor of another, either
-    @test_throws "works in Float32" sYlm!(Y32, sYlmCalculator(rotors32[1], 4, -1:1), rotors[1], 1)
-    # Agreement all round is what the function is for
-    @test array_view(sYlm!(Y64, rotors[1], 4, 1)) == array_view(sYlm(rotors[1], 4, 1))
-    @test array_view(sYlm!(Y32, rotors32[1], 4, 1)) == array_view(sYlm(rotors32[1], 4, 1))
-    @test array_view(sYlm!(Y64, sYlmCalculator(rotors[1], 4, -1:1), rotors[1], 1)) == array_view(sYlm(rotors[1], 4, 1))
+        @test all(
+            eltype(array_view(b)) === eltype(array_view(Y)) && b == Y[ℓ]
+            for (ℓ, b) ∈ c if ℓ ∈ keys(Y)
+        )
+    end
 
     # A vector of rotor data must say what it holds, so an abstract or ambiguous element type
     # is refused instead of guessed at, as it would be by re-boxing such a vector into a

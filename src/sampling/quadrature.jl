@@ -1,6 +1,7 @@
-# Each rule below fills a buffer whose length is set by the number of nodes `n`, starting
-# with its first element and under `@inbounds`, so `n` is checked at the top of every
-# method, before anything is allocated.
+# Each rule below has two functions: the colatitudes of its nodes, which are the rings of a
+# transform, and its weights.  The weights fill a buffer whose length is set by the number
+# of nodes `n`, starting with its first element and under `@inbounds`, so `n` is checked at
+# the top of every method, before anything is allocated.
 #
 # The weights of each rule are the inverse discrete Fourier transform of a vector that is
 # known in closed form.  For Fejér's second rule and the Clenshaw–Curtis rule that vector is
@@ -10,6 +11,26 @@
 # that a `Float16` input is transformed in `Float32`; the result is therefore converted to
 # `T`, which costs nothing for the other types, since the conversion then returns the same
 # array.
+
+"""
+    fejer1_rings(N, [T=Float64])
+
+Values of the colatitude coordinate (``θ``) appropriate for quadrature by Fejér's first
+rule, using weights provided by [`fejer1`](@ref).
+
+Note that the first argument to this function is `N`, rather than the `ℓₘₐₓ` used in some
+other functions.  For spin-weighted spherical harmonics, you may want to use `N=2ℓₘₐₓ+1`.
+The number of rings `N` must be at least 1.
+"""
+function fejer1_rings(N, ::Type{T}=Float64) where T
+    if N < 1
+        throw(ArgumentError("`fejer1_rings` needs at least one ring; got N=$N."))
+    end
+    # Eq. (12) of Reinecke and Seljebotn
+    let π = T(π)
+        [(2n+1)*π/2N for n ∈ 0:N-1]
+    end
+end
 
 @doc raw"""
     fejer1(n, [T])
@@ -53,6 +74,26 @@ function fejer1(n, ::Type{T}=Float64) where {T<:AbstractFloat}
 end
 
 
+"""
+    fejer2_rings(N, [T=Float64])
+
+Values of the colatitude coordinate (``θ``) appropriate for quadrature by Fejér's second
+rule, using weights provided by [`fejer2`](@ref).
+
+Note that the first argument to this function is `N`, rather than the `ℓₘₐₓ` used in some
+other functions.  For spin-weighted spherical harmonics, you may want to use `N=2ℓₘₐₓ+1`.
+The number of rings `N` must be at least 1.
+"""
+function fejer2_rings(N, ::Type{T}=Float64) where T
+    if N < 1
+        throw(ArgumentError("`fejer2_rings` needs at least one ring; got N=$N."))
+    end
+    # Eq. (13) of Reinecke and Seljebotn, with N adjusted to reflect actual number of elements
+    let π = T(π)
+        [n*π/(N+1) for n ∈ 1:N]
+    end
+end
+
 @doc raw"""
     fejer2(n, [T])
 
@@ -89,6 +130,28 @@ function fejer2(n, ::Type{T}=Float64) where {T<:AbstractFloat}
     w[2:end]
 end
 
+
+"""
+    clenshaw_curtis_rings(N, [T=Float64])
+
+Values of the colatitude coordinate (``θ``) appropriate for quadrature by the
+Clenshaw-Curtis rule, using weights provided by [`clenshaw_curtis`](@ref).
+
+Note that the first argument to this function is `N`, rather than the `ℓₘₐₓ` used in some
+other functions.  For spin-weighted spherical harmonics, you may want to use `N=2ℓₘₐₓ+1`.
+The number of rings `N` must be at least 2, since the rings include both poles.
+"""
+function clenshaw_curtis_rings(N, ::Type{T}=Float64) where T
+    if N < 2
+        throw(ArgumentError(
+            "`clenshaw_curtis_rings` needs at least two rings, one at each pole; got N=$N."
+        ))
+    end
+    # Eq. (14) of Reinecke and Seljebotn, with N adjusted to reflect actual number of elements
+    let π = T(π)
+        [n*π/(N-1) for n ∈ 0:N-1]
+    end
+end
 
 @doc raw"""
     clenshaw_curtis(n, [T])

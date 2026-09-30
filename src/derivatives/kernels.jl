@@ -27,8 +27,9 @@
 #
 #     a_m = √((ℓ-m+1)(ℓ+m)),        b_m = √((ℓ+m+1)(ℓ-m)),
 #
-# in which the terms beyond ±ℓ vanish with their coefficients.  This is the derivative from
-# the left, and it couples each element to its neighbors in the same column.  Writing
+# in which the terms beyond ±ℓ vanish with their coefficients, which are computed by
+# `ladder_down` and `ladder_up` in `src/mode_weights/operators.jl`.  This is the derivative
+# from the left, and it couples each element to its neighbors in the same column.  Writing
 # instead Ṙ = R q′, with q′ = R̄ Ṙ / ‖R‖² and v′ its vector part, gives the derivative from
 # the right, which couples each element to its neighbors in the same row,
 #
@@ -98,21 +99,6 @@ end
         (-(gx * X + gy * Y + gz * Z) / n², (W * gx + cx) / n², (W * gy + cy) / n², (W * gz + cz) / n²)
     end
 end
-
-# The coefficients a_m = √((ℓ-m+1)(ℓ+m)) and b_m = √((ℓ+m+1)(ℓ-m)) of the ladder operators,
-# in the real type `T`.  Both vanish exactly where the neighbor they multiply lies outside
-# -ℓ:ℓ, and are then given as zero rather than as the square root of zero, whose derivative
-# is infinite: when `T` is a dual number, the zero partials of the constant would be
-# multiplied by that infinity, and give `NaN`.  They are computed in `float_type(T)`, the
-# floating-point type underneath any dual numbers (see `src/derivatives/lifting.jl`), since
-# they are constants.
-@inline function ladder_coefficient(n::Int, ::Type{T}) where {T}
-    let F = float_type(T)
-        n == 0 ? zero(F) : √F(n)
-    end
-end
-@inline ladder_down(ℓ, m, ::Type{T}) where {T} = ladder_coefficient(Int(ℓ - m + 1) * Int(ℓ + m), T)
-@inline ladder_up(ℓ, m, ::Type{T}) where {T} = ladder_coefficient(Int(ℓ + m + 1) * Int(ℓ - m), T)
 
 # The generators of every rotor in `rotors`, in each of `N` directions, written as the
 # columns of `G`: the generator in direction d of rotor iᵣ is `G[3d-2:3d, iᵣ]`.  The
@@ -437,7 +423,7 @@ function D_array_with_stored(
     R, ℓₘₐₓ::IT, m′ₘₐₓ::IT, m′ₘᵢₙ::IT, mₘₐₓ::IT, mₘᵢₙ::IT
 ) where {IT<:IntegerHalf}
     calc = DCalculator(R, ℓₘₐₓ; m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
-    ℓs = ℓₘᵢₙ(IT):ℓₘₐₓ
+    ℓs = lowest_index(IT):ℓₘₐₓ
     blocks = Vector{Matrix{eltype(calc.Wˡ)}}(undef, length(ℓs))
     stored = Vector{Array{eltype(calc.Wˡ), 3}}(undef, length(ℓs))
     for (i, ℓ) ∈ enumerate(ℓs)
@@ -452,7 +438,7 @@ end
 function D_array_pushforward(calc::WignerCalculator{IT}, stored, v) where {IT}
     G = reshape([v[1], v[2], v[3]], 3, 1)
     left = derivatives_from_left(calc)
-    map(enumerate(ℓₘᵢₙ(IT):ℓₘₐₓ(calc))) do (i, ℓ)
+    map(enumerate(lowest_index(IT):ℓₘₐₓ(calc))) do (i, ℓ)
         rows, cols = stored_m′range(calc, ℓ), stored_mrange(calc, ℓ)
         outrows, outcols = m′range(calc, ℓ), mrange(calc, ℓ)
         Aˢ = stored[i]
@@ -470,7 +456,7 @@ end
 function D_array_pullback(calc::WignerCalculator{IT}, stored, Ā) where {IT}
     Ḡ = zeros(real(eltype(first(stored))), 3, 1)
     left = derivatives_from_left(calc)
-    for (i, ℓ) ∈ enumerate(ℓₘᵢₙ(IT):ℓₘₐₓ(calc))
+    for (i, ℓ) ∈ enumerate(lowest_index(IT):ℓₘₐₓ(calc))
         Āᵢ = Ā[i]
         Āᵢ === nothing && continue
         rows, cols = stored_m′range(calc, ℓ), stored_mrange(calc, ℓ)

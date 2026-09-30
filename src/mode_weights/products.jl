@@ -17,22 +17,9 @@
 
 ### Checks shared by the products below.
 #
-# The index *kind* is checked first, always.  `HalfOddInteger` and `Integer` deliberately do
-# not promote — but `≤` between them is well defined and returns an ordinary `Bool`, so a kind
-# mismatch sails straight through an ℓ-range test and surfaces much later as an `InexactError`
-# from `convert`, or as a complaint from inside a loop.
-
-index_kind_name(::Type{<:Integer}) = "integers"
-index_kind_name(::Type{HalfOddInteger}) = "half-odd-integers"
-
-function check_same_kind(::Type{IT}, w::ModeWeights{T, JT}, what) where {IT<:IntegerHalf, T, JT}
-    (IT <: Integer) === (JT <: Integer) && return nothing
-    throw(ArgumentError(
-        "These mode weights are indexed by $(index_kind_name(JT)) — "
-        * "ℓ ∈ $(ℓₘᵢₙ(w)):$(ℓₘₐₓ(w)) — but $what is indexed by $(index_kind_name(IT)); "
-        * "the two must be of one kind."
-    ))
-end
+# The index *kind* is checked first, always, by `check_same_kind` (in
+# `indices/index_methods.jl`), since a mismatch of kinds would otherwise pass the tests of
+# the ranges of ℓ below.
 
 # Containment, not equality: `D` has no `ℓₘᵢₙ` argument and always starts at 0 (or 1/2),
 # while a `ModeWeights` usually starts at `abs(s)`.  Truncation the other way is never
@@ -330,10 +317,10 @@ end
 
 Evaluate the function with mode weights `w` at the rotor (or rotors) whose harmonics `Y`
 holds, ``f(𝐑) = \\sum_{ℓ,m} f_{ℓ,m}\\, {}_sY_{ℓ,m}(𝐑)``.  `Y` is a
-[`HarmonicValues`](@ref) from [`sYlm`](@ref), or an [`sYlmCalculator`](@ref).  The real
-harmonics of [`sλlm`](@ref) and [`sλlmCalculator`](@ref) are refused: they are functions of
-``θ`` alone, without the phase ``i^{2s}`` of ``{}_sY_{ℓ,m}``, so they evaluate the function
-at no rotor.
+[`HarmonicValues`](@ref) from [`sYlm`](@ref), or an [`sYlmCalculator`](@ref).  Real
+harmonics are refused, whether from an [`sλlmCalculator`](@ref) or in a `HarmonicValues` of
+real numbers: they are functions of ``θ`` alone, without the phase ``i^{2s}`` of
+``{}_sY_{ℓ,m}``, so they evaluate the function at no rotor.
 
 The result is a scalar when the harmonics were computed for a single rotor, and a `Vector`
 of one value per rotor otherwise.  Where `Y` holds a *range* of spin weights, the row of
@@ -473,7 +460,7 @@ end
 (w::ModeWeights)(R::NonRotorData) = throw(ArgumentError(not_a_rotor(R)))
 # The number type of the values, that of a product of the harmonics, which are complex numbers
 # of the rotor's floating-point type, with the weights.
-evaluation_type(R, w::ModeWeights) = promote_type(Complex{rotor_basetype(R)}, eltype(w))
+evaluation_type(R, w::ModeWeights) = promote_type(Complex{floattype(R)}, eltype(w))
 
 
 ### `dot` is *not* evaluation.

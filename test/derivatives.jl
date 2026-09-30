@@ -324,7 +324,7 @@ end
 
 @testitem "Derivatives: ReverseDiff's angles give one calculator type" setup=[DerivativeTools] begin
     import ReverseDiff
-    import SphericalFunctions: rotor_basetype, set_θ!
+    import SphericalFunctions: floattype, set_θ!
     # ReverseDiff records in the type of each of its numbers where the number came from, but
     # a calculator stores its rotor data in one type, that of an element of a tracked
     # `Vector`.  So an angle that is an input of the tape and one computed on it, each alone
@@ -332,8 +332,8 @@ end
     # them accepts any other through `set_θ!`.
     x = ReverseDiff.track([0.3, 1.1])
     types = (
-        rotor_basetype(x[1]), rotor_basetype(2x[1]), rotor_basetype([x[1]]),
-        rotor_basetype([2x[1]])
+        floattype(x[1]), floattype(2x[1]), floattype([x[1]]), floattype([2x[1]]),
+        floattype(typeof(2x[1])), floattype(sYlmCalculator(2x[1], 4, -1))
     )
     @test all(==(first(types)), types)
     total(c) = sum(Y -> sum(z -> real(z) + 2imag(z), array_view(Y)), values(c))

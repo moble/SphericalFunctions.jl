@@ -164,7 +164,7 @@ end
                 # phase powers `Z₊`, `Z₋`) alone — those are `set_rotors!`'s job, and its
                 # docstring promises they survive — so they are not asserted NaN here.
                 fill!(calc, NaN)
-                @test all(isnan, parent(calc.H.Hˡ))
+                @test all(isnan, parent(calc.engine.H.Hˡ))
                 @test all(x -> isnan(real(x)), calc.Wˡ)
                 for ℓ in schedule(ℓₘₐₓ)
                     @test check_block(recurrence!(calc, ℓ), recurrence!(calcF, ℓ), atol)
@@ -443,7 +443,7 @@ end
     import Random
 
     # Measure inside functions so that the calculator's type is concrete at the call site.
-    alloc_H(calc, ℓ) = @allocated recurrence!(calc.H, ℓ)
+    alloc_H(calc, ℓ) = @allocated recurrence!(calc.engine.H, ℓ)
     alloc_D(calc, ℓ) = @allocated recurrence!(calc, ℓ)
     alloc_set(calc, R, ℓ) = @allocated recurrence!(calc, R, ℓ)
 
@@ -459,12 +459,12 @@ end
     alloc_H(calc, ℓ)
     aH = alloc_H(calc, ℓ)
     @test aH == 0
-    recurrence!(calc.H, ℓ - 1)  # backwards: restarts from 0 and runs to ℓ-1
+    recurrence!(calc.engine.H, ℓ - 1)  # backwards: restarts from 0 and runs to ℓ-1
     aH_step = alloc_H(calc, ℓ)
     @test aH_step == 0
     # A full restart from ℓ = 0 up to ℓ
-    recurrence!(calc.H, ℓ)
-    alloc_restart(calc, ℓ) = @allocated (recurrence!(calc.H, 0); recurrence!(calc.H, ℓ))
+    recurrence!(calc.engine.H, ℓ)
+    alloc_restart(calc, ℓ) = @allocated (recurrence!(calc.engine.H, 0); recurrence!(calc.engine.H, ℓ))
     alloc_restart(calc, ℓ)
     aH_restart = alloc_restart(calc, ℓ)
     @test aH_restart == 0
@@ -550,7 +550,7 @@ end
         for f in (SphericalFunctions.ℓₘₐₓ, SphericalFunctions.Nᵣ, SphericalFunctions.ℓₘᵢₙ)
             @test f(c) == f(calc)
         end
-        H, Hc = calc isa HCalculator ? (calc, c) : (calc.H, c.H)
+        H, Hc = calc isa HCalculator ? (calc, c) : (calc.engine.H, c.engine.H)
         @test SphericalFunctions.m′ₘₐₓ(Hc) == SphericalFunctions.m′ₘₐₓ(H)
         @test parent(Hc.Hˡ) !== parent(H.Hˡ)
         @test Hc.Hˡ.row_index !== H.Hˡ.row_index
@@ -560,13 +560,13 @@ end
         @test Hc.eⁱᵝ == H.eⁱᵝ
         @test Hc.cβ½ == H.cβ½ && Hc.sβ½ == H.sβ½
         if !(calc isa HCalculator)
-            @test c.Z₊ !== calc.Z₊
-            @test c.Z₋ !== calc.Z₋
+            @test c.engine.Z₊ !== calc.engine.Z₊
+            @test c.engine.Z₋ !== calc.engine.Z₋
             # A calculator built from angles never fills its phase buffers, which then hold
             # whatever the allocation held, NaN included, so the copies are compared with
             # `isequal`, under which a NaN equals itself
-            @test isequal(c.Z₊, calc.Z₊)
-            @test isequal(c.Z₋, calc.Z₋)
+            @test isequal(c.engine.Z₊, calc.engine.Z₊)
+            @test isequal(c.engine.Z₋, calc.engine.Z₋)
             # `similar` copies no results: `ℓ` reports that nothing has been computed
             @test SphericalFunctions.ℓ(c) == SphericalFunctions.ℓₘᵢₙ(c) - 1
             # ... and stepping it gives what the original gives, bit for bit
@@ -644,18 +644,18 @@ end
     @test fetch.(tasksH) == serialH
 end
 
-@testitem "Offset rotor and output arrays are refused before any write" begin
+@testitem "Offset rotor arrays and storage are refused before any write" begin
     import SphericalFunctions: DCalculator, dCalculator, HCalculator, sYlmCalculator,
-        sλlmCalculator, sYlm, sYlm!, sλlm!, sYlm_matrix, set_R!, set_β!, set_θ!, array_view,
+        sλlmCalculator, sYlm, sYlm_matrix, set_R!, set_β!, set_θ!, recurrence!,
         WignerMatrix, WignerMatrixBatch, DegreeBlock, DegreeBlockBatch, SpinMatrix,
         SpinMatrixBatch, WignerSeries, relabel
     import Quaternionic: from_euler_angles
     import OffsetArrays: OffsetVector, OffsetArray
 
-    # Each of these writes the calculator's 1-based buffers (or the caller's output) at the
-    # input's own indices, under `@inbounds`, so that an offset array would write outside
-    # them.  Each must therefore be refused, with the ArgumentError from
-    # `Base.require_one_based_indexing`, before anything is written.
+    # Each of these writes the calculator's 1-based buffers at the input's own indices,
+    # under `@inbounds`, so that an offset array would write outside them.  Each must
+    # therefore be refused, with the ArgumentError from `Base.require_one_based_indexing`,
+    # before anything is written.
     offset = "offset arrays are not supported"
     R = [from_euler_angles(0.1i, 0.2i, 0.3i) for i ∈ 1:2]
     β = [0.3, 0.4]
@@ -679,14 +679,7 @@ end
     # A refused reset leaves the calculator as it was
     c = DCalculator(R, 2)
     @test_throws offset set_R!(c, Ro)
-    @test c.H.eⁱᵝ == DCalculator(R, 2).H.eⁱᵝ
-
-    # Output arrays, for one spin weight and for a range of them
-    Y = OffsetVector(zeros(ComplexF64, 8), 0:7)
-    @test_throws offset sYlm!(Y, R[1], 2, 1)
-    @test_throws offset sYlm!(Y, sYlmCalculator(R[1], 2, 1), R[1])
-    @test_throws offset sYlm!(OffsetArray(zeros(ComplexF64, 3, 9), 0:2, 0:8), R[1], 2, -1:1)
-    @test_throws offset sλlm!(OffsetVector(zeros(8), 0:7), sλlmCalculator(0.3, 2, 1), 0.3)
+    @test c.engine.H.eⁱᵝ == DCalculator(R, 2).engine.H.eⁱᵝ
 
     # The block containers and `WignerSeries`, which index their storage as 1-based, refuse
     # an offset parent however they are built: directly, by `relabel`, or as a series
@@ -703,5 +696,6 @@ end
     @test WignerSeries(blocks, 0, 2)[2] === blocks[3]
 
     # The ordinary 1-based forms are unaffected
-    @test array_view(sYlm!(zeros(ComplexF64, 8), R[1], 2, 1)) == array_view(sYlm(R[1], 2, 1))
+    cY = set_R!(sYlmCalculator(reverse(R), 2, 1), R)
+    @test collect(recurrence!(cY, 2)) == collect(recurrence!(sYlmCalculator(R, 2, 1), 2))
 end

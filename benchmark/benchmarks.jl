@@ -93,9 +93,11 @@ let R = randn(rng, Rotor{Float64}), s = -2
     for ℓₘₐₓ in (8, 64)
         SUITE["sYlm"]["sYlm", ℓₘₐₓ] = @benchmarkable sYlm($R, $ℓₘₐₓ, $s)
         calc = sYlmCalculator(R, ℓₘₐₓ, s)
-        Y = Vector{ComplexF64}(undef, Ysize(abs(s), ℓₘₐₓ))
-        SUITE["sYlm"]["sYlm! reusing a calculator", ℓₘₐₓ] =
-            @benchmarkable sYlm!($Y, $calc, $R, $s)
+        SUITE["sYlm"]["sYlmCalculator reused with set_R!", ℓₘₐₓ] = @benchmarkable begin
+            set_R!($calc, $R)
+            for (ℓ, Yˡ) in $calc
+            end
+        end
     end
 end
 for ℓₘₐₓ in (8, 32)
