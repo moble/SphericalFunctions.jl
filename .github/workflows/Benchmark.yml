@@ -1,31 +1,36 @@
-name: Run benchmarks
+name: benchmarks
 
-# Disable this action for now; also see `if` below
+# The regression benchmarks in `benchmark/benchmarks.jl`, run on demand.  They use the
+# benchmark project of the workspace, exactly as the command at the top of that file does,
+# and the results appear in the summary of the run.  Timings on shared runners are noisy, so
+# they are useful for spotting large changes, such as a slowdown by an order of magnitude, and
+# not for small ones.
+
 on:
-  push:
-    branches-ignore:
-      - '**'
-# on: [pull_request]
+  workflow_dispatch:
 
+permissions:
+  actions: write  # needed by julia-actions/cache to delete old caches it has created
+  contents: read
 
 jobs:
-  Benchmark:
+  benchmarks:
+    name: Benchmarks
     runs-on: ubuntu-latest
-    if: false # always skip job
-    # if: >-
-    #     !contains(github.event.head_commit.message, '[skip ci]')
-    #     && !contains(github.event.head_commit.message, '[skip benchmark]')
-    #     && !contains(github.event.head_commit.message, '[skip benchmarks]')
     steps:
       - uses: actions/checkout@v7
-      - uses: julia-actions/setup-julia@latest
+      - uses: julia-actions/setup-julia@v2
         with:
-          version: 1.6
-      - name: Install dependencies
-        run: julia -e 'using Pkg; pkg"add PkgBenchmark BenchmarkCI"'
-      - name: Run benchmarks
-        run: julia -e 'using BenchmarkCI; BenchmarkCI.judge(baseline="origin/main"); BenchmarkCI.displayjudgement()'
-      - name: Post results
-        run: julia -e 'using BenchmarkCI; BenchmarkCI.postjudge()'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          version: '1'
+          show-versioninfo: true
+      - uses: julia-actions/cache@v3
+      - name: Install the benchmark environment
+        run: julia --project=benchmark --color=yes -e 'using Pkg; Pkg.instantiate()'
+      - name: Run the benchmarks
+        run: |
+          julia --project=benchmark --color=yes -e '
+            using PkgBenchmark
+            results = benchmarkpkg("SphericalFunctions")
+            export_markdown("benchmark/results.md", results)'
+      - name: Report the results
+        run: cat benchmark/results.md >> "$GITHUB_STEP_SUMMARY"

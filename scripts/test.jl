@@ -1,8 +1,8 @@
 # Call this from the top-level directory as
 #   julia -t auto scripts/test.jl
-# Optionally, specify the name of a top-level test group — e.g., ssht —
-# at the end of this command to only run the tests in that group.  Or add
-# --help at the end to see the possibilities.
+# or to run with coverage as
+#   julia -t auto scripts/test.jl --coverage
+# See docs/src/60-development/01-index.md for more information.
 
 import Dates
 println("Running tests starting at ", Dates.format(Dates.now(), "HH:MM:SS"), ".")
@@ -11,20 +11,32 @@ using Pkg
 cd((@__DIR__) * "/..")
 Pkg.activate(".")
 
-using LinearAlgebra
-using Base.Threads
-LinearAlgebra.BLAS.set_num_threads(nthreads())
+# Check for the `--coverage` flag
+coverage = any(ARGS .== "--coverage")
 
-try
-    Δt = @elapsed Pkg.test("SphericalFunctions"; coverage=true, test_args=ARGS)
+# A failure is remembered rather than rethrown, so that coverage is still written; the exit
+# status at the end reports it, so that `./runtests` and anything else calling this script
+# can tell that the tests failed.
+tests_passed = try
+    Δt = @elapsed Pkg.test("SphericalFunctions"; coverage, test_args=ARGS)
     println("Running tests took $Δt seconds.")
+    true
 catch e
-    println("Tests failed; proceeding to coverage")
+    if coverage
+        println("Tests failed; proceeding to coverage")
+    else
+        println("Tests failed.")
+    end
+    false
 end
 
-Pkg.activate()  # Activate Julia's base (home) directory
-using Coverage
-cd((@__DIR__) * "/..")
-coverage = Coverage.process_folder("src")
-Coverage.writefile("lcov.info", coverage)
-Coverage.clean_folder(".")
+if coverage
+    cd((@__DIR__) * "/..")
+    Pkg.activate("test")  # The test environment, which lists `Coverage`
+    using Coverage
+    coverage = Coverage.process_folder("src")
+    Coverage.writefile("lcov.info", coverage)
+    Coverage.clean_folder(".")
+end
+
+tests_passed || exit(1)

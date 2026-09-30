@@ -1,0 +1,21 @@
+# Where test items are looked for.  Scanning every `.jl` file is the
+# right default for most packages, but not this one: the checkout also
+# holds `notes/` and `docs/src/local_notes`, symbolic links to a
+# separate repository of notes, whose `.jl` files, if any, are not part
+# of the suite.  Listing the trees that may hold test items is clearer
+# than excluding the ones that do not.
+#
+#   src/**                    for test items that live next to the code
+#                             they test
+#   test/**                   the bulk of the suite
+#   docs/literate_input/**    the literature-comparison pages, which
+#                             are Literate scripts containing test
+#                             items; the pages generated from them in
+#                             `docs/src/**` are Markdown, which is
+#                             never searched
+include = ["src/**", "test/**", "docs/literate_input/**"]
+
+# `test/.CondaPkg` is the Conda environment that the `:python` test items
+# build on first use.  It is git-ignored and holds thousands of files that
+# are not part of the suite, none of which should be searched.
+exclude = ["test/.CondaPkg/**"]

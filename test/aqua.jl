@@ -1,8 +1,8 @@
 @testitem "Aqua quality assurance tests" begin
     using Aqua: Aqua
-    Aqua.test_all(
-        SphericalFunctions;
-        ambiguities=false,
-        #stale_deps=(;ignore=[:Requires])  # Need Requires on Julia <1.9; not loaded on ≥1.9
-    )
+    # `ambiguities` is on: the package defines methods on `Base.in`, `Base.:*` and friends
+    # for its own types, which is exactly where ambiguities creep in.  One did — `in(::Real,
+    # ::WignerRange)` against `Base`'s `in(::Integer, ::AbstractUnitRange{<:Integer})` — and
+    # went unnoticed while this was `false`.
+    Aqua.test_all(SphericalFunctions)
 end

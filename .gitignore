@@ -22,18 +22,31 @@ docs/site/
 # It records a fixed state of all packages used by the project. As such, it should not be
 # committed for packages, but should be committed for applications that require a static
 # environment.
-Manifest.toml
+Manifest*.toml
+
+# Preferences for a single checkout, such as turning off the precompile workload
+LocalPreferences.toml
 
 # Recommended by https://github.com/tkf/BenchmarkCI.jl
 .benchmarkci
-.benchmarkci/*.json
 benchmark/*.json
 benchmark/results.md
 
-# Ignore my notes and settings
+# Ignore my notes and settings (symlinks into private Notes repo)
 /notes
+docs/src/local_notes
 .vscode
-
+conventions.slides.json
 
 rotate.jl
 
+# Files left behind by macOS and by Python, and the environments that CondaPkg creates
+.DS_Store
+__pycache__/
+.CondaPkg/
+
+# Pages generated during the documentation build from the Literate scripts in
+# docs/literate_input (see docs/make_literate.jl).  These directories hold nothing but
+# generated files, so a hand-written page must not be placed in either of them.
+docs/src/30-conventions/10-comparisons/
+docs/src/30-conventions/20-calculations/

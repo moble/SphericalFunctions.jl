@@ -6,6 +6,7 @@ authors:
     orcid: https://orcid.org/0000-0002-5075-5116
 title: "SphericalFunctions.jl"
 license: MIT
-version: v2.1.0
+repository-code: https://github.com/moble/SphericalFunctions.jl
+version: v2.2.9
 doi: 10.5281/zenodo.5514038
-date-released: 2023-01-31
+date-released: 2026-04-28

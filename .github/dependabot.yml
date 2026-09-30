@@ -5,3 +5,9 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+  - package-ecosystem: "julia"
+    # The top-level Project.toml lists the test, docs and benchmark projects as members of its
+    # workspace, so this one directory covers all four projects.
+    directory: "/"
+    schedule:
+      interval: "weekly"
