@@ -12,10 +12,10 @@ the table under "What replaces what" maps each old function to its
 successor.  The most significant additions are a complete account of
 the package's conventions, derived from first principles and compared
 in detail with thirty other sources from Euler (1767) to current
-software; support for half-integer indices throughout the package; and
-the `ModeWeights` container, which can be evaluated, rotated, and
-acted on by the differential operators directly.  The entries below
-are relative to version 2.2.9.
+references and software; support for half-integer indices throughout
+the package; and the `ModeWeights` container, which can be evaluated,
+rotated, and acted on by the differential operators directly.  The
+entries below are relative to version 2.2.9.
 
 ### Breaking
 
@@ -408,6 +408,21 @@ started at ``ℓ = |s|``.)  A calculator of integer indices starts at
 
 ### Fixed
 
+* ``𝔇`` follows the convention of the standard references, rather
+  than its complex conjugate.  (Issue #42; see "Breaking".)
+* The blocks of ``𝔇`` and ``d`` are indexed as `[m′, m]`, as
+  documented, where version 2's `D_iterator` and `d_iterator` returned
+  their transposes.  (Issues #41 and #48.)
+* Derivatives of ``𝔇`` and of the harmonics are as accurate as their
+  values at ``β = 0`` and ``β = π``, where ForwardDiff used to give
+  `NaN` for every element, and so are those of ``d`` with respect to
+  its angle.  Only ``d`` of
+  a rotor that lies exactly at a pole still gives `NaN`, in the
+  elements with ``|m′ - m| = 1`` at ``β = 0`` or ``|m′ + m| = 1`` at
+  ``β = π``, which have no derivative with respect to the rotor there.
+  (Issue #67.)
+* `map2salm` no longer raises a `BoundsError` under
+  `--check-bounds=yes`.  (Issue #59.)
 * The size functions throw for an inverted range of ``ℓ``, rather than
   returning a negative number.  (Issue #52.)
 * `complex_powers!` works for wrapper element types such as
@@ -427,3 +442,7 @@ started at ``ℓ = |s|``.)  A calculator of integer indices starts at
   badly conditioned at larger ``ℓₘₐₓ``, for every spin weight, and the
   constructor now warns when a round trip would lose more than half
   the digits.
+
+The additions described above also resolve issues #29 (half-integer
+indices), #32 (calculators that compute one ``ℓ`` at a time), and #57
+(spinor phases).
