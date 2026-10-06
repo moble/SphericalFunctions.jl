@@ -129,6 +129,21 @@
     @test_throws "exceeds ℓₘₐₓ" SSHTMinimal(3, 2; θ=Float64[])
     @test_throws "exceeds ℓₘₐₓ" SSHTRS(3, 2)
 
+    # "Minimal" refuses two rings at one colatitude, which would make its system singular,
+    # including a zero of either sign and colatitudes given as integers
+    for (s, θ) ∈ ((0, [1.0, 1.0]), (1, [0.5, 2.0, 0.5]), (-2, [0.0, 1.0, -0.0]), (0, [2, 1, 2]))
+        ℓₘₐₓ = abs(s) + length(θ) - 1
+        @test_throws ArgumentError SSHTMinimal(s, ℓₘₐₓ; θ)
+        @test_throws "θ must be distinct" SSHT(s, ℓₘₐₓ; method="Minimal", θ)
+    end
+    # ... and explains any other layout that makes it singular, such as a ring of more than
+    # one point at a pole
+    for (s, θ) ∈ ((0, [2.4, 0.0, 1.6]), (1, [0.0, 1.6, 2.4]), (-2, [0.8, 1.6, 0.0]))
+        ℓₘₐₓ = abs(s) + length(θ) - 1
+        @test_throws ArgumentError SSHTMinimal(s, ℓₘₐₓ; θ)
+        @test_throws "their system is singular" SSHT(s, ℓₘₐₓ; method="Minimal", θ)
+    end
+
     # "Matrix" warns when the dense matrix gets large (Ysize² > 65⁴, i.e. ℓₘₐₓ ≥ 65 for s =
     # 0).  The warning comes before the count of the points is checked, so a single point
     # shows it without the cost of building the transform.

@@ -32,9 +32,9 @@ The parameters of the type `SSHTMinimal{T, Inplace, P, BP}` are as follows:
 The function is sampled on ``ℓₘₐₓ-|s|+1`` "rings" at constant colatitude, each holding an odd
 number of equally spaced points starting at ``ϕ = 0``.  Their sizes, and the default
 colatitudes, are given by [`minimal_rings`](@ref); the `θ` keyword argument may give other
-colatitudes, one for each ring in the order listed there, which is also the order of the
-sample points, given in the type `T` that the transform works in, or as integers.  See
-[`pixels`](@ref) and [`rotors`](@ref) for the sample points themselves.
+colatitudes, which must be distinct, one for each ring in the order listed there, which is
+also the order of the sample points, given in the type `T` that the transform works in, or
+as integers.  See [`pixels`](@ref) and [`rotors`](@ref) for the sample points themselves.
 
 For ``s = 0`` the rings have ``1, 3, …, 2ℓₘₐₓ+1`` points.  For any other spin weight that
 choice is badly conditioned: near the north pole a function of spin weight ``s`` is
@@ -195,6 +195,17 @@ end
     end
     check_sample_reals(TT, θ, "θ")
     θ = Vector{TT}(θ)
+    # Two rings at one colatitude make the system for the modes they share singular.  The
+    # check of each LU decomposition below would catch that too, but not name the cause.
+    let θsorted = sort(θ)
+        i = findfirst(i -> θsorted[i] == θsorted[i+1], 1:nrings-1)
+        if i !== nothing
+            throw(ArgumentError(
+                "The colatitudes θ must be distinct, but θ = $(θsorted[i])\n"
+                * "appears more than once.  Two rings at one colatitude are degenerate."
+            ))
+        end
+    end
     Nϕ, centers = rings.Nϕ, rings.centers
 
     ring_ranges = let stops = cumsum(Nϕ)
@@ -241,7 +252,16 @@ end
                 M[e, u] = Λ[i, r]
             end
         end
-        MinimalBlock{TT}(modes, coefficients, LinearAlgebra.lu(M))
+        factorization = LinearAlgebra.lu(M; check=false)
+        if !LinearAlgebra.issuccess(factorization)
+            throw(ArgumentError(
+                "The colatitudes θ = $θ do not determine the modes with m ∈ $group:\n"
+                * "their system is singular.  This happens, for example, when a ring of more "
+                * "than one point lies at a pole, where all of its points coincide.  The "
+                * "colatitudes given by `minimal_rings` avoid this."
+            ))
+        end
+        MinimalBlock{TT}(modes, coefficients, factorization)
     end
     rhs = Vector{Complex{TT}}(undef, maximum(b -> length(b.modes), blocks))
 
