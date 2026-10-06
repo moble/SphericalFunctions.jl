@@ -1004,17 +1004,24 @@ end
 @testitem "sYlmCalculator: each block element is the wedge element `wedge_value` reads" begin
     import SphericalFunctions
     import SphericalFunctions: sYlmCalculator, sλlmCalculator, recurrence!, wedge_value,
-        zpower, sYlm_coefficient, spins, Nᵣ, ℓₘᵢₙ, ℓₘₐₓ, floattype, number_type
+        power_column, sYlm_coefficient, spins, Nᵣ, ℓₘᵢₙ, ℓₘₐₓ, floattype, number_type,
+        block_array, nspins
     using Quaternionic: Rotor
     import Random
 
     # As for the Wigner calculators, the elements H[m, -s] are read in runs along the rows
     # of the wedge, and in one of two orders according to the numbers of rotors and of spin
-    # weights.  Each value is compared here, bit for bit, with the one built from
-    # `wedge_value` and the same power tables, and each row below ℓ < |s| is zero.
+    # weights, and to whether the phases are computed; the batches of 65 with several spin
+    # weights take the order of storage.  Each value is compared here, bit for bit, with the
+    # one built from `wedge_value` and the same power tables, and each row below ℓ < |s| is
+    # zero.
     rng = Random.Xoshiro(20260924)
     R⃗ = randn(rng, Rotor{Float64}, 4)
     θ⃗ = [0.0, 0.7, 2.2, π]
+    R⃗₆₅ = randn(rng, Rotor{Float64}, 65)
+    θ⃗₆₅ = [θ⃗; rand(rng, 61) .* π]
+    # The power zᵏ of rotor iᵣ in a power table, for k of either sign
+    zpower(Z, iᵣ, k) = Z[iᵣ, power_column(Z, k)]
     function expected(calc, H, iᵣ, s, m, ℓ)
         NT, RT = number_type(calc), floattype(calc)
         abs(s) > ℓ && return zero(NT)
@@ -1031,14 +1038,16 @@ end
         for s ∈ spinsets, (Ctor, data) ∈ (
             (sYlmCalculator, R⃗), (sYlmCalculator, R⃗[1]), (sYlmCalculator, θ⃗),
             (sλlmCalculator, θ⃗), (sλlmCalculator, θ⃗[2]),
+            (sYlmCalculator, R⃗₆₅), (sYlmCalculator, θ⃗₆₅), (sλlmCalculator, θ⃗₆₅),
         )
             calc = Ctor(data, ℓmax, s)
             for ℓ ∈ ℓₘᵢₙ(calc):ℓₘₐₓ(calc)
                 recurrence!(calc, ℓ)
                 H = calc.engine.H.Hˡ
+                Y = block_array(calc, calc.Yˡ, ℓ, Base.OneTo(nspins(calc.s)))  # [iᵣ, s, m]
                 good = true
                 for (i, sᵢ) ∈ enumerate(spins(calc)), m ∈ -ℓ:ℓ, iᵣ ∈ 1:Nᵣ(calc)
-                    value = calc.Yˡ[iᵣ, i, Int(m + ℓ) + 1]
+                    value = Y[iᵣ, i, Int(m + ℓ) + 1]
                     good &= isequal(value, expected(calc, H, iᵣ, sᵢ, m, ℓ))
                     count[] += 1
                 end
@@ -1047,6 +1056,48 @@ end
         end
     end
     @test count[] > 20_000
+end
+
+
+@testitem "compute_block! writes a harmonic block into any destination" begin
+    import SphericalFunctions
+    import SphericalFunctions: sYlmCalculator, sλlmCalculator, recurrence!, compute_block!,
+        block_array, nspins, ℓₘᵢₙ, ℓₘₐₓ
+    using Quaternionic: Rotor
+    import Random
+
+    # `compute_block!(calc, ℓ, is, A, o)` writes the spin rows `is` of the block of ℓ
+    # densely, as [iᵣ, s ∈ is, m], into `A` after its first `o` entries, which is how `sYlm`
+    # and `sYlm_matrix` fill their results.  The rows written are bit for bit those of the
+    # calculator's own block, whether all of them or one, nothing outside them is touched,
+    # and the calculator, whose own buffer was not written, no longer claims to hold a
+    # block.
+    rng = Random.Xoshiro(20261001)
+    R⃗ = randn(rng, Rotor{Float64}, 3)
+    θ⃗ = [0.0, 0.7, π]
+    for (ℓmax, spinsets) ∈ ((6, (-2, -2:2)), (11//2, (1//2, -3//2:3//2))), s ∈ spinsets,
+            (Ctor, data) ∈ (
+                (sYlmCalculator, R⃗), (sYlmCalculator, R⃗[1]), (sλlmCalculator, θ⃗),
+                (sλlmCalculator, θ⃗[2]),
+            )
+        calc = Ctor(data, ℓmax, s)
+        NT = eltype(calc.Yˡ)
+        good = true
+        for ℓ ∈ ℓₘᵢₙ(calc):ℓₘₐₓ(calc)
+            recurrence!(calc, ℓ)
+            full = copy(block_array(calc, calc.Yˡ, ℓ, Base.OneTo(nspins(calc.s))))
+            for is ∈ (Base.OneTo(nspins(calc.s)), nspins(calc.s):nspins(calc.s), 1:1)
+                rows = vec(full[:, is, :])
+                n = length(rows)
+                A = fill(NT(NaN), n + 8)
+                compute_block!(calc, ℓ, is, A, 3)
+                good &= isequal(A[4:(3 + n)], rows)
+                good &= all(isnan, A[1:3]) && all(isnan, A[(4 + n):end])
+                good &= SphericalFunctions.ℓ(calc) < ℓₘᵢₙ(calc)
+            end
+        end
+        @test good
+    end
 end
 
 

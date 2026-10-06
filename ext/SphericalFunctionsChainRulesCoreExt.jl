@@ -11,14 +11,16 @@ module SphericalFunctionsChainRulesCoreExt
 # type.  The cotangent returned is a `Quaternion`, not a `Rotor`: a cotangent is not a unit
 # quaternion, and a `Rotor` would be taken to be one by any method that reached it.
 
-import SphericalFunctions: D_array, D_series, sYlm_array, sYlm_matrix_array, D_array_with_stored,
-    D_array_pushforward, D_array_pullback, harmonic_array_pushforward,
-    harmonic_array_pullback!, derivatives_from_left, rotor_generator, rotor_generators,
-    rotor_cotangent, rotor_cotangents, RotorLike, IntegerHalf
+import SphericalFunctions: D_array, d_array, D_series, sYlm_array, sYlm_matrix_array,
+    wigner_arrays_with_derivative_values, wigner_arrays_pushforward, wigner_arrays_pullback,
+    harmonic_array_pushforward, harmonic_array_pullback!, derivatives_from_left,
+    rotor_generator, rotor_generators, rotor_cotangent, rotor_cotangents,
+    rotation_angle_gradient, rotation_angle_cotangent, angle_generators, angle_cotangent,
+    floattype, RotorLike, IntegerHalf, leading_view
 using Quaternionic: AbstractQuaternion, Quaternion
 import ChainRulesCore
 using ChainRulesCore: AbstractZero, AbstractThunk, NoTangent, ZeroTangent, Tangent, unthunk,
-    backing
+    backing, RuleConfig, HasReverseMode, rrule_via_ad
 
 # The four components of a tangent of a rotor, or `nothing` for a zero tangent.
 tangent_components(::AbstractZero) = nothing
@@ -56,28 +58,84 @@ function ChainRulesCore.frule(
     (_, Ṙ, _, _, _, _, _), ::typeof(D_array),
     R::RotorLike, ℓₘₐₓ::IT, m′ₘₐₓ::IT, m′ₘᵢₙ::IT, mₘₐₓ::IT, mₘᵢₙ::IT
 ) where {IT<:IntegerHalf}
-    blocks, stored, calc = D_array_with_stored(R, ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
+    blocks, values, calc = wigner_arrays_with_derivative_values(
+        Complex{floattype(R)}, R, ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ
+    )
     ṙ = tangent_components(Ṙ)
     ṙ === nothing && return (blocks, ZeroTangent())
     v = rotor_generator(derivatives_from_left(calc), R, ṙ)
-    (blocks, D_array_pushforward(calc, stored, v))
+    (blocks, wigner_arrays_pushforward(calc, values, reshape([v[1], v[2], v[3]], 3, 1)))
 end
 
 function ChainRulesCore.rrule(
     ::typeof(D_array), R::RotorLike, ℓₘₐₓ::IT, m′ₘₐₓ::IT, m′ₘᵢₙ::IT, mₘₐₓ::IT, mₘᵢₙ::IT
 ) where {IT<:IntegerHalf}
-    blocks, stored, calc = D_array_with_stored(R, ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
+    blocks, values, calc = wigner_arrays_with_derivative_values(
+        Complex{floattype(R)}, R, ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ
+    )
     function D_array_rrule_pullback(ΔA)
         Ā = unthunk(ΔA)
         R̄ = if Ā isa AbstractZero
             ZeroTangent()
         else
-            g = D_array_pullback(calc, stored, cotangent_blocks(Ā))
-            Quaternion(rotor_cotangent(derivatives_from_left(calc), R, g)...)
+            Ḡ = wigner_arrays_pullback(calc, values, cotangent_blocks(Ā))
+            Quaternion(rotor_cotangent(derivatives_from_left(calc), R, (Ḡ[1], Ḡ[2], Ḡ[3]))...)
         end
         (NoTangent(), R̄, NoTangent(), NoTangent(), NoTangent(), NoTangent(), NoTangent())
     end
     (blocks, D_array_rrule_pullback)
+end
+
+
+## d
+#
+# The derivatives of `d` are taken with respect to the angle β of its rotor data (see
+# `rotation_angle`), whose tangent and cotangent are formed here from those of the rotor
+# data by the gradient of β, so that a phase or a rotor is differentiated through its angle.
+
+# The tangent β̇ of the angle of `x` from a tangent `ẋ` of `x`, or `nothing` for a zero one.
+angle_tangent(x::Real, ẋ) = (ẋ = unthunk(ẋ); ẋ isa AbstractZero ? nothing : ẋ)
+angle_tangent(z::Complex, ż) =
+    (ż = unthunk(ż); ż isa AbstractZero ? nothing : real(conj(rotation_angle_gradient(z)) * ż))
+function angle_tangent(R::RotorLike, Ṙ)
+    ṙ = tangent_components(Ṙ)
+    ṙ === nothing && return nothing
+    sum(rotation_angle_gradient(R) .* ṙ)
+end
+# The cotangent of `x` from that of its angle.
+data_cotangent(x::Union{Real, Complex}, β̄) = rotation_angle_cotangent(x, β̄)
+data_cotangent(R::RotorLike, β̄) = Quaternion(rotation_angle_cotangent(R, β̄)...)
+
+function ChainRulesCore.frule(
+    (_, ẋ, _, _, _, _, _), ::typeof(d_array),
+    x::Union{Real, Complex, RotorLike}, ℓₘₐₓ::IT, m′ₘₐₓ::IT, m′ₘᵢₙ::IT, mₘₐₓ::IT, mₘᵢₙ::IT
+) where {IT<:IntegerHalf}
+    blocks, values, calc = wigner_arrays_with_derivative_values(
+        floattype(x), x, ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ
+    )
+    β̇ = angle_tangent(x, ẋ)
+    β̇ === nothing && return (blocks, ZeroTangent())
+    (blocks, wigner_arrays_pushforward(calc, values, angle_generators([β̇])))
+end
+
+function ChainRulesCore.rrule(
+    ::typeof(d_array), x::Union{Real, Complex, RotorLike}, ℓₘₐₓ::IT, m′ₘₐₓ::IT, m′ₘᵢₙ::IT,
+    mₘₐₓ::IT, mₘᵢₙ::IT
+) where {IT<:IntegerHalf}
+    blocks, values, calc = wigner_arrays_with_derivative_values(
+        floattype(x), x, ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ
+    )
+    function d_array_rrule_pullback(ΔA)
+        Ā = unthunk(ΔA)
+        x̄ = if Ā isa AbstractZero
+            ZeroTangent()
+        else
+            Ḡ = wigner_arrays_pullback(calc, values, cotangent_blocks(Ā))
+            data_cotangent(x, angle_cotangent(Ḡ, 1))
+        end
+        (NoTangent(), x̄, NoTangent(), NoTangent(), NoTangent(), NoTangent(), NoTangent())
+    end
+    (blocks, d_array_rrule_pullback)
 end
 
 
@@ -89,14 +147,19 @@ field_cotangent(Δ, name::Symbol) = ZeroTangent()
 field_cotangent(Δ::Tangent, name::Symbol) =
     haskey(backing(Δ), name) ? unthunk(getproperty(Δ, name)) : ZeroTangent()
 field_cotangent(Δ::NamedTuple, name::Symbol) = haskey(Δ, name) ? unthunk(Δ[name]) : ZeroTangent()
-block_cotangents(Δblocks, n) = fill(ZeroTangent(), n)
-block_cotangents(Δblocks::AbstractVector, n) = [field_cotangent(unthunk(Δb), :parent) for Δb ∈ Δblocks]
+# The storage of each block is `vec` of its matrix, so the cotangent of that storage is
+# given the matrix's shape.
+shaped_like(Δ, b) = Δ
+shaped_like(Δ::AbstractArray, b::AbstractArray) = reshape(Δ, size(b))
+block_cotangents(Δblocks, blocks) = fill(ZeroTangent(), length(blocks))
+block_cotangents(Δblocks::AbstractVector, blocks) =
+    [shaped_like(field_cotangent(unthunk(Δb), :parent), b) for (Δb, b) ∈ zip(Δblocks, blocks)]
 
 function ChainRulesCore.rrule(::typeof(D_series), blocks::AbstractVector, ℓₘₐₓ, limits...)
     S = D_series(blocks, ℓₘₐₓ, limits...)
     function D_series_pullback(ΔS)
         Δblocks = field_cotangent(unthunk(ΔS), :blocks)
-        B̄ = Δblocks isa AbstractZero ? ZeroTangent() : block_cotangents(Δblocks, length(blocks))
+        B̄ = Δblocks isa AbstractZero ? ZeroTangent() : block_cotangents(Δblocks, blocks)
         (NoTangent(), B̄, NoTangent(), map(_ -> NoTangent(), limits)...)
     end
     (S, D_series_pullback)
@@ -160,6 +223,21 @@ function ChainRulesCore.rrule(
         (NoTangent(), R̄⃗, NoTangent(), NoTangent(), NoTangent())
     end
     (Y, sYlm_matrix_array_rrule_pullback)
+end
+
+
+## The storage of a block
+
+# The elements of a block are a view of the leading entries of its storage, which
+# `leading_view` builds: it is `view(p, Base.OneTo(n))`, constructed by `Base.unsafe_view`
+# (see `src/containers/blocks.jl`).  Zygote cannot differentiate that constructor, so `leading_view` is differentiated as the
+# `view` that it is, by the tool's own rule for `view`.
+function ChainRulesCore.rrule(
+    config::RuleConfig{>:HasReverseMode}, ::typeof(leading_view), p::AbstractVector, n::Int
+)
+    x, view_pullback = rrule_via_ad(config, view, p, Base.OneTo(n))
+    leading_view_pullback(Δ) = (NoTangent(), view_pullback(Δ)[2], NoTangent())
+    (x, leading_view_pullback)
 end
 
 end # module SphericalFunctionsChainRulesCoreExt

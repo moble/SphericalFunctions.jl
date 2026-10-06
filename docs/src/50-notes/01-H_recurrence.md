@@ -607,57 +607,73 @@ at the beginning of the algorithm — but only for very small
 computations, such as those involving ``ℓ_{\mathrm{max}} ≈ 10``.
 Beyond this, despite the storage penalties for all those constants, it
 turned out to be better to pre-compute them.  However, it should be
-noted that the fractional cost of storing the constants is
-``\sim 3/ℓ_{\mathrm{max}}`` compared to just storing ``H`` itself, so
-this will never be a very significant amount of space.  On the other
-hand, if we can pre-compute the constants just once, and store them
-between multiple calls to the ``H`` recurrence, then it was always
+noted that the fractional cost of storing the constants is ``\sim
+3/ℓ_{\mathrm{max}}`` compared to just storing ``H`` itself, so this
+will never be a very significant amount of space.  On the other hand,
+if we can pre-compute the constants just once, and store them between
+multiple calls to the ``H`` recurrence, then it was always
 advantageous to do so — typically by factors of 2 or 3 in speed.
 
 The implementation in this package nonetheless computes nearly every
 constant on the fly, because batching changes the balance.  Each
 constant is computed once for a given ``ℓ`` and ``m'`` or ``m``, and
 then used for every rotor in the batch, so its cost is divided among
-all of them.  Every transform in the package uses the batched path, and
-there the constants are a small part of the total.
+all of them.  Every transform in the package uses the batched path,
+and there the constants are a small part of the total.
 
-The exception is the pair of coefficients on the ``m`` side of steps 4
-and 5, ``\sqrt{δ²(ℓ, m)}`` and ``\sqrt{δ²(ℓ, m-1)}``, which depend on
-``ℓ`` and ``m`` but not on ``m'``, so that the two ladders would
-otherwise take the same square roots again for every row.  Each call to
-[`recurrence!`](@ref) fills a table of them, one entry for each ``m``,
-before either step runs.  The table is ``O(ℓ_{\mathrm{max}})`` storage,
-allocated with the calculator.  Because it is refilled at every call,
-it is never out of date and needs no invalidation logic, and because
-each entry is computed from the same expression the steps would
-evaluate, the results are the same to the last bit.
+There are two exceptions.  The first is the pair of coefficients on
+the ``m`` side of steps 4 and 5, ``\sqrt{δ²(ℓ, m)}`` and ``\sqrt{δ²(ℓ,
+m-1)}``, which depend on ``ℓ`` and ``m`` but not on ``m'``, so that
+the two ladders would otherwise take the same square roots again for
+every row.  Each call to [`recurrence!`](@ref) fills a table of them,
+one entry for each ``m``, before either step runs.  The table is
+``O(ℓ_{\mathrm{max}})`` storage, allocated with the calculator.
+Because it is refilled at every call, it is never out of date and
+needs no invalidation logic, and because each entry is computed from
+the same expression the steps would evaluate, the results are the same
+to the last bit.
+
+The second is the square roots that depend on a single integer.  The
+coefficients ``d̄_{n,m}`` and ``ē_{n,m}`` of step 2 are
+``\sqrt{k(k-1)}`` at ``k = n-m`` and ``k = n+m``, divided by ``2n``,
+and in step 3 so are ``\sqrt{ℓ(ℓ+1)}`` and the two coefficients
+``b̄_{ℓ+1}^{m-1}`` and ``b̄_{ℓ+1}^{-m-1}``, at ``k = ℓ+1``, ``ℓ-m+2``,
+and ``ℓ+m+2``.  A calculator builds a table of ``\sqrt{k(k-1)}``,
+once, for every ``k`` up to twice the largest order of its axis, and
+both steps read them from it.  That table never changes, and it too is
+``O(ℓ_{\mathrm{max}})`` storage whose entries are the square roots the
+steps would otherwise take.  The divisions by ``n`` and ``2n`` remain,
+since multiplying by a reciprocal instead would not always round to
+the same number.
 
 A single rotor pays the full cost of every constant, but the constants
 are not most of what makes it slower, per rotor, than a batch.  The
-innermost loop of each step runs over the rotors, and for one rotor the
-setup of that vectorized loop at every ``(m', m)`` costs more than the
-arithmetic it performs.  The inner loops of steps 4 and 5 therefore
-write the single-rotor case out as one statement, the loop's own
-expression; with the square roots taken from the table, the compiler
-then vectorizes the loop over ``m`` instead.  Measured for `Float64` on
-an Apple M2 Max, step 5 at ``ℓ = 200`` for one rotor took 52 µs as a
-loop over one rotor taking its own square roots, 33 µs with the table
-alone, 52 µs with the single statement alone, and 9.6 µs with both.  A
-full sweep of the wedge to ``ℓ = 200`` then costs about 0.52 ns per
-element for one rotor, against about 2.4 ns with neither measure, and
-0.27 to 0.36 ns per element and rotor for batches of 8 to 512.  For
-`BigFloat`, whose square roots are expensive, the table alone halves
-the time of a single-rotor sweep.
+innermost loop of each step runs over the rotors, and for one rotor
+the setup of that vectorized loop at every ``(m', m)`` costs more than
+the arithmetic it performs.  Every loop over the rotors therefore runs
+the single-rotor case as one statement, the loop's own expression;
+with the square roots on the ``m`` side taken from the first table,
+the compiler then vectorizes the loop over ``m`` of steps 4 and 5
+instead.  Measured for `Float64` on an Apple M2 Max, step 5 at ``ℓ =
+200`` for one rotor took 52 µs as a loop over one rotor taking its own
+square roots, 33 µs with that table alone, 52 µs with the single
+statement alone, and 9.6 µs with both.  At small ``ℓ`` what remains is
+the cost of the calls themselves, so each step of ``ℓ`` inlines every
+step of the recurrence but the ladders of steps 4 and 5, which are one
+function of their own; a sweep to ``ℓ = 8`` for one rotor takes about
+0.7 µs, and one to ``ℓ = 32`` about 13 µs.  For `BigFloat`, whose
+square roots are expensive, the two tables together halve the time of
+a single-rotor sweep to ``ℓ = 32``.
 
 The case in which the constants really do dominate is the axis alone,
 ``m'_{\mathrm{max}} = 0``, which is all that spin weight zero needs.
-There the three square roots and three divisions in each coefficient
-of step 2 are most of the cost — a sweep to ``ℓ = 200`` costs about 3.8
-ns per element for one rotor, against 0.6 ns per element and rotor for
-a batch of 64 — and each is used only once per sweep, so that only a
-table kept for the lifetime of the calculator could remove it.  Such a
-table would hold ``O(ℓ_{\mathrm{max}}^2)`` numbers, although, since
-``ℓ_{\mathrm{max}}`` is fixed at construction, it too would need no
-invalidation.  It has not been added; it could be added later without
-changing the interface, since it would be entirely internal to
-[`recurrence!`](@ref).
+There the square root and the three divisions of the coefficients at
+each ``m`` of step 2 are most of the cost — a sweep to ``ℓ = 200``
+costs about 2.1 ns per element for one rotor, against 0.6 ns per
+element and rotor for a batch of 64 — and each is used only once per
+sweep, so that only a table kept for the lifetime of the calculator
+could remove it.  Such a table would hold ``O(ℓ_{\mathrm{max}}^2)``
+numbers, although, since ``ℓ_{\mathrm{max}}`` is fixed at
+construction, it too would need no invalidation.  It has not been
+added; it could be added later without changing the interface, since
+it would be entirely internal to [`recurrence!`](@ref).

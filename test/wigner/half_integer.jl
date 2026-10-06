@@ -596,10 +596,12 @@ end
     import Quaternionic: Rotor, from_euler_angles
     import SphericalFunctions: D, d, DCalculator, dCalculator, recurrence!, HalfOddInteger
 
-    # Restricting the block to some rows and columns changes no value: the limited calculator
-    # runs exactly the same operations for the elements it keeps, so every element of a
-    # restricted block, symmetric or not, must equal the full block's bit for bit.  Both rows
-    # m′ = ±1/2 seed the recurrence, so every window brackets them, and the same holds for m.
+    # Restricting the block to some rows and columns changes no value, so every element of a
+    # restricted block, symmetric or not, must equal the full block's.  For d the limited
+    # calculator runs exactly the same operations for the elements it keeps; a block of 𝔇 is
+    # written in pairs that depend on the limits, so a zero of 𝔇 may have the other sign.
+    # Both rows m′ = ±1/2 seed the recurrence, so every window brackets them, and the same
+    # holds for m.
     J = 9//2
     R = Rotor(from_euler_angles(0.7, 1.1, 2.3))
     β = 1.1
@@ -633,7 +635,7 @@ end
         WignerMatrix, WignerMatrixBatch, DegreeBlock, DegreeBlockBatch, WignerSeries,
         WignerRange, HalfOddInteger,
         SpinMatrix, SpinMatrixBatch,
-        ℓ, ℓₘᵢₙ, ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, sₘₐₓ, sₘᵢₙ, spins
+        ℓ, ℓₘᵢₙ, ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, sₘₐₓ, sₘᵢₙ, spins, array_view
     import .HalfIntegerOracle: rotors
 
     R = rotors()[6]
@@ -688,10 +690,11 @@ end
         @test length(w) == 36
         @test eltype(w) === ComplexF64
 
-        # getindex/setindex! use the natural indices; the 1-based parent is the same data
-        @test w[-J, -J] == parent(w)[1, 1]
-        @test w[J, J] == parent(w)[6, 6]
-        @test w[1//2, -3//2] == parent(w)[4, 2]
+        # getindex/setindex! use the natural indices; the 1-based `array_view` is the same
+        # data
+        @test w[-J, -J] == array_view(w)[1, 1]
+        @test w[J, J] == array_view(w)[6, 6]
+        @test w[1//2, -3//2] == array_view(w)[4, 2]
 
         # collect / Matrix / Array all give a plain 1-based matrix in increasing (m′, m)
         M = Matrix(w)
@@ -710,7 +713,7 @@ end
         ws = similar(w)
         @test ws isa WignerMatrix
         @test axes(ws) == axes(w) && ℓ(ws) == ℓ(w) && eltype(ws) === eltype(w)
-        @test parent(ws) isa Matrix{ComplexF64} && size(parent(ws)) == size(w)
+        @test parent(ws) isa Vector{ComplexF64} && length(parent(ws)) == length(w)
         @test eltype(similar(w, Float64)) === Float64
         fill!(parent(ws), 0)
         for m′ ∈ -J:J, m ∈ -J:J     # the storage must be writable through the natural indices
@@ -746,7 +749,7 @@ end
         @test collect(b) == A
         @test_throws "3-dimensional" Matrix(b)
 
-        # iteration follows `Array(b)`, so the reducers work as they do on the integer path
+        # iteration follows `Array(b)`, and the reducers work as they do on the integer path
         @test collect(Iterators.take(b, length(b))) == vec(A)
         # unitary blocks, so Σ|𝔇|² = Nᵣ(2J+1); measured residual 3.6e-15
         @test sum(abs2, b) ≈ 3 * (2J + 1) atol=1e-13
@@ -759,7 +762,7 @@ end
         bs = similar(b)
         @test bs isa WignerMatrixBatch
         @test axes(bs) == axes(b) && eltype(bs) === eltype(b)
-        @test parent(bs) isa Array{ComplexF64, 3} && size(parent(bs)) == size(b)
+        @test parent(bs) isa Vector{ComplexF64} && length(parent(bs)) == length(b)
 
         @test occursin("(1:3)×(-5//2:5//2)×(-5//2:5//2)", sprint(show, b))
         @test occursin("WignerMatrixBatch", sprint(show, MIME("text/plain"), b))
@@ -831,7 +834,7 @@ end
         vbs = similar(vb)
         @test vbs isa DegreeBlockBatch
         @test axes(vbs) == axes(vb) && eltype(vbs) === eltype(vb)
-        @test parent(vbs) isa Matrix{ComplexF64} && size(parent(vbs)) == size(vb)
+        @test parent(vbs) isa Vector{ComplexF64} && length(parent(vbs)) == length(vb)
         @test occursin("(1:2)×(-5//2:5//2) DegreeBlockBatch", sprint(show, vb))
     end
 
@@ -849,7 +852,7 @@ end
         @test axes(b) == (sr, -J:J) && axes(b, 1) == sr && axes(b, 3) == Base.OneTo(1)
         @test sₘₐₓ(b) == 3//2 && sₘᵢₙ(b) == -3//2 && mₘₐₓ(b) == J && mₘᵢₙ(b) == -J
         @test ℓ(b) == J && ℓₘᵢₙ(b) == 1//2 && spins(b) == sr
-        @test b[1//2, -J] == parent(b)[3, 1]
+        @test b[1//2, -J] == array_view(b)[3, 1]
         # Each row is the very block a single-spin calculator would give
         for s ∈ sr
             @test b[s, :] isa DegreeBlock
@@ -866,7 +869,7 @@ end
         bs = similar(b)
         @test bs isa SpinMatrix
         @test axes(bs) == axes(b) && eltype(bs) === eltype(b)
-        @test parent(bs) isa Matrix{ComplexF64} && size(parent(bs)) == size(b)
+        @test parent(bs) isa Vector{ComplexF64} && length(parent(bs)) == length(b)
         @test occursin("(-3//2:3//2)×(-5//2:5//2) SpinMatrix", sprint(show, b))
         @test occursin("SpinMatrix", sprint(show, MIME("text/plain"), b))
 
@@ -893,7 +896,7 @@ end
         bbs = similar(bb)
         @test bbs isa SpinMatrixBatch
         @test axes(bbs) == axes(bb) && eltype(bbs) === eltype(bb)
-        @test parent(bbs) isa Array{ComplexF64, 3} && size(parent(bbs)) == size(bb)
+        @test parent(bbs) isa Vector{ComplexF64} && length(parent(bbs)) == length(bb)
         @test occursin("(1:2)×(-3//2:3//2)×(-5//2:5//2) SpinMatrixBatch", sprint(show, bb))
         @test occursin("SpinMatrixBatch", sprint(show, MIME("text/plain"), bb))
     end

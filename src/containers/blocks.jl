@@ -10,7 +10,25 @@ by their natural indices ``m′``, ``m`` and ``s`` rather than by position.  The
   of every natural index.
 - `NT` is the number type, such as `ComplexF64` for a block of ``𝔇`` or `Float64` for one
   of ``d``.
-- `ST` is the type of the storage, which is 1-based.
+- `ST` is the type of the storage, `parent(w)`, which is one-dimensional and 1-based (see
+  below).
+
+A block's storage is one-dimensional, and element k of the block, in the order of `Array(w)`
+(the column-major order of its axes), is entry k of the storage; entries beyond `length(w)`
+are not read.  The constructors take a 1-based array of any shape with at least `length(w)`
+entries and use it in its linear order: the storage is `vec` of that array, which shares its
+memory, and an array of exactly the block's shape is the block.  A calculator's blocks are
+the leading entries of the calculator's one buffer, so `parent(w)` of such a block is that
+buffer.  The blocks of [`D`](@ref) and [`d`](@ref) are consecutive parts of one vector,
+which holds them all, so `parent(w)` of each is a view of its own part.
+[`array_view`](@ref)`(w)` is the block's entries of the storage, reshaped to the block's
+shape, without a copy: contiguous for a calculator's block, for the blocks of `D` and `d`,
+and for the results of `copy`, `similar`, and [`relabel`](@ref).  A slice of a batch,
+`w[iᵣ]` or `b[iᵣ]`, and the row `b[s, :]` of a `SpinMatrix`, are views of an arithmetic
+progression of the storage, with the step `Nᵣ` or the number of spin weights.  The one
+exception is the slice `b[:, s, :]` of a [`SpinMatrixBatch`](@ref), whose elements are not
+one such progression: its storage is a strided matrix view of exactly its shape, and its
+`array_view` is that matrix.
 
 These types are *not* `AbstractArray`s, because half-integer indices cannot satisfy that
 interface: `axes` must be integer ranges there, and `-3//2:3//2` is not one.  Consequently
@@ -25,7 +43,7 @@ and `summary` and `show`.  Each block defines its own indexing, since the natura
 differ from one to the next, and all six share an array-like interface as well:
 - `axes(w)` are the ranges of the natural indices, one per axis, with `1:Nᵣ` for the rotor
   axis of a batch, and `size(w)`, `length(w)` and `ndims(w)` describe the block, whose
-  storage may be larger;
+  storage may be larger, as a calculator's buffer is;
 - the limits are read with [`m′ₘₐₓ`](@ref), [`m′ₘᵢₙ`](@ref), [`mₘₐₓ`](@ref), [`mₘᵢₙ`](@ref),
   [`sₘₐₓ`](@ref) and [`sₘᵢₙ`](@ref), for the axes a block has, and [`isbatched`](@ref) says
   whether it has a rotor axis;
@@ -234,63 +252,164 @@ function validate_s_range(sₘₐₓ::IT, sₘᵢₙ::IT) where {IT<:IntegerHalf
 end
 
 
-### Storage extents
+### Storage
 #
-# The natural-index accessors compare an index with a container's limits and then index the
-# storage under `@inbounds`, and iteration reads every element the same way, so the storage
-# must reach every element the limits describe.  That is checked in each inner constructor,
-# because the inner constructors are also what `copy`, `similar` and the views `w[iᵣ]`,
-# `b[s, :]`, `b[:, s, :]` and `b[iᵣ]` are built with.  Storage larger than the block is
-# legitimate: a calculator's blocks sit in storage sized for its largest ℓ.  The ordering of
-# the limits and their relation to ℓ are left to the outer constructors, with one exception:
-# an axis of negative extent is refused here, because two of them would multiply to a
-# positive `length`, which iteration would then read.  A `DegreeBlock` is checked again at
-# each access, because its storage may be a caller's `Vector`, which can be resized after
-# construction; see `check_storage` below.
+# A block's storage is one-dimensional: element k of the block, in the order of `Array(w)`,
+# is entry k of `parent(w)`, and the entries beyond `length(w)` are not read.  The only
+# other storage is the matrix of a slice `b[:, s, :]` of a `SpinMatrixBatch` (see the
+# `DegreeBlockBatch` that it builds), whose elements are not one arithmetic progression
+# through the storage of `b`; it is a strided view of exactly the slice's shape, and is read
+# as a matrix.  Every method that reads the storage goes through the four functions below,
+# which are the one place that tells the two apart: `storage_index` for one element,
+# `elements` for all of them as an array of the block's shape (which `array_view`, the
+# reductions, broadcasting, the copying forms, the comparisons, and `show` read),
+# `leading_slice` for the slices of the leading axis, and `holds`, with `check_storage`, for
+# the comparison of the storage with the block.  The one exception is iteration, which reads
+# entry k of the storage by its linear index, since that is element k in either form (see
+# `iterate`).
+#
+# The accessors index the storage itself, at the position `storage_index` gives, rather than
+# `elements`: building the reshaped view at each access is free for a `Vector`, but for
+# other storage, such as `vec` of a view of a matrix, it was measured to allocate at every
+# access on Julia 1.10, and for a strided view on 1.13 as well.
+#
+# The inner constructors check that the storage holds every element the limits describe,
+# because the accessors and iteration read it under `@inbounds`; they are also what `copy`,
+# `similar`, `relabel`, and the slices `w[iᵣ]`, `b[s, :]`, `b[:, s, :]`, and `b[iᵣ]` are
+# built with.  The ordering of the limits and their relation to ℓ are left to the outer
+# constructors, with one exception: an axis of negative extent is refused here, because two
+# of them would multiply to a positive `length`, which iteration would then read.  A vector
+# can be resized after the constructor has compared it with the limits, so every access to a
+# block over a vector compares its length with the block again, and any access to a block
+# whose vector has become shorter than the block is refused; see `check_storage`.
 #
 # These run on every view that `w[iᵣ]` or `b[s, :]` builds, so the messages are formatted
 # only on the way to an error.
 
-@inline function check_extent(parent, d::Int, hi, lo, name::String)
-    (0 ≤ Int(hi - lo) + 1 ≤ size(parent, d)) || extent_error(parent, d, hi, lo, name)
-    nothing
-end
-@inline function check_extent(parent, Nᵣ::Int)
-    (0 ≤ Nᵣ ≤ size(parent, 1)) || extent_error(parent, Nᵣ)
+# The axes of a block as its inner constructor describes them: `(hi, lo, name)` for a
+# natural index, whose extent is `hi - lo + 1`, and `(Nᵣ,)` for the rotor axis of a batch.
+@inline described_extent(a::Tuple{Any, Any, String}) = Int(a[1] - a[2]) + 1
+@inline described_extent(a::Tuple{Int}) = a[1]
+
+@inline function check_extent(parent::AbstractArray, axes::Tuple)
+    dims = map(described_extent, axes)
+    (all(≥(0), dims) && holds(parent, dims)) || extent_error(parent, axes)
     nothing
 end
 
-@noinline function extent_error(parent, d::Int, hi, lo, name::String)
-    n = Int(hi - lo) + 1
-    # A negative lower limit is parenthesized, so that the difference reads `2-(-2)+1`.
-    lo_text = lo < 0 ? "($lo)" : "$lo"
-    if n < 0
+# Whether `parent` holds a block whose axes have the extents `dims`: a vector must be at
+# least as long as the block, and the matrix of a slice `b[:, s, :]` must have its shape.
+@inline holds(parent::AbstractVector, dims::Tuple) = length(parent) ≥ prod(dims)
+@inline holds(parent::AbstractMatrix, dims::Tuple{Int, Int}) = size(parent) == dims
+
+@noinline function extent_error(parent, axes::Tuple)
+    for a ∈ axes
+        n = described_extent(a)
+        n ≥ 0 && continue
+        if a isa Tuple{Int}
+            throw(ArgumentError("The number of rotors Nᵣ=$n must not be negative."))
+        end
+        hi, lo, name = a
         throw(ArgumentError(
             "$(name)ₘₐₓ=$hi is less than $(name)ₘᵢₙ=$lo by more than one, which would give "
             * "the block an axis of extent $n."
         ))
+    end
+    dims = map(described_extent, axes)
+    if parent isa AbstractVector && length(axes) == 1
+        throw(DimensionMismatch(
+            "The input data must have at least $(extent_formula(only(axes))) entries; it "
+            * "has $(length(parent))."
+        ))
     elseif parent isa AbstractVector
         throw(DimensionMismatch(
-            "The input data must have length at least "
-            * "$(name)ₘₐₓ-$(name)ₘᵢₙ+1=$hi-$lo_text+1=$n; it is $(length(parent))."
+            "The input data must have at least $(prod(dims)) = $(join(dims, "×")) entries, "
+            * "the number of elements of a block with "
+            * "$(serial_list(map(axis_description, axes))); it has $(length(parent))."
         ))
     else
         throw(DimensionMismatch(
-            "The extent of the $(("first", "second", "third")[d]) dimension in the input data "
-            * "must be at least $(name)ₘₐₓ-$(name)ₘᵢₙ+1=$hi-$lo_text+1=$n; it is "
-            * "$(size(parent, d))."
+            "The storage of a slice must have the shape $dims of the block; it has the "
+            * "shape $(size(parent))."
         ))
     end
 end
-@noinline function extent_error(parent, Nᵣ::Int)
-    if Nᵣ < 0
-        throw(ArgumentError("The number of rotors Nᵣ=$Nᵣ must not be negative."))
-    else
-        throw(DimensionMismatch(
-            "The extent of the first dimension in the input data must be at least the number "
-            * "of rotors Nᵣ=$Nᵣ; it is $(size(parent, 1))."
-        ))
+# The extent of the one axis of a `DegreeBlock`, as the message above writes it:
+# `mₘₐₓ-mₘᵢₙ+1=2-(-2)+1=5`, with a negative lower limit parenthesized.
+function extent_formula((hi, lo, name)::Tuple{Any, Any, String})
+    lo_text = lo < 0 ? "($lo)" : "$lo"
+    "$(name)ₘₐₓ-$(name)ₘᵢₙ+1=$hi-$lo_text+1=$(Int(hi - lo) + 1)"
+end
+# The axes of a block of two or three axes, as the message above lists them: `Nᵣ=3 rotors,
+# m′ ∈ -2:2, and m ∈ -2:2`.
+axis_description(a::Tuple{Int}) = "Nᵣ=$(a[1]) rotors"
+axis_description((hi, lo, name)::Tuple{Any, Any, String}) = "$name ∈ $lo:$hi"
+serial_list(items) = length(items) == 2 ? join(items, " and ") : join(items, ", ", ", and ")
+
+# The position in the storage of the element at the 1-based positions along the block's
+# axes: its linear position in storage of one dimension, for a block of one, two, or three
+# axes, and the positions themselves in the matrix of a slice `b[:, s, :]`.  Every accessor
+# has compared the positions with the block's limits before it asks.  The linear position is
+# computed here rather than by `LinearIndices`, whose own bounds check, which remains when
+# bounds checking is forced on, as `Pkg.test` forces it, can crash Enzyme's reverse mode as
+# it compiles a loop over the blocks of a calculator.  Only a `DegreeBlockBatch` may have a
+# matrix as storage (see its type bound below); the methods for that storage, here and in
+# the functions that follow, are written for any block over a matrix, because the block
+# types are defined after them.
+@inline storage_index(::AbstractBlock{IT, NT, <:AbstractVector}, i::Int) where {IT, NT} = i
+@inline storage_index(w::AbstractBlock{IT, NT, <:AbstractVector}, i::Int, j::Int) where {IT, NT} =
+    i + size(w)[1] * (j - 1)
+@inline function storage_index(
+    w::AbstractBlock{IT, NT, <:AbstractVector}, i::Int, j::Int, k::Int
+) where {IT, NT}
+    n₁, n₂ = size(w)
+    i + n₁ * ((j - 1) + n₂ * (k - 1))
+end
+@inline storage_index(v::AbstractBlock{IT, NT, <:AbstractMatrix}, iᵣ::Int, j::Int) where {IT, NT} =
+    CartesianIndex(iᵣ, j)
+
+# The elements of `w`, 1-based, as an array of its shape; `array_view` is this with the
+# storage compared with the block first.
+@inline elements(w::AbstractBlock{IT, NT, <:AbstractVector}) where {IT<:IntegerHalf, NT} =
+    reshape(leading_view(parent(w), length(w)), size(w))
+@inline elements(v::AbstractBlock{IT, NT, <:AbstractMatrix}) where {IT<:IntegerHalf, NT} =
+    parent(v)
+
+# The elements of `w` whose first index is `i`, in order, as a vector: an arithmetic
+# progression through storage of one dimension, whose step is the extent of the first axis,
+# or a row of the matrix of a slice `b[:, s, :]`.  These are the storage of the slices
+# `w[iᵣ]`, `v[iᵣ]`, and `b[iᵣ]` of a batch, and `b[s, :]` of a `SpinMatrix`.
+@inline function leading_slice(w::AbstractBlock{IT, NT, <:AbstractVector}, i::Int) where {IT, NT}
+    N = size(w, 1)
+    view(parent(w), i:N:(i + N * (length(w) ÷ N - 1)))
+end
+@inline leading_slice(v::AbstractBlock{IT, NT, <:AbstractMatrix}, i::Int) where {IT, NT} =
+    view(parent(v), i, :)
+
+# The leading `n` entries of `p`, as a view, with no bounds check of its own: every caller
+# has compared the storage with the block first, in `check_storage`, which the extension for
+# Enzyme declares inactive (see the note there).  The extension for ChainRules
+# differentiates it as `view(p, Base.OneTo(n))`.
+@inline leading_view(p::AbstractVector, n::Int) = Base.unsafe_view(p, Base.OneTo(n))
+
+# Only a vector can be resized after the constructor has compared its length with the limits
+# — a caller's `Vector`, or a calculator's buffer, which `parent(w)` hands out — so every
+# access compares its length with the block again, and refuses any access once it is shorter
+# than the block.
+@inline function check_storage(w::AbstractBlock{IT, NT, <:AbstractVector}) where {IT<:IntegerHalf, NT}
+    if length(parent(w)) < length(w)
+        throw(storage_error(w))
     end
+    nothing
+end
+@inline check_storage(v::AbstractBlock{IT, NT, <:AbstractMatrix}) where {IT<:IntegerHalf, NT} =
+    nothing
+@noinline function storage_error(w::AbstractBlock)
+    DimensionMismatch(
+        "The storage of this $(sprint(summary, w)) has length $(length(parent(w))), but "
+        * "the block has $(length(w)) elements, which are its leading entries.  A block "
+        * "uses its storage without copying it, so the vector must not be resized."
+    )
 end
 
 
@@ -302,14 +421,13 @@ General concrete subtype of [`AbstractBlock`](@ref) for Wigner rotation matrices
 which can include D-matrices (when `NT` is complex) or d-matrices (when `NT` is real).
 - `IT` is the index type, `Int` or [`HalfOddInteger`](@ref).
 - `NT` is the number type of the elements.
-- `ST` is the type of the storage, an `AbstractMatrix{NT}`.
+- `ST` is the type of the storage, an `AbstractVector{NT}` (see [`AbstractBlock`](@ref)).
 
-In general, the storage type `ST` can be any `AbstractMatrix{NT}`, but should be 1-based.
-That is, the storage should generally be either a `Matrix` or a view.  That matrix will
-represent a rectangular array of values representing some or all of the Wigner matrix for a
-specific ``ℓ`` value.  The first dimension corresponds to the `m′` index, and the second
-dimension corresponds to the `m` index.  The allowed ranges of `m′` and `m` are governed by
-the fields `m′ₘₐₓ`, `m′ₘᵢₙ`, `mₘₐₓ`, and `mₘᵢₙ`, which must satisfy
+The block holds some or all of the Wigner matrix for a specific ``ℓ``, as a rectangular
+array whose first dimension corresponds to the `m′` index and whose second corresponds to
+the `m` index; how it is stored is described under [`AbstractBlock`](@ref).  The allowed
+ranges of `m′` and `m` are governed by the fields `m′ₘₐₓ`, `m′ₘᵢₙ`, `mₘₐₓ`, and `mₘᵢₙ`,
+which must satisfy
 ```math
 \begin{aligned}
 -ℓₘₐₓ &≤ m′ₘᵢₙ ≤ -ℓₘᵢₙ ≤ ℓₘᵢₙ ≤ m′ₘₐₓ ≤ ℓₘₐₓ, \\
@@ -321,14 +439,15 @@ type.  Both rows `±ℓₘᵢₙ` must be included because the recurrence seeds 
 ladder from the pair of rows `m′ = ±1/2`; for integers this reduces to the familiar `m′ₘᵢₙ ≤
 0 ≤ m′ₘₐₓ`.
 
-The constructor wraps `parent`, which must be 1-based and at least `(m′ₘₐₓ-m′ₘᵢₙ+1) ×
-(mₘₐₓ-mₘᵢₙ+1)`, without copying it.  `ℓ` and the limits must all be integers of type `Int`,
-or all half-odd-integers, each a [`HalfOddInteger`](@ref) or a `Rational{Int}` with
+The constructor wraps `parent` without copying it.  `parent` is a 1-based array of any shape
+with at least `(m′ₘₐₓ-m′ₘᵢₙ+1) × (mₘₐₓ-mₘᵢₙ+1)` entries, read in its linear order, so that a
+matrix of exactly that size is the block.  `ℓ` and the limits must all be integers of type
+`Int`, or all half-odd-integers, each a [`HalfOddInteger`](@ref) or a `Rational{Int}` with
 denominator 2; the limits default to the whole block, and each lower limit defaults to minus
-the corresponding upper one.  The keywords may also be spelled `mp_max`, `mp_min`, `m_max`
+the corresponding upper one.  The keywords may also be spelled `mp_max`, `mp_min`, `m_max`,
 and `m_min`; where both spellings of one are given, the Unicode one is used.
 """
-struct WignerMatrix{IT, NT, ST} <: AbstractBlock{IT, NT, ST}
+struct WignerMatrix{IT, NT, ST<:AbstractVector{NT}} <: AbstractBlock{IT, NT, ST}
     parent::ST
     ℓ::IT
     m′ₘₐₓ::IT
@@ -338,11 +457,10 @@ struct WignerMatrix{IT, NT, ST} <: AbstractBlock{IT, NT, ST}
     # The parent is indexed as 1-based throughout, much of it under `@inbounds`, so an
     # offset array would be read and written outside its storage; `ModeWeights` and
     # `HarmonicValues` refuse one in the same way.  For the same reason the parent must
-    # reach every element of the block (see "Storage extents" above).
+    # reach every element of the block (see "Storage" above).
     function WignerMatrix{IT, NT, ST}(parent, ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ) where {IT, NT, ST}
         Base.require_one_based_indexing(parent)
-        check_extent(parent, 1, m′ₘₐₓ, m′ₘᵢₙ, "m′")
-        check_extent(parent, 2, mₘₐₓ, mₘᵢₙ, "m")
+        check_extent(parent, ((m′ₘₐₓ, m′ₘᵢₙ, "m′"), (mₘₐₓ, mₘᵢₙ, "m")))
         new{IT, NT, ST}(parent, ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
     end
 end
@@ -368,14 +486,16 @@ Base.checkbounds(::Type{Bool}, w::WignerMatrix{IT}, m′::IT, m::IT) where {IT} 
     w::WignerMatrix{IT}, m′::IT, m::IT
 ) where {IT<:IntegerHalf}
     @boundscheck checkbounds(Bool, w, m′, m) || throw(BoundsError(w, (m′, m)))
-    @inbounds Base.parent(w)[(m′-m′ₘᵢₙ(w))+1, (m-mₘᵢₙ(w))+1]
+    @boundscheck check_storage(w)
+    @inbounds parent(w)[storage_index(w, Int(m′ - w.m′ₘᵢₙ) + 1, Int(m - w.mₘᵢₙ) + 1)]
 end
 
 @propagate_inbounds function Base.setindex!(
     w::WignerMatrix{IT}, v, m′::IT, m::IT
 ) where {IT<:IntegerHalf}
     @boundscheck checkbounds(Bool, w, m′, m) || throw(BoundsError(w, (m′, m)))
-    @inbounds Base.parent(w)[(m′-m′ₘᵢₙ(w))+1, (m-mₘᵢₙ(w))+1] = v
+    @boundscheck check_storage(w)
+    @inbounds parent(w)[storage_index(w, Int(m′ - w.m′ₘᵢₙ) + 1, Int(m - w.mₘᵢₙ) + 1)] = v
 end
 
 
@@ -407,11 +527,13 @@ end
     mp_min::IndexType=-m′ₘₐₓ, m′ₘᵢₙ::IndexType=mp_min,
     m_max::IndexType=ℓ, mₘₐₓ::IndexType=m_max,
     m_min::IndexType=-mₘₐₓ, mₘᵢₙ::IndexType=m_min
-) where {IT<:IndexType, NT, ST<:AbstractMatrix{NT}}
+) where {IT<:IndexType, NT, ST<:AbstractArray{NT}}
     validate_degree(ℓ)
     validate_axis(ℓ, m′ₘₐₓ, m′ₘᵢₙ, "m′")
     validate_axis(ℓ, mₘₐₓ, mₘᵢₙ, "m")
-    WignerMatrix{IT, NT, ST}(parent, ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
+    Base.require_one_based_indexing(parent)
+    p = vec(parent)
+    WignerMatrix{IT, NT, typeof(p)}(p, ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
 end
 
 # A block with the labels of `w` over the storage `p`, through the inner constructor, which
@@ -430,17 +552,19 @@ what [`recurrence!`](@ref) returns for a calculator built from a vector of rotor
 any length, for either kind of index.
 - `IT` is the index type, `Int` or [`HalfOddInteger`](@ref).
 - `NT` is the number type of the elements.
-- `ST` is the type of the storage, a 3-dimensional array of `NT`.
+- `ST` is the type of the storage, an `AbstractVector{NT}` (see [`AbstractBlock`](@ref)).
 
-The storage `parent(w)` is 1-based and 3-dimensional, ordered `[iᵣ, m′, m]`, exactly as in
-the calculator, and `Nᵣ` is its first extent.  The constructor takes the indices and the
-limits, with their ASCII spellings, exactly as [`WignerMatrix`](@ref) does, and under the
-same rules.  `w[iᵣ]` gives the [`WignerMatrix`](@ref) view of one rotor's matrix, which is
-then indexed naturally as `w[iᵣ][m′, m]`.
+The elements are ordered `[iᵣ, m′, m]`, exactly as in the calculator.  The constructor takes
+a 1-based array of any shape, whose first extent is `Nᵣ` and which has at least as many
+entries as the block, read in its linear order, so that an array of exactly the block's
+shape is the block; it takes the indices and the limits, with their ASCII spellings, exactly
+as [`WignerMatrix`](@ref) does, and under the same rules.  `w[iᵣ]` gives the
+[`WignerMatrix`](@ref) view of one rotor's matrix, which is then indexed naturally as
+`w[iᵣ][m′, m]`.
 
 See also [`WignerMatrix`](@ref) and [`WignerSeries`](@ref).
 """
-struct WignerMatrixBatch{IT, NT, ST} <: AbstractBlock{IT, NT, ST}
+struct WignerMatrixBatch{IT, NT, ST<:AbstractVector{NT}} <: AbstractBlock{IT, NT, ST}
     parent::ST
     ℓ::IT
     m′ₘₐₓ::IT
@@ -451,9 +575,7 @@ struct WignerMatrixBatch{IT, NT, ST} <: AbstractBlock{IT, NT, ST}
     # As for `WignerMatrix`: the parent must be 1-based, and must reach every element.
     function WignerMatrixBatch{IT, NT, ST}(parent, ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, Nᵣ) where {IT, NT, ST}
         Base.require_one_based_indexing(parent)
-        check_extent(parent, Nᵣ)
-        check_extent(parent, 2, m′ₘₐₓ, m′ₘᵢₙ, "m′")
-        check_extent(parent, 3, mₘₐₓ, mₘᵢₙ, "m")
+        check_extent(parent, ((Nᵣ,), (m′ₘₐₓ, m′ₘᵢₙ, "m′"), (mₘₐₓ, mₘᵢₙ, "m")))
         new{IT, NT, ST}(parent, ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, Nᵣ)
     end
 end
@@ -464,11 +586,14 @@ end
     mp_min::IndexType=-m′ₘₐₓ, m′ₘᵢₙ::IndexType=mp_min,
     m_max::IndexType=ℓ, mₘₐₓ::IndexType=m_max,
     m_min::IndexType=-mₘₐₓ, mₘᵢₙ::IndexType=m_min
-) where {IT<:IndexType, NT, ST<:AbstractArray{NT, 3}}
+) where {IT<:IndexType, NT, ST<:AbstractArray{NT}}
     validate_degree(ℓ)
     validate_axis(ℓ, m′ₘₐₓ, m′ₘᵢₙ, "m′")
     validate_axis(ℓ, mₘₐₓ, mₘᵢₙ, "m")
-    WignerMatrixBatch{IT, NT, ST}(parent, ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, size(parent, 1))
+    Base.require_one_based_indexing(parent)
+    Nᵣ = size(parent, 1)
+    p = vec(parent)
+    WignerMatrixBatch{IT, NT, typeof(p)}(p, ℓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ, Nᵣ)
 end
 
 Nᵣ(w::WignerMatrixBatch) = w.Nᵣ
@@ -480,14 +605,20 @@ Base.checkbounds(::Type{Bool}, w::WignerMatrixBatch{IT}, iᵣ::Integer, m′::IT
     w::WignerMatrixBatch{IT}, iᵣ::Integer, m′::IT, m::IT
 ) where {IT<:IntegerHalf}
     @boundscheck checkbounds(Bool, w, iᵣ, m′, m) || throw(BoundsError(w, (iᵣ, m′, m)))
-    @inbounds parent(w)[iᵣ, Int(m′ - w.m′ₘᵢₙ) + 1, Int(m - w.mₘᵢₙ) + 1]
+    @boundscheck check_storage(w)
+    @inbounds parent(w)[
+        storage_index(w, Int(iᵣ), Int(m′ - w.m′ₘᵢₙ) + 1, Int(m - w.mₘᵢₙ) + 1)
+    ]
 end
 
 @propagate_inbounds function Base.setindex!(
     w::WignerMatrixBatch{IT}, v, iᵣ::Integer, m′::IT, m::IT
 ) where {IT<:IntegerHalf}
     @boundscheck checkbounds(Bool, w, iᵣ, m′, m) || throw(BoundsError(w, (iᵣ, m′, m)))
-    @inbounds parent(w)[iᵣ, Int(m′ - w.m′ₘᵢₙ) + 1, Int(m - w.mₘᵢₙ) + 1] = v
+    @boundscheck check_storage(w)
+    @inbounds parent(w)[
+        storage_index(w, Int(iᵣ), Int(m′ - w.m′ₘᵢₙ) + 1, Int(m - w.mₘᵢₙ) + 1)
+    ] = v
 end
 
 # See the note on indexing with indices of other types above.
@@ -508,7 +639,8 @@ it naturally as `w[iᵣ][m′, m]`.
     @boundscheck if !(1 ≤ iᵣ ≤ w.Nᵣ)
         throw(BoundsError(w, (iᵣ,)))
     end
-    let p = view(parent(w), iᵣ, :, :)
+    @boundscheck check_storage(w)
+    let p = leading_slice(w, Int(iᵣ))
         WignerMatrix{IT, NT, typeof(p)}(p, w.ℓ, w.m′ₘₐₓ, w.m′ₘᵢₙ, w.mₘₐₓ, w.mₘᵢₙ)
     end
 end
@@ -530,7 +662,7 @@ One harmonic degree's worth of values, indexed naturally by the order ``m``: `v[
 ``mₘᵢₙ ≤ m ≤ mₘₐₓ``.  This is the 1-dimensional sibling of [`WignerMatrix`](@ref).
 - `IT` is the index type, `Int` or [`HalfOddInteger`](@ref).
 - `NT` is the number type of the elements.
-- `ST` is the type of the storage, an `AbstractVector{NT}`.
+- `ST` is the type of the storage, an `AbstractVector{NT}` (see [`AbstractBlock`](@ref)).
 
 The name is deliberately neutral, because the same shape serves three things: a block of
 spin-weighted harmonics at one ``ℓ``, from [`sYlm`](@ref) or [`sYlmCalculator`](@ref)'s
@@ -538,11 +670,13 @@ spin-weighted harmonics at one ``ℓ``, from [`sYlm`](@ref) or [`sYlmCalculator`
 one spin weight's row of a [`SpinMatrix`](@ref), from `b[s, :]`.  All three are values at a
 fixed degree indexed by order, whatever they mean.
 
-The storage `parent(v)` is 1-based, in order of increasing ``m``.  The constructor
+The elements are in order of increasing ``m``.  The constructor
 
     DegreeBlock(parent, ℓ; mₘₐₓ=ℓ, mₘᵢₙ=-mₘₐₓ)
 
-wraps it without copying, and requires `-ℓ ≤ mₘᵢₙ ≤ mₘₐₓ ≤ ℓ`; unlike the limits of a
+wraps `parent` without copying it.  `parent` is a 1-based array of any shape with at least
+`mₘₐₓ-mₘᵢₙ+1` entries, read in its linear order, so that a vector of exactly that length is
+the block.  The limits must satisfy `-ℓ ≤ mₘᵢₙ ≤ mₘₐₓ ≤ ℓ`; unlike the limits of a
 [`WignerMatrix`](@ref), these need not bracket zero, because no recurrence fills the block.
 `ℓ` and the limits must all be integers of type `Int`, or all half-odd-integers, each a
 [`HalfOddInteger`](@ref) or a `Rational{Int}` with denominator 2.  The keywords may also be
@@ -558,7 +692,7 @@ struct DegreeBlock{IT, NT, ST<:AbstractVector{NT}} <: AbstractBlock{IT, NT, ST}
     # As for `WignerMatrix`: the parent must be 1-based, and must reach every element.
     function DegreeBlock{IT, NT, ST}(parent, ℓ, mₘₐₓ, mₘᵢₙ) where {IT, NT, ST}
         Base.require_one_based_indexing(parent)
-        check_extent(parent, 1, mₘₐₓ, mₘᵢₙ, "m")
+        check_extent(parent, ((mₘₐₓ, mₘᵢₙ, "m"),))
         new{IT, NT, ST}(parent, ℓ, mₘₐₓ, mₘᵢₙ)
     end
 end
@@ -567,57 +701,31 @@ end
     parent::ST, ℓ::IT;
     m_max::IndexType=ℓ, mₘₐₓ::IndexType=m_max,
     m_min::IndexType=-mₘₐₓ, mₘᵢₙ::IndexType=m_min
-) where {IT<:IndexType, NT, ST<:AbstractVector{NT}}
+) where {IT<:IndexType, NT, ST<:AbstractArray{NT}}
     validate_m_range(ℓ, mₘₐₓ, mₘᵢₙ)
-    DegreeBlock{IT, NT, ST}(parent, ℓ, mₘₐₓ, mₘᵢₙ)
+    Base.require_one_based_indexing(parent)
+    p = vec(parent)
+    DegreeBlock{IT, NT, typeof(p)}(p, ℓ, mₘₐₓ, mₘᵢₙ)
 end
 
 Base.firstindex(v::DegreeBlock) = v.mₘᵢₙ
 Base.lastindex(v::DegreeBlock) = v.mₘₐₓ
 Base.keys(v::DegreeBlock) = v.mₘᵢₙ:v.mₘₐₓ
 
-# Of all the blocks, only a `DegreeBlock` may have a caller's `Vector` as its storage — from
-# `DegreeBlock(v, ℓ)` or `relabel`, for example — which can be resized after the constructor
-# has compared its length with the limits.  So the accessors compare the position of the
-# element with the length of the storage as well as with the limits, and `array_view`,
-# through which iteration, `show`, the copying forms and the comparisons all read the
-# elements, compares the extent of the whole block with it.
-@inline function check_storage(v::DegreeBlock, i)
-    if i > length(parent(v))
-        throw(storage_error(v, i))
-    end
-    nothing
-end
-@noinline function storage_error(v::DegreeBlock, i)
-    DimensionMismatch(
-        "The storage of this DegreeBlock for ℓ=$(v.ℓ), with m ∈ $(v.mₘᵢₙ):$(v.mₘₐₓ), has "
-        * "length $(length(parent(v))), but the limits need an entry at position $i.  A "
-        * "`DegreeBlock` uses its vector as storage without copying it, so the vector must not "
-        * "be resized."
-    )
-end
-# The elements of a block are the leading entries of its storage, which must still be there
-# when `array_view` reads them; only the storage of a `DegreeBlock` can have changed since
-# the inner constructor compared it with the limits.
-@inline check_storage(w::AbstractBlock) = nothing
-@inline check_storage(v::DegreeBlock) = check_storage(v, length(v))
-
 Base.checkbounds(::Type{Bool}, v::DegreeBlock{IT}, m::IT) where {IT} =
     inrange(m, v.mₘᵢₙ, v.mₘₐₓ)
 
 @propagate_inbounds function Base.getindex(v::DegreeBlock{IT}, m::IT) where {IT<:IntegerHalf}
-    i = Int(m - v.mₘᵢₙ) + 1
     @boundscheck checkbounds(Bool, v, m) || throw(BoundsError(v, m))
-    @boundscheck check_storage(v, i)
-    @inbounds parent(v)[i]
+    @boundscheck check_storage(v)
+    @inbounds parent(v)[storage_index(v, Int(m - v.mₘᵢₙ) + 1)]
 end
 @propagate_inbounds function Base.setindex!(
     v::DegreeBlock{IT}, x, m::IT
 ) where {IT<:IntegerHalf}
-    i = Int(m - v.mₘᵢₙ) + 1
     @boundscheck checkbounds(Bool, v, m) || throw(BoundsError(v, m))
-    @boundscheck check_storage(v, i)
-    @inbounds parent(v)[i] = x
+    @boundscheck check_storage(v)
+    @inbounds parent(v)[storage_index(v, Int(m - v.mₘᵢₙ) + 1)] = x
 end
 
 # See the note on indexing with indices of other types above.
@@ -640,13 +748,18 @@ the 1-dimensional sibling of [`WignerMatrixBatch`](@ref), and is what a batched
 `v[iᵣ]` gives the [`DegreeBlock`](@ref) view of one rotor's row.
 - `IT` is the index type, `Int` or [`HalfOddInteger`](@ref).
 - `NT` is the number type of the elements.
-- `ST` is the type of the storage, an `AbstractMatrix{NT}`.
+- `ST` is the type of the storage, an `AbstractVector{NT}`, or an `AbstractMatrix{NT}` for
+  the slice `b[:, s, :]` of a [`SpinMatrixBatch`](@ref) (see [`AbstractBlock`](@ref)).
 
-The storage `parent(v)` is 1-based and 2-dimensional, ordered `[iᵣ, m]`, and `Nᵣ` is its
-first extent.  The constructor, `DegreeBlockBatch(parent, ℓ; mₘₐₓ=ℓ, mₘᵢₙ=-mₘₐₓ)`, takes the
-indices and the limits exactly as [`DegreeBlock`](@ref) does, and under the same rules.
+The elements are ordered `[iᵣ, m]`.  The constructor, `DegreeBlockBatch(parent, ℓ; mₘₐₓ=ℓ,
+mₘᵢₙ=-mₘₐₓ)`, takes a 1-based array of any shape, whose first extent is `Nᵣ` and which has
+at least as many entries as the block, read in its linear order, so that a matrix of exactly
+the block's shape is the block; it takes the indices and the limits exactly as
+[`DegreeBlock`](@ref) does, and under the same rules.
 """
-struct DegreeBlockBatch{IT, NT, ST<:AbstractMatrix{NT}} <: AbstractBlock{IT, NT, ST}
+struct DegreeBlockBatch{IT, NT, ST<:Union{AbstractVector{NT}, AbstractMatrix{NT}}} <: AbstractBlock{IT, NT, ST}
+    # The storage is a matrix only for a slice `b[:, s, :]` of a `SpinMatrixBatch`; see
+    # "Storage" above.
     parent::ST
     ℓ::IT
     mₘₐₓ::IT
@@ -655,8 +768,7 @@ struct DegreeBlockBatch{IT, NT, ST<:AbstractMatrix{NT}} <: AbstractBlock{IT, NT,
     # As for `WignerMatrix`: the parent must be 1-based, and must reach every element.
     function DegreeBlockBatch{IT, NT, ST}(parent, ℓ, mₘₐₓ, mₘᵢₙ, Nᵣ) where {IT, NT, ST}
         Base.require_one_based_indexing(parent)
-        check_extent(parent, Nᵣ)
-        check_extent(parent, 2, mₘₐₓ, mₘᵢₙ, "m")
+        check_extent(parent, ((Nᵣ,), (mₘₐₓ, mₘᵢₙ, "m")))
         new{IT, NT, ST}(parent, ℓ, mₘₐₓ, mₘᵢₙ, Nᵣ)
     end
 end
@@ -665,9 +777,12 @@ end
     parent::ST, ℓ::IT;
     m_max::IndexType=ℓ, mₘₐₓ::IndexType=m_max,
     m_min::IndexType=-mₘₐₓ, mₘᵢₙ::IndexType=m_min
-) where {IT<:IndexType, NT, ST<:AbstractMatrix{NT}}
+) where {IT<:IndexType, NT, ST<:AbstractArray{NT}}
     validate_m_range(ℓ, mₘₐₓ, mₘᵢₙ)
-    DegreeBlockBatch{IT, NT, ST}(parent, ℓ, mₘₐₓ, mₘᵢₙ, size(parent, 1))
+    Base.require_one_based_indexing(parent)
+    Nᵣ = size(parent, 1)
+    p = vec(parent)
+    DegreeBlockBatch{IT, NT, typeof(p)}(p, ℓ, mₘₐₓ, mₘᵢₙ, Nᵣ)
 end
 
 Nᵣ(v::DegreeBlockBatch) = v.Nᵣ
@@ -679,13 +794,15 @@ Base.checkbounds(::Type{Bool}, v::DegreeBlockBatch{IT}, iᵣ::Integer, m::IT) wh
     v::DegreeBlockBatch{IT}, iᵣ::Integer, m::IT
 ) where {IT<:IntegerHalf}
     @boundscheck checkbounds(Bool, v, iᵣ, m) || throw(BoundsError(v, (iᵣ, m)))
-    @inbounds parent(v)[iᵣ, Int(m - v.mₘᵢₙ) + 1]
+    @boundscheck check_storage(v)
+    @inbounds parent(v)[storage_index(v, Int(iᵣ), Int(m - v.mₘᵢₙ) + 1)]
 end
 @propagate_inbounds function Base.setindex!(
     v::DegreeBlockBatch{IT}, x, iᵣ::Integer, m::IT
 ) where {IT<:IntegerHalf}
     @boundscheck checkbounds(Bool, v, iᵣ, m) || throw(BoundsError(v, (iᵣ, m)))
-    @inbounds parent(v)[iᵣ, Int(m - v.mₘᵢₙ) + 1] = x
+    @boundscheck check_storage(v)
+    @inbounds parent(v)[storage_index(v, Int(iᵣ), Int(m - v.mₘᵢₙ) + 1)] = x
 end
 
 # See the note on indexing with indices of other types above.
@@ -699,7 +816,8 @@ end
     @boundscheck if !(1 ≤ iᵣ ≤ v.Nᵣ)
         throw(BoundsError(v, (iᵣ,)))
     end
-    let p = view(parent(v), iᵣ, :)
+    @boundscheck check_storage(v)
+    let p = leading_slice(v, Int(iᵣ))
         DegreeBlock{IT, NT, typeof(p)}(p, v.ℓ, v.mₘₐₓ, v.mₘᵢₙ)
     end
 end
@@ -718,14 +836,16 @@ as a [`DegreeBlock`](@ref).  This is what an [`sYlmCalculator`](@ref) built for 
 spin weights yields for each ``ℓ``.
 - `IT` is the index type, `Int` or [`HalfOddInteger`](@ref).
 - `NT` is the number type of the elements.
-- `ST` is the type of the storage, an `AbstractMatrix{NT}`.
+- `ST` is the type of the storage, an `AbstractVector{NT}` (see [`AbstractBlock`](@ref)).
 
-The storage `parent(b)` is 1-based and 2-dimensional, ordered `[s, m]`.  The constructor
+The elements are ordered `[s, m]`.  The constructor
 
     SpinMatrix(parent, ℓ; sₘₐₓ, sₘᵢₙ, mₘₐₓ=ℓ, mₘᵢₙ=-mₘₐₓ)
 
-wraps it without copying.  The spin limits are required, and the keywords may also be
-spelled `s_max`, `s_min`, `m_max` and `m_min`.  `ℓ` and every limit must all be integers of
+wraps `parent` without copying it.  `parent` is a 1-based array of any shape with at least
+as many entries as the block, read in its linear order, so that a matrix of exactly the
+block's shape is the block.  The spin limits are required, and the keywords may also be
+spelled `s_max`, `s_min`, `m_max`, and `m_min`.  `ℓ` and every limit must all be integers of
 type `Int`, or all half-odd-integers, each a [`HalfOddInteger`](@ref) or a `Rational{Int}`
 with denominator 2.  The ``m`` axis obeys the rule of [`DegreeBlock`](@ref), `-ℓ ≤ mₘᵢₙ ≤
 mₘₐₓ ≤ ℓ`.
@@ -738,7 +858,7 @@ order, `sₘᵢₙ ≤ sₘₐₓ`.
 
 See also [`SpinMatrixBatch`](@ref) and [`DegreeBlock`](@ref).
 """
-struct SpinMatrix{IT, NT, ST<:AbstractMatrix{NT}} <: AbstractBlock{IT, NT, ST}
+struct SpinMatrix{IT, NT, ST<:AbstractVector{NT}} <: AbstractBlock{IT, NT, ST}
     parent::ST
     ℓ::IT
     sₘₐₓ::IT
@@ -748,8 +868,7 @@ struct SpinMatrix{IT, NT, ST<:AbstractMatrix{NT}} <: AbstractBlock{IT, NT, ST}
     # As for `WignerMatrix`: the parent must be 1-based, and must reach every element.
     function SpinMatrix{IT, NT, ST}(parent, ℓ, sₘₐₓ, sₘᵢₙ, mₘₐₓ, mₘᵢₙ) where {IT, NT, ST}
         Base.require_one_based_indexing(parent)
-        check_extent(parent, 1, sₘₐₓ, sₘᵢₙ, "s")
-        check_extent(parent, 2, mₘₐₓ, mₘᵢₙ, "m")
+        check_extent(parent, ((sₘₐₓ, sₘᵢₙ, "s"), (mₘₐₓ, mₘᵢₙ, "m")))
         new{IT, NT, ST}(parent, ℓ, sₘₐₓ, sₘᵢₙ, mₘₐₓ, mₘᵢₙ)
     end
 end
@@ -762,12 +881,14 @@ end
     s_min::Union{Nothing, IndexType}=nothing, sₘᵢₙ::Union{Nothing, IndexType}=s_min,
     m_max::IndexType=ℓ, mₘₐₓ::IndexType=m_max,
     m_min::IndexType=-mₘₐₓ, mₘᵢₙ::IndexType=m_min
-) where {IT<:IndexType, NT, ST<:AbstractMatrix{NT}}
+) where {IT<:IndexType, NT, ST<:AbstractArray{NT}}
     sₘₐₓ === nothing && throw(UndefKeywordError(:sₘₐₓ))
     sₘᵢₙ === nothing && throw(UndefKeywordError(:sₘᵢₙ))
     validate_s_range(sₘₐₓ, sₘᵢₙ)
     validate_m_range(ℓ, mₘₐₓ, mₘᵢₙ)
-    SpinMatrix{IT, NT, ST}(parent, ℓ, sₘₐₓ, sₘᵢₙ, mₘₐₓ, mₘᵢₙ)
+    Base.require_one_based_indexing(parent)
+    p = vec(parent)
+    SpinMatrix{IT, NT, typeof(p)}(p, ℓ, sₘₐₓ, sₘᵢₙ, mₘₐₓ, mₘᵢₙ)
 end
 
 sₘₐₓ(b::SpinMatrix) = b.sₘₐₓ
@@ -787,13 +908,15 @@ Base.checkbounds(::Type{Bool}, b::SpinMatrix{IT}, s::IT, m::IT) where {IT} =
     b::SpinMatrix{IT}, s::IT, m::IT
 ) where {IT<:IntegerHalf}
     @boundscheck checkbounds(Bool, b, s, m) || throw(BoundsError(b, (s, m)))
-    @inbounds parent(b)[Int(s - b.sₘᵢₙ) + 1, Int(m - b.mₘᵢₙ) + 1]
+    @boundscheck check_storage(b)
+    @inbounds parent(b)[storage_index(b, Int(s - b.sₘᵢₙ) + 1, Int(m - b.mₘᵢₙ) + 1)]
 end
 @propagate_inbounds function Base.setindex!(
     b::SpinMatrix{IT}, x, s::IT, m::IT
 ) where {IT<:IntegerHalf}
     @boundscheck checkbounds(Bool, b, s, m) || throw(BoundsError(b, (s, m)))
-    @inbounds parent(b)[Int(s - b.sₘᵢₙ) + 1, Int(m - b.mₘᵢₙ) + 1] = x
+    @boundscheck check_storage(b)
+    @inbounds parent(b)[storage_index(b, Int(s - b.sₘᵢₙ) + 1, Int(m - b.mₘᵢₙ) + 1)] = x
 end
 
 # See the note on indexing with indices of other types above.
@@ -815,7 +938,8 @@ then indexed naturally as `b[s, :][m]`.  The notation follows [`ModeWeights`](@r
     b::SpinMatrix{IT, NT}, s::IT, ::Colon
 ) where {IT<:IntegerHalf, NT}
     @boundscheck inrange(s, b.sₘᵢₙ, b.sₘₐₓ) || throw(BoundsError(b, (s, :)))
-    let p = view(parent(b), Int(s - b.sₘᵢₙ) + 1, :)
+    @boundscheck check_storage(b)
+    let p = leading_slice(b, Int(s - b.sₘᵢₙ) + 1)
         DegreeBlock{IT, NT, typeof(p)}(p, b.ℓ, b.mₘₐₓ, b.mₘᵢₙ)
     end
 end
@@ -836,16 +960,17 @@ weights.  `b[iᵣ]` gives the `SpinMatrix` view of one rotor's block, which is t
 naturally as `b[iᵣ][s, m]`.
 - `IT` is the index type, `Int` or [`HalfOddInteger`](@ref).
 - `NT` is the number type of the elements.
-- `ST` is the type of the storage, a 3-dimensional array of `NT`.
+- `ST` is the type of the storage, an `AbstractVector{NT}` (see [`AbstractBlock`](@ref)).
 
-The storage `parent(b)` is 1-based and 3-dimensional, ordered `[iᵣ, s, m]`, exactly as in
-the calculator, and `Nᵣ` is its first extent.  The constructor, `SpinMatrixBatch(parent, ℓ;
-sₘₐₓ, sₘᵢₙ, mₘₐₓ=ℓ, mₘᵢₙ=-mₘₐₓ)`, takes the indices and the limits exactly as
-[`SpinMatrix`](@ref) does, and under the same rules.
+The elements are ordered `[iᵣ, s, m]`, exactly as in the calculator.  The constructor,
+`SpinMatrixBatch(parent, ℓ; sₘₐₓ, sₘᵢₙ, mₘₐₓ=ℓ, mₘᵢₙ=-mₘₐₓ)`, takes a 1-based array of any
+shape, whose first extent is `Nᵣ` and which has at least as many entries as the block, read
+in its linear order, so that an array of exactly the block's shape is the block; it takes
+the indices and the limits exactly as [`SpinMatrix`](@ref) does, and under the same rules.
 
 See also [`SpinMatrix`](@ref) and [`DegreeBlockBatch`](@ref).
 """
-struct SpinMatrixBatch{IT, NT, ST<:AbstractArray{NT, 3}} <: AbstractBlock{IT, NT, ST}
+struct SpinMatrixBatch{IT, NT, ST<:AbstractVector{NT}} <: AbstractBlock{IT, NT, ST}
     parent::ST
     ℓ::IT
     sₘₐₓ::IT
@@ -856,9 +981,7 @@ struct SpinMatrixBatch{IT, NT, ST<:AbstractArray{NT, 3}} <: AbstractBlock{IT, NT
     # As for `WignerMatrix`: the parent must be 1-based, and must reach every element.
     function SpinMatrixBatch{IT, NT, ST}(parent, ℓ, sₘₐₓ, sₘᵢₙ, mₘₐₓ, mₘᵢₙ, Nᵣ) where {IT, NT, ST}
         Base.require_one_based_indexing(parent)
-        check_extent(parent, Nᵣ)
-        check_extent(parent, 2, sₘₐₓ, sₘᵢₙ, "s")
-        check_extent(parent, 3, mₘₐₓ, mₘᵢₙ, "m")
+        check_extent(parent, ((Nᵣ,), (sₘₐₓ, sₘᵢₙ, "s"), (mₘₐₓ, mₘᵢₙ, "m")))
         new{IT, NT, ST}(parent, ℓ, sₘₐₓ, sₘᵢₙ, mₘₐₓ, mₘᵢₙ, Nᵣ)
     end
 end
@@ -870,12 +993,15 @@ end
     s_min::Union{Nothing, IndexType}=nothing, sₘᵢₙ::Union{Nothing, IndexType}=s_min,
     m_max::IndexType=ℓ, mₘₐₓ::IndexType=m_max,
     m_min::IndexType=-mₘₐₓ, mₘᵢₙ::IndexType=m_min
-) where {IT<:IndexType, NT, ST<:AbstractArray{NT, 3}}
+) where {IT<:IndexType, NT, ST<:AbstractArray{NT}}
     sₘₐₓ === nothing && throw(UndefKeywordError(:sₘₐₓ))
     sₘᵢₙ === nothing && throw(UndefKeywordError(:sₘᵢₙ))
     validate_s_range(sₘₐₓ, sₘᵢₙ)
     validate_m_range(ℓ, mₘₐₓ, mₘᵢₙ)
-    SpinMatrixBatch{IT, NT, ST}(parent, ℓ, sₘₐₓ, sₘᵢₙ, mₘₐₓ, mₘᵢₙ, size(parent, 1))
+    Base.require_one_based_indexing(parent)
+    Nᵣ = size(parent, 1)
+    p = vec(parent)
+    SpinMatrixBatch{IT, NT, typeof(p)}(p, ℓ, sₘₐₓ, sₘᵢₙ, mₘₐₓ, mₘᵢₙ, Nᵣ)
 end
 
 sₘₐₓ(b::SpinMatrixBatch) = b.sₘₐₓ
@@ -890,13 +1016,19 @@ Base.checkbounds(::Type{Bool}, b::SpinMatrixBatch{IT}, iᵣ::Integer, s::IT, m::
     b::SpinMatrixBatch{IT}, iᵣ::Integer, s::IT, m::IT
 ) where {IT<:IntegerHalf}
     @boundscheck checkbounds(Bool, b, iᵣ, s, m) || throw(BoundsError(b, (iᵣ, s, m)))
-    @inbounds parent(b)[iᵣ, Int(s - b.sₘᵢₙ) + 1, Int(m - b.mₘᵢₙ) + 1]
+    @boundscheck check_storage(b)
+    @inbounds parent(b)[
+        storage_index(b, Int(iᵣ), Int(s - b.sₘᵢₙ) + 1, Int(m - b.mₘᵢₙ) + 1)
+    ]
 end
 @propagate_inbounds function Base.setindex!(
     b::SpinMatrixBatch{IT}, x, iᵣ::Integer, s::IT, m::IT
 ) where {IT<:IntegerHalf}
     @boundscheck checkbounds(Bool, b, iᵣ, s, m) || throw(BoundsError(b, (iᵣ, s, m)))
-    @inbounds parent(b)[iᵣ, Int(s - b.sₘᵢₙ) + 1, Int(m - b.mₘᵢₙ) + 1] = x
+    @boundscheck check_storage(b)
+    @inbounds parent(b)[
+        storage_index(b, Int(iᵣ), Int(s - b.sₘᵢₙ) + 1, Int(m - b.mₘᵢₙ) + 1)
+    ] = x
 end
 
 # See the note on indexing with indices of other types above.
@@ -918,7 +1050,8 @@ notation follows [`SpinMatrix`](@ref)'s `b[s, :]`.
     b::SpinMatrixBatch{IT, NT}, ::Colon, s::IT, ::Colon
 ) where {IT<:IntegerHalf, NT}
     @boundscheck inrange(s, b.sₘᵢₙ, b.sₘₐₓ) || throw(BoundsError(b, (:, s, :)))
-    let p = view(parent(b), :, Int(s - b.sₘᵢₙ) + 1, :)
+    check_storage(b)
+    let p = view(elements(b), :, Int(s - b.sₘᵢₙ) + 1, :)
         DegreeBlockBatch{IT, NT, typeof(p)}(p, b.ℓ, b.mₘₐₓ, b.mₘᵢₙ, b.Nᵣ)
     end
 end
@@ -936,7 +1069,8 @@ naturally as `b[iᵣ][s, m]`.
     @boundscheck if !(1 ≤ iᵣ ≤ b.Nᵣ)
         throw(BoundsError(b, (iᵣ,)))
     end
-    let p = view(parent(b), iᵣ, :, :)
+    @boundscheck check_storage(b)
+    let p = leading_slice(b, Int(iᵣ))
         SpinMatrix{IT, NT, typeof(p)}(p, b.ℓ, b.sₘₐₓ, b.sₘᵢₙ, b.mₘₐₓ, b.mₘᵢₙ)
     end
 end
@@ -1025,29 +1159,48 @@ m′ₘᵢₙ(w::AbstractBlock) = throw(no_m′_axis(w))
     * "are read with `mₘₐₓ` and `mₘᵢₙ`, and for a spin axis `sₘₐₓ` and `sₘᵢₙ`."
 )
 
-# Every block keeps its elements in the leading entries of its 1-based storage, in the
-# order of `Array(w)`, and `array_view(w)` is the view of those entries, so everything below
-# reads the elements through it.
+# Everything below reads the elements through `array_view(w)`, which is an array of the
+# block's shape (see "Storage" above), in the order of `Array(w)`.
 Base.Array(w::AbstractBlock) = Array(array_view(w))
 Base.collect(w::AbstractBlock) = Array(w)
 
-# Iteration visits the elements in the order of `Array(w)`, so that `sum`, `maximum` and the
-# other reducers work on a block exactly as they do on an ordinary array.
-@inline Base.iterate(w::AbstractBlock, state...) = iterate(array_view(w), state...)
+# Iteration visits the elements in the order of `Array(w)`, entry by entry of the storage,
+# so that a loop over a block, and the functions that fold over its elements one by one,
+# such as `foldl`, `any`, and `all`, see them as they would see the elements of an ordinary
+# array.  (The matrix of a slice `b[:, s, :]` is read in its linear order, which is that of
+# `Array(w)`.)
+@inline function Base.iterate(w::AbstractBlock, i::Int=1)
+    check_storage(w)
+    i > length(w) && return nothing
+    (@inbounds parent(w)[i], i + 1)
+end
 
-# The copy is of the whole storage, which may be larger than the block, as it is for a
-# calculator's blocks.
-Base.copy(w::AbstractBlock) = rewrap(w, copy(parent(w)))
+# Reductions over a block — `sum`, `prod`, `maximum`, `count`, and the others that `Base`
+# builds on `mapreduce` — run over its array, `array_view(w)`, rather than through the
+# iteration, and give exactly what they give for that array.  `Base` reduces a linearly
+# indexed array pairwise and vectorized, so a block over contiguous storage, such as a
+# calculator's block or one built on an array, reduces exactly as `Array(w)` does; over the
+# strided storage of a slice, the terms may be associated differently.  Only `init` is
+# passed on: `dims` is refused, as it is for any collection that is not an array.  `f` and
+# `op` are type parameters because Julia does not otherwise specialize a method on functions
+# that it only passes on, and the call to the array's reduction would then be dynamic and
+# would allocate.
+Base.mapreduce(f::F, op::OP, w::AbstractBlock; init=nothing) where {F, OP} =
+    init === nothing ? mapreduce(f, op, array_view(w)) : mapreduce(f, op, array_view(w); init)
+
+# The copy is of the block alone, as a `Vector` of its elements.
+Base.copy(w::AbstractBlock) = rewrap(w, collect(vec(array_view(w))))
 
 """
     similar(w::AbstractBlock, [T=eltype(w)])
 
 A new block of the same kind as `w`, with the same ℓ and the same natural axes (and so, for
 a batch, the same `Nᵣ`), over uninitialized storage of element type `T`.  The storage is a
-plain `Array` sized exactly to the block, even when `parent(w)` is a larger array or a view.
+`Vector` of exactly `length(w)` entries, even when `parent(w)` is a calculator's buffer or a
+view.
 """
 Base.similar(w::AbstractBlock, ::Type{T}=eltype(w)) where {T} =
-    rewrap(w, Array{T}(undef, size(w)))
+    rewrap(w, Vector{T}(undef, length(w)))
 
 function Base.summary(io::IO, w::AbstractBlock{IT, NT}) where {IT, NT}
     print(io, axes_string(axes(w)), " ", nameof(typeof(w)), "{", IT, ", ", NT, "} for ℓ=", ℓ(w))
@@ -1064,10 +1217,10 @@ end
 
 # The labels of a block are its kind — the roles of its axes — its ℓ, and the limits of its
 # axes, including the number of rotors of a batch.  The same numbers under different labels
-# are not the same block, so `==`, `isequal`, `≈` and `hash` count the labels as well as the
-# numbers, which they read from the leading block of the storage without copying it.  Blocks
-# of the same labels but different number types compare their numbers as arrays do, and hash
-# as arrays do, so that `hash` agrees with `isequal` between them too.
+# are not the same block, so `==`, `isequal`, `≈`, and `hash` count the labels as well as
+# the numbers, which they read through `array_view` without copying them.  Blocks of the
+# same labels but different number types compare their numbers as arrays do, and hash as
+# arrays do, so that `hash` agrees with `isequal` between them too.
 block_labels(w::AbstractBlock) =
     (axis_roles(w), ℓ(w), map(a -> (first(a), last(a)), natural_axes(w)))
 Base.:(==)(a::AbstractBlock, b::AbstractBlock) =

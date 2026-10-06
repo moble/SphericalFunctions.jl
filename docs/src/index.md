@@ -25,6 +25,39 @@ accurate "analysis" (decomposition into mode coefficients) of
 functions evaluated on regular grids to high order, or arbitrary grids
 to intermediate order.
 
+## What's new in version 3
+
+Version 3.0 of this package is a complete rewrite, with a new
+interface and new capabilities — including the introduction of
+half-integer indices.  The most important *breaking* change is the
+change in the convention for Wigner's 𝔇 matrices, which now agree
+with most significant modern sources — though disagree with previous
+versions of this package, as well as its predecessors found
+[here](https://moble.github.io/spherical_functions/) and
+[here](https://moble.github.io/spherical/).  Code that is ported by
+renaming functions alone will run without complaint, but will give the
+complex conjugate of the intended result.  Two other changes affect
+most code: every rotation is given as a
+[`Quaternionic.Rotor`](@extref) — or Euler angles or spherical
+coordinates that are immediately converted to a `Rotor` — and the
+element type of every result is that of the `Rotor`, rather than being
+chosen by a separate argument.  The
+[changelog](https://github.com/moble/SphericalFunctions.jl/blob/main/CHANGELOG.md)
+lists all the changes, with a table giving the replacement for each
+function of version 2.
+
+The conventions used in this package are summarized on [this
+page](@ref Summary), and derived from first principles on the
+[following page](@ref Details).  They are then compared in detail with
+thirty other sources, each on its own page: from Euler's early work in
+1767, to Hamilton and Tait in the 1800s, through the standard texts
+and papers of quantum mechanics and relativity of the 1900s, to
+current references and software such as the NIST DLMF, LALSuite,
+Mathematica, SciPy and SymPy.  For the twenty-four sources whose
+formulas can be evaluated, those formulas are checked numerically
+against this package, and the checks run as tests with each change to
+this code.
+
 ## Outline of capabilities
 
 - Basic functions [`D`](@ref), [`d`](@ref), [`sYlm`](@ref), and
@@ -100,13 +133,13 @@ julia> ℓₘₐₓ = 8;
 
 julia> 𝔇 = D(R, ℓₘₐₓ);
 
-julia> size(𝔇[3])  # each block is (2ℓ+1)×(2ℓ+1)
+julia> size(𝔇[3])  # Each block is (2ℓ+1)×(2ℓ+1),
 (7, 7)
 
-julia> axes(𝔇[3])  # and is indexed as 𝔇[ℓ][m′, m], with m′, m ∈ -ℓ:ℓ
+julia> axes(𝔇[3])  # and is indexed as 𝔇[ℓ][m′, m], with m′, m ∈ -ℓ:ℓ.
 (-3:3, -3:3)
 
-julia> 𝔇[1][0, 0] ≈ cos(π/3)  # for m′ = m = 0 the phases drop out, leaving d = cos β
+julia> 𝔇[1][0, 0] ≈ cos(π/3)  # For m′ = m = 0 the phases drop out, leaving d = cos β.
 true
 ```
 
@@ -380,36 +413,6 @@ are rejected.  See [Half-integer indices](@ref
 interface_half_integers), and the [half-integer section of the
 transforms page](@ref transformations_half_integer) for what a
 function of half-integer spin weight is a function *of*.
-
-## What's new in version 3
-
-Version 3.0 of this package is a complete rewrite, with a new
-interface and new capabilities — including the introduction of
-half-integer indices.  The most important *breaking* change is the
-change in the convention for Wigner's 𝔇 matrices, which now agree
-with most significant modern sources — though disagree with previous
-versions of this package, as well as its predecessors found
-[here](https://moble.github.io/spherical_functions/) and
-[here](https://moble.github.io/spherical/).  Code that is ported by
-renaming functions alone will run without complaint, but will give the
-complex conjugate of the intended result.  Two other changes affect
-most code: every rotation is given as a `Rotor`, and the element type
-of every result computed from a rotation is that of the rotation,
-rather than being chosen by an argument.  The
-[changelog](https://github.com/moble/SphericalFunctions.jl/blob/main/CHANGELOG.md)
-lists all the changes, with a table giving the replacement for each
-function of version 2.
-
-The conventions used in this package are summarized on [this
-page](@ref Summary), and derived from first principles on the
-[following page](@ref Details).  They are then compared in detail with
-thirty other sources, each on its own page: from Euler (1767),
-Hamilton and Tait, through the standard texts and papers of quantum
-mechanics and relativity, to current references and software such as
-the NIST DLMF, LALSuite, Mathematica, SciPy and SymPy.  For the
-twenty-four sources whose formulas can be evaluated, those formulas
-are checked numerically against this package, and the checks run as
-tests with each change to this code.
 
 ## Related packages
 

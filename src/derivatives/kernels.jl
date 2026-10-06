@@ -9,7 +9,7 @@
 # the block itself.  The calculators of dual numbers use them to lift each block of values
 # into a block of duals (see `lift!` below), and the extensions for Enzyme and Mooncake use
 # them in rules for the calculators' steps, while the extensions for ChainRulesCore and
-# ReverseDiff use them in rules for `D_array`, `sYlm_array`, and `sYlm_matrix`.
+# ReverseDiff use them in rules for `D_array`, `d_array`, `sYlm_array`, and `sYlm_matrix`.
 #
 # The derivative of 𝔇 along a rotation is given by its generators.  For R(t) = exp(t𝐮/2) R,
 # with 𝐮 a vector,
@@ -46,6 +46,24 @@
 #
 # from the right, the derivative would couple the harmonics of weight s to those of weights
 # s ± 1.
+#
+# The matrices `d`, and the real harmonics ₛλ_{ℓ,m}, belong to the rotations about y,
+# exp(β𝐣/2), which commute with 𝐣.  So a tangent β̇ of the angle is the generator
+# v = (0, β̇/2, 0) from the left and from the right alike, and the formulas above become real:
+#
+#     ḋ_{m′,m} = (β̇/2) (b_{m′} d_{m′+1,m} - a_{m′} d_{m′-1,m}) = (β̇/2) (a_m d_{m′,m-1} - b_m d_{m′,m+1}),
+#     ₛλ̇_{ℓ,m} = (θ̇/2) (b_m ₛλ_{ℓ,m+1} - a_m ₛλ_{ℓ,m-1}).
+#
+# The two forms of ḋ are equal, so the side is chosen as for 𝔇, by the neighbors that a
+# block holds, and otherwise for speed (see `derivatives_from_left`).  A phase e^{iβ} is
+# differentiated through its argument, and a rotor through the β ∈ [0, π] of its Euler
+# decomposition (see `rotation_angle`).  Each of these derivatives is a difference of two
+# products that nearly cancel near the poles, and a gradient sums many of them with weights
+# of either sign.  So the coefficients a and b are used to about twice the working precision
+# (see `step_coefficients`), since the rounding error of a coefficient is the same in every
+# element of the line that it multiplies, and would not average out in such a sum; and the
+# reverse kernels add each element's term, with its exact rounding error, into a compensated
+# sum.
 #
 # The reverse-mode rules need the adjoint of these linear maps.  A complex cotangent z̄ is
 # taken to be ∂L/∂(Re z) + i ∂L/∂(Im z), for a real function L, which is the convention of
@@ -123,24 +141,196 @@ function set_generators!(G::AbstractMatrix, left::Bool, rotors, value, tangents,
 end
 
 
+# The generators of the rotors of a calculator of `d` or of ₛλₗₘ, which are the rotations
+# about the y axis by the angles β or θ it is given: the generator of a tangent β̇ is (0,
+# β̇/2, 0), so only its y component is held, in `vy[d, iᵣ]` for direction d of rotor iᵣ,
+# where `G[3d-1, iᵣ]` would hold it.  The values of such a calculator are real, and so are
+# their derivatives along these generators, which the kernels compute in real arithmetic.
+# - `T` is the element type.
+# - `M` is the type of the matrix.
+struct AngleGenerators{T, M<:AbstractMatrix{T}}
+    vy::M
+end
+
+# The cotangents of the generators of a calculator of `d` or of ₛλₗₘ, as the pullbacks below
+# add them: the y component of the vector g of each rotor in `vy[1, iᵣ]`, and the rounding
+# error of that sum in `c[1, iᵣ]`, so that the cotangent of the angle of rotor iᵣ is half
+# their sum.  The terms of these sums have either sign and nearly cancel, and the
+# compensation keeps their rounding errors from accumulating.
+# - `T` is the element type.
+# - `M` is the type of the matrices.
+struct AngleCotangents{T, M<:AbstractMatrix{T}}
+    vy::M
+    c::M
+    function AngleCotangents(vy::M, c::M) where {T, M<:AbstractMatrix{T}}
+        size(c) == size(vy) || throw(DimensionMismatch(
+            "The compensation of cotangents of size $(size(vy)) has size $(size(c))."
+        ))
+        new{T, M}(vy, c)
+    end
+end
+angle_cotangent(Ḡ::AngleCotangents, iᵣ) = (Ḡ.vy[1, iᵣ] + Ḡ.c[1, iᵣ]) / 2
+# The sum of `x` and `y` and its rounding error, by Knuth's algorithm, which needs no branch.
+@inline function two_sum(x, y)
+    s = x + y
+    z = s - x
+    (s, (x - (s - z)) + (y - z))
+end
+# The sum s + x, with the compensation c of s, to which the rounding error of the sum is
+# added.
+@inline function compensated_sum(s, c, x)
+    t, e = two_sum(s, x)
+    (t, c + e)
+end
+# Add x, and its own compensation c, into the cotangent of rotor iᵣ.
+@inline function compensated_add!(Ḡ::AngleCotangents, iᵣ, x, c=zero(x))
+    @inbounds Ḡ.vy[1, iᵣ], Ḡ.c[1, iᵣ] = compensated_sum(Ḡ.vy[1, iᵣ], Ḡ.c[1, iᵣ] + c, x)
+    nothing
+end
+
+# The generators of the tangents β̇ of the angles of a calculator of `d` or of ₛλₗₘ, in one
+# direction; the cotangents of zero for `Nᵣ` rotors of a calculator of elements of type
+# `NT`, into which a pullback adds; and the addition of the cotangents of the angles from
+# those of their generators into `β̄`.
+angle_generators(β̇::AbstractVector) = AngleGenerators(reshape([b / 2 for b ∈ β̇], 1, length(β̇)))
+zero_cotangents(::Type{NT}, Nᵣ::Int) where {NT<:Complex} = zeros(real(NT), 3, Nᵣ)
+zero_cotangents(::Type{NT}, Nᵣ::Int) where {NT<:Real} =
+    AngleCotangents(zeros(NT, 1, Nᵣ), zeros(NT, 1, Nᵣ))
+function add_angle_cotangents!(β̄::AbstractVector, Ḡ::AngleCotangents)
+    for i ∈ eachindex(β̄)
+        β̄[i] += angle_cotangent(Ḡ, i)
+    end
+    β̄
+end
+
+# The type of the derivatives along the generators `G` of values of type `T`.
+derivative_type(::Type{T}, G::AbstractMatrix) where {T} = promote_type(T, Complex{eltype(G)})
+derivative_type(::Type{T}, G::AngleGenerators) where {T} = promote_type(T, eltype(G.vy))
+
+# The number of rotors for which the generators or cotangents `G` are given, and the check
+# that they hold `N` directions, for a kernel that reads them under `@inbounds`.
+generator_columns(G::AbstractMatrix) = size(G, 2)
+generator_columns(G::Union{AngleGenerators, AngleCotangents}) = size(G.vy, 2)
+function check_generators(G::AbstractMatrix, N, name)
+    Base.require_one_based_indexing(G)
+    size(G, 1) ≥ 3N || throw(DimensionMismatch("The $name need $(3N) rows, not $(size(G, 1))."))
+    nothing
+end
+function check_generators(G::Union{AngleGenerators, AngleCotangents}, N, name)
+    Base.require_one_based_indexing(G.vy)
+    size(G.vy, 1) ≥ N || throw(DimensionMismatch("The $name need $N rows, not $(size(G.vy, 1))."))
+    nothing
+end
+
+# The coefficients of a derivative that steps the index n: k = 2n, a_n, and b_n.  Along the
+# generators of angles, a_n and b_n are each given as a pair whose sum is the coefficient to
+# about twice the working precision (see `ladder_pair`): the derivative of an element of `d`
+# or of ₛλₗₘ is then the difference of two products, which nearly cancel, and the rounding
+# error of a coefficient, the same in every element of a line that it multiplies, would not
+# average out when the derivatives are summed, as a gradient sums them.
+@inline step_coefficients(::AbstractMatrix, ℓ, n, ::Type{RT}) where {RT} =
+    (Int(2n), ladder_down(ℓ, n, RT), ladder_up(ℓ, n, RT))
+@inline step_coefficients(::Union{AngleGenerators, AngleCotangents}, ℓ, n, ::Type{RT}) where {RT} =
+    (Int(2n), ladder_pair(Int(ℓ - n + 1) * Int(ℓ + n), RT), ladder_pair(Int(ℓ + n + 1) * Int(ℓ - n), RT))
+# The coefficient √N of `ladder_coefficient`, as the pair (c, e) whose sum is √N to about
+# twice the precision of `T`: e = (N - c²)/(2c), whose numerator `fma` forms exactly.
+@inline function ladder_pair(N::Int, ::Type{T}) where {T}
+    c = ladder_coefficient(N, T)
+    (c, N == 0 ? zero(c) : fma(-c, c, oftype(c, N)) / 2c)
+end
+# The difference b y₊ - a y₋ for the coefficient pairs a and b, with each coefficient to that
+# precision.
+@inline neighbor_difference(a, b, y₋, y₊) = fma(b[1], y₊, b[2] * y₊) - fma(a[1], y₋, a[2] * y₋)
+
+# The derivative of an element x of a block of 𝔇 or of `d` along the generator of direction
+# d of rotor iᵣ, from the left or from the right, given the neighbors x₋ and x₊ that it
+# couples, and the coefficients k, a, and b of the index that it steps (see
+# `step_coefficients`); and the addition of that element's part of the vector g into `Ḡ`,
+# given ā, the conjugate of its cotangent, and p = ā a x₋ and q = ā b x₊.  Along a generator
+# about y, v = (0, v_y, 0), the formulas of the note at the top of this file are v_y (b x₊ -
+# a x₋) from the left and v_y (a x₋ - b x₊) from the right.  The callers have checked the
+# shapes of the arrays, which are therefore indexed under `@inbounds`.
+@inline function wigner_derivative(G::AbstractMatrix, d, iᵣ, left::Bool, k, a, b, x, x₋, x₊)
+    w = @inbounds Complex(G[3d - 2, iᵣ], G[3d - 1, iᵣ])
+    vz = @inbounds G[3d, iᵣ]
+    if left
+        -im * (vz * k * x + conj(w) * a * x₋ + w * b * x₊)
+    else
+        -im * (vz * k * x + w * a * x₋ + conj(w) * b * x₊)
+    end
+end
+@inline function wigner_derivative(G::AngleGenerators, d, iᵣ, left::Bool, k, a, b, x, x₋, x₊)
+    vy = @inbounds G.vy[d, iᵣ]
+    δ = neighbor_difference(a, b, x₋, x₊)
+    vy * (left ? δ : -δ)
+end
+@inline function add_wigner_cotangent!(Ḡ::AbstractMatrix, iᵣ, left::Bool, ā, k, x, p, q)
+    @inbounds begin
+        Ḡ[1, iᵣ] += imag(p + q)
+        Ḡ[2, iᵣ] += left ? real(q - p) : real(p - q)
+        Ḡ[3, iᵣ] += imag(ā * k * x)
+    end
+    nothing
+end
+
+# The generators of angles of which some are not finite, as at a pole for `d` of a rotor,
+# where the angle has no derivative (see `rotation_angle_gradient`).  An element whose
+# neighbors cancel exactly is then given the derivative zero: at a pole these are the
+# elements whose neighbors both vanish, which are those whose derivative as a function of
+# the rotor exists and is zero.  Generators that are all finite are not wrapped in this
+# type, since its test of each element keeps the kernel from vectorizing.
+# - `G` is the type of the generators.
+struct PoleGenerators{G<:AngleGenerators}
+    generators::G
+end
+all_finite(::AbstractMatrix) = true
+all_finite(G::AngleGenerators) = all(isfinite, G.vy)
+@inline step_coefficients(G::PoleGenerators, ℓ, n, ::Type{RT}) where {RT} =
+    step_coefficients(G.generators, ℓ, n, RT)
+@inline function wigner_derivative(G::PoleGenerators, d, iᵣ, left::Bool, k, a, b, x, x₋, x₊)
+    ẋ = wigner_derivative(G.generators, d, iᵣ, left, k, a, b, x, x₋, x₊)
+    finite = isfinite(@inbounds G.generators.vy[d, iᵣ])
+    finite || !iszero(neighbor_difference(a, b, x₋, x₊)) ? ẋ : zero(ẋ)
+end
+
+# The derivative of an element y of a block of the harmonics, and the addition of its part
+# of g, as for 𝔇 above; it is differentiated from the left, conjugated, and along a
+# generator about y its derivative is v_y (b y₊ - a y₋).
+@inline function harmonic_derivative(G::AbstractMatrix, d, iᵣ, k, a, b, y, y₋, y₊)
+    w = @inbounds Complex(G[3d - 2, iᵣ], G[3d - 1, iᵣ])
+    vz = @inbounds G[3d, iᵣ]
+    im * (vz * k * y + w * a * y₋ + conj(w) * b * y₊)
+end
+@inline harmonic_derivative(G::AngleGenerators, d, iᵣ, k, a, b, y, y₋, y₊) =
+    (@inbounds G.vy[d, iᵣ]) * neighbor_difference(a, b, y₋, y₊)
+@inline function add_harmonic_cotangent!(Ḡ::AbstractMatrix, iᵣ, ȳ, k, y, p, q)
+    @inbounds begin
+        Ḡ[1, iᵣ] -= imag(p + q)
+        Ḡ[2, iᵣ] += real(q - p)
+        Ḡ[3, iᵣ] -= imag(ȳ * k * y)
+    end
+    nothing
+end
+
+
 ## The kernels
 
 # The blocks here are 3-dimensional arrays with the rotor index first, as the calculators
 # store them: [iᵣ, m′, m] for 𝔇, with rows `rows` and columns `cols`, and [iᵣ, s, m] for
 # the harmonics, whose third axis is the whole of -ℓ:ℓ.  For 𝔇, the derivatives of the
-# elements in the rows `outrows` ⊆ `rows` and the columns `outcols` ⊆ `cols` are written into
-# `Ȧ`, laid out as [iᵣ, outrows, outcols]; for the harmonics, those of the elements in the
-# spin rows `is` are written into the same positions of `Ȧ`.  Each element of `Ȧ` is
-# `combine(x, ẋ)`, where `x` is the value and `ẋ` the tuple of its derivatives in the `N`
-# directions whose generators are in `G`, so that a caller can assemble its own number type
-# in the same pass.  Every array is indexed under `@inbounds`, so its shape is checked first.
+# elements in the rows `outrows` ⊆ `rows` and the columns `outcols` ⊆ `cols` are written
+# into `Ȧ`, laid out as [iᵣ, outrows, outcols]; for the harmonics, those of every element
+# are written into the same position of `Ȧ`.  Each element of `Ȧ` is `combine(x, ẋ)`, where
+# `x` is the value and `ẋ` the tuple of its derivatives in the `N` directions whose
+# generators are in `G`, so that a caller can assemble its own number type in the same pass.
+# Every array is indexed under `@inbounds`, so its shape is checked first.
 
 function check_wigner_block(Ȧ, A, ℓ, rows, cols, outrows, outcols, left::Bool, Nᵣ)
     Base.require_one_based_indexing(Ȧ, A)
     within(out, r) = isempty(out) || (first(r) ≤ first(out) && last(out) ≤ last(r))
     ok = (
-        size(A, 1) ≥ Nᵣ && size(A, 2) ≥ length(rows) && size(A, 3) ≥ length(cols)
-        && size(Ȧ, 1) ≥ Nᵣ && size(Ȧ, 2) ≥ length(outrows) && size(Ȧ, 3) ≥ length(outcols)
+        size(A, 1) == Nᵣ && size(A, 2) ≥ length(rows) && size(A, 3) ≥ length(cols)
+        && size(Ȧ, 1) == Nᵣ && size(Ȧ, 2) ≥ length(outrows) && size(Ȧ, 3) ≥ length(outcols)
         && within(outrows, rows) && within(outcols, cols)
     )
     # Every neighbor that a coefficient does not annihilate must be in the block.
@@ -156,142 +346,314 @@ function check_wigner_block(Ȧ, A, ℓ, rows, cols, outrows, outcols, left::Bool
     nothing
 end
 
+# `combine` is typed by a parameter in each method, so that the methods are compiled for it
+# although they only pass it on: Julia does not specialize a method on a function that it
+# merely passes to another, and calls it dynamically otherwise.
 function wigner_block_pushforward!(
-    combine, Ȧ::AbstractArray{<:Any, 3}, A::AbstractArray{<:Any, 3}, ℓ, rows, cols,
-    outrows, outcols, left::Bool, G::AbstractMatrix, ::Val{N}
-) where {N}
-    Nᵣ = size(G, 2)
+    combine::F, Ȧ::AbstractArray{<:Any, 3}, A::AbstractArray{<:Any, 3}, ℓ, rows, cols,
+    outrows, outcols, left::Bool, G::Union{AbstractMatrix, AngleGenerators}, ::Val{N}
+) where {F, N}
+    Nᵣ = generator_columns(G)
     check_wigner_block(Ȧ, A, ℓ, rows, cols, outrows, outcols, left, Nᵣ)
-    Base.require_one_based_indexing(G)
-    size(G, 1) ≥ 3N || throw(DimensionMismatch("The generators need $(3N) rows, not $(size(G, 1))."))
-    RT = real(eltype(A))
-    o′ = isempty(outrows) ? 0 : Int(first(outrows) - first(rows))
-    o = isempty(outcols) ? 0 : Int(first(outcols) - first(cols))
-    @inbounds for (jₒ, m) ∈ enumerate(outcols), (j′ₒ, m′) ∈ enumerate(outrows)
-        j′, j = j′ₒ + o′, jₒ + o
-        n = left ? m′ : m
-        k = Int(2n)
-        a, b = ladder_down(ℓ, n, RT), ladder_up(ℓ, n, RT)
-        has₋, has₊ = n > -ℓ, n < ℓ
-        for iᵣ ∈ 1:Nᵣ
-            x = A[iᵣ, j′, j]
-            x₋ = has₋ ? (left ? A[iᵣ, j′ - 1, j] : A[iᵣ, j′, j - 1]) : zero(x)
-            x₊ = has₊ ? (left ? A[iᵣ, j′ + 1, j] : A[iᵣ, j′, j + 1]) : zero(x)
-            ẋ = ntuple(Val(N)) do d
-                # `@inbounds` does not reach into a closure.
-                w = @inbounds Complex(G[3d - 2, iᵣ], G[3d - 1, iᵣ])
-                vz = @inbounds G[3d, iᵣ]
-                if left
-                    -im * (vz * k * x + conj(w) * a * x₋ + w * b * x₊)
-                else
-                    -im * (vz * k * x + w * a * x₋ + conj(w) * b * x₊)
-                end
-            end
-            Ȧ[iᵣ, j′ₒ, jₒ] = combine(x, ẋ)
-        end
+    check_generators(G, N, "generators")
+    # One rotor is differentiated by a method in which `Nᵣ` is `Val(1)`, as in
+    # `materialize!`, and several by one in which it is the `Int` it is.
+    if !all_finite(G)
+        wigner_block_pushforward!(
+            combine, Ȧ, A, ℓ, rows, cols, outrows, outcols, left, PoleGenerators(G), Val(N), Nᵣ
+        )
+    elseif Nᵣ == 1
+        wigner_block_pushforward!(combine, Ȧ, A, ℓ, rows, cols, outrows, outcols, left, G, Val(N), Val(1))
+    else
+        wigner_block_pushforward!(combine, Ȧ, A, ℓ, rows, cols, outrows, outcols, left, G, Val(N), Nᵣ)
     end
     Ȧ
+end
+# The arrays are read and written by linear index, the element (iᵣ, j′, j) of `A` at iᵣ + s′
+# (j′ - 1) + s (j - 1), and likewise for `Ȧ`.  The coefficients depend only on the index
+# that the derivative steps, so the loop over that index is the outer one, and they are
+# computed once for each of its values.  Each element is computed by the same expression
+# whatever the order of the loops.
+function wigner_block_pushforward!(
+    combine::F, Ȧ, A, ℓ, rows, cols, outrows, outcols, left::Bool, G, ::Val{N},
+    Nᵣ::Union{Val{1}, Int}
+) where {F, N}
+    RT = real(eltype(A))
+    s′ = rotor_count(Nᵣ)
+    s, ṡ = s′ * size(A, 2), s′ * size(Ȧ, 2)
+    o′ = isempty(outrows) ? 0 : Int(first(outrows) - first(rows))
+    o = isempty(outcols) ? 0 : Int(first(outcols) - first(cols))
+    if left
+        @inbounds for (j′ₒ, m′) ∈ enumerate(outrows)
+            k, a, b = step_coefficients(G, ℓ, m′, RT)
+            has₋, has₊ = m′ > -ℓ, m′ < ℓ
+            i, iₒ = s′ * (j′ₒ + o′ - 1) + s * o, s′ * (j′ₒ - 1)
+            for jₒ ∈ 1:length(outcols)
+                element_pushforward!(
+                    combine, Ȧ, iₒ + ṡ * (jₒ - 1), A, i + s * (jₒ - 1), s′, has₋, has₊, G,
+                    true, k, a, b, Val(N), Nᵣ
+                )
+            end
+        end
+    else
+        @inbounds for (jₒ, m) ∈ enumerate(outcols)
+            k, a, b = step_coefficients(G, ℓ, m, RT)
+            has₋, has₊ = m > -ℓ, m < ℓ
+            i, iₒ = s′ * o′ + s * (jₒ + o - 1), ṡ * (jₒ - 1)
+            for j′ₒ ∈ 1:length(outrows)
+                element_pushforward!(
+                    combine, Ȧ, iₒ + s′ * (j′ₒ - 1), A, i + s′ * (j′ₒ - 1), s, has₋, has₊, G,
+                    false, k, a, b, Val(N), Nᵣ
+                )
+            end
+        end
+    end
+    nothing
+end
+# The derivatives of one element for every rotor, written into `Ȧ` after its first `iₒ`
+# entries, from the element after the first `i` entries of `A`, whose neighbors are `step`
+# before and after it, where they exist.
+@inline function element_pushforward!(
+    combine::F, Ȧ, iₒ, A, i, step, has₋::Bool, has₊::Bool, G, left::Bool, k, a, b, ::Val{N},
+    Nᵣ::Union{Val{1}, Int}
+) where {F, N}
+    @inbounds for iᵣ ∈ 1:rotor_count(Nᵣ)
+        x = A[i + iᵣ]
+        x₋ = has₋ ? A[i + iᵣ - step] : zero(x)
+        x₊ = has₊ ? A[i + iᵣ + step] : zero(x)
+        ẋ = ntuple(d -> wigner_derivative(G, d, iᵣ, left, k, a, b, x, x₋, x₊), Val(N))
+        Ȧ[iₒ + iᵣ] = combine(x, ẋ)
+    end
+    nothing
 end
 
 # The vector g of the note above for each rotor, added into the columns of `Ḡ`, from the
 # values `A` and the cotangent `Ā` of the rows `outrows` and columns `outcols`, laid out as
 # `Ȧ` is above.
 function wigner_block_pullback!(
-    Ḡ::AbstractMatrix, A::AbstractArray{<:Any, 3}, Ā::AbstractArray{<:Any, 3}, ℓ, rows, cols,
-    outrows, outcols, left::Bool
+    Ḡ::AbstractMatrix, A::AbstractArray{<:Any, 3},
+    Ā::AbstractArray{<:Any, 3}, ℓ, rows, cols, outrows, outcols, left::Bool
 )
-    Nᵣ = size(Ḡ, 2)
+    Nᵣ = generator_columns(Ḡ)
     check_wigner_block(Ā, A, ℓ, rows, cols, outrows, outcols, left, Nᵣ)
-    Base.require_one_based_indexing(Ḡ)
-    size(Ḡ, 1) ≥ 3 || throw(DimensionMismatch("The cotangents need 3 rows, not $(size(Ḡ, 1))."))
+    check_generators(Ḡ, 1, "cotangents")
     RT = real(eltype(A))
+    s′, s = size(A, 1), size(A, 1) * size(A, 2)
+    ṡ′, ṡ = size(Ā, 1), size(Ā, 1) * size(Ā, 2)
     o′ = isempty(outrows) ? 0 : Int(first(outrows) - first(rows))
     o = isempty(outcols) ? 0 : Int(first(outcols) - first(cols))
+    # The contributions are added in the order of the storage of the elements, the rotors
+    # innermost.  The coefficients a_n of the rows are tabulated once, since b_n = a_{n+1};
+    # those of a column are the same throughout it.
+    (isempty(outrows) || isempty(outcols)) && return Ḡ
+    out = left ? outrows : outcols
+    ladder = [ladder_down(ℓ, n, RT) for n ∈ first(out):(last(out) + 1)]
     @inbounds for (jₒ, m) ∈ enumerate(outcols), (j′ₒ, m′) ∈ enumerate(outrows)
-        j′, j = j′ₒ + o′, jₒ + o
+        p = left ? j′ₒ : jₒ
         n = left ? m′ : m
-        k = Int(2n)
-        a, b = ladder_down(ℓ, n, RT), ladder_up(ℓ, n, RT)
+        k, a, b = Int(2n), ladder[p], ladder[p + 1]
         has₋, has₊ = n > -ℓ, n < ℓ
+        i, iₒ = s′ * (j′ₒ + o′ - 1) + s * (jₒ + o - 1), ṡ′ * (j′ₒ - 1) + ṡ * (jₒ - 1)
+        step = left ? s′ : s
         for iᵣ ∈ 1:Nᵣ
-            ā = conj(Ā[iᵣ, j′ₒ, jₒ])
-            x = A[iᵣ, j′, j]
-            p = has₋ ? ā * a * (left ? A[iᵣ, j′ - 1, j] : A[iᵣ, j′, j - 1]) : zero(ā * x)
-            q = has₊ ? ā * b * (left ? A[iᵣ, j′ + 1, j] : A[iᵣ, j′, j + 1]) : zero(ā * x)
-            Ḡ[1, iᵣ] += imag(p + q)
-            Ḡ[2, iᵣ] += left ? real(q - p) : real(p - q)
-            Ḡ[3, iᵣ] += imag(ā * k * x)
+            ā = conj(Ā[iₒ + iᵣ])
+            x = A[i + iᵣ]
+            p₋ = has₋ ? ā * a * A[i + iᵣ - step] : zero(ā * x)
+            q₊ = has₊ ? ā * b * A[i + iᵣ + step] : zero(ā * x)
+            add_wigner_cotangent!(Ḡ, iᵣ, left, ā, k, x, p₋, q₊)
         end
     end
     Ḡ
 end
 
-function check_harmonic_block(Ȧ, A, ℓ, is, Nᵣ)
+# The same for a block of `d`, whose cotangents are those of the angles of its rotors (see
+# `AngleCotangents`).  The cotangent of each angle is the sum of ā δ over the elements, with
+# δ the difference that the derivative of the element is v_y times, formed as the forward
+# kernel forms it.  The terms have either sign, and near the poles they nearly cancel, so
+# each product is added with its rounding error, which `fma` gives exactly, into a
+# compensated sum.  The elements of a line, along which the coefficients are constant, are
+# added into two such sums in turn, which run in parallel.
+function wigner_block_pullback!(
+    Ḡ::AngleCotangents, A::AbstractArray{<:Real, 3}, Ā::AbstractArray{<:Real, 3}, ℓ, rows,
+    cols, outrows, outcols, left::Bool
+)
+    Nᵣ = generator_columns(Ḡ)
+    check_wigner_block(Ā, A, ℓ, rows, cols, outrows, outcols, left, Nᵣ)
+    check_generators(Ḡ, 1, "cotangents")
+    (isempty(outrows) || isempty(outcols)) && return Ḡ
+    RT = eltype(A)
+    s′, s, ṡ = Nᵣ, Nᵣ * size(A, 2), Nᵣ * size(Ā, 2)
+    o′, o = Int(first(outrows) - first(rows)), Int(first(outcols) - first(cols))
+    # The lines, the number of elements in each, the steps from one element of a line to the
+    # next in `A` and in `Ā`, and the step to a neighbor in `A`
+    lines, len = left ? (outrows, length(outcols)) : (outcols, length(outrows))
+    step, stepₒ, neighbor = left ? (s, ṡ, s′) : (s′, s′, s)
+    @inbounds for iᵣ ∈ 1:Nᵣ
+        t₁ = t₂ = c₁ = c₂ = zero(RT)
+        for (l, n) ∈ enumerate(lines)
+            # The first element of the line, in `A` and in `Ā`
+            i, iₒ = if left
+                (iᵣ + s′ * (l + o′ - 1) + s * o, iᵣ + s′ * (l - 1))
+            else
+                (iᵣ + s′ * o′ + s * (l + o - 1), iᵣ + ṡ * (l - 1))
+            end
+            _, a, b = step_coefficients(Ḡ, ℓ, n, RT)
+            # δ from the right is the negative of that from the left
+            a, b = left ? (a, b) : (.-a, .-b)
+            has₋, has₊ = n > -ℓ, n < ℓ
+            u = 0
+            while u < len
+                p, e = angle_term(Ā, A, iₒ + stepₒ * u, i + step * u, neighbor, has₋, has₊, a, b)
+                t₁, c₁ = compensated_sum(t₁, c₁ + e, p)
+                if u + 1 < len
+                    p, e = angle_term(
+                        Ā, A, iₒ + stepₒ * (u + 1), i + step * (u + 1), neighbor, has₋, has₊, a, b
+                    )
+                    t₂, c₂ = compensated_sum(t₂, c₂ + e, p)
+                end
+                u += 2
+            end
+        end
+        t, e = two_sum(t₁, t₂)
+        compensated_add!(Ḡ, iᵣ, t, (c₁ + c₂) + e)
+    end
+    Ḡ
+end
+# The term ā δ of the element of `A` at index `i`, whose cotangent is at index `iₒ` of `Ā`,
+# and the rounding error of that product.
+@inline function angle_term(Ā, A, iₒ, i, neighbor, has₋::Bool, has₊::Bool, a, b)
+    @inbounds begin
+        ā = Ā[iₒ]
+        x₋ = has₋ ? A[i - neighbor] : zero(ā)
+        x₊ = has₊ ? A[i + neighbor] : zero(ā)
+    end
+    δ = neighbor_difference(a, b, x₋, x₊)
+    p = ā * δ
+    (p, fma(ā, δ, -p))
+end
+
+function check_harmonic_block(Ȧ, A, ℓ, Nᵣ)
     Base.require_one_based_indexing(Ȧ, A)
     n = Int(2ℓ) + 1
     if !(
-        size(A, 1) ≥ Nᵣ && size(A, 3) ≥ n && size(Ȧ, 1) ≥ Nᵣ && size(Ȧ, 3) ≥ n
-        && (isempty(is) || (1 ≤ first(is) && last(is) ≤ min(size(A, 2), size(Ȧ, 2))))
+        size(A, 1) == Nᵣ && size(A, 3) ≥ n && size(Ȧ, 1) == Nᵣ && size(Ȧ, 2) ≥ size(A, 2)
+        && size(Ȧ, 3) ≥ n
     )
         throw(DimensionMismatch(
-            "Cannot differentiate the spin rows $is of a block of size $(size(A)) at ℓ=$ℓ into "
-            * "an array of size $(size(Ȧ)) for Nᵣ=$Nᵣ."
+            "Cannot differentiate a block of size $(size(A)) at ℓ=$ℓ into an array of size "
+            * "$(size(Ȧ)) for Nᵣ=$Nᵣ."
         ))
     end
     nothing
 end
 
 function harmonic_block_pushforward!(
-    combine, Ȧ::AbstractArray{<:Any, 3}, A::AbstractArray{<:Any, 3}, ℓ, is,
-    G::AbstractMatrix, ::Val{N}
-) where {N}
-    Nᵣ = size(G, 2)
-    check_harmonic_block(Ȧ, A, ℓ, is, Nᵣ)
-    Base.require_one_based_indexing(G)
-    size(G, 1) ≥ 3N || throw(DimensionMismatch("The generators need $(3N) rows, not $(size(G, 1))."))
-    RT = real(eltype(A))
-    n = Int(2ℓ) + 1
-    @inbounds for j ∈ 1:n
-        m = -ℓ + (j - 1)
-        k = Int(2m)
-        a, b = ladder_down(ℓ, m, RT), ladder_up(ℓ, m, RT)
-        for i ∈ is, iᵣ ∈ 1:Nᵣ
-            y = A[iᵣ, i, j]
-            y₋ = j > 1 ? A[iᵣ, i, j - 1] : zero(y)
-            y₊ = j < n ? A[iᵣ, i, j + 1] : zero(y)
-            ẏ = ntuple(Val(N)) do d
-                w = @inbounds Complex(G[3d - 2, iᵣ], G[3d - 1, iᵣ])
-                vz = @inbounds G[3d, iᵣ]
-                im * (vz * k * y + w * a * y₋ + conj(w) * b * y₊)
-            end
-            Ȧ[iᵣ, i, j] = combine(y, ẏ)
-        end
+    combine::F, Ȧ::AbstractArray{<:Any, 3}, A::AbstractArray{<:Any, 3}, ℓ,
+    G::Union{AbstractMatrix, AngleGenerators}, ::Val{N}
+) where {F, N}
+    Nᵣ = generator_columns(G)
+    check_harmonic_block(Ȧ, A, ℓ, Nᵣ)
+    check_generators(G, N, "generators")
+    if Nᵣ == 1
+        harmonic_block_pushforward!(combine, Ȧ, A, ℓ, G, Val(N), Val(1))
+    else
+        harmonic_block_pushforward!(combine, Ȧ, A, ℓ, G, Val(N), Nᵣ)
     end
     Ȧ
 end
-
-function harmonic_block_pullback!(
-    Ḡ::AbstractMatrix, A::AbstractArray{<:Any, 3}, Ā::AbstractArray{<:Any, 3}, ℓ, is
-)
-    Nᵣ = size(Ḡ, 2)
-    check_harmonic_block(Ā, A, ℓ, is, Nᵣ)
-    Base.require_one_based_indexing(Ḡ)
-    size(Ḡ, 1) ≥ 3 || throw(DimensionMismatch("The cotangents need 3 rows, not $(size(Ḡ, 1))."))
+# As for 𝔇, the arrays are read and written by linear index, and the coefficients, which
+# depend on m alone, are computed once for each column.
+function harmonic_block_pushforward!(
+    combine::F, Ȧ, A, ℓ, G, ::Val{N}, Nᵣ::Union{Val{1}, Int}
+) where {F, N}
     RT = real(eltype(A))
     n = Int(2ℓ) + 1
+    s′ = rotor_count(Nᵣ)
+    s, ṡ = s′ * size(A, 2), s′ * size(Ȧ, 2)
     @inbounds for j ∈ 1:n
         m = -ℓ + (j - 1)
-        k = Int(2m)
-        a, b = ladder_down(ℓ, m, RT), ladder_up(ℓ, m, RT)
-        for i ∈ is, iᵣ ∈ 1:Nᵣ
-            ȳ = conj(Ā[iᵣ, i, j])
-            y = A[iᵣ, i, j]
-            p = j > 1 ? ȳ * a * A[iᵣ, i, j - 1] : zero(ȳ * y)
-            q = j < n ? ȳ * b * A[iᵣ, i, j + 1] : zero(ȳ * y)
-            Ḡ[1, iᵣ] -= imag(p + q)
-            Ḡ[2, iᵣ] += real(q - p)
-            Ḡ[3, iᵣ] -= imag(ȳ * k * y)
+        k, a, b = step_coefficients(G, ℓ, m, RT)
+        i, iₒ = s * (j - 1), ṡ * (j - 1)
+        for p ∈ 1:size(A, 2)
+            element_pushforward!(
+                combine, Ȧ, iₒ + s′ * (p - 1), A, i + s′ * (p - 1), s, j > 1, j < n, G,
+                k, a, b, Val(N), Nᵣ
+            )
         end
+    end
+    nothing
+end
+@inline function element_pushforward!(
+    combine::F, Ȧ, iₒ, A, i, step, has₋::Bool, has₊::Bool, G, k, a, b, ::Val{N},
+    Nᵣ::Union{Val{1}, Int}
+) where {F, N}
+    @inbounds for iᵣ ∈ 1:rotor_count(Nᵣ)
+        y = A[i + iᵣ]
+        y₋ = has₋ ? A[i + iᵣ - step] : zero(y)
+        y₊ = has₊ ? A[i + iᵣ + step] : zero(y)
+        ẏ = ntuple(d -> harmonic_derivative(G, d, iᵣ, k, a, b, y, y₋, y₊), Val(N))
+        Ȧ[iₒ + iᵣ] = combine(y, ẏ)
+    end
+    nothing
+end
+
+function harmonic_block_pullback!(
+    Ḡ::AbstractMatrix, A::AbstractArray{<:Any, 3},
+    Ā::AbstractArray{<:Any, 3}, ℓ
+)
+    Nᵣ = generator_columns(Ḡ)
+    check_harmonic_block(Ā, A, ℓ, Nᵣ)
+    check_generators(Ḡ, 1, "cotangents")
+    RT = real(eltype(A))
+    n = Int(2ℓ) + 1
+    s′, s = size(A, 1), size(A, 1) * size(A, 2)
+    ṡ′, ṡ = size(Ā, 1), size(Ā, 1) * size(Ā, 2)
+    @inbounds for j ∈ 1:n
+        m = -ℓ + (j - 1)
+        k, a, b = Int(2m), ladder_down(ℓ, m, RT), ladder_up(ℓ, m, RT)
+        for i ∈ axes(A, 2)
+            o, oₒ = s′ * (i - 1) + s * (j - 1), ṡ′ * (i - 1) + ṡ * (j - 1)
+            for iᵣ ∈ 1:Nᵣ
+                ȳ = conj(Ā[oₒ + iᵣ])
+                y = A[o + iᵣ]
+                p = j > 1 ? ȳ * a * A[o + iᵣ - s] : zero(ȳ * y)
+                q = j < n ? ȳ * b * A[o + iᵣ + s] : zero(ȳ * y)
+                add_harmonic_cotangent!(Ḡ, iᵣ, ȳ, k, y, p, q)
+            end
+        end
+    end
+    Ḡ
+end
+
+# The same for a block of ₛλₗₘ.  Since b_m = a_{m+1}, the neighbors m and m+1 of a spin row
+# contribute b_m (ȳ_m y_{m+1} - ȳ_{m+1} y_m) together.  Near the poles this difference
+# nearly cancels, so it is formed exactly, as the sum of a number and its rounding error,
+# multiplied by b_m to twice the working precision, and added with the rounding errors of
+# these steps into a compensated sum.
+function harmonic_block_pullback!(
+    Ḡ::AngleCotangents, A::AbstractArray{<:Real, 3}, Ā::AbstractArray{<:Real, 3}, ℓ
+)
+    Nᵣ = generator_columns(Ḡ)
+    check_harmonic_block(Ā, A, ℓ, Nᵣ)
+    check_generators(Ḡ, 1, "cotangents")
+    RT = eltype(A)
+    n = Int(2ℓ) + 1
+    b = [ladder_pair(Int(ℓ + m + 1) * Int(ℓ - m), RT) for m ∈ -ℓ:(ℓ - 1)]
+    s, ṡ = Nᵣ * size(A, 2), Nᵣ * size(Ā, 2)
+    @inbounds for iᵣ ∈ 1:Nᵣ, row ∈ axes(A, 2)
+        i = iᵣ + Nᵣ * (row - 1)
+        t = c = zero(RT)
+        for j ∈ 1:(n - 1)
+            ȳ, ȳ₊ = Ā[i + ṡ * (j - 1)], Ā[i + ṡ * j]
+            y, y₊ = A[i + s * (j - 1)], A[i + s * j]
+            p = ȳ * y₊
+            q = ȳ₊ * y
+            d, e = two_sum(p, -q)
+            e += fma(ȳ, y₊, -p) - fma(ȳ₊, y, -q)
+            x = b[j][1] * d
+            t, c = compensated_sum(t, c + (fma(b[j][1], d, -x) + (b[j][1] * e + b[j][2] * d)), x)
+        end
+        compensated_add!(Ḡ, iᵣ, t, c)
     end
     Ḡ
 end
@@ -318,30 +680,30 @@ function harmonic_array_pushforward(
     combine, Y::AbstractArray, batched::Bool, ℓₘᵢₙ::IT, ℓₘₐₓ::IT, G::AbstractMatrix, ::Val{N}
 ) where {IT<:IntegerHalf, N}
     Y₃ = harmonic_blocks_view(Y, batched)
-    check_harmonic_array(Y₃, ℓₘᵢₙ, ℓₘₐₓ, size(G, 2))
-    CT = promote_type(eltype(Y), Complex{eltype(G)})
+    check_harmonic_array(Y₃, ℓₘᵢₙ, ℓₘₐₓ, generator_columns(G))
+    CT = derivative_type(eltype(Y), G)
     Ẏ = similar(Y, typeof(combine(zero(eltype(Y)), ntuple(_ -> zero(CT), Val(N)))))
     Ẏ₃ = harmonic_blocks_view(Ẏ, batched)
     for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ
         r = Yindex(ℓ, -ℓ, ℓₘᵢₙ):Yindex(ℓ, ℓ, ℓₘᵢₙ)
         harmonic_block_pushforward!(
-            combine, view(Ẏ₃, :, :, r), view(Y₃, :, :, r), ℓ, axes(Y₃, 2), G, Val(N)
+            combine, view(Ẏ₃, :, :, r), view(Y₃, :, :, r), ℓ, G, Val(N)
         )
     end
     Ẏ
 end
 
 function harmonic_array_pullback!(
-    Ḡ::AbstractMatrix, Y::AbstractArray, Ȳ::AbstractArray, batched::Bool, ℓₘᵢₙ::IT, ℓₘₐₓ::IT
+    Ḡ::Union{AbstractMatrix, AngleCotangents}, Y::AbstractArray, Ȳ::AbstractArray, batched::Bool, ℓₘᵢₙ::IT, ℓₘₐₓ::IT
 ) where {IT<:IntegerHalf}
     size(Ȳ) == size(Y) || throw(DimensionMismatch(
         "The cotangent has size $(size(Ȳ)), but the harmonics $(size(Y))."
     ))
     Y₃, Ȳ₃ = harmonic_blocks_view(Y, batched), harmonic_blocks_view(Ȳ, batched)
-    check_harmonic_array(Y₃, ℓₘᵢₙ, ℓₘₐₓ, size(Ḡ, 2))
+    check_harmonic_array(Y₃, ℓₘᵢₙ, ℓₘₐₓ, generator_columns(Ḡ))
     for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ
         r = Yindex(ℓ, -ℓ, ℓₘᵢₙ):Yindex(ℓ, ℓ, ℓₘᵢₙ)
-        harmonic_block_pullback!(Ḡ, view(Y₃, :, :, r), view(Ȳ₃, :, :, r), ℓ, axes(Y₃, 2))
+        harmonic_block_pullback!(Ḡ, view(Y₃, :, :, r), view(Ȳ₃, :, :, r), ℓ)
     end
     Ḡ
 end
@@ -369,29 +731,78 @@ end
 
 set_generators!(lift::Lift, left::Bool, rotors::AbstractVector{Quaternion{RT}}) where {RT} =
     set_generators!(lift.G, left, rotors, rotor_value, rotor_tangents, Val(ndirections(RT)))
+# The generators of the angles of a calculator of `d` or of ₛλₗₘ, from either side: the y
+# component β̇/2 of each, in each direction (see `AngleGenerators`).
+function set_generators!(lift::Lift, ::Bool, angles::AbstractVector{RT}) where {RT<:Real}
+    G = lift.G
+    N = ndirections(RT)
+    Base.require_one_based_indexing(G, angles)
+    size(G) == (N, length(angles)) || throw(DimensionMismatch(
+        "The generators of $(length(angles)) angles in $N directions need a matrix of size "
+        * "$((N, length(angles))), not $(size(G))."
+    ))
+    @inbounds for iᵣ ∈ eachindex(angles)
+        β̇ = angle_tangents(angles[iᵣ])
+        for d ∈ 1:N
+            G[d, iᵣ] = β̇[d] / 2
+        end
+    end
+    lift
+end
 
-# The stored rows and columns of this calculator's block, from those of the calculator of
-# values, which stores one more on each side wherever this one needs it; see
-# `stored_limits`.
-function lift!(c::WignerCalculator{IT, RT, NT, ST, B, FT, <:Lift}, ℓ::IT) where {IT, RT, NT, ST, B, FT<:Real}
+# The generators of a lifting calculator's rotors, as the kernels read them.
+lift_generators(
+    c::Union{WignerCalculator{IT, RT, NT}, HarmonicCalculator{IT, RT, NT}}
+) where {IT, RT, NT} = NT <: Complex ? c.lift.G : AngleGenerators(c.lift.G)
+
+# The block of degree ℓ, written into `A` after its first `o` entries, from the block of the
+# calculator of values, whose limits are this calculator's derivative limits, so that it
+# holds one row or column more on each side wherever this one needs it; see
+# `derivative_limits`.
+function lift!(
+    c::WignerCalculator{IT, RT, NT, ST, B, FT, <:Lift}, ℓ::IT, A, o::Int
+) where {IT, RT, NT, ST, B, FT<:Real}
     inner = c.lift.inner
-    rows, cols = stored_m′range(inner, ℓ), stored_mrange(inner, ℓ)
-    outrows, outcols = stored_m′range(c, ℓ), stored_mrange(c, ℓ)
     wigner_block_pushforward!(
-        lift_combine(RT), view(c.Wˡ, :, 1:length(outrows), 1:length(outcols)),
-        view(inner.Wˡ, :, 1:length(rows), 1:length(cols)), ℓ, rows, cols, outrows, outcols,
-        derivatives_from_left(c), c.lift.G, Val(ndirections(RT))
+        lift_combine(RT), block_array(c, A, ℓ, o), block_array(inner, inner.Wˡ, ℓ), ℓ,
+        m′range(inner, ℓ), mrange(inner, ℓ), m′range(c, ℓ), mrange(c, ℓ),
+        derivatives_from_left(c), lift_generators(c), Val(ndirections(RT))
     )
     c
 end
-# The spin rows `is` of the block of degree ℓ, written into `Y` after its first `j₀` modes,
+# The values from which the derivatives of the block of degree ℓ are computed, as for a
+# calculator of values (see `derivative_values` in `src/calculators/wigner.jl`).  Where they
+# reach beyond the block, the wedge alone cannot give them, since it holds the values of the
+# rotors and not their derivatives, so they are lifted, as the block itself is, from the
+# values of the calculator of values over its own derivative ranges, which reach one row or
+# column further.
+function derivative_values(
+    c::WignerCalculator{IT, RT, NT, ST, B, FT, <:Lift}, ℓ::IT, A::AbstractArray=c.Wˡ,
+    o::Int=0
+) where {IT, RT, NT, ST, B, FT<:Real}
+    rows, cols = derivative_m′range(c, ℓ), derivative_mrange(c, ℓ)
+    if rows == m′range(c, ℓ) && cols == mrange(c, ℓ)
+        block_array(c, A, ℓ, o)
+    else
+        inner = c.lift.inner
+        values = Array{NT, 3}(undef, Nᵣ(c), length(rows), length(cols))
+        wigner_block_pushforward!(
+            lift_combine(RT), values, derivative_values(inner, ℓ), ℓ,
+            derivative_m′range(inner, ℓ), derivative_mrange(inner, ℓ), rows, cols,
+            derivatives_from_left(c), lift_generators(c), Val(ndirections(RT))
+        )
+        values
+    end
+end
+# The spin rows `is` of the block of degree ℓ, written into `A` after its first `o` entries,
 # from the calculator of values, which computes them into its own block.
 function lift!(
-    c::HarmonicCalculator{IT, RT, NT, ST, S, B, FT, <:Lift}, ℓ::IT, is, Y, j₀::Int
+    c::HarmonicCalculator{IT, RT, NT, ST, S, B, FT, <:Lift}, ℓ::IT, is, A, o::Int
 ) where {IT, RT, NT, ST, S, B, FT<:Real}
+    inner = c.lift.inner
     harmonic_block_pushforward!(
-        lift_combine(RT), view(Y, :, :, (j₀ + 1):(j₀ + Int(2ℓ) + 1)), c.lift.inner.Yˡ, ℓ, is,
-        c.lift.G, Val(ndirections(RT))
+        lift_combine(RT), block_array(c, A, ℓ, is, o), block_array(inner, inner.Yˡ, ℓ, is),
+        ℓ, lift_generators(c), Val(ndirections(RT))
     )
     c
 end
@@ -401,7 +812,8 @@ end
 #
 # ChainRules and ReverseDiff cannot differentiate code that mutates arrays, as a calculator
 # does, so their extensions define rules for the functions that return whole arrays instead:
-# `D_array`, `sYlm_array`, and `sYlm_matrix_array`.  These are what those rules compute.
+# `D_array`, `d_array`, `sYlm_array`, and `sYlm_matrix_array`.  These are what those rules
+# compute.
 
 # The generators of the tangents `Ṙ` of the rotors `R` as the matrix `G` that the kernels
 # read, for one direction, and the cotangents of the rotors from the vectors in the columns
@@ -416,55 +828,88 @@ end
 rotor_cotangents(left::Bool, R::AbstractVector, Ḡ::AbstractMatrix) =
     [rotor_cotangent(left, R[i], (Ḡ[1, i], Ḡ[2, i], Ḡ[3, i])) for i ∈ eachindex(R)]
 
-# The blocks of `D_array(R, …)`, and the stored rows and columns of each, as [1, m′, m],
-# with the calculator that computed them, from which the rules read the ranges of each
-# block.
-function D_array_with_stored(
-    R, ℓₘₐₓ::IT, m′ₘₐₓ::IT, m′ₘᵢₙ::IT, mₘₐₓ::IT, mₘᵢₙ::IT
-) where {IT<:IntegerHalf}
-    calc = DCalculator(R, ℓₘₐₓ; m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
-    ℓs = lowest_index(IT):ℓₘₐₓ
-    blocks = Vector{Matrix{eltype(calc.Wˡ)}}(undef, length(ℓs))
-    stored = Vector{Array{eltype(calc.Wˡ), 3}}(undef, length(ℓs))
-    for (i, ℓ) ∈ enumerate(ℓs)
-        blocks[i] = copy(parent(recurrence!(calc, ℓ)))
-        stored[i] = calc.Wˡ[1:1, 1:length(stored_m′range(calc, ℓ)), 1:length(stored_mrange(calc, ℓ))]
-    end
-    blocks, stored, calc
+# The gradient of the angle β of the rotor data `x` (see `rotation_angle`) with respect to
+# its components: 1 for an angle; for a phase z, the complex number g with β̇ = Re(conj(g) ż),
+# which is i z / |z|²; and for a rotor, the tuple of the four partial derivatives of
+# 2 atan(√(X²+Y²), √(W²+Z²)), which are `NaN` at the poles, where β has no derivative.
+rotation_angle_gradient(::Real) = 1
+rotation_angle_gradient(z::Complex) = im * z / abs2(z)
+function rotation_angle_gradient(R::RotorLike)
+    W, X, Y, Z = R[1], R[2], R[3], R[4]
+    a, b = W^2 + Z^2, X^2 + Y^2
+    c, s = 2sqrt(b) / (sqrt(a) * (a + b)), 2sqrt(a) / (sqrt(b) * (a + b))
+    (-c * W, s * X, s * Y, -c * Z)
 end
 
-# The derivatives of the blocks of `D_array` along the generator `v`, from the stored rows
-# and columns of each, as the matrices of the blocks themselves.
-function D_array_pushforward(calc::WignerCalculator{IT}, stored, v) where {IT}
-    G = reshape([v[1], v[2], v[3]], 3, 1)
+# The same gradient with respect to the components of the rotor data (see
+# `rotor_data_components`), as a tuple of reals.
+angle_component_gradient(β::Real) = (one(β),)
+function angle_component_gradient(x::Real, y::Real)
+    g = rotation_angle_gradient(Complex(x, y))
+    (real(g), imag(g))
+end
+angle_component_gradient(w::Real, x::Real, y::Real, z::Real) =
+    rotation_angle_gradient(Quaternion(w, x, y, z))
+
+# The cotangent of the rotor data `x` from the cotangent β̄ of its angle: a number for an
+# angle, a complex number for a phase, as for `rotation_angle_gradient`, and a tuple of four
+# components for a rotor.  A zero β̄ gives zero even at the poles, where the gradient is not
+# finite, so that the elements whose derivative there is zero (see `wigner_derivative`) give
+# zero cotangents too.
+function rotation_angle_cotangent(x, β̄)
+    x̄ = rotation_angle_gradient(x) .* β̄
+    iszero(β̄) ? map(zero, x̄) : x̄
+end
+
+# The blocks of the arrays of `D` or `d` of the rotor data `x`, with elements of type `NT`,
+# as `D_array` and `d_array` compute them, and the values from which the derivatives of each
+# are computed, as [1, m′, m], with the calculator that computed them, from which the rules
+# read the ranges of each block.  The values are copied, since they may be the blocks
+# themselves, which are handed to the caller.
+function wigner_arrays_with_derivative_values(
+    ::Type{NT}, x, ℓₘₐₓ::IT, m′ₘₐₓ::IT, m′ₘᵢₙ::IT, mₘₐₓ::IT, mₘᵢₙ::IT
+) where {NT, IT<:IntegerHalf}
+    calc = series_calculator(NT, x, ℓₘₐₓ, m′ₘₐₓ, m′ₘᵢₙ, mₘₐₓ, mₘᵢₙ)
+    values = Array{eltype(calc.Wˡ), 3}[]
+    blocks = wigner_arrays(calc) do ℓ, A, o
+        push!(values, copy(derivative_values(calc, ℓ, A, o)))
+    end
+    blocks, values, calc
+end
+
+# The derivatives of those blocks along the generators `G` of one direction, as the matrices
+# of the blocks themselves, from `values`, the values from which the derivatives of each
+# block are computed.
+function wigner_arrays_pushforward(calc::WignerCalculator{IT}, values, G) where {IT}
     left = derivatives_from_left(calc)
     map(enumerate(lowest_index(IT):ℓₘₐₓ(calc))) do (i, ℓ)
-        rows, cols = stored_m′range(calc, ℓ), stored_mrange(calc, ℓ)
+        rows, cols = derivative_m′range(calc, ℓ), derivative_mrange(calc, ℓ)
         outrows, outcols = m′range(calc, ℓ), mrange(calc, ℓ)
-        Aˢ = stored[i]
-        Ȧ = similar(Aˢ, promote_type(eltype(Aˢ), Complex{eltype(G)}), 1, length(outrows), length(outcols))
+        Aᵈ = values[i]
+        Ȧ = similar(Aᵈ, derivative_type(eltype(Aᵈ), G), 1, length(outrows), length(outcols))
         wigner_block_pushforward!(
-            (x, ẋ) -> only(ẋ), Ȧ, Aˢ, ℓ, rows, cols, outrows, outcols, left, G, Val(1)
+            (x, ẋ) -> only(ẋ), Ȧ, Aᵈ, ℓ, rows, cols, outrows, outcols, left, G, Val(1)
         )
         reshape(Ȧ, length(outrows), length(outcols))
     end
 end
 
-# The vector g of the note at the top of this file, from the stored rows and columns of each
-# block and the cotangents `Ā` of the blocks, of which any may be `nothing` for a zero
-# cotangent.
-function D_array_pullback(calc::WignerCalculator{IT}, stored, Ā) where {IT}
-    Ḡ = zeros(real(eltype(first(stored))), 3, 1)
+# The cotangents of the generators, from the values from which the derivatives of each
+# block are computed and the cotangents `Ā` of the blocks, of which any may be `nothing` for
+# a zero cotangent: the vector g of the note at the top of this file for 𝔇, as a 3×1 matrix,
+# and its y component for `d`, as `AngleCotangents`.
+function wigner_arrays_pullback(calc::WignerCalculator{IT}, values, Ā) where {IT}
+    Ḡ = zero_cotangents(eltype(first(values)), 1)
     left = derivatives_from_left(calc)
     for (i, ℓ) ∈ enumerate(lowest_index(IT):ℓₘₐₓ(calc))
         Āᵢ = Ā[i]
         Āᵢ === nothing && continue
-        rows, cols = stored_m′range(calc, ℓ), stored_mrange(calc, ℓ)
+        rows, cols = derivative_m′range(calc, ℓ), derivative_mrange(calc, ℓ)
         outrows, outcols = m′range(calc, ℓ), mrange(calc, ℓ)
         wigner_block_pullback!(
-            Ḡ, stored[i], reshape(Āᵢ, 1, length(outrows), length(outcols)), ℓ,
+            Ḡ, values[i], reshape(Āᵢ, 1, length(outrows), length(outcols)), ℓ,
             rows, cols, outrows, outcols, left
         )
     end
-    (Ḡ[1, 1], Ḡ[2, 1], Ḡ[3, 1])
+    Ḡ
 end

@@ -209,15 +209,13 @@ end
     mode_m = Vector{Int}(undef, n)
     Λ = Matrix{TT}(undef, n, nrings)
     λ = sλlmCalculator(θ, ℓₘₐₓ, s)  # θ is already a Vector{TT}, which fixes the type
-    iₛ = spin_index(λ, s)
-    Λℓ = λ.Yˡ  # [ring, spin, m+ℓ+1]
     for ℓ ∈ abs(s):ℓₘₐₓ
-        recurrence!(λ, ℓ)
+        Λℓ = array_view(recurrence!(λ, ℓ))  # [ring, m+ℓ+1]
         for m ∈ -ℓ:ℓ
             i = Yindex(ℓ, m, abs(s))
             mode_m[i] = m
             for r ∈ 1:nrings
-                Λ[i, r] = Λℓ[r, iₛ, m + ℓ + 1]
+                Λ[i, r] = Λℓ[r, m + ℓ + 1]
             end
         end
     end

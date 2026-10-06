@@ -538,6 +538,8 @@ end
         @test all(isnan, parent(calc.Hˡ))
         @test all(isnan, parent(calc.h⃗ᵃ))
         @test all(isnan, parent(calc.h⃗ᵇ))
+        # The constant table of square roots is left alone
+        @test all(k -> calc.k̄[k] == sqrt(T(k * (k - 1))), eachindex(calc.k̄))
         for ℓ in 0:6  # sequential, reusing the rotor data
             recurrence!(calc, ℓ)
             @test wedge(calc.Hˡ) == wedges[ℓ+1]

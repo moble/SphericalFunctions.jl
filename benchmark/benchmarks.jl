@@ -33,11 +33,19 @@ for T in [big, Float64, Float32, Float16]
 end
 
 ### The Wigner engine, one ℓ at a time, for a single rotor and for a batch.  `m′ₘₐₓ = 2` is
-### the spin-weighted case that the harmonics need; `m′ₘₐₓ = ℓₘₐₓ` is the full matrix.  A
-### calculator built from a vector is batched even when the vector holds only one rotor, and
-### one built from a single `Rotor` is not, so the case of one rotor is timed both ways.
+### the spin-weighted case that the harmonics need; `m′ₘₐₓ = ℓₘₐₓ` is the full matrix.  Both
+### are timed at ℓₘₐₓ = 8 and 64, for one rotor and for 64.  A calculator built from a
+### vector is batched even when the vector holds only one rotor, and one built from a single
+### `Rotor` is not, so at those degrees the case of one rotor is timed both ways.  The full
+### matrix is also timed for batches of 3, 7, and 8 rotors at ℓₘₐₓ = 8 and 32, whose loops
+### over the rotors are short enough that a change can slow them while one rotor and 64 stay
+### as fast as before; at ℓₘₐₓ = 32, batches of 1 and 64 rotors are timed beside them.
 SUITE["wigner"] = BenchmarkGroup(["recursions"])
-for ℓₘₐₓ in (8, 64), m′ₘₐₓ in unique((ℓₘₐₓ, 2)), Nᵣ in (1, 64)
+D_sweeps = unique([
+    [(ℓₘₐₓ, m′ₘₐₓ, Nᵣ) for ℓₘₐₓ in (8, 64) for m′ₘₐₓ in (ℓₘₐₓ, 2) for Nᵣ in (1, 64)];
+    [(ℓₘₐₓ, ℓₘₐₓ, Nᵣ) for ℓₘₐₓ in (8, 32) for Nᵣ in (1, 3, 7, 8, 64)]
+])
+for (ℓₘₐₓ, m′ₘₐₓ, Nᵣ) in D_sweeps
     R⃗ = randn(rng, Rotor{Float64}, Nᵣ)
     calc = DCalculator(R⃗, ℓₘₐₓ; m′ₘₐₓ, m′ₘᵢₙ=-m′ₘₐₓ)
     SUITE["wigner"]["D sweep", ℓₘₐₓ, m′ₘₐₓ, Nᵣ] = @benchmarkable begin
@@ -53,6 +61,22 @@ for ℓₘₐₓ in (8, 64), m′ₘₐₓ in unique((ℓₘₐₓ, 2))
         for ℓ in 0:$ℓₘₐₓ
             recurrence!($calc, ℓ)
         end
+    end
+end
+### A whole sweep as a caller writes it — `set_R!`, then the iteration, summing each block
+### through `array_view` — and `set_R!` alone, which fills the rotor data that every sweep
+### starts from.  Here one rotor is a single `Rotor`, and the batch holds 64.
+for ℓₘₐₓ in (8, 32), Nᵣ in (1, 64)
+    R = Nᵣ == 1 ? randn(rng, Rotor{Float64}) : randn(rng, Rotor{Float64}, Nᵣ)
+    calc = DCalculator(R, ℓₘₐₓ)
+    SUITE["wigner"]["set_R!", ℓₘₐₓ, Nᵣ] = @benchmarkable set_R!($calc, $R)
+    SUITE["wigner"]["D sweep + sum", ℓₘₐₓ, Nᵣ] = @benchmarkable begin
+        set_R!($calc, $R)
+        s = zero(ComplexF64)
+        for (ℓ, 𝔇ˡ) in $calc
+            s += sum(array_view(𝔇ˡ))
+        end
+        s
     end
 end
 let R = randn(rng, Rotor{Float64})

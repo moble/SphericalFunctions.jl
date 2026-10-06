@@ -6,7 +6,7 @@
 # formulaic matrices in `ExplicitWignerMatrices` and a set of metamorphic identities.
 
 @testitem "DCalculator vs closed forms" setup=[HalfIntegerOracle, Utilities] begin
-    import SphericalFunctions: DCalculator, recurrence!
+    import SphericalFunctions: DCalculator, recurrence!, array_view
     import .HalfIntegerOracle: d_oracle, D_oracle
     import .Utilities: Rrange
     using Quaternionic: Rotor, Quaternion, components, 𝐢, 𝐣, 𝐤
@@ -73,11 +73,11 @@
                     end
                     @test axes(𝔇ˡ) == (-ℓ:ℓ, -ℓ:ℓ)
                     @test eltype(𝔇ˡ) === Complex{T}
-                    # The block is a view into the calculator's storage; stripping the
-                    # offsets leaves a 1-based (2ℓ+1)×(2ℓ+1) matrix, and `collect` gives a
-                    # plain `Matrix`
-                    @test parent(𝔇ˡ) isa AbstractMatrix{Complex{T}}
-                    @test axes(parent(𝔇ˡ)) == (1:2ℓ+1, 1:2ℓ+1)
+                    # The block is a view into the calculator's buffer, which is its
+                    # storage; `array_view` strips the offsets, leaving a 1-based
+                    # (2ℓ+1)×(2ℓ+1) matrix, and `collect` gives a plain `Matrix`
+                    @test parent(𝔇ˡ) === calc.Wˡ
+                    @test axes(array_view(𝔇ˡ)) == (1:2ℓ+1, 1:2ℓ+1)
                     @test collect(𝔇ˡ) isa Matrix{Complex{T}}
                     # The errors are accumulated and asserted once per rotor rather than
                     # element by element, so a broken engine reports a handful of failures
@@ -98,7 +98,7 @@ end
 
 
 @testitem "dCalculator vs closed form" setup=[HalfIntegerOracle, Utilities] begin
-    import SphericalFunctions: dCalculator, recurrence!
+    import SphericalFunctions: dCalculator, recurrence!, array_view
     import .HalfIntegerOracle: d_oracle
     import .Utilities: βrange
     using Quaternionic: Rotor, from_euler_angles
@@ -142,7 +142,7 @@ end
                         end
                         @test axes(dˡ) == (-ℓ:ℓ, -ℓ:ℓ)
                         @test eltype(dˡ) === T  # d is real
-                        @test parent(dˡ) isa AbstractMatrix{T}
+                        @test array_view(dˡ) isa AbstractMatrix{T}
                         for m′ in -ℓ:ℓ, m in -ℓ:ℓ
                             worst = max(worst, abs(dˡ[m′, m] - ref[ℓ+1][m′+ℓ+1, m+ℓ+1]))
                         end
@@ -241,8 +241,10 @@ end
                     m′r = max(-ℓ, m′ₘᵢₙ):min(ℓ, m′ₘₐₓ)
                     mr = max(-ℓ, mₘᵢₙ):min(ℓ, mₘₐₓ)
                     @test axes(blk) == (m′r, mr)
-                    # Restricting the block never changes a value: the limited calculator
-                    # runs exactly the same operations for the rows it keeps
+                    # Restricting the block never changes a value.  For d the limited
+                    # calculator runs exactly the same operations for the rows it keeps;
+                    # a block of 𝔇 is written in pairs that depend on the limits, so a
+                    # zero of 𝔇 may have the other sign.
                     @test all(blk[m′, m] == full[ℓ][m′, m] for m′ in m′r, m in mr)
                     @test blktwin == blk
                 end
@@ -575,7 +577,8 @@ end
         for ℓ in 0:ℓₘₐₓ
             @test 𝔇[ℓ] isa WignerMatrix && eltype(𝔇[ℓ]) === ComplexF64
             @test axes(𝔇[ℓ]) == (-ℓ:ℓ, -ℓ:ℓ)
-            @test parent(𝔇[ℓ]) isa Matrix{ComplexF64}  # a copy, not a view
+            @test parent(𝔇[ℓ]) isa SubArray{ComplexF64, 1, Vector{ComplexF64}}
+            @test length(parent(𝔇[ℓ])) == length(𝔇[ℓ])
             @test 𝔇[ℓ] == recurrence!(calc, R, ℓ)
         end
         # Each block is an independent copy: computing more matrices, for a different rotor,
@@ -622,7 +625,8 @@ end
         for ℓ in 0:ℓₘₐₓ
             @test dβ[ℓ] isa WignerMatrix && eltype(dβ[ℓ]) === Float64
             @test axes(dβ[ℓ]) == (-ℓ:ℓ, -ℓ:ℓ)
-            @test parent(dβ[ℓ]) isa Matrix{Float64}  # a copy, not a view
+            @test parent(dβ[ℓ]) isa SubArray{Float64, 1, Vector{Float64}}
+            @test length(parent(dβ[ℓ])) == length(dβ[ℓ])
             @test dβ[ℓ] == recurrence!(calc, β, ℓ)
         end
         # Independent copies
@@ -680,9 +684,53 @@ end
 end
 
 
+@testitem "D and d allocate one buffer" begin
+    import SphericalFunctions: D, d, array_view
+    using Quaternionic: Rotor
+    import Random
+
+    # The blocks of `D` and `d` are written one after another, from ℓₘᵢₙ up, into one
+    # vector, which holds nothing else, and each block's storage is the contiguous view of
+    # its own part of it, so that its `array_view` is a strided matrix over that part.
+    rng = Random.Xoshiro(20261001)
+    R = randn(rng, Rotor{Float64})
+    β = 0.7
+    limits = (m′ₘₐₓ=2, m′ₘᵢₙ=-1, mₘₐₓ=3, mₘᵢₙ=-3)
+    half_limits = (m′ₘₐₓ=3//2, m′ₘᵢₙ=-1//2, mₘₐₓ=5//2, mₘᵢₙ=-5//2)
+    for (series, NT) ∈ (
+        (D(R, 8), ComplexF64), (D(R, 8; limits...), ComplexF64), (D(R, 15//2), ComplexF64),
+        (D(R, 15//2; half_limits...), ComplexF64), (D(Rotor{Float32}(R), 6), ComplexF32),
+        (d(β, 8), Float64), (d(β, 8; limits...), Float64), (d(β, 15//2), Float64),
+        (d(R, 6; mₘₐₓ=1), Float64),
+    )
+        buffer = parent(parent(first(values(series))))
+        @test buffer isa Vector{NT}
+        @test length(buffer) == sum(length, values(series))
+        o = 0
+        for b ∈ values(series)
+            @test parent(parent(b)) === buffer
+            @test parentindices(parent(b)) == ((o + 1):(o + length(b)),)
+            A = array_view(b)
+            @test A isa StridedMatrix{NT} && IndexStyle(A) === IndexLinear()
+            @test strides(A) == (1, size(A, 1)) && pointer(A) == pointer(buffer, o + 1)
+            o += length(b)
+        end
+    end
+
+    # So the number of allocations hardly grows with the number of blocks, up to 65 here: it
+    # is that of the calculator, about 20, and a few more for the result, from 24 to 33 on
+    # Julia 1.13 and from 22 to 24 on 1.10 in these cases.
+    allocations(f, x, ℓₘₐₓ) = (f(x, ℓₘₐₓ); @allocations f(x, ℓₘₐₓ))
+    for ℓₘₐₓ ∈ (8, 32, 64, 63//2)
+        @test allocations(D, R, ℓₘₐₓ) ≤ 40
+        @test allocations(d, β, ℓₘₐₓ) ≤ 40
+    end
+end
+
+
 @testitem "Wigner calculators vs independent references" setup=[HalfIntegerOracle] begin
     import SphericalFunctions
-    import SphericalFunctions: DCalculator, dCalculator, recurrence!, D
+    import SphericalFunctions: DCalculator, dCalculator, recurrence!, D, array_view
     import .HalfIntegerOracle: d_oracle, D_oracle
     using Quaternionic: Rotor, Quaternion, components
     using LinearAlgebra: I, opnorm
@@ -756,8 +804,8 @@ end
             end
             # Reference 2 (category 3: metamorphic identities).  𝔇ˡ is unitary and dˡ is
             # real orthogonal, measured to 9.0 and 8.4 eps respectively at ℓ ≤ 6.
-            M = parent(𝔇ˡ)
-            Md = parent(dˡ)
+            M = array_view(𝔇ˡ)
+            Md = array_view(dˡ)
             @test opnorm(M * M' - I) ≤ atolᵘ
             @test opnorm(M' * M - I) ≤ atolᵘ
             @test opnorm(Md * Md' - I) ≤ atolᵘ
@@ -777,7 +825,10 @@ end
         𝔇₁₂ = D(R₁ * R₂, ℓₘₐₓ)
         worst = zero(T)
         for ℓ in 0:ℓₘₐₓ
-            worst = max(worst, opnorm(parent(𝔇s[i₁][ℓ]) * parent(𝔇s[i₂][ℓ]) - parent(𝔇₁₂[ℓ])))
+            worst = max(
+                worst,
+                opnorm(array_view(𝔇s[i₁][ℓ]) * array_view(𝔇s[i₂][ℓ]) - array_view(𝔇₁₂[ℓ]))
+            )
         end
         @test worst ≤ atolʳ
     end
@@ -880,23 +931,32 @@ end
 
 @testitem "Wigner calculators: each block element is the wedge element `wedge_value` reads" begin
     import SphericalFunctions
-    import SphericalFunctions: DCalculator, dCalculator, recurrence!, wedge_value, zpower, ϵ,
-        HalfOddInteger, Nᵣ, isbatched, ℓₘᵢₙ, ℓₘₐₓ
+    import SphericalFunctions: DCalculator, dCalculator, recurrence!, wedge_value,
+        power_column, ϵ, HalfOddInteger, Nᵣ, isbatched, ℓₘᵢₙ, ℓₘₐₓ, derivative_values,
+        derivative_m′range, derivative_mrange, m′range, mrange
     using Quaternionic: Rotor
     import Random
 
     # `materialize!` reads the wedge in runs along its rows, resolving the symmetries of H
     # once for each run rather than once for each element, as `wedge_source` does.  Each
-    # element of every block is compared here, bit for bit, with the value built from
-    # `wedge_value`, which applies the symmetries one element at a time, and from the same
-    # power tables: the ϵ signs of d, and for 𝔇 the phase e^{-i(m′α+mγ)} = conj(z₊^(m′+m)
-    # z₋^(m′-m)).  The restrictions include rows or columns narrower than the other range,
-    # so that the wedge is narrowed too, and asymmetric ranges; the calculators are single
-    # and batched.  The rotors and angles include some exactly at both poles, β = 0 and β =
-    # π.
+    # element of every block is compared here with the value built from `wedge_value`,
+    # which applies the symmetries one element at a time, and from the same power tables:
+    # the ϵ signs of d, and for 𝔇 the phase e^{-i(m′α+mγ)} = conj(z₊^(m′+m) z₋^(m′-m)).  The
+    # elements of d are compared bit for bit.  Those of 𝔇 are compared with `==`, because 𝔇
+    # is written in pairs (m′, m) and (-m′, -m), and the partner's phase is the conjugate of
+    # its element's product, which agrees in value with the product of the conjugates but
+    # not always in the signs of zeros.  A NaN still fails, since `==` is false for it.  The
+    # restrictions include rows or columns narrower than the other range, so that the wedge
+    # is narrowed too, and asymmetric ranges; the calculators are single and batched.  The
+    # rotors and angles include some exactly at both poles, β = 0 and β = π.  So are the
+    # values from which the derivatives of each block are computed, which for a block of 𝔇
+    # restricted in both m′ and m reach one row or column beyond it, and which
+    # `derivative_values` materializes from the same wedge.
     rng = Random.Xoshiro(20260924)
     R⃗ = [randn(rng, Rotor{Float64}, 5); Rotor(1.0, 0.0, 0.0, 0.0); Rotor(0.0, 0.6, 0.8, 0.0)]
     β⃗ = [0.0, 0.4, 1.9, π, 2.7]
+    # The power zᵏ of rotor iᵣ in a power table, for k of either sign
+    zpower(Z, iᵣ, k) = Z[iᵣ, power_column(Z, k)]
     function expected(calc, H, iᵣ, m′, m)
         RT = SphericalFunctions.floattype(calc)
         dᵐ′ᵐ = convert(RT, ϵ(m′) * ϵ(-m)) * wedge_value(H, iᵣ, m′, m)
@@ -906,6 +966,7 @@ end
             dᵐ′ᵐ
         end
     end
+    agrees(calc, x, y) = eltype(calc.Wˡ) <: Complex ? x == y : isequal(x, y)
     integer_limits = [
         (;), (m′ₘₐₓ=2, m′ₘᵢₙ=-1, mₘₐₓ=3, mₘᵢₙ=-3), (mₘₐₓ=2, mₘᵢₙ=-2), (m′ₘₐₓ=2,),
         (mₘₐₓ=3, mₘᵢₙ=0, m′ₘₐₓ=7, m′ₘᵢₙ=-5), (mₘₐₓ=0, mₘᵢₙ=0), (m′ₘₐₓ=0, m′ₘᵢₙ=0),
@@ -916,6 +977,7 @@ end
         (m′ₘₐₓ=17//2, m′ₘᵢₙ=-1//2, mₘₐₓ=3//2, mₘᵢₙ=-5//2), (m′ₘₐₓ=1//2, m′ₘᵢₙ=-1//2),
     ]
     count = Ref(0)
+    widened = Ref(0)
     for (ℓmax, limits) ∈ ((9, integer_limits), (17//2, half_limits)), lim ∈ limits,
             data ∈ (R⃗, R⃗[1], β⃗, β⃗[2])
         Ctor = eltype(data) <: Rotor ? DCalculator : dCalculator
@@ -927,13 +989,118 @@ end
             for m′ ∈ axes(blk, isbatched(calc) ? 2 : 1), m ∈ axes(blk, isbatched(calc) ? 3 : 2),
                     iᵣ ∈ 1:Nᵣ(calc)
                 value = isbatched(calc) ? blk[iᵣ, m′, m] : blk[m′, m]
-                good &= isequal(value, expected(calc, H, iᵣ, m′, m))
+                good &= agrees(calc, value, expected(calc, H, iᵣ, m′, m))
                 count[] += 1
             end
             @test good
+            rows, cols = derivative_m′range(calc, ℓ), derivative_mrange(calc, ℓ)
+            vals = derivative_values(calc, ℓ)
+            widened[] += (rows, cols) != (m′range(calc, ℓ), mrange(calc, ℓ))
+            @test size(vals) == (Nᵣ(calc), length(rows), length(cols))
+            @test all(
+                agrees(calc, vals[iᵣ, i′, i], expected(calc, H, iᵣ, m′, m))
+                for (i, m) ∈ enumerate(cols), (i′, m′) ∈ enumerate(rows), iᵣ ∈ 1:Nᵣ(calc)
+            )
         end
     end
     @test count[] > 50_000  # every element of every block of every case was compared
+    @test widened[] > 0  # some of the cases reach beyond their blocks
+end
+
+
+@testitem "Calculators: the power tables hold every power a block reads" begin
+    import SphericalFunctions: DCalculator, sYlmCalculator, power_extent, spinor_phases,
+        complex_powers, Nᵣ, ℓₘᵢₙ, ℓₘₐₓ, m′ₘₐₓ, spins, derivative_m′range, derivative_mrange
+    using Quaternionic: Rotor
+    import Random
+
+    # The tables of a calculator hold the powers zᵏ of the phases z₊ and z₋ of each rotor
+    # for k ∈ -K:K, with K = power_extent(ℓₘₐₓ, W) for a wedge of width W, at the columns
+    # k+K+1: the powers that `complex_powers` computes for k ≥ 0, their conjugates for
+    # k < 0, and z⁰ = 1 + 0i itself, not its conjugate, in the middle.  Every element of a
+    # block reads its phase from them, for 𝔇 at the powers m′ + m and m′ - m, and for ₛYₗₘ
+    # at m - s and m + s, so those must all lie within -K:K; for 𝔇 that includes the rows
+    # or columns beyond the block from which its derivatives are computed.  The calculators
+    # are single and batched, with an odd number of rotors, some of them special.
+    rng = Random.Xoshiro(20261001)
+    special = [Rotor(1.0, 0.0, 0.0, 0.0), Rotor(0.0, 0.0, 0.0, 1.0)]
+    R⃗ = [randn(rng, Rotor{Float64}, 3); special]
+    function check_tables(calc)
+        K = power_extent(ℓₘₐₓ(calc), m′ₘₐₓ(calc.engine.H))
+        good = size(calc.engine.Z₊) == size(calc.engine.Z₋) == (Nᵣ(calc), 2K + 1)
+        for iᵣ ∈ 1:Nᵣ(calc)
+            _, z₊, z₋ = spinor_phases(calc.rotors[iᵣ], Float64)
+            for (Z, z) ∈ ((calc.engine.Z₊, z₊), (calc.engine.Z₋, z₋))
+                good &= isequal(Z[iᵣ, K+1:2K+1], complex_powers(z, K))
+                good &= isequal(Z[iᵣ, K:-1:1], conj.(Z[iᵣ, K+2:2K+1]))
+                good &= Z[iᵣ, K+1] === one(ComplexF64)
+            end
+        end
+        good, K
+    end
+    for (ℓmax, limits, s⃗) ∈ (
+            (9, [(;), (m′ₘₐₓ=2, m′ₘᵢₙ=-1), (mₘₐₓ=3,), (m′ₘₐₓ=2, m′ₘᵢₙ=-1, mₘₐₓ=3, mₘᵢₙ=-3)],
+                [0, -2, 9, -2:2]),
+            (17//2, [(;), (m′ₘₐₓ=5//2, m′ₘᵢₙ=-3//2), (mₘₐₓ=3//2,),
+                (m′ₘₐₓ=3//2, m′ₘᵢₙ=-1//2, mₘₐₓ=5//2, mₘᵢₙ=-5//2)],
+                [1//2, -17//2, -3//2:3//2]),
+        ), data ∈ (R⃗, R⃗[1], special[2])
+        for lim ∈ limits
+            calc = DCalculator(data, ℓmax; lim...)
+            good, K = check_tables(calc)
+            @test good
+            @test all(
+                abs(m′ + m) ≤ K && abs(m′ - m) ≤ K
+                for ℓ ∈ ℓₘᵢₙ(calc):ℓₘₐₓ(calc)
+                for m′ ∈ derivative_m′range(calc, ℓ), m ∈ derivative_mrange(calc, ℓ)
+            )
+        end
+        for s ∈ s⃗
+            calc = sYlmCalculator(data, ℓmax, s)
+            good, K = check_tables(calc)
+            @test good
+            @test all(
+                abs(m - s′) ≤ K && abs(m + s′) ≤ K
+                for ℓ ∈ ℓₘᵢₙ(calc):ℓₘₐₓ(calc) for s′ ∈ spins(calc), m ∈ -ℓ:ℓ
+            )
+        end
+    end
+end
+
+
+@testitem "compute_block! writes a block into any destination" begin
+    import SphericalFunctions
+    import SphericalFunctions: DCalculator, dCalculator, recurrence!, compute_block!,
+        array_view, ℓₘᵢₙ, ℓₘₐₓ
+    using Quaternionic: Rotor
+    import Random
+
+    # `compute_block!(calc, ℓ, A, o)` writes the block of ℓ densely into `A` after its first
+    # `o` entries, which is how `D` and `d` fill their matrices without passing through the
+    # calculator's buffer.  The block written is bit for bit the one the calculator returns,
+    # nothing outside it is touched, and the calculator, whose own buffer was not written,
+    # no longer claims to hold a block.
+    rng = Random.Xoshiro(20261001)
+    R⃗ = randn(rng, Rotor{Float64}, 3)
+    β⃗ = [0.4, 1.9, π]
+    for (ℓmax, lim) ∈ (
+            (6, (;)), (6, (m′ₘₐₓ=2, m′ₘᵢₙ=-1, mₘₐₓ=3, mₘᵢₙ=-3)), (6, (mₘₐₓ=1,)),
+            (11//2, (;)), (11//2, (m′ₘₐₓ=3//2, m′ₘᵢₙ=-1//2, mₘₐₓ=5//2, mₘᵢₙ=-5//2)),
+        ), data ∈ (R⃗, R⃗[1], β⃗, β⃗[2])
+        calc = (eltype(data) <: Rotor ? DCalculator : dCalculator)(data, ℓmax; lim...)
+        NT = eltype(calc.Wˡ)
+        good = true
+        for ℓ ∈ ℓₘᵢₙ(calc):ℓₘₐₓ(calc)
+            block = copy(vec(array_view(recurrence!(calc, ℓ))))
+            n = length(block)
+            A = fill(NT(NaN), n + 8)
+            compute_block!(calc, ℓ, A, 3)
+            good &= isequal(A[4:(3 + n)], block)
+            good &= all(isnan, A[1:3]) && all(isnan, A[(4 + n):end])
+            good &= SphericalFunctions.ℓ(calc) < ℓₘᵢₙ(calc)
+        end
+        @test good
+    end
 end
 
 
@@ -945,9 +1112,11 @@ end
 
     # The wedge holds the rows |m′| ≤ W for every m, and an element of the block whose |m′|
     # exceeds W is read from its transpose, so W need only be the narrower of the widest m′
-    # and the widest m.  A calculator restricted to a few columns then runs the recurrence of
-    # one restricted to as many rows, rather than the whole of it, and its blocks are the
-    # restriction of the full ones, bit for bit.
+    # and the widest m.  A calculator restricted to a few columns then runs the recurrence
+    # of one restricted to as many rows, rather than the whole of it, and its blocks are the
+    # restriction of the full ones: for 𝔇 value for value (a zero may have the other sign,
+    # because the pairs of a restricted block differ from those of the full one), and for d,
+    # which is not written in pairs, bit for bit.
     rng = Random.Xoshiro(3)
     R⃗ = randn(rng, Rotor{Float64}, 3)
     for (ℓmax, narrow, wide) ∈ ((24, 2, 24), (47//2, 3//2, 47//2))
@@ -968,7 +1137,7 @@ end
         for (ℓ, blk) ∈ by_columns
             ref = recurrence!(full, ℓ)
             @test all(
-                isequal(blk[iᵣ, m′, m], ref[iᵣ, m′, m])
+                blk[iᵣ, m′, m] == ref[iᵣ, m′, m]
                 for iᵣ ∈ 1:3, m′ ∈ axes(blk, 2), m ∈ axes(blk, 3)
             )
         end
@@ -992,9 +1161,11 @@ end
     using Quaternionic: Rotor
     import Random
 
-    # With one rotor there is nothing to vectorize, so the innermost loops of the recurrence
-    # and of the assembly of the blocks write that case out as a single statement.  It is the
-    # loop's own expression, so the values of a rotor are the same alone as in a batch.
+    # With one rotor there is nothing to vectorize over the rotors: the innermost loops of
+    # the recurrence write that case out as a single statement, and the assembly of the
+    # blocks loops over the elements of each run rather than over the rotors.  Each computes
+    # an element by the loop's own expression, so the values of a rotor are the same alone
+    # as in a batch.
     rng = Random.Xoshiro(11)
     R⃗ = randn(rng, Rotor{Float64}, 2)
     β⃗ = [0.4, 2.2]
@@ -1014,6 +1185,14 @@ end
             @test all(
                 isequal(first_rotor(b), Array(copy(a))) for ((_, b), (_, a)) ∈ zip(batch, single)
             )
+        end
+        # A block of many rotors and several spin weights is written a mode at a time, in
+        # the order of its storage, rather than a spin row at a time, and the row of each
+        # rotor is still the block of that rotor alone.
+        R⃗₆₅ = randn(rng, Rotor{Float64}, 65)
+        singles = [[copy(a) for (_, a) ∈ sYlmCalculator(R, ℓmax, s)] for R ∈ R⃗₆₅]
+        for (k, (_, b)) ∈ enumerate(sYlmCalculator(R⃗₆₅, ℓmax, s))
+            @test all(isequal(Array(b[iᵣ]), Array(singles[iᵣ][k])) for iᵣ ∈ 1:65)
         end
         batch, single = HCalculator(β⃗, ℓmax), HCalculator(β⃗[1], ℓmax)
         for ℓ ∈ (ℓₘₐₓ(batch) - 2):ℓₘₐₓ(batch)

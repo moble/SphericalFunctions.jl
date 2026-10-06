@@ -330,9 +330,10 @@ wedge ``b ≥ |a|``, ``|a| ≤ m′ₘₐₓ``.
 This is the definition, for the batched engine, of how the symmetries ``H_{m′,m} =
 H_{-m,-m′} = σ H_{m,m′} = σ H_{-m′,-m}`` of the ``H`` matrix supply an element outside the
 stored wedge, and a read of such an element should go through it or through
-[`wedge_value`](@ref).  The functions that assemble the blocks of the calculators apply the
-same cases, in the same order, a whole run of elements at a time, and are tested against
-`wedge_value` element by element.
+[`wedge_value`](@ref).  The Wigner `materialize!` applies the same cases a whole run of
+elements at a time.  The harmonic one reads through this function the elements ``|m| ≤ |s|``
+of each spin row, or every element when it writes a block a mode at a time.  Both are
+compared with `wedge_value` element by element in the tests.
 
 An `ArgumentError` is thrown if no stored element can supply the requested one, which
 happens only when both ``|m′|`` and ``|m|`` exceed `m′ₘₐₓ`.

@@ -124,7 +124,7 @@ end
         w = WignerMatrix(copy(A), L)
 
         @test ℓ(w) == L
-        @test parent(w) == A
+        @test parent(w) == vec(A) && array_view(w) == A
         @test eltype(w) == Float64
         @test eltype(typeof(w)) == Float64
         @test ndims(w) == 2 && ndims(typeof(w)) == 2
@@ -192,9 +192,9 @@ end
     @test w[1//2, -1//2] == 7.0
     @test w[HalfOddInteger(1//2), HalfOddInteger(-1//2)] == 7.0
 
-    # Storage too small for the requested ranges is refused, per dimension
-    @test_throws "first dimension" WignerMatrix(zeros(3, 5), 2)
-    @test_throws "second dimension" WignerMatrix(zeros(5, 3), 2)
+    # Storage with fewer entries than the requested ranges is refused, whatever its shape
+    @test_throws "must have at least 25 = 5×5 entries" WignerMatrix(zeros(3, 5), 2)
+    @test_throws "must have at least 25 = 5×5 entries" WignerMatrix(zeros(5, 3), 2)
 
     # The limits: each lower one defaults to minus the upper one, each has an ASCII spelling,
     # and where both spellings are given the Unicode one is used
@@ -263,18 +263,19 @@ end
     code(x) = 2x + 6
     encode(ℓ, m′, m) = code(ℓ) + code(m′)*25 + code(m)*625
     for ℓ ∈ Any[collect(0:ℓₘₐₓ); HalfOddInteger.(collect(1//2:(ℓₘₐₓ+1//2)))]
-        # The input must be at least as big as the block along each axis, and may be bigger
-        @test_throws "The extent of the first dimension" WignerMatrix(Array{ComplexF64}(undef, 2ℓ, 2ℓ + 1), ℓ)
-        @test_throws "The extent of the first dimension" WignerMatrix(Array{Float64}(undef, 2ℓ, 2ℓ + 1), ℓ)
-        @test_throws "The extent of the second dimension" WignerMatrix(Array{ComplexF64}(undef, 2ℓ + 1, 2ℓ), ℓ)
-        @test_throws "The extent of the second dimension" WignerMatrix(Array{Float64}(undef, 2ℓ + 1, 2ℓ), ℓ)
+        # The input must have at least as many entries as the block, and is read in its
+        # linear order
+        @test_throws "must have at least" WignerMatrix(Array{ComplexF64}(undef, 2ℓ, 2ℓ + 1), ℓ)
+        @test_throws "must have at least" WignerMatrix(Array{Float64}(undef, 2ℓ, 2ℓ + 1), ℓ)
+        @test_throws "must have at least" WignerMatrix(Array{ComplexF64}(undef, 2ℓ + 1, 2ℓ), ℓ)
+        @test_throws "must have at least" WignerMatrix(Array{Float64}(undef, 2ℓ + 1, 2ℓ), ℓ)
         @test WignerMatrix(Array{ComplexF64}(undef, 2ℓ + 2, 2ℓ + 3), ℓ) isa WignerMatrix
 
         # Check that a data array with a dimension of 0 extent throws an error.
-        @test_throws r"The extent of the second dimension.*; it is 0." WignerMatrix(Array{ComplexF64}(undef, 2ℓ + 1, 0), ℓ)
-        @test_throws r"The extent of the first dimension.*; it is 0." WignerMatrix(Array{ComplexF64}(undef, 0, 2ℓ + 1), ℓ)
-        @test_throws r"The extent of the second dimension.*; it is 0." WignerMatrix(Array{Float64}(undef, 2ℓ + 1, 0), ℓ)
-        @test_throws r"The extent of the first dimension.*; it is 0." WignerMatrix(Array{Float64}(undef, 0, 2ℓ + 1), ℓ)
+        @test_throws r"must have at least .*; it has 0." WignerMatrix(Array{ComplexF64}(undef, 2ℓ + 1, 0), ℓ)
+        @test_throws r"must have at least .*; it has 0." WignerMatrix(Array{ComplexF64}(undef, 0, 2ℓ + 1), ℓ)
+        @test_throws r"must have at least .*; it has 0." WignerMatrix(Array{Float64}(undef, 2ℓ + 1, 0), ℓ)
+        @test_throws r"must have at least .*; it has 0." WignerMatrix(Array{Float64}(undef, 0, 2ℓ + 1), ℓ)
 
         # Every symmetric restriction of either axis, with the limits given in both
         # spellings
@@ -287,7 +288,7 @@ end
             # Check that indexing works as expected.
             for NT ∈ (ComplexF64, Float64)
                 w = WignerMatrix(NT.(data), ℓ; m′ₘₐₓ=m′ₘ, m′ₘᵢₙ=-m′ₘ, mₘₐₓ=mₘ, mₘᵢₙ=-mₘ)
-                @test Base.parent(w) == data
+                @test Base.parent(w) == vec(data) && array_view(w) == data
                 @test ell(w) == ℓ
                 @test mp_max(w) == m′ₘ
                 @test m_max(w) == mₘ
@@ -312,7 +313,7 @@ end
                 w = WignerMatrix(data, ℓ; m′ₘₐₓ=m′ₘ, m′ₘᵢₙ=-m′ₘ)
 
                 # Check that the data array is stored correctly.
-                @test Base.parent(w) == data
+                @test Base.parent(w) == vec(data) && array_view(w) == data
                 @test ell(w) == ℓ
                 @test m′ₘₐₓ(w) == m′ₘ
                 @test mₘₐₓ(w) == ℓ
@@ -343,7 +344,7 @@ end
         w = WignerMatrixBatch(copy(A), L)
 
         @test ℓ(w) == L && Nᵣ(w) == N
-        @test parent(w) == A
+        @test parent(w) == vec(A) && array_view(w) == A
         @test size(w) == (N, n, n)
         # `Array` is the storage, which holds exactly the block here, in `[iᵣ, m′, m]` order
         @test Array(w) == A
@@ -368,11 +369,11 @@ end
         @test_throws BoundsError w[N + 1]
 
         # `Array` follows the storage through writes; `Matrix` is refused as ambiguous
-        @test Array(w) == parent(w)
+        @test vec(Array(w)) == parent(w) && Array(w) == array_view(w)
         @test collect(w) == Array(w)
         @test_throws "3-dimensional" Matrix(w)
 
-        # Iteration matches `Array(w)`, so the reducers work as they do on a plain array
+        # Iteration matches `Array(w)`, and the reducers work as they do on a plain array
         @test [x for x ∈ w] == vec(Array(w))
         @test sum(w) ≈ sum(Array(w))
 
@@ -388,9 +389,9 @@ end
         @test occursin("WignerMatrixBatch", shown)
     end
 
-    # Storage too small in either indexed dimension is refused
-    @test_throws "second dimension" WignerMatrixBatch(zeros(2, 3, 5), 2)
-    @test_throws "third dimension" WignerMatrixBatch(zeros(2, 5, 3), 2)
+    # Storage with fewer entries than the block is refused, whatever its shape
+    @test_throws "must have at least 50 = 2×5×5 entries" WignerMatrixBatch(zeros(2, 3, 5), 2)
+    @test_throws "must have at least 50 = 2×5×5 entries" WignerMatrixBatch(zeros(2, 5, 3), 2)
 
     # `Rational` indices reach a half-odd-integer batch
     w = WignerMatrixBatch(zeros(2, 4, 4), HalfOddInteger(3//2))
@@ -490,8 +491,8 @@ end
     end
 
     # Storage too small is refused
-    @test_throws "length at least" DegreeBlock(zeros(4), 2)
-    @test_throws "second dimension" DegreeBlockBatch(zeros(2, 4), 2)
+    @test_throws "must have at least" DegreeBlock(zeros(4), 2)
+    @test_throws "must have at least 10 = 2×5 entries" DegreeBlockBatch(zeros(2, 4), 2)
 
     # A `Rational` ℓ, and `Rational` indexing
     v = DegreeBlock(zeros(4), 3//2)
@@ -613,11 +614,11 @@ end
         @test occursin("SpinMatrixBatch", sprint(show, MIME("text/plain"), bb))
     end
 
-    # Storage too small is refused, per dimension
-    @test_throws "first dimension" SpinMatrix(zeros(3, 5), 2; sₘₐₓ=2, sₘᵢₙ=-2)
-    @test_throws "second dimension" SpinMatrix(zeros(5, 3), 2; sₘₐₓ=2, sₘᵢₙ=-2)
-    @test_throws "second dimension" SpinMatrixBatch(zeros(2, 3, 5), 2; sₘₐₓ=2, sₘᵢₙ=-2)
-    @test_throws "third dimension" SpinMatrixBatch(zeros(2, 5, 3), 2; sₘₐₓ=2, sₘᵢₙ=-2)
+    # Storage with fewer entries than the block is refused, whatever its shape
+    @test_throws "must have at least 25 = 5×5" SpinMatrix(zeros(3, 5), 2; sₘₐₓ=2, sₘᵢₙ=-2)
+    @test_throws "must have at least 25 = 5×5" SpinMatrix(zeros(5, 3), 2; sₘₐₓ=2, sₘᵢₙ=-2)
+    @test_throws "must have at least 50 = 2×5×5" SpinMatrixBatch(zeros(2, 3, 5), 2; sₘₐₓ=2, sₘᵢₙ=-2)
+    @test_throws "must have at least 50 = 2×5×5" SpinMatrixBatch(zeros(2, 5, 3), 2; sₘₐₓ=2, sₘᵢₙ=-2)
 
     # A `Rational` ℓ is converted, along with the keyword spin bounds, which are indices like
     # any other and are normalized against the kind of ℓ.  These two containers are the only
@@ -1075,7 +1076,8 @@ end
         @test refuses(() -> (x[pre..., 0, Int16(1)] = 1.0), ArgumentError, "`Int16` is narrower")
         # The natural form is untouched: it reaches the same storage element as ever
         ax = axes(x)
-        @test x[pre..., 1, 0] == parent(x)[pre..., 1 - first(ax[end-1]) + 1, 0 - first(ax[end]) + 1]
+        @test x[pre..., 1, 0] ==
+            array_view(x)[pre..., 1 - first(ax[end-1]) + 1, 0 - first(ax[end]) + 1]
     end
     @test refuses(() -> si[Int32(0), :], ArgumentError, "`Int32` is narrower")
     @test refuses(() -> sbi[:, Int32(0), :], ArgumentError, "`Int32` is narrower")
@@ -1087,8 +1089,168 @@ end
     )
 
     # The extent in a refusal is written with its signs, and an axis is shown as a unit range
-    @test_throws "m′ₘₐₓ-m′ₘᵢₙ+1=2-(-2)+1=5; it is 2." WignerMatrix(zeros(2, 2), 2)
+    @test_throws "mₘₐₓ-mₘᵢₙ+1=2-(-2)+1=5 entries; it has 2." DegreeBlock(zeros(2), 2)
+    @test_throws(
+        "25 = 5×5 entries, the number of elements of a block with m′ ∈ -2:2 and m ∈ -2:2; it has 4.",
+        WignerMatrix(zeros(2, 2), 2)
+    )
     @test repr(axes(WignerMatrix(zeros(5, 5), 2))) == "(-2:2, -2:2)"
     @test repr(axes(WignerMatrix(zeros(4, 4), 3//2))) == "(-3//2:3//2, -3//2:3//2)"
     @test repr(axes(WignerMatrixBatch(zeros(2, 5, 5), 2))) == "(1:2, -2:2, -2:2)"
+end
+
+@testitem "Blocks read their storage in its linear order" begin
+    import SphericalFunctions: WignerMatrix, WignerMatrixBatch, DegreeBlock, DegreeBlockBatch,
+        SpinMatrix, SpinMatrixBatch, HalfOddInteger, array_view, isbatched, sYlm
+    using Quaternionic: Rotor
+    import Random
+
+    # A block's storage is one-dimensional: the constructors take a 1-based array of any
+    # shape with at least as many entries as the block, and element k of the block, in the
+    # order of `Array(w)`, is entry k of that array.  An array of exactly the block's shape
+    # is the block, and a larger one is read in its linear order, not as its leading corner.
+    # The batches take the number of rotors from the first extent.
+    N = 2
+    for L ∈ (2, HalfOddInteger(3//2))
+        n = Int(2L + 1)
+        s = L isa Integer ? (sₘₐₓ=1, sₘᵢₙ=-1) : (sₘₐₓ=1//2, sₘᵢₙ=-1//2)
+        nₛ = L isa Integer ? 3 : 2
+        for (build, shape, larger) ∈ (
+            (A -> WignerMatrix(A, L), (n, n), (n + 2, n + 2)),
+            (A -> WignerMatrixBatch(A, L), (N, n, n), (N, n + 2, n + 2)),
+            (A -> DegreeBlock(A, L), (n,), (n + 3,)),
+            (A -> DegreeBlockBatch(A, L), (N, n), (N, n + 2)),
+            (A -> SpinMatrix(A, L; s...), (nₛ, n), (nₛ + 1, n + 2)),
+            (A -> SpinMatrixBatch(A, L; s...), (N, nₛ, n), (N, nₛ + 1, n + 2)),
+        )
+            A = reshape(collect(1.0:prod(shape)), shape)
+            w = build(A)
+            @test size(w) == shape && array_view(w) == A && Array(w) == A
+
+            # A larger array, or for an unbatched block a longer vector, is read in its
+            # linear order, by the accessors, by iteration, and by `array_view`, and writing
+            # through the natural indices writes its entries in that order
+            arrays = Any[reshape(collect(1.0:prod(larger)), larger)]
+            isbatched(w) || push!(arrays, collect(1.0:(prod(shape) + 5)))
+            for B ∈ arrays
+                b = build(B)
+                @test size(b) == shape
+                @test array_view(b) == reshape(vec(B)[1:length(b)], shape)
+                @test all(
+                    b[map((a, i) -> a[i], axes(b), Tuple(c))...] == vec(B)[k]
+                    for (k, c) ∈ enumerate(CartesianIndices(shape))
+                )
+                @test [x for x ∈ b] == vec(B)[1:length(b)]
+                b[last.(axes(b))...] = -1.0
+                b[first.(axes(b))...] = -2.0
+                @test vec(B)[length(b)] == -1.0 && vec(B)[1] == -2.0
+                @test vec(B)[length(b) + 1] == length(b) + 1  # beyond the block, untouched
+            end
+
+            # Storage with too few entries is refused, whatever its shape
+            @test_throws "must have at least" build(zeros((shape[1:end-1]..., shape[end] - 1)))
+        end
+    end
+
+    # The accessors index the storage at the element's linear position, rather than through
+    # a reshaped view of it, which would allocate at every access on Julia 1.10 for storage
+    # such as `vec` of a view of a matrix: a block built on a view of some of the columns
+    # of a matrix, and a block of `HarmonicValues`, which is built on a view of its values
+    function natural_sum(w::WignerMatrix)
+        total = zero(eltype(w))
+        for m ∈ axes(w, 2), m′ ∈ axes(w, 1)
+            total += w[m′, m]
+        end
+        total
+    end
+    function natural_sum(v::DegreeBlockBatch)
+        total = zero(eltype(v))
+        for m ∈ axes(v, 2), iᵣ ∈ axes(v, 1)
+            total += v[iᵣ, m]
+        end
+        total
+    end
+    allocations(w) = (natural_sum(w); @allocated natural_sum(w))
+    M = randn(Random.Xoshiro(20261001), 5, 7)
+    w = WignerMatrix(view(M, :, 2:6), 2)
+    @test natural_sum(w) ≈ sum(M[:, 2:6])
+    @test allocations(w) == 0
+    R⃗ = randn(Random.Xoshiro(20261001), Rotor{Float64}, 3)
+    v = sYlm(R⃗, 6, -2)[4]
+    @test v isa DegreeBlockBatch
+    @test natural_sum(v) ≈ sum(array_view(v))
+    @test allocations(v) == 0
+end
+
+@testitem "Blocks reduce as their arrays do" begin
+    import SphericalFunctions: WignerMatrix, WignerMatrixBatch, DegreeBlock, DegreeBlockBatch,
+        SpinMatrix, SpinMatrixBatch, array_view, DCalculator, dCalculator, sYlmCalculator,
+        sλlmCalculator, recurrence!, D, sYlm
+    using Quaternionic: Rotor
+    import Random
+
+    # `sum`, `maximum`, `count`, and the other reductions over a block run over its array,
+    # `array_view(b)`, and give exactly what that array gives.  For a block over contiguous
+    # storage — a calculator's block, a block of `D` or `sYlm`, or a block built on an array
+    # — that is also exactly what `Array(b)` gives.  The storage of a slice is strided, and
+    # `Base` may associate the terms of its sums differently, so those agree with the sums
+    # of `Array(b)` only to rounding, while its maxima and counts agree exactly.
+    function check_reductions(b, contiguous)
+        A = array_view(b)
+        positive(x) = real(x) > 0
+        @test sum(b) === sum(A)
+        @test sum(abs2, b) === sum(abs2, A)
+        @test sum(b; init=0.0) === sum(A; init=0.0)
+        @test maximum(abs, b) === maximum(abs, A) === maximum(abs, Array(b))
+        @test count(positive, b) == count(positive, Array(b))
+        if contiguous
+            @test sum(b) === sum(Array(b))
+            @test sum(abs2, b) === sum(abs2, Array(b))
+        else
+            @test sum(b) ≈ sum(Array(b))
+            @test sum(abs2, b) ≈ sum(abs2, Array(b))
+        end
+        # `dims` is refused, as it is for any collection that is not an array
+        @test_throws MethodError sum(b; dims=1)
+    end
+    rng = Random.Xoshiro(20261001)
+    R = randn(rng, Rotor{Float64})
+    R⃗ = randn(rng, Rotor{Float64}, 7)
+    for L ∈ (8, 15//2)
+        n = Int(2L + 1)
+        s = L isa Integer ? (-2:2) : (-3//2:3//2)
+        s₁ = first(s)
+        limits = (sₘₐₓ=last(s), sₘᵢₙ=first(s))
+        𝔇 = recurrence!(DCalculator(R⃗, L), L)
+        Y = recurrence!(sYlmCalculator(R⃗, L, s), L)
+        Y₁ = recurrence!(sYlmCalculator(R, L, s), L)
+        Yᶜ = SpinMatrixBatch(randn(rng, ComplexF64, 7, length(s), n), L; limits...)
+        for b ∈ (
+            recurrence!(DCalculator(R, L), L), 𝔇, recurrence!(dCalculator(0.7, L), L),
+            Y₁, Y, recurrence!(sYlmCalculator(R⃗, L, s₁), L),
+            recurrence!(sλlmCalculator(0.7, L, s₁), L), D(R, L)[L], sYlm(R⃗, L, s₁)[L],
+            WignerMatrix(randn(rng, ComplexF64, n, n), L),
+            WignerMatrixBatch(randn(rng, ComplexF64, 7, n, n), L),
+            DegreeBlock(randn(rng, n), L), DegreeBlockBatch(randn(rng, ComplexF64, 7, n), L),
+            SpinMatrix(randn(rng, ComplexF64, length(s), n), L; limits...), Yᶜ,
+        )
+            check_reductions(b, true)
+        end
+        for b ∈ (
+            𝔇[3], Y[3], Y[:, s₁, :], Y₁[s₁, :], Y[3][s₁, :], Y[:, s₁, :][3],
+            Yᶜ[3], Yᶜ[:, s₁, :],
+        )
+            check_reductions(b, false)
+        end
+    end
+
+    # The array is a view of the storage, so a reduction over a calculator's block allocates
+    # nothing
+    allocations(b) = (sum(b); @allocated sum(b))
+    for (calc, ℓ) ∈ (
+        (DCalculator(R, 8), 8), (DCalculator(R⃗, 8), 8), (sYlmCalculator(R⃗, 8, -2:2), 8),
+        (DCalculator(R, 15//2), 15//2),
+    )
+        @test allocations(recurrence!(calc, ℓ)) == 0
+    end
 end

@@ -6,6 +6,7 @@
 #
 #   - `D` and `d`, and the iteration of a `DCalculator` and an `sYlmCalculator`, each for
 #     integer and for half-integer indices;
+#   - the iteration of a `DCalculator` of a vector of rotors, for both kinds of index;
 #   - `sYlm` for one rotor and for a vector of rotors, for both kinds of index, and `Ylm`;
 #   - a round of the operations on `ModeWeights`: `setindex!`, evaluation `w(R)`, the
 #     products `sYlm(R, ℓₘₐₓ, s) * w` and `D(R, ℓₘₐₓ) * w`, the operators `ð`, `ð̄` and
@@ -26,6 +27,10 @@ PrecompileTools.@setup_workload begin
         d(0.3, 7//2)
         for ℓₘₐₓ ∈ (4, 7//2)
             for (ℓ, 𝔇ˡ) ∈ DCalculator(R, ℓₘₐₓ)
+            end
+        end
+        for ℓₘₐₓ ∈ (4, 7//2)
+            for (ℓ, 𝔇ˡ) ∈ DCalculator(R⃗, ℓₘₐₓ)
             end
         end
         for (ℓₘₐₓ, s) ∈ ((4, -2), (7//2, 1//2))

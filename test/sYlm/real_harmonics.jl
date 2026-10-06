@@ -79,7 +79,7 @@ end
         @test !isempty(cY.engine.Z₊) && !isempty(cY.engine.Z₋)
         # The rotor axis, which comes first, is still there, and only the powers are missing
         @test size(cλ.engine.Z₊) == (size(cY.engine.Z₊, 1), 0)
-        @test size(cY.engine.Z₊) == (1, 2ℓmax + 1)
+        @test size(cY.engine.Z₊) == (1, 2SphericalFunctions.power_extent(ℓmax, abs(s)) + 1)
         @test number_type(cλ) === Float64
         @test number_type(cY) === ComplexF64
         @test eltype(cλ.Yˡ) === Float64
@@ -176,7 +176,7 @@ end
 end
 
 @testitem "The ring transforms are unchanged by the real tables" begin
-    import SphericalFunctions: SSHT, SSHTRS, SSHTMinimal, rotors, Ysize, sλlmCalculator
+    import SphericalFunctions: SSHT, SSHTRS, SSHTMinimal, rotors, Ysize, sλlmCalculator, Nᵣ
     using Random
 
     # `SSHTRS` and `SSHTMinimal` build their Λ tables with an `sλlmCalculator`.  The precise
@@ -194,7 +194,7 @@ end
         for ℓ ∈ abs(s):ℓmax
             blkλ = recurrence!(𝒯rs.λ, ℓ)
             blkY = recurrence!(cY, ℓ)
-            for iᵣ ∈ 1:size(𝒯rs.λ.Yˡ, 1), m ∈ -ℓ:ℓ
+            for iᵣ ∈ 1:Nᵣ(𝒯rs.λ), m ∈ -ℓ:ℓ
                 @test blkλ[iᵣ, m] === λref(blkY[iᵣ, m], s)
             end
         end

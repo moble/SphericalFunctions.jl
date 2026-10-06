@@ -38,7 +38,7 @@ end
 
 
 @testitem "Wigner D unitarity" setup=[WignerPropertyRotors] begin
-    import SphericalFunctions: D
+    import SphericalFunctions: D, array_view
     using Quaternionic: Rotor, 𝐤
     using LinearAlgebra: I, opnorm
     using Random: Xoshiro
@@ -50,8 +50,8 @@ end
         @test axes(𝔇, 1) == 0:ℓₘₐₓ
         for ℓ ∈ 0:ℓₘₐₓ
             @test axes(𝔇[ℓ]) == (-ℓ:ℓ, -ℓ:ℓ)
-            M = parent(𝔇[ℓ])
-            @test M isa Matrix{Complex{T}}
+            M = array_view(𝔇[ℓ])
+            @test parent(𝔇[ℓ]) isa SubArray{Complex{T}, 1, Vector{Complex{T}}}
             @test size(M) == (2ℓ + 1, 2ℓ + 1)
             atol = 20 * max(1, ℓ) * eps(T)
             @test opnorm(M * M' - I) ≤ atol
@@ -76,7 +76,7 @@ end
 
 
 @testitem "Wigner D representation property" setup=[WignerPropertyRotors] begin
-    import SphericalFunctions: D
+    import SphericalFunctions: D, array_view
     using Quaternionic: Rotor, 𝐢, 𝐣, 𝐤
     using LinearAlgebra: opnorm
     using Random: Xoshiro
@@ -90,17 +90,19 @@ end
             𝔇₁₂ = D(R₁ * R₂, ℓₘₐₓ)
             for ℓ ∈ 0:ℓₘₐₓ
                 atol = 20 * max(1, ℓ) * eps(T)
-                @test opnorm(parent(𝔇s[i₁][ℓ]) * parent(𝔇s[i₂][ℓ]) - parent(𝔇₁₂[ℓ])) ≤ atol
+                @test opnorm(
+                    array_view(𝔇s[i₁][ℓ]) * array_view(𝔇s[i₂][ℓ]) - array_view(𝔇₁₂[ℓ])
+                ) ≤ atol
             end
         end
         for (i, R) ∈ enumerate(rotors)
             𝔇⁻¹ = D(inv(R), ℓₘₐₓ)
             for ℓ ∈ 0:ℓₘₐₓ
                 atol = 20 * max(1, ℓ) * eps(T)
-                @test opnorm(parent(𝔇⁻¹[ℓ]) - parent(𝔇s[i][ℓ])') ≤ atol
+                @test opnorm(array_view(𝔇⁻¹[ℓ]) - array_view(𝔇s[i][ℓ])') ≤ atol
             end
             @test 𝔇s[i][0][0, 0] == 1
-            @test size(parent(𝔇s[i][0])) == (1, 1)
+            @test size(array_view(𝔇s[i][0])) == (1, 1)
         end
     end
 
@@ -119,7 +121,7 @@ end
 
 
 @testitem "Wigner D double cover" setup=[WignerPropertyRotors] begin
-    import SphericalFunctions: D
+    import SphericalFunctions: D, array_view
     using Quaternionic: Rotor
     using Random: Xoshiro
 
@@ -145,19 +147,19 @@ end
         𝔇₊ = D(R, ℓₘₐₓ)
         𝔇₋ = D(-R, ℓₘₐₓ)
         for ℓ ∈ 0:ℓₘₐₓ
-            @test parent(𝔇₋[ℓ]) == parent(𝔇₊[ℓ])
+            @test array_view(𝔇₋[ℓ]) == array_view(𝔇₊[ℓ])
         end
         𝔇₊ = D(R, ℓₘₐₓ - 1//2)
         𝔇₋ = D(-R, ℓₘₐₓ - 1//2)
         for ℓ ∈ 1//2:ℓₘₐₓ - 1//2
-            @test parent(𝔇₋[ℓ]) == -parent(𝔇₊[ℓ])
+            @test array_view(𝔇₋[ℓ]) == -array_view(𝔇₊[ℓ])
         end
     end
 end
 
 
 @testitem "Wigner d symmetries" begin
-    import SphericalFunctions: d
+    import SphericalFunctions: d, array_view
     using LinearAlgebra: I
     using Random: Xoshiro
 
@@ -171,7 +173,8 @@ end
         d₋ = d(-β, ℓₘₐₓ)
         for ℓ ∈ 0:ℓₘₐₓ
             @test axes(d₊[ℓ]) == (-ℓ:ℓ, -ℓ:ℓ)
-            @test parent(d₊[ℓ]) isa Matrix{T}
+            @test parent(d₊[ℓ]) isa SubArray{T, 1, Vector{T}}
+            @test length(parent(d₊[ℓ])) == length(d₊[ℓ])
             for m′ ∈ -ℓ:ℓ, m ∈ -ℓ:ℓ
                 # d_{m′m}(β) = (-1)^{m′-m} d_{mm′}(β) = d_{-m,-m′}(β)
                 @test d₊[ℓ][m′, m] ≈ (-1)^(m′ - m) * d₊[ℓ][m, m′] atol=4eps(T)
@@ -193,7 +196,7 @@ end
     # anti-diagonal of ±1.6e-16 at ℓ = 5, so the whole matrix is checked to a few eps.)
     d₀ = d(zero(T), ℓₘₐₓ)
     for ℓ ∈ 0:ℓₘₐₓ
-        @test maximum(abs, parent(d₀[ℓ]) - I) ≤ 4eps(T)
+        @test maximum(abs, array_view(d₀[ℓ]) - I) ≤ 4eps(T)
     end
 
     # β = π: anti-diagonal, dˡ_{m′m}(π) = (-1)^{ℓ-m} δ_{m′,-m}.  The sign follows from the
@@ -352,7 +355,7 @@ end
 end
 
 @testitem "Wigner D large ℓ sanity" begin
-    import SphericalFunctions: SphericalFunctions, DCalculator, recurrence!
+    import SphericalFunctions: SphericalFunctions, DCalculator, recurrence!, array_view
     using Quaternionic: Rotor
     using LinearAlgebra: I, opnorm
     using Random: Xoshiro
@@ -376,7 +379,7 @@ end
     @test SphericalFunctions.ℓ(calc) == L
     @test_throws MethodError calc[L - 1]
 
-    M = parent(recurrence!(calc, L))
+    M = array_view(recurrence!(calc, L))
     @test size(M) == (2L + 1, 2L + 1)
     @test opnorm(M * M' - I) ≤ 1e-11
     @test opnorm(M' * M - I) ≤ 1e-11

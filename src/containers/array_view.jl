@@ -7,10 +7,11 @@
 # wrong answers.
 #
 # What is offered instead is an explicit, named route to the underlying numbers.
-# `array_view` hands back a 1-based array aliasing the storage — a `StridedArray` for the
-# containers the package builds, on which BLAS and LAPACK work at full speed — and `relabel`
-# puts the natural indices back onto the result.  `Array` and `collect`, and `Matrix` for a
-# two-axis block, remain the copying forms, for results that must outlive the storage.
+# `array_view` hands back a 1-based array aliasing the storage — a `StridedArray` for a
+# calculator's blocks and those of `D` and `d`, on which BLAS and LAPACK work at full speed
+# — and `relabel` puts the natural indices back onto the result.  `Array` and `collect`, and
+# `Matrix` for a two-axis block, remain the copying forms, for results that must outlive the
+# storage.
 
 """
     array_view(w)
@@ -34,14 +35,19 @@ container or a bare array without asking which it was given.  An array with othe
 as an `OffsetArray`, is refused with an `ArgumentError`, because the result is indexed from
 `1`.
 
-For the containers the package builds, over ordinary storage such as a `Matrix`, the result
-is a `StridedArray`, which is the second reason to want it: BLAS needs a unit stride down
-the first axis and a constant stride between columns — not contiguity — so a block can go
-straight to `mul!`, `lu!`, `norm` and the rest with no copy at all:
+For a calculator's blocks, the blocks of [`D`](@ref) and [`d`](@ref), and the results of
+`copy`, `similar`, and `relabel`, the result is a contiguous `StridedArray`, which is the
+second reason to want it: BLAS needs a unit stride down the first axis and a constant stride
+between columns — not contiguity — so a block can go straight to `mul!`, `lu!`, `norm`, and
+the rest with no copy at all:
 
 ```julia
 𝔇₃ = array_view(𝔇₁[ℓ]) * array_view(𝔇₂[ℓ])
 ```
+
+The `array_view` of a block that a calculator returns is moreover linearly indexed, so that
+`sum`, broadcasting, and `copyto!` run over it as fast as over an `Array`, and a batch can
+be reshaped to a matrix of `Nᵣ` times as many rows for BLAS without a copy.
 
 A single rotor's slice of a batched block has a leading stride of `Nᵣ`, so BLAS cannot take
 it; `mul!` then falls back to the generic implementation, which is slower but correct.  The
@@ -85,13 +91,12 @@ function relabel end
 
 ### `array_view`
 
-# `size(w)` is the extent of the *block*, which may be smaller than the storage it sits in,
-# and a tuple whose length is fixed by the type of the block, so the index tuple is known to
-# the compiler and the view is free.  The storage of a `DegreeBlock` is compared with the
-# block first, since it may have been resized (see `check_storage`).
+# The elements of a block, as `elements` gives them (see "Storage" in `blocks.jl`), after
+# the storage of a block over a vector has been compared with the block, since the vector
+# may have been resized.
 @inline function array_view(w::AbstractBlock)
     check_storage(w)
-    view(parent(w), map(Base.OneTo, size(w))...)
+    elements(w)
 end
 
 # The mode containers store their data flat and 1-based already, so their storage *is* the
@@ -114,11 +119,11 @@ end
 
 ### `relabel`
 
-# The block constructors accept storage larger than the block, because a block may sit in
-# storage sized for a larger one, as a calculator's blocks do.  The array given to `relabel`
-# is to hold exactly the block, so its shape is compared with the block's own; otherwise a
-# larger array would be accepted and labelled over its leading corner.  `size(w)` is the
-# extent of the block, which is also the shape of `array_view(w)`.
+# The array given to `relabel` is to hold exactly the block, so its shape is compared with
+# the block's own, which is also the shape of `array_view(w)`, although a block's
+# constructor accepts any array with at least as many entries.  It is used as `vec(A)`, as
+# there, and `vec` of an offset array is 1-based, so `A` itself is compared with 1-based
+# axes first, as the constructors compare it.
 function check_relabel_shape(w, A)
     if size(A) != size(w)
         throw(DimensionMismatch(
@@ -127,12 +132,10 @@ function check_relabel_shape(w, A)
     end
 end
 
-# The array must have the rank of the block's storage, which is that of the block.
-function relabel(
-    w::AbstractBlock{IT, NT, <:AbstractArray{<:Any, N}}, A::AbstractArray{<:Any, N}
-) where {IT, NT, N}
+function relabel(w::AbstractBlock, A::AbstractArray)
     check_relabel_shape(w, A)
-    rewrap(w, A)
+    Base.require_one_based_indexing(A)
+    rewrap(w, vec(A))
 end
 function relabel(w::ModeWeights, A::AbstractVector)
     if length(A) != length(w)
@@ -160,14 +163,14 @@ end
 #
 # A block or a `HarmonicValues` takes part in a broadcast as the numbers of `array_view`,
 # wrapped together with the container itself, so that the broadcast works on a plain 1-based
-# array while the labels remain at hand.  Broadcasting pairs elements by position, which means
-# the same thing for two containers only when they have the same labels, so a broadcast that
-# combines containers, or writes one into another with `.=`, requires their labels to agree,
-# as a broadcast over `ModeWeights` does.  A plain array combined with a container has no
-# labels to compare, and is paired by position as it is.  The result is a plain 1-based
-# array.  A `ModeWeights` has a style of its own, in `mode_weights.jl`, because the result of
-# a broadcast over mode weights is labelled; a block combined with mode weights is a plain
-# vector of factors there.
+# array while the labels remain at hand.  Broadcasting pairs elements by position, which
+# means the same thing for two containers only when they have the same labels, so a
+# broadcast that combines containers, or writes one into another with `.=`, requires their
+# labels to agree, as a broadcast over `ModeWeights` does.  A plain array combined with a
+# container has no labels to compare, and is paired by position as it is.  The result is a
+# plain 1-based array.  A `ModeWeights` has a style of its own, in `mode_weights.jl`,
+# because the result of a broadcast over mode weights is labelled; a block combined with
+# mode weights is a plain vector of factors there.
 
 # The numbers of a container, as broadcasting sees them, with the container for its labels.
 # `T` is the number type, `N` the number of dimensions, `A` the type of the array of

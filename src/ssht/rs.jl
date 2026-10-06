@@ -78,7 +78,7 @@ struct SSHTRS{T<:Real, ST, P, BP, B, IT<:IntegerHalf} <: SSHT{T}
     analysis_phases::Vector{Vector{Complex{T}}}
     # Workspace, which `copy` allocates afresh.  `F` holds, for each column of a chunk (see
     # `rs_chunk`), the Fourier coefficients [ring, m+ℓₘₐₓ+1] for m ∈ -ℓₘₐₓ:ℓₘₐₓ.
-    λ::sλlmCalculator{IT, T, ST, IT, B}  # ₛλₗₘ(θ) for all rings at once (angle mode)
+    λ::HarmonicCalculator{IT, T, T, ST, IT, B, T, Nothing}  # ₛλₗₘ(θ) for all rings at once
     F::Vector{Matrix{Complex{T}}}
     G::Vector{Vector{Complex{T}}}  # an FFT buffer for each distinct ring size
 end
@@ -272,10 +272,8 @@ function rs_synthesis!(f, 𝒯::SSHTRS{T}, f̃) where {T}
     for k ∈ columns
         fill!(F[k], zero(Complex{T}))
     end
-    iₛ = spin_index(λ, s)
-    Λ = λ.Yˡ  # [y, spin, m+ℓ+1]
     for ℓ ∈ abs(s):ℓₘₐₓ
-        recurrence!(λ, ℓ)
+        Λ = array_view(recurrence!(λ, ℓ))  # [y, m+ℓ+1]
         i₀ = Yindex(ℓ, -ℓ, abs(s)) - 1
         @inbounds for k ∈ columns
             Fₖ = F[k]
@@ -284,7 +282,7 @@ function rs_synthesis!(f, 𝒯::SSHTRS{T}, f̃) where {T}
                 jm = m + ℓₘₐₓ + 1
                 jℓ = m + ℓ + 1
                 @simd for y ∈ 1:Nθ
-                    Fₖ[y, jm] += f̃ₗₘ * Λ[y, iₛ, jℓ]
+                    Fₖ[y, jm] += f̃ₗₘ * Λ[y, jℓ]
                 end
             end
         end
@@ -348,15 +346,13 @@ function rs_analysis!(f̃, 𝒯::SSHTRS{T}, f) where {T}
             end
         end
     end
-    iₛ = spin_index(λ, s)
-    Λ = λ.Yˡ  # [y, spin, m+ℓ+1]
     # The sum over rings is formed in order, without `@simd`.  `@simd` would permit the
     # compiler to reassociate it, and whether it does depends on the context in which each
     # specialization of this function happens to be compiled, so that the same data analyzed
     # from real and from complex storage, or into different outputs, could differ in the
     # last bit.  The compiler still vectorizes the loop, with a reduction kept in order.
     for ℓ ∈ abs(s):ℓₘₐₓ
-        recurrence!(λ, ℓ)
+        Λ = array_view(recurrence!(λ, ℓ))  # [y, m+ℓ+1]
         i₀ = Yindex(ℓ, -ℓ, abs(s)) - 1
         @inbounds for k ∈ columns
             Fₖ = F[k]
@@ -365,7 +361,7 @@ function rs_analysis!(f̃, 𝒯::SSHTRS{T}, f) where {T}
                 jℓ = m + ℓ + 1
                 acc = zero(Complex{T})
                 for y ∈ 1:Nθ
-                    acc += Fₖ[y, jm] * Λ[y, iₛ, jℓ]
+                    acc += Fₖ[y, jm] * Λ[y, jℓ]
                 end
                 f̃[i₀ + ℓ + m + 1, k] = acc
             end

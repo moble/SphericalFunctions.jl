@@ -495,9 +495,11 @@ end
     @test all(v[k] == reference[k] for k ∈ eachindex(v) if k != 2)
     recurrence!(calc, 4)
     @test all(v[k] == reference[k] for k ∈ eachindex(v) if k != 2)
-    # Copying is what changes the element type: iteration yields views, `collect` arrays
-    @test eltype(v) !== eltype(calc)
+    # A copy is a block of the same type, over a vector of its own of exactly its length
+    # rather than over the calculator's buffer
+    @test eltype(v) === eltype(calc)
     @test eltype(v) === typeof(v[1])
+    @test all(length(parent(p.second)) == length(p.second) for p ∈ v)
 
     # The same for a batch, for half-integer ℓ, and for the spin-weighted iterator
     vb = collect(DCalculator(rotors, 4))

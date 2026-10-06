@@ -64,61 +64,68 @@ end
     # The natural-index accessors compare an index with the block's limits and then read the
     # storage under `@inbounds`, and iteration does the same for every element, so the
     # limits must fit inside the storage.  The typed constructors are the ones that `copy`,
-    # `similar` and the views `w[iᵣ]`, `b[s, :]` and `b[iᵣ]` are built with.  Storage larger
-    # than the block is legitimate, because a calculator's blocks sit in storage sized for
-    # its largest ℓ; storage smaller than the block is not.
-    @test_throws DimensionMismatch WignerMatrix{Int, Float64, Matrix{Float64}}(
-        zeros(2, 2), 2, 2, -2, 2, -2
+    # `similar`, and the views `w[iᵣ]`, `b[s, :]`, `b[:, s, :]`, and `b[iᵣ]` are built with.
+    # The storage is a vector, of which element k of the block is entry k.  A vector longer
+    # than the block is legitimate, because a calculator's blocks are the leading entries of
+    # a buffer sized for its largest ℓ; a vector shorter than the block is not.
+    @test_throws DimensionMismatch WignerMatrix{Int, Float64, Vector{Float64}}(
+        zeros(24), 2, 2, -2, 2, -2
     )[2, 2]
-    @test_throws DimensionMismatch WignerMatrixBatch{Int, Float64, Array{Float64, 3}}(
-        zeros(1, 2, 2), 2, 2, -2, 2, -2, 3
+    @test_throws DimensionMismatch WignerMatrixBatch{Int, Float64, Vector{Float64}}(
+        zeros(74), 2, 2, -2, 2, -2, 3
     )[3, 2, 2]
-    # ... including the extent of the rotor axis alone
-    @test_throws DimensionMismatch WignerMatrixBatch{Int, Float64, Array{Float64, 3}}(
-        zeros(1, 5, 5), 2, 2, -2, 2, -2, 2
-    )[2, 0, 0]
     @test_throws DimensionMismatch DegreeBlock{Int, Float64, Vector{Float64}}(
-        zeros(1), 3, 3, -3
+        zeros(6), 3, 3, -3
     )[3]
-    @test_throws DimensionMismatch DegreeBlockBatch{Int, Float64, Matrix{Float64}}(
-        zeros(1, 1), 3, 3, -3, 2
+    @test_throws DimensionMismatch DegreeBlockBatch{Int, Float64, Vector{Float64}}(
+        zeros(13), 3, 3, -3, 2
     )[2, 3]
-    @test_throws DimensionMismatch SpinMatrix{Int, Float64, Matrix{Float64}}(
-        zeros(1, 1), 2, 1, -1, 2, -2
+    @test_throws DimensionMismatch SpinMatrix{Int, Float64, Vector{Float64}}(
+        zeros(14), 2, 1, -1, 2, -2
     )[1, 2]
-    @test_throws DimensionMismatch SpinMatrixBatch{Int, Float64, Array{Float64, 3}}(
-        zeros(1, 1, 1), 2, 1, -1, 2, -2, 2
+    @test_throws DimensionMismatch SpinMatrixBatch{Int, Float64, Vector{Float64}}(
+        zeros(29), 2, 1, -1, 2, -2, 2
     )[2, 1, 2]
     let h = HalfOddInteger
-        @test_throws DimensionMismatch WignerMatrix{h, Float64, Matrix{Float64}}(
-            zeros(1, 1), h(3//2), h(3//2), h(-3//2), h(3//2), h(-3//2)
+        @test_throws DimensionMismatch WignerMatrix{h, Float64, Vector{Float64}}(
+            zeros(15), h(3//2), h(3//2), h(-3//2), h(3//2), h(-3//2)
         )[h(3//2), h(3//2)]
     end
 
-    # Iteration, which is what `sum`, `maximum` and `collect` use, reads every element
+    # The one block whose storage may be a matrix is the slice `b[:, s, :]` of a
+    # `SpinMatrixBatch`, a `DegreeBlockBatch`, and that matrix must have exactly its shape
+    @test size(DegreeBlockBatch{Int, Float64, Matrix{Float64}}(zeros(2, 7), 3, 3, -3, 2)) == (2, 7)
+    @test_throws DimensionMismatch DegreeBlockBatch{Int, Float64, Matrix{Float64}}(
+        zeros(2, 8), 3, 3, -3, 2
+    )
+    @test_throws DimensionMismatch DegreeBlockBatch{Int, Float64, Matrix{Float64}}(
+        zeros(3, 7), 3, 3, -3, 2
+    )
+
+    # Iteration and the reductions, such as `sum` and `maximum`, read every element
     @test_throws DimensionMismatch sum(
         DegreeBlock{Int, Float64, Vector{Float64}}(zeros(1), 3, 3, -3)
     )
 
     # An axis of negative extent is refused, rather than compared with the storage, and so is
     # a negative number of rotors
-    @test_throws ArgumentError WignerMatrix{Int, Float64, Matrix{Float64}}(
-        zeros(5, 5), 2, -3, 2, 2, -2
+    @test_throws ArgumentError WignerMatrix{Int, Float64, Vector{Float64}}(
+        zeros(25), 2, -3, 2, 2, -2
     )
-    @test_throws ArgumentError WignerMatrixBatch{Int, Float64, Array{Float64, 3}}(
-        zeros(2, 5, 5), 2, 2, -2, 2, -2, -1
+    @test_throws ArgumentError WignerMatrixBatch{Int, Float64, Vector{Float64}}(
+        zeros(50), 2, 2, -2, 2, -2, -1
     )
 
     # Storage at least as large as the block is accepted, and the block keeps its own size
-    @test size(WignerMatrix{Int, Float64, Matrix{Float64}}(zeros(7, 7), 2, 2, -2, 2, -2)) == (5, 5)
+    @test size(WignerMatrix{Int, Float64, Vector{Float64}}(zeros(49), 2, 2, -2, 2, -2)) == (5, 5)
     @test size(
-        WignerMatrixBatch{Int, Float64, Array{Float64, 3}}(zeros(3, 7, 7), 2, 2, -2, 2, -2, 2)
+        WignerMatrixBatch{Int, Float64, Vector{Float64}}(zeros(147), 2, 2, -2, 2, -2, 2)
     ) == (2, 5, 5)
     @test size(DegreeBlock{Int, Float64, Vector{Float64}}(zeros(9), 3, 3, -3)) == (7,)
-    @test size(DegreeBlockBatch{Int, Float64, Matrix{Float64}}(zeros(2, 9), 3, 3, -3, 2)) == (2, 7)
-    @test size(SpinMatrix{Int, Float64, Matrix{Float64}}(zeros(4, 6), 2, 1, -1, 2, -2)) == (3, 5)
+    @test size(DegreeBlockBatch{Int, Float64, Vector{Float64}}(zeros(18), 3, 3, -3, 2)) == (2, 7)
+    @test size(SpinMatrix{Int, Float64, Vector{Float64}}(zeros(24), 2, 1, -1, 2, -2)) == (3, 5)
     @test size(
-        SpinMatrixBatch{Int, Float64, Array{Float64, 3}}(zeros(2, 3, 5), 2, 1, -1, 2, -2, 2)
+        SpinMatrixBatch{Int, Float64, Vector{Float64}}(zeros(30), 2, 1, -1, 2, -2, 2)
     ) == (2, 3, 5)
 end
 
@@ -311,12 +318,16 @@ end
     @test_throws DimensionMismatch [ℓ for (ℓ, _) ∈ s]
 end
 
-@testitem "Bounds: a DegreeBlock refuses storage resized after its construction" tags=[:bounds] begin
-    import SphericalFunctions: DegreeBlock, ModeWeights, relabel
+@testitem "Bounds: a block refuses storage resized after its construction" tags=[:bounds] begin
+    import SphericalFunctions: DegreeBlock, ModeWeights, relabel, array_view
+    import SphericalFunctions: DCalculator, sYlmCalculator, recurrence!
+    using Quaternionic: Rotor
+    import Random
 
-    # A `DegreeBlock` may use a caller's vector as its storage, which can be resized after the
+    # A block may use a caller's vector as its storage, which can be resized after the
     # constructor has compared its length with the limits, while the accessors and iteration
-    # read the storage under `@inbounds` at the positions the limits give.
+    # read the storage under `@inbounds` at the positions the limits give.  Once the vector
+    # is shorter than the block, every access is refused, even to an entry it still holds.
     v = collect(1.0:5.0)
     b = DegreeBlock(v, 2)
     resize!(v, 1)
@@ -324,7 +335,7 @@ end
     @test_throws DimensionMismatch (b[2] = 0.0)
     @test_throws DimensionMismatch sum(b)
     @test_throws DimensionMismatch collect(b)
-    @test b[-2] == 1.0  # the one entry the storage still holds
+    @test_throws DimensionMismatch b[-2]
 
     # ... including the block that `relabel` puts on a vector
     u = collect(1.0:7.0)
@@ -332,6 +343,36 @@ end
     resize!(u, 1)
     @test_throws DimensionMismatch b[3]
     @test_throws DimensionMismatch maximum(b)
+
+    # ... and the blocks of a calculator, whose storage is the calculator's own buffer,
+    # which `parent` hands out
+    rng = Random.Xoshiro(20261001)
+    R⃗ = randn(rng, Rotor{Float64}, 3)
+    let b = recurrence!(DCalculator(R⃗[1], 4), 3)
+        resize!(parent(b), 1)
+        @test_throws DimensionMismatch b[0, 0]
+        @test_throws DimensionMismatch (b[0, 0] = 0)
+        @test_throws DimensionMismatch sum(b)
+        @test_throws DimensionMismatch collect(b)
+        @test_throws DimensionMismatch array_view(b)
+    end
+    let b = recurrence!(DCalculator(R⃗, 4), 3)
+        resize!(parent(b), 1)
+        @test_throws DimensionMismatch b[1, 0, 0]
+        @test_throws DimensionMismatch b[1]
+        @test_throws DimensionMismatch sum(b)
+        @test_throws DimensionMismatch collect(b)
+        @test_throws DimensionMismatch array_view(b)
+    end
+    let b = recurrence!(sYlmCalculator(R⃗, 4, -2:2), 3)
+        resize!(parent(b), 1)
+        @test_throws DimensionMismatch b[1, 0, 0]
+        @test_throws DimensionMismatch b[1]
+        @test_throws DimensionMismatch b[:, 0, :]
+        @test_throws DimensionMismatch sum(b)
+        @test_throws DimensionMismatch collect(b)
+        @test_throws DimensionMismatch array_view(b)
+    end
 end
 
 @testitem "Bounds: the transforms refuse mode weights whose storage was resized" tags=[:bounds] begin
@@ -380,42 +421,92 @@ end
 end
 
 @testitem "Bounds: the Wigner and harmonic calculators refuse buffers too small for them" tags=[:bounds] begin
-    import SphericalFunctions: DCalculator, sYlmCalculator, SphericalFunctionsEngine
+    import SphericalFunctions: DCalculator, sYlmCalculator, dCalculator, sλlmCalculator,
+        SphericalFunctionsEngine, recurrence!
     using Quaternionic: Rotor
     import Random
 
     rng = Random.Xoshiro(20260924)
 
     # `materialize!` writes the block and reads the power tables under `@inbounds`, for
-    # every rotor, every (m′, m) or (s, m) the calculator serves, and every power up to
-    # 2ℓₘₐₓ, so the calculators' own constructors compare the buffers they are given with
-    # all of those.  Each buffer is replaced here by one too small in a single dimension:
-    # the power tables of the engine are laid out [iᵣ, k+1], with a row for each of the 4
-    # rotors and 7 columns.  The calculator's copy of its rotors must likewise hold one for
-    # each.
+    # every rotor, every (m′, m) or (s, m) the calculator serves, and every power zᵏ that
+    # one of those reads, with |k| ≤ K (see `power_extent`), so the calculators' own
+    # constructors compare the buffers they are given with all of those.  Each buffer is
+    # replaced here by one too small: the block's buffer by a vector one entry shorter, and
+    # the power tables of the engine, which are laid out [iᵣ, k+K+1], with a row for each of
+    # the 4 rotors and 2K+1 columns (13 for 𝔇, where K = 6, and 9 for ₛYₗₘ, where K = 4), by
+    # one too small in a single dimension.  The calculator's copy of its rotors must
+    # likewise hold one for each.
     R⃗ = randn(rng, Rotor{Float64}, 4)
     c = DCalculator(R⃗, 3)
     C = typeof(c)
     e = c.engine
     with_tables(e, Z₊, Z₋) = SphericalFunctionsEngine(e.H, Z₊, Z₋)
-    limits = (c.m′ₘₐₓ, c.m′ₘᵢₙ, c.mₘₐₓ, c.mₘᵢₙ, c.m′ₘₐₓˢ, c.m′ₘᵢₙˢ, c.mₘₐₓˢ, c.mₘᵢₙˢ)
-    @test C(e, c.Wˡ, c.rotors, limits..., c.ℓ, c.lift) isa C
-    @test_throws DimensionMismatch C(e, zeros(ComplexF64, 1, 7, 7), c.rotors, limits..., c.ℓ, c.lift)
-    @test_throws DimensionMismatch C(e, zeros(ComplexF64, 4, 7, 6), c.rotors, limits..., c.ℓ, c.lift)
-    @test_throws DimensionMismatch C(with_tables(e, zeros(ComplexF64, 3, 7), e.Z₋), c.Wˡ, c.rotors, limits..., c.ℓ, c.lift)
-    @test_throws DimensionMismatch C(with_tables(e, e.Z₊, zeros(ComplexF64, 4, 6)), c.Wˡ, c.rotors, limits..., c.ℓ, c.lift)
-    @test_throws DimensionMismatch C(e, c.Wˡ, c.rotors[1:3], limits..., c.ℓ, c.lift)
+    limits = (c.m′ₘₐₓ, c.m′ₘᵢₙ, c.mₘₐₓ, c.mₘᵢₙ, c.m′ₘₐₓᵈ, c.m′ₘᵢₙᵈ, c.mₘₐₓᵈ, c.mₘᵢₙᵈ)
+    @test C(e, c.Wˡ, c.rotors, c.angles, limits..., c.ℓ, c.lift) isa C
+    @test_throws DimensionMismatch C(e, zeros(ComplexF64, length(c.Wˡ) - 1), c.rotors, c.angles, limits..., c.ℓ, c.lift)
+    @test_throws DimensionMismatch C(with_tables(e, zeros(ComplexF64, 3, 13), e.Z₋), c.Wˡ, c.rotors, c.angles, limits..., c.ℓ, c.lift)
+    @test_throws DimensionMismatch C(with_tables(e, e.Z₊, zeros(ComplexF64, 4, 12)), c.Wˡ, c.rotors, c.angles, limits..., c.ℓ, c.lift)
+    @test_throws DimensionMismatch C(e, c.Wˡ, c.rotors[1:3], c.angles, limits..., c.ℓ, c.lift)
+    # An empty block buffer is accepted, for a calculator that writes every block into a
+    # destination given to it, as those of `D` and `d` do, and such a calculator refuses to
+    # write a block into its buffer.
+    let c₀ = C(e, ComplexF64[], c.rotors, c.angles, limits..., Ref(-1), c.lift)
+        @test c₀ isa C
+        @test_throws "an array of length 0" recurrence!(c₀, 3)
+    end
 
     y = sYlmCalculator(R⃗, 3, -1:1)
     Y = typeof(y)
     e = y.engine
     state = (y.s, y.ℓ, y.phases, y.lift)
-    @test Y(e, y.Yˡ, y.rotors, state...) isa Y
-    @test_throws DimensionMismatch Y(e, zeros(ComplexF64, 4, 1, 7), y.rotors, state...)
-    @test_throws DimensionMismatch Y(e, zeros(ComplexF64, 4, 3, 5), y.rotors, state...)
-    @test_throws DimensionMismatch Y(with_tables(e, zeros(ComplexF64, 3, 7), e.Z₋), y.Yˡ, y.rotors, state...)
-    @test_throws DimensionMismatch Y(with_tables(e, e.Z₊, zeros(ComplexF64, 4, 6)), y.Yˡ, y.rotors, state...)
-    @test_throws DimensionMismatch Y(e, y.Yˡ, y.rotors[1:3], state...)
+    @test Y(e, y.Yˡ, y.rotors, y.angles, state...) isa Y
+    @test_throws DimensionMismatch Y(e, zeros(ComplexF64, length(y.Yˡ) - 1), y.rotors, y.angles, state...)
+    @test_throws DimensionMismatch Y(with_tables(e, zeros(ComplexF64, 3, 9), e.Z₋), y.Yˡ, y.rotors, y.angles, state...)
+    @test_throws DimensionMismatch Y(with_tables(e, e.Z₊, zeros(ComplexF64, 4, 8)), y.Yˡ, y.rotors, y.angles, state...)
+    @test_throws DimensionMismatch Y(e, y.Yˡ, y.rotors[1:3], y.angles, state...)
+
+    # A calculator of `d` or of ₛλₗₘ keeps one angle for each of its rotor data instead.
+    c = dCalculator(randn(rng, 4), 3)
+    C = typeof(c)
+    limits = (c.m′ₘₐₓ, c.m′ₘᵢₙ, c.mₘₐₓ, c.mₘᵢₙ, c.m′ₘₐₓᵈ, c.m′ₘᵢₙᵈ, c.mₘₐₓᵈ, c.mₘᵢₙᵈ)
+    @test C(c.engine, c.Wˡ, c.rotors, c.angles, limits..., c.ℓ, c.lift) isa C
+    @test_throws DimensionMismatch C(c.engine, c.Wˡ, c.rotors, c.angles[1:3], limits..., c.ℓ, c.lift)
+    y = sλlmCalculator(randn(rng, 4), 3, -1:1)
+    Y = typeof(y)
+    state = (y.s, y.ℓ, y.phases, y.lift)
+    @test Y(y.engine, y.Yˡ, y.rotors, y.angles, state...) isa Y
+    @test_throws DimensionMismatch Y(y.engine, y.Yˡ, y.rotors, y.angles[1:3], state...)
+end
+
+@testitem "Bounds: materialize! refuses rows or columns that miss ±ℓₘᵢₙ" tags=[:bounds] begin
+    import SphericalFunctions: DCalculator, materialize!, recurrence!, HalfOddInteger
+    using Quaternionic: Rotor
+    import Random
+
+    # The Wigner `materialize!` writes the rows and columns it is given under `@inbounds`,
+    # and those of every block and every derivative range include ±ℓₘᵢₙ, which its kernel
+    # relies on.  A range that misses them is refused before anything is written, even
+    # when it lies within the rows the calculator computes and the destination is long
+    # enough.
+    rng = Random.Xoshiro(20261001)
+    R = randn(rng, Rotor{Float64})
+    let c = DCalculator(R, 6), A = fill(ComplexF64(7), 300)
+        recurrence!(c, 6)
+        @test_throws "must include" materialize!(c, 6, 2:5, -6:6, A, 100)
+        @test_throws "must include" materialize!(c, 6, -6:6, -5:-1, A, 100)
+        @test all(==(7), A)
+    end
+    let h = HalfOddInteger, c = DCalculator(R, 13//2), A = fill(ComplexF64(7), 300)
+        recurrence!(c, 13//2)
+        @test_throws "must include" materialize!(
+            c, h(13//2), h(3//2):h(9//2), h(-13//2):h(13//2), A, 100
+        )
+        @test_throws "must include" materialize!(
+            c, h(13//2), h(-13//2):h(13//2), h(-13//2):h(-3//2), A, 100
+        )
+        @test all(==(7), A)
+    end
 end
 
 
@@ -711,9 +802,8 @@ end
     using Quaternionic: Rotor
 
     # The accessors of a block take indices of its own index type only, while a caller writes
-    # literals, which are `Int`s, and the iteration of a Wigner matrix or a spin matrix, which
-    # every reduction uses, forms its indices as a lower limit plus an `Int`; with any other
-    # integer index type, neither would find a method.
+    # literals, which are `Int`s; with any other integer index type, they would find no
+    # method.
     R = Rotor(1.0, 2.0, 3.0, 4.0)
     @test_throws narrow_refusal sum(D(R, Int32(2))[2])
     @test_throws narrow_refusal D(R, Int32(2))[2][1, 0]

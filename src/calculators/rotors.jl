@@ -201,9 +201,10 @@ r^{-k}`` relative to their size at a distance ``r`` from it.  The values are acc
 every rotor, the poles included, so the calculators of ``𝔇`` and of ``{}_sY_{ℓ,m}``, which
 are smooth there, are never differentiated through this: the rules for automatic
 differentiation give their derivatives in terms of their values (see
-`src/derivatives/kernels.jl`).  The ``d`` and ``H`` of a rotor have no such rules, and keep
-the `NaN`: they see the rotor only through ``β``, which has a cone-shaped singularity at
-each pole, so that some of their elements actually have no derivative there.
+`src/derivatives/kernels.jl`).  ``H`` of a rotor has no such rules, and keeps the `NaN`.
+``d`` of a rotor is differentiated through ``β``, by the same rules as ``d`` of an angle.
+Since ``β`` has a cone-shaped singularity at each pole, the derivatives of those elements of
+``d`` that actually have no derivative there are `NaN`, and those of the others are zero.
 
 The optional second argument is the real type the phases are computed in; it defaults to
 `float(eltype(R))`.  Pass the *calculator's* type whenever that is more precise than the
@@ -225,6 +226,25 @@ function spinor_phases(R::AbstractQuaternion, ::Type{F}) where {F<:Real}
     sβ½ = sqrtb / nrm
     (eⁱᵝ, z₊, z₋, cβ½, sβ½)
 end
+
+# The angle β of rotor data: the angle itself, the argument of a phase e^{iβ}, and the β ∈
+# [0, π] of a rotor's Euler decomposition, 2 atan(√(X²+Y²), √(W²+Z²)), as the half angles of
+# `spinor_phases` give it.  A calculator of `d` or of ₛλₗₘ keeps a copy of these angles,
+# whose tangents and cotangents are what the rules for automatic differentiation read (see
+# `src/derivatives/kernels.jl`); its values are computed from the rotor data, not from
+# these.
+rotation_angle(β::Real) = β
+rotation_angle(z::Complex) = angle(z)
+rotation_angle(R::RotorLike) = 2atan(sqrt(R[2]^2 + R[3]^2), sqrt(R[1]^2 + R[4]^2))
+
+# The components of rotor data, as a tuple of one, two, or four reals, and the rotor data
+# with those components.
+rotor_data_components(β::Real) = (β,)
+rotor_data_components(z::Complex) = (real(z), imag(z))
+rotor_data_components(R::RotorLike) = (R[1], R[2], R[3], R[4])
+rotor_data(β::Real) = β
+rotor_data(x::Real, y::Real) = Complex(x, y)
+rotor_data(w::Real, x::Real, y::Real, z::Real) = Quaternion(w, x, y, z)
 
 """
     half_angles(eⁱᵝ)

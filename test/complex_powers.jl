@@ -119,6 +119,95 @@ end
 end
 
 
+@testitem "Complex powers: a quarter turn is the division by i" begin
+    using SphericalFunctions: quarter_turn
+    using DoubleFloats: Double64
+    using Random: Xoshiro
+
+    # The recurrence rotates its phase into the sector -π/4 < arg z ≤ π/4 by quarter turns,
+    # which exchange the components where that is exactly the division by i, and divide
+    # otherwise.  So the two agree to the last bit, signs of zeros included, for every pair
+    # of these components: zeros of either sign, infinities, NaN, the smallest positive
+    # number (a subnormal, except in `BigFloat`), the extremes of each type, the edges 1/2
+    # and 2 of the range in which the components are exchanged and the numbers just outside
+    # it, the components ±1/√2 of the phases on the diagonals, and numbers far from the unit
+    # circle.  They agree for random phases too.
+    rng = Xoshiro(20261001)
+    for T ∈ (Float16, Float32, Float64, BigFloat, Double64)
+        tiny = nextfloat(zero(T))
+        special = T[
+            0, -0.0, 1, -1, 0.5, -0.5, 2, -2, prevfloat(T(1)/2), nextfloat(T(2)),
+            Inf, -Inf, NaN, tiny, -tiny, floatmin(T), -floatmin(T), floatmax(T),
+            -floatmax(T), eps(T), -eps(T), 1/√T(2), -1/√T(2), T(1e-300), T(1e300),
+        ]
+        @test all(
+            isequal(quarter_turn(Complex(x, y)), Complex(x, y) / 1im)
+            for x ∈ special, y ∈ special
+        )
+        @test all(
+            isequal(quarter_turn(z), z / 1im)
+            for z ∈ (cis(2T(π) * rand(rng, T)) for _ ∈ 1:10_000)
+        )
+    end
+end
+
+
+@testitem "Complex powers: several phases at once are separate calls" begin
+    using SphericalFunctions: complex_powers!, phase_powers!
+    using DoubleFloats: Double64
+    using Random: Xoshiro
+
+    # The calculators fill the powers of the phases of two rotors in one call of
+    # `phase_powers!`, and the powers of each phase are exactly those that `complex_powers!`
+    # gives for that phase alone: in every precision, at every length, for one to four
+    # phases at once, and for the phases on the axes and the diagonals, where the rotation
+    # into the sector of the recurrence is decided.  Every phase of the list takes its turn
+    # in each position of a call.
+    rng = Xoshiro(20261001)
+    for T ∈ (Float16, Float32, Float64, BigFloat, Double64)
+        s = 1/√T(2)
+        phases = Complex{T}[
+            1, im, -1, -im, complex(1, -zero(T)), complex(-1, -zero(T)),
+            complex(-zero(T), 1), complex(-zero(T), -1),
+            complex(s, s), complex(-s, s), complex(s, -s), complex(-s, -s),
+            (cis(2T(π) * rand(rng, T)) for _ ∈ 1:12)...,
+        ]
+        for n ∈ 1:4, M ∈ (0, 1, 2, 3, 4, 17, 65)
+            @test all(1:length(phases)) do k
+                z = ntuple(i -> phases[mod1(k + i - 1, length(phases))], n)
+                together = phase_powers!(ntuple(_ -> fill(Complex{T}(NaN), M), n), z)
+                alone = map(zᵢ -> complex_powers!(fill(Complex{T}(NaN), M), zᵢ), z)
+                all(map(isequal, together, alone))
+            end
+        end
+    end
+
+    # A phase in a lower precision than its vector gives the powers that `complex_powers!`
+    # gives for it, whatever the other phases of the call are
+    for M ∈ (3, 17, 65)
+        z = (cis(0.3f0), cis(2.9), cis(-1.3f0), ComplexF32(-0.0, 1))
+        together = phase_powers!(ntuple(_ -> zeros(ComplexF64, M), 4), z)
+        alone = map(zᵢ -> complex_powers!(zeros(ComplexF64, M), zᵢ), z)
+        @test all(map(isequal, together, alone))
+    end
+
+    # The rows of a matrix, which is how the calculators pass their tables, are filled as
+    # vectors of their own are
+    let Z = fill(ComplexF64(NaN), 4, 17), z = (cis(0.3), cis(-2.0), 1.0im, cis(π/4))
+        phase_powers!(ntuple(i -> view(Z, i, :), 4), z)
+        alone = map(zᵢ -> complex_powers!(zeros(ComplexF64, 17), zᵢ), z)
+        @test all(i -> isequal(Z[i, :], alone[i]), 1:4)
+    end
+
+    # Vectors of unequal lengths are refused before anything is written
+    let a = fill(ComplexF64(NaN), 3), b = fill(ComplexF64(NaN), 4)
+        @test_throws DimensionMismatch phase_powers!((a, b), (cis(0.1), cis(0.2)))
+        @test_throws "lengths (3, 4)" phase_powers!((a, b), (cis(0.1), cis(0.2)))
+        @test all(isnan, a) && all(isnan, b)
+    end
+end
+
+
 @testitem "ComplexPowers" begin
     using SphericalFunctions: ComplexPowers
 

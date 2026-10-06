@@ -86,15 +86,18 @@ struct HCalculator{IT, RT<:Real, ST} <: AbstractCalculator{IT}
     cβ½::FixedSizeVectorDefault{RT}  # cos(β/2) per rotor; length 0 unless IT <: HalfOddInteger
     sβ½::FixedSizeVectorDefault{RT}  # sin(β/2) per rotor; length 0 unless IT <: HalfOddInteger
     d̄ₗ::FixedSizeVectorDefault{RT}  # d̄ₗ[m-ℓₘᵢₙ+1] = √δ²(ℓ, m); see `recurrence_coefficients!`
+    k̄::FixedSizeVectorDefault{RT}  # k̄[k] = √(k(k-1)), a constant; see `recurrence_step2!`
     ℓₘₐₓ::IT
     m′ₘₐₓ::IT
     swapH::Base.RefValue{Bool}  # h⃗ˡ(w) returns h⃗ᵃ if `false`, otherwise h⃗ᵇ; and vice versa for h⃗ˡ⁺¹(w)
     axes_valid::Base.RefValue{Bool}  # h⃗ˡ and h⃗ˡ⁺¹ hold correct data for their ℓ labels
-    # The recurrence steps index every buffer under `@inbounds`, for each of the wedge's `Nᵣ`
-    # rotors, so each buffer must hold exactly that many, and the table of coefficients must
-    # hold one entry for each m ∈ ℓₘᵢₙ:ℓ-1 at the largest ℓ of the wedge.  `allocate_H` always
-    # builds them so; this checks the buffers wherever they come from, once, as they are
-    # brought together.
+    # The recurrence steps index every buffer under `@inbounds`, for each of the wedge's
+    # `Nᵣ` rotors, so each buffer must hold exactly that many, and the table of coefficients
+    # must hold one entry for each m ∈ ℓₘᵢₙ:ℓ-1 at the largest ℓ of the wedge.  `allocate_H`
+    # always builds them so; this checks the buffers wherever they come from, once, as they
+    # are brought together.  The table `k̄` is not a buffer but a constant of the
+    # calculator, so it is built here rather than passed in, with one entry for each k ≤ 2n
+    # at the largest order n of the axes, which is as far as steps 2 and 3 read it.
     function HCalculator{IT, RT, ST}(
         h⃗ᵃ, h⃗ᵇ, Hˡ, eⁱᵝ, cβ½, sβ½, d̄ₗ, ℓₘₐₓ, m′ₘₐₓ, swapH, axes_valid
     ) where {IT, RT<:Real, ST}
@@ -112,7 +115,11 @@ struct HCalculator{IT, RT<:Real, ST} <: AbstractCalculator{IT}
                 ))
             end
         end
-        new{IT, RT, ST}(h⃗ᵃ, h⃗ᵇ, Hˡ, eⁱᵝ, cβ½, sβ½, d̄ₗ, ℓₘₐₓ, m′ₘₐₓ, swapH, axes_valid)
+        k̄ = FixedSizeVector{RT}(undef, 2max(maxℓ(h⃗ᵃ), maxℓ(h⃗ᵇ)))
+        for k ∈ eachindex(k̄)
+            k̄[k] = sqrt(RT(k * (k - 1)))
+        end
+        new{IT, RT, ST}(h⃗ᵃ, h⃗ᵇ, Hˡ, eⁱᵝ, cβ½, sβ½, d̄ₗ, k̄, ℓₘₐₓ, m′ₘₐₓ, swapH, axes_valid)
     end
 end
 
@@ -200,9 +207,11 @@ eⁱᵝ(w::HCalculator) = w.eⁱᵝ
 Fill every internal buffer of `w` (both axes, the wedge, and the table of recurrence
 coefficients) with the value `v`, and mark the axis data as invalid.  The stored rotor data
 — the phases `e^{iβ}` and, on the half-integer path, the half angles — is deliberately left
-alone, so that `recurrence!(w, ℓ)` still has everything it needs.  Useful for testing that no
-uninitialized storage is ever read: everything the recurrence is responsible for writing is
-poisoned, while everything the rotor data consists of is preserved.
+alone, so that `recurrence!(w, ℓ)` still has everything it needs, and so is the constant
+table of square roots that the constructor builds, which the recurrence reads but never
+writes.  Useful for testing that no uninitialized storage is ever read: everything the
+recurrence is responsible for writing is poisoned, while everything the rotor data consists
+of is preserved.
 """
 function Base.fill!(w::HCalculator{IT, RT}, v::Real) where {IT, RT}
     let v = convert(RT, v)
@@ -501,28 +510,34 @@ function advance_axes!(w::HCalculator, j::Int)
     end
     while h⃗ˡ(w).ℓ < j
         increment_axes!(w)
-        recurrence_step2!(w)  # h⃗ʲ₀ₘ -> h⃗ʲ⁺¹₀ₘ
+        @inline recurrence_step2!(w)  # h⃗ʲ₀ₘ -> h⃗ʲ⁺¹₀ₘ
     end
     w
 end
 
+# The drivers below inline every step but steps 4 and 5.  As separate calls, the steps cost
+# about 25 ns for every ℓ, even where there is little for them to compute, which for one
+# rotor was a quarter of the recurrence at ℓₘₐₓ = 8 and half of it at ℓₘₐₓ = 1.  Steps 4 and
+# 5, whose loops are nearly the whole cost at large ℓ, are inlined instead into a function
+# of their own, `recurrence_ladder!`: inlined here, those loops ran 7% to 13% slower for 3
+# to 7 rotors at ℓ ≥ 32.  Each step is still a function of its own, documented and tested by
+# itself.
 function recurrence!(w::HCalculator{Int, RT}, ℓ) where {RT}
     ℓ = check_ℓ(w, ℓ)  # rejects an `ℓ` that is not an index of this calculator
 
     # Steps 1 and 2 (the ℓ recurrence along the m′=0 axis).  The axis buffers h⃗ˡ and h⃗ˡ⁺¹
     # hold the axes for two successive ℓ values.  We restart from ℓₘᵢₙ if they are invalid or
     # ahead of the requested ℓ, and otherwise advance them one ℓ at a time.
-    advance_axes!(w, axis_ℓ(w, ℓ))
+    @inline advance_axes!(w, axis_ℓ(w, ℓ))
 
     # Steps 3, 4, and 5 (the m′ recurrences at fixed ℓ), filling the wedge Hˡ.
-    Hˡ(w).ℓ = ℓ
-    fillHˡ₀ₘ!(w)  # Copy h⃗ˡ₀ₘ to Hˡ₀ₘ
-    recurrence_step3!(w)  # Hˡ⁺¹₀ₘ -> Hˡ₁ₘ
-    recurrence_coefficients!(w)  # d̄ₗᵐ for steps 4 and 5
-    recurrence_step4!(w)  # Hˡₘ′ₘ₋₁, Hˡₘ′₋₁ₘ, Hˡₘ′ₘ₊₁ -> Hˡₘ′₊₁ₘ
-    recurrence_step5!(w)  # Hˡₘ′ₘ₋₁, Hˡₘ′₊₁ₘ, Hˡₘ′ₘ₊₁ -> Hˡₘ′₋₁ₘ
-    # Step 6 (the symmetries) is never applied to the wedge itself; elements outside the
-    # wedge are read through `wedge_value`/`wedge_source` when the results are materialized.
+    @inline Hˡ(w).ℓ = ℓ
+    @inline fillHˡ₀ₘ!(w)  # Copy h⃗ˡ₀ₘ to Hˡ₀ₘ
+    @inline recurrence_step3!(w)  # Hˡ⁺¹₀ₘ -> Hˡ₁ₘ
+    @inline recurrence_coefficients!(w)  # d̄ₗᵐ for steps 4 and 5
+    recurrence_ladder!(w)  # steps 4 and 5
+    # Step 6 (the symmetries) is never applied to the wedge itself; the calculators'
+    # `materialize!` methods apply them as they read it (see `wedge_source`).
     Hˡ(w)
 end
 
@@ -534,13 +549,20 @@ end
 # `docs/src/50-notes/01-H_recurrence.md`).
 function recurrence!(w::HCalculator{IT, RT}, ℓ) where {IT<:HalfOddInteger, RT}
     ℓ = check_ℓ(w, ℓ)  # rejects an `ℓ` that is not an index of this calculator
-    advance_axes!(w, axis_ℓ(w, ℓ))
-    Hˡ(w).ℓ = ℓ
-    recurrence_seed!(w)   # h⃗ʲ₀ₘ -> Hˡ₊₁⁄₂ₘ, Hˡ₋₁⁄₂ₘ
-    recurrence_coefficients!(w)  # d̄ₗᵐ for steps 4 and 5
-    recurrence_step4!(w)  # Hˡₘ′ₘ₋₁, Hˡₘ′₋₁ₘ, Hˡₘ′ₘ₊₁ -> Hˡₘ′₊₁ₘ
-    recurrence_step5!(w)  # Hˡₘ′ₘ₋₁, Hˡₘ′₊₁ₘ, Hˡₘ′ₘ₊₁ -> Hˡₘ′₋₁ₘ
+    @inline advance_axes!(w, axis_ℓ(w, ℓ))
+    @inline Hˡ(w).ℓ = ℓ
+    @inline recurrence_seed!(w)   # h⃗ʲ₀ₘ -> Hˡ₊₁⁄₂ₘ, Hˡ₋₁⁄₂ₘ
+    @inline recurrence_coefficients!(w)  # d̄ₗᵐ for steps 4 and 5
+    recurrence_ladder!(w)  # steps 4 and 5
     Hˡ(w)
+end
+
+# The m′ ladders, steps 4 and 5, which fill every row of the wedge beyond the two that the
+# seed, or `fillHˡ₀ₘ!` and step 3, wrote; see the note above the drivers.
+function recurrence_ladder!(w::HCalculator)
+    @inline recurrence_step4!(w)  # Hˡₘ′ₘ₋₁, Hˡₘ′₋₁ₘ, Hˡₘ′ₘ₊₁ -> Hˡₘ′₊₁ₘ
+    @inline recurrence_step5!(w)  # Hˡₘ′ₘ₋₁, Hˡₘ′₊₁ₘ, Hˡₘ′ₘ₊₁ -> Hˡₘ′₋₁ₘ
+    w
 end
 
 
@@ -560,14 +582,38 @@ end
 # bit-identical output.
 #
 # At Nᵣ=1 there is nothing to vectorize over rotors, and the setup of a vector loop costs
-# more than the one element it computes, so the inner loops of steps 4 and 5, which touch
-# every element of the wedge, write that case out as a single statement.  The statement is
-# the loop's own expression at i = 1, so the values are the same.  Since the coefficients on
-# the m side are read from a table (see `recurrence_coefficients!`), the loop over m that
-# holds the statement is then one the compiler vectorizes in turn, and measured on
-# `recurrence_step5!` for one rotor at ℓ = 64 and ℓ = 200, the two together are about five
-# times as fast as a loop over one rotor that takes its own square roots; either alone gains
-# little.  The other loops run once per ℓ or once per row, and are left alone.
+# more than the one element it computes, so every loop over the rotors is written with
+# `@rotor_loop`, which runs that case as the loop's body at i = 1, with no loop around it.
+# The body is the loop's own expression, so the values are the same.  Since the coefficients
+# on the m side of steps 4 and 5 are read from a table (see `recurrence_coefficients!`), the
+# loop over m that holds the body is then one the compiler vectorizes in turn, and measured
+# on `recurrence_step5!` for one rotor at ℓ = 64 and ℓ = 200, the two together are about
+# five times as fast as a loop over one rotor that takes its own square roots; either alone
+# gains little.
+
+# `@rotor_loop for i ∈ 1:Nᵣ … end` is `@simd ivdep for i ∈ 1:Nᵣ … end`, except that a range
+# of one element runs the body once, as it is, with no vector loop around it.
+macro rotor_loop(loop)
+    if !(Meta.isexpr(loop, :for) && Meta.isexpr(loop.args[1], :(=)))
+        throw(ArgumentError("@rotor_loop takes a loop of the form `for i ∈ range … end`"))
+    end
+    i, range = loop.args[1].args
+    body = loop.args[2]
+    r = gensym(:range)
+    esc(quote
+        let $r = $range
+            if length($r) == 1
+                let $i = first($r)
+                    $body
+                end
+            else
+                @simd ivdep for $i ∈ $r
+                    $body
+                end
+            end
+        end
+    end)
+end
 
 # The axis buffers are integer-indexed for every index type (for half-integer ℓ they encode
 # the order j = ℓ - 1/2), so steps 1 and 2 are shared verbatim and never see a `Rational`.
@@ -599,7 +645,7 @@ Xing et al. (2020) for the normalized associated Legendre functions, in the nota
 Gumerov and Duraiswami's step 2.
 """
 function recurrence_step2!(w::HCalculator{IT, RT}) where {IT, RT}
-    let h⃗ⁿ⁻¹ = h⃗ˡ(w), h⃗ⁿ = h⃗ˡ⁺¹(w), eⁱᵝ = eⁱᵝ(w)
+    let h⃗ⁿ⁻¹ = h⃗ˡ(w), h⃗ⁿ = h⃗ˡ⁺¹(w), eⁱᵝ = eⁱᵝ(w), k̄ = w.k̄
         n = h⃗ⁿ⁻¹.ℓ + 1
         if h⃗ⁿ.ℓ ≠ n
             error("Inconsistent axes in recurrence_step2!: ℓ(h⃗ˡ)=$(h⃗ⁿ⁻¹.ℓ), ℓ(h⃗ˡ⁺¹)=$(h⃗ⁿ.ℓ).")
@@ -608,34 +654,35 @@ function recurrence_step2!(w::HCalculator{IT, RT}) where {IT, RT}
         # Note that in this step only, we use notation derived from (but not the same as)
         # Xing et al., denoting the coefficients as b̄ₙ, c̄ₙₘ, d̄ₙₘ, ēₙₘ.  In the following
         # steps, we will use notation from Gumerov and Duraiswami, who denote their
-        # different coefficients aₗᵐ, etc.
+        # different coefficients aₗᵐ, etc.  The square roots in d̄ₙₘ and ēₙₘ are those of
+        # k(k-1), at k = n-m and k = n+m, which are read from the constant table `k̄`.
         @inbounds let √=sqrt∘RT, Nᵣ = Nᵣ(h⃗ⁿ⁻¹)
             if n == 1
                 # We know that h⃗⁰₀₀ = 1, so this is just the general branch with the
                 # (nonexistent) h⃗⁰₀₁ set to zero.
                 invsqrt2 = inv(√2)
-                @simd ivdep for i ∈ 1:Nᵣ
+                @rotor_loop for i ∈ 1:Nᵣ
                     cosβ, sinβ = reim(eⁱᵝ[i])
                     h⃗ⁿ[i] = cosβ  # h⃗¹[i, 0, 0] = cosβ
                     h⃗ⁿ[Nᵣ + i] = invsqrt2 * sinβ  # h⃗¹[i, 0, 1] = sinβ / √2
                 end
             else
                 b̄ₙ = √(RT(n-1)/n)
-                @simd ivdep for i ∈ 1:Nᵣ
+                @rotor_loop for i ∈ 1:Nᵣ
                     cosβ, sinβ = reim(eⁱᵝ[i])
                     # h⃗ⁿ[i, 0, 0] = cosβ * h⃗ⁿ⁻¹[i, 0, 0] - b̄ₙ * sinβ * h⃗ⁿ⁻¹[i, 0, 1]
                     h⃗ⁿ[i] = cosβ * h⃗ⁿ⁻¹[i] - b̄ₙ * sinβ * h⃗ⁿ⁻¹[Nᵣ + i]
                 end
                 for m ∈ 1:n-2
                     c̄ₙₘ = √((n+m)*(n-m)) / n
-                    d̄ₙₘ = √((n-m)*(n-m-1)) / 2n
-                    ēₙₘ = √((n+m)*(n+m-1)) / 2n
+                    d̄ₙₘ = k̄[n-m] / 2n  # √((n-m)*(n-m-1)) / 2n
+                    ēₙₘ = k̄[n+m] / 2n  # √((n+m)*(n+m-1)) / 2n
 
                     i⁰ᵐ = Nᵣ * m
                     i⁰ᵐ⁺¹ = Nᵣ * (m + 1)
                     i⁰ᵐ⁻¹ = Nᵣ * (m - 1)
 
-                    @simd ivdep for i ∈ 1:Nᵣ
+                    @rotor_loop for i ∈ 1:Nᵣ
                         cosβ, sinβ = reim(eⁱᵝ[i])
                         # h⃗ⁿ[i, 0, m] = (
                         #     c̄ₙₘ * cosβ * h⃗ⁿ⁻¹[i, 0, m]
@@ -650,12 +697,12 @@ function recurrence_step2!(w::HCalculator{IT, RT}) where {IT, RT}
                 let m = n-1
                     # As above, but h⃗ⁿ⁻¹[i, 0, m+1] does not exist (it is zero).
                     c̄ₙₘ = √((n+m)*(n-m)) / n
-                    ēₙₘ = √((n+m)*(n+m-1)) / 2n
+                    ēₙₘ = k̄[n+m] / 2n  # √((n+m)*(n+m-1)) / 2n
 
                     i⁰ᵐ = Nᵣ * m
                     i⁰ᵐ⁻¹ = Nᵣ * (m - 1)
 
-                    @simd ivdep for i ∈ 1:Nᵣ
+                    @rotor_loop for i ∈ 1:Nᵣ
                         cosβ, sinβ = reim(eⁱᵝ[i])
                         # h⃗ⁿ[i, 0, m] = c̄ₙₘ * cosβ * h⃗ⁿ⁻¹[i, 0, m] + sinβ * ēₙₘ * h⃗ⁿ⁻¹[i, 0, m-1]
                         h⃗ⁿ[i⁰ᵐ + i] = (
@@ -666,12 +713,12 @@ function recurrence_step2!(w::HCalculator{IT, RT}) where {IT, RT}
                 end
                 let m = n
                     # As above, but now h⃗ⁿ⁻¹[i, 0, m] does not exist either.
-                    ēₙₘ = √((n+m)*(n+m-1)) / 2n
+                    ēₙₘ = k̄[n+m] / 2n  # √((n+m)*(n+m-1)) / 2n
 
                     i⁰ᵐ = Nᵣ * m
                     i⁰ᵐ⁻¹ = Nᵣ * (m - 1)
 
-                    @simd ivdep for i ∈ 1:Nᵣ
+                    @rotor_loop for i ∈ 1:Nᵣ
                         cosβ, sinβ = reim(eⁱᵝ[i])
                         # h⃗ⁿ[i, 0, m] = sinβ * ēₙₘ * h⃗ⁿ⁻¹[i, 0, m-1]
                         h⃗ⁿ[i⁰ᵐ + i] = sinβ * ēₙₘ * h⃗ⁿ⁻¹[i⁰ᵐ⁻¹ + i]
@@ -725,7 +772,7 @@ function recurrence_seed!(w::HCalculator{IT, RT}) where {IT<:HalfOddInteger, RT}
                 iₗ = Nᵣ * (m - half)         # h_{m-1/2}, axis index k = m - 1/2
                 iᵤ = Nᵣ * (m + half)         # h_{m+1/2}, axis index k = m + 1/2
 
-                @simd ivdep for i ∈ 1:Nᵣ
+                @rotor_loop for i ∈ 1:Nᵣ
                     c = cβ½[i]
                     s = sβ½[i]
                     hₗ = hp[iₗ + i]
@@ -746,7 +793,7 @@ function recurrence_seed!(w::HCalculator{IT, RT}) where {IT<:HalfOddInteger, RT}
                 i₋ = r₋ + col
                 iₗ = Nᵣ * (m - half)
 
-                @simd ivdep for i ∈ 1:Nᵣ
+                @rotor_loop for i ∈ 1:Nᵣ
                     hₗ = hp[iₗ + i]
                     Hp[i₊ + i] = a * cβ½[i] * hₗ * invnrm
                     Hp[i₋ + i] = a * sβ½[i] * hₗ * invnrm
@@ -762,25 +809,26 @@ end
 
 Step 3 of the ``H`` recursion, for integer indices: compute the row ``H^{ℓ}_{1,m}`` of the
 wedge of `w`, for ``1 ≤ m ≤ ℓ``, from the axis ``H^{ℓ+1}_{0,m}`` in the upper axis buffer,
-`h⃗ˡ⁺¹(w)`, for every rotor.  For half-integer indices, [`recurrence_seed!`](@ref) takes its
-place.
+`h⃗ˡ⁺¹(w)`, for every rotor.  The coefficients that depend on a single integer are read from
+the constant table of square roots that step 2 also reads.  For half-integer indices,
+[`recurrence_seed!`](@ref) takes its place.
 """
 function recurrence_step3!(w::HCalculator{Int, RT}) where {RT}
-    let Hˡ = Hˡ(w), h⃗ˡ⁺¹ = h⃗ˡ⁺¹(w), eⁱᵝ = eⁱᵝ(w)
+    let Hˡ = Hˡ(w), h⃗ˡ⁺¹ = h⃗ˡ⁺¹(w), eⁱᵝ = eⁱᵝ(w), k̄ = w.k̄
         @inbounds let √=sqrt∘RT, ℓ=Hˡ.ℓ, Nᵣ = Nᵣ(Hˡ), m′ₘₐₓ=m′ₘₐₓ(Hˡ)
             if h⃗ˡ⁺¹.ℓ ≠ ℓ + 1
                 error("Inconsistent axes in recurrence_step3!: ℓ(Hˡ)=$(ℓ), ℓ(h⃗ˡ⁺¹)=$(h⃗ˡ⁺¹.ℓ).")
             end
             if ℓ > 0 && m′ₘₐₓ ≥ 1
-                c = 1 / √(ℓ*(ℓ+1))
+                c = 1 / k̄[ℓ+1]  # 1 / √(ℓ*(ℓ+1))
 
                 # Precompute base offset for m′=1 row in Hˡ
                 r¹ = row_index(Hˡ, 1) - 1  # step 3 is integer-only, so `m′ = 1` exists
 
                 for m ∈ 1:ℓ
                     āₗᵐ = √((ℓ+m+1)*(ℓ-m+1))
-                    b̄ₗ₊₁ᵐ⁻¹ = √((ℓ-m+1)*(ℓ-m+2))
-                    b̄ₗ₊₁⁻ᵐ⁻¹ = √((ℓ+m+1)*(ℓ+m+2))
+                    b̄ₗ₊₁ᵐ⁻¹ = k̄[ℓ-m+2]  # √((ℓ-m+1)*(ℓ-m+2))
+                    b̄ₗ₊₁⁻ᵐ⁻¹ = k̄[ℓ+m+2]  # √((ℓ+m+1)*(ℓ+m+2))
 
                     # Column offsets in Hˡ row 1 and h⃗ˡ⁺¹ row 0
                     c¹ᵐ = Nᵣ * (m - 1)  # Hˡ[i, 1, m] has m′=1, so column is m-abs(1)=m-1
@@ -789,7 +837,7 @@ function recurrence_step3!(w::HCalculator{Int, RT}) where {RT}
                     i⁰ᵐ⁻¹ = Nᵣ * (m - 1)
                     i⁰ᵐ = Nᵣ * m
 
-                    @simd ivdep for i ∈ 1:Nᵣ
+                    @rotor_loop for i ∈ 1:Nᵣ
                         cosβ, sinβ = reim(eⁱᵝ[i])
                         # Hˡ[i, 1, m] = -c * (
                         #     b̄ₗ₊₁⁻ᵐ⁻¹ * (1 - cosβ) / 2 * h⃗ˡ⁺¹[i, 0, m+1]
@@ -886,20 +934,12 @@ function recurrence_step4!(w::HCalculator{IT, RT}) where {IT, RT}
                     #     - d̄ₗᵐ⁻¹ * Hˡ[i, m′, m-1]
                     #     + d̄ₗᵐ * Hˡ[i, m′, m+1]
                     # ) / d̄ₗᵐ′
-                    if Nᵣ == 1  # the same expression, for the one rotor
-                        Hˡ[iᵐ′⁺¹ᵐ + 1] = (
-                            d̄ₗᵐ′⁻¹ * Hˡ[iᵐ′⁻¹ᵐ + 1]
-                            - d̄ₗᵐ⁻¹ * Hˡ[iᵐ′ᵐ⁻¹ + 1]
-                            + d̄ₗᵐ * Hˡ[iᵐ′ᵐ⁺¹ + 1]
+                    @rotor_loop for i ∈ 1:Nᵣ
+                        Hˡ[iᵐ′⁺¹ᵐ + i] = (
+                            d̄ₗᵐ′⁻¹ * Hˡ[iᵐ′⁻¹ᵐ + i]
+                            - d̄ₗᵐ⁻¹ * Hˡ[iᵐ′ᵐ⁻¹ + i]
+                            + d̄ₗᵐ * Hˡ[iᵐ′ᵐ⁺¹ + i]
                         ) * inv_d̄ₗᵐ′
-                    else
-                        @simd ivdep for i ∈ 1:Nᵣ
-                            Hˡ[iᵐ′⁺¹ᵐ + i] = (
-                                d̄ₗᵐ′⁻¹ * Hˡ[iᵐ′⁻¹ᵐ + i]
-                                - d̄ₗᵐ⁻¹ * Hˡ[iᵐ′ᵐ⁻¹ + i]
-                                + d̄ₗᵐ * Hˡ[iᵐ′ᵐ⁺¹ + i]
-                            ) * inv_d̄ₗᵐ′
-                        end
                     end
                 end
 
@@ -917,7 +957,7 @@ function recurrence_step4!(w::HCalculator{IT, RT}) where {IT, RT}
                     iᵐ′ᵐ⁻¹ = rᵐ′ + cᵐ′ᵐ⁻¹
                     iᵐ′⁺¹ᵐ = rᵐ′⁺¹ + cᵐ′⁺¹ᵐ
 
-                    @simd ivdep for i ∈ 1:Nᵣ
+                    @rotor_loop for i ∈ 1:Nᵣ
                         # Hˡ[i, m′+1, m] = (
                         #     d̄ₗᵐ′⁻¹ * Hˡ[i, m′-1, m]
                         #     - d̄ₗᵐ⁻¹ * Hˡ[i, m′, m-1]
@@ -981,20 +1021,12 @@ function recurrence_step5!(w::HCalculator{IT, RT}) where {IT, RT}
                     #     + d̄ₗᵐ⁻¹ * Hˡ[i, m′, m-1]
                     #     - d̄ₗᵐ * Hˡ[i, m′, m+1]
                     # ) / d̄ₗᵐ′⁻¹
-                    if Nᵣ == 1  # the same expression, for the one rotor
-                        Hˡ[iᵐ′⁻¹ᵐ + 1] = (
-                            d̄ₗᵐ′ * Hˡ[iᵐ′⁺¹ᵐ + 1]
-                            + d̄ₗᵐ⁻¹ * Hˡ[iᵐ′ᵐ⁻¹ + 1]
-                            - d̄ₗᵐ * Hˡ[iᵐ′ᵐ⁺¹ + 1]
+                    @rotor_loop for i ∈ 1:Nᵣ
+                        Hˡ[iᵐ′⁻¹ᵐ + i] = (
+                            d̄ₗᵐ′ * Hˡ[iᵐ′⁺¹ᵐ + i]
+                            + d̄ₗᵐ⁻¹ * Hˡ[iᵐ′ᵐ⁻¹ + i]
+                            - d̄ₗᵐ * Hˡ[iᵐ′ᵐ⁺¹ + i]
                         ) * inv_d̄ₗᵐ′⁻¹
-                    else
-                        @simd ivdep for i ∈ 1:Nᵣ
-                            Hˡ[iᵐ′⁻¹ᵐ + i] = (
-                                d̄ₗᵐ′ * Hˡ[iᵐ′⁺¹ᵐ + i]
-                                + d̄ₗᵐ⁻¹ * Hˡ[iᵐ′ᵐ⁻¹ + i]
-                                - d̄ₗᵐ * Hˡ[iᵐ′ᵐ⁺¹ + i]
-                            ) * inv_d̄ₗᵐ′⁻¹
-                        end
                     end
                 end
                 let m = ℓ
@@ -1008,7 +1040,7 @@ function recurrence_step5!(w::HCalculator{IT, RT}) where {IT, RT}
                     iᵐ′ᵐ⁻¹ = rᵐ′ + cᵐ′ᵐ⁻¹
                     iᵐ′⁻¹ᵐ = rᵐ′⁻¹ + cᵐ′⁻¹ᵐ
 
-                    @simd ivdep for i ∈ 1:Nᵣ
+                    @rotor_loop for i ∈ 1:Nᵣ
                         # Hˡ[i, m′-1, m] = (
                         #     d̄ₗᵐ′ * Hˡ[i, m′+1, m]
                         #     + d̄ₗᵐ⁻¹ * Hˡ[i, m′, m-1]

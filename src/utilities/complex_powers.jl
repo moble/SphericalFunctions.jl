@@ -16,6 +16,24 @@
 @inline fused_abs2(x::T, y::T) where {T<:AbstractFloat} = fma(x, x, y * y)
 @inline fused_abs2(x, y) = muladd(x, x, y * y)
 
+# A quarter turn, z / i, of the phase `z`.  For a z near the unit circle whose components
+# are both nonzero, that is exactly (Im z, -Re z) for every division in Base — the robust
+# one of `ComplexF64`, the widening one of `ComplexF32` and `ComplexF16`, and the generic
+# one that `BigFloat` and `Double64` use — so the components are exchanged rather than
+# divided, which saves a division that the recurrence below would otherwise wait for.  Where
+# a component is zero or not finite, or `z` is far from the circle, where the division of
+# `ComplexF64` rescales its arguments, the result, and the signs of its zeros, are left to
+# the division.
+@inline quarter_turn(z::Complex) = z / 1im
+@inline function quarter_turn(z::Complex{T}) where {T<:AbstractFloat}
+    x, y = reim(z)
+    if !iszero(x) & !iszero(y) & (T(1)/2 ≤ max(abs(x), abs(y)) ≤ 2)
+        Complex(y, -x)
+    else
+        z / 1im
+    end
+end
+
 # The start of the recurrence: `z` rotated by a power of i into the sector -π/4 < arg z ≤
 # π/4, that power `θ`, which is factored out and restored exactly at each power, the first
 # increment δz¹ = z² - z, and the constant `t`.  The recurrence is most accurate for z near
@@ -38,7 +56,7 @@
     for _ in 1:3
         -z.re < z.im ≤ z.re && break
         θ *= 1im
-        z /= 1im
+        z = quarter_turn(z)
     end
     # dc = -2 (Im √z)² = Re z - |z| = -(Im z)² / (Re z + |z|).  The last form is the one used
     # here: it avoids `Base.sqrt(::Complex)`, whose `nextfloat` rules out element types such
@@ -74,6 +92,25 @@ end
     zᵐ⁺¹, δzᵐ + t * zᵐ⁺¹
 end
 
+# The state of the recurrence for one phase, for `complex_powers!` below: the power zᵐ of
+# the rotated phase, stored as an element of the output would be; the power of i that was
+# factored out; the increment δzᵐ; the constant `t`; and θᵐ, by which zᵐ is multiplied on
+# its way out.
+@inline function complex_powers_state(zpowers, z)
+    z¹, θ, dz, t = complex_powers_start(z)
+    (convert(eltype(zpowers), z¹), θ, dz, t, θ)
+end
+# Store zᵐ⁻¹ as element `m` of `zpowers`, and advance the state by one step.
+@inline function complex_powers_step!(zpowers, m, (zᵐ, θ, dz, t, θᵐ))
+    zᵐ⁺¹, dz = complex_powers_step(zᵐ, dz, t)
+    @inbounds zpowers[m] = zᵐ * θᵐ
+    (convert(eltype(zpowers), zᵐ⁺¹), θ, dz, t, θᵐ * θ)
+end
+@inline function complex_powers_store!(zpowers, m, (zᵐ, θ, dz, t, θᵐ))
+    @inbounds zpowers[m] = zᵐ * θᵐ
+    nothing
+end
+
 # The functions that allocate the powers, `complex_powers` and `ComplexPowers`, are refused
 # for a `z` whose modulus is not close to 1, for which the recurrence would compute the
 # powers of a different number.  The in-place kernel, which the calculators call with phases
@@ -101,31 +138,35 @@ not checked.  The algorithm, and its accuracy, are described under [`complex_pow
 See also: [`complex_powers`](@ref), [`ComplexPowers`](@ref)
 """
 function complex_powers!(zpowers, z)
-    Base.require_one_based_indexing(zpowers)
-    @inbounds begin
-        M = length(zpowers)
-        if M == 0
-            return zpowers
-        end
-        M -= 1
-        zpowers[1] = one(z)
-        if M == 0
-            return zpowers
-        end
-        if M == 1
-            zpowers[2] = z
-            return zpowers
-        end
-        z, θ, dz, t = complex_powers_start(z)
-        zpowers[2] = z
-        clock = θ
-        for m in 2:M
-            zpowers[m+1], dz = complex_powers_step(zpowers[m], dz, t)
-            zpowers[m] *= clock
-            clock *= θ
-        end
-        zpowers[M+1] *= clock
+    phase_powers!((zpowers,), (z,))
+    zpowers
+end
+
+# The powers of several phases at once: each vector of `zpowers` is filled with the powers
+# of the phase at the same position of `z`, exactly as `complex_powers!` fills one, and the
+# vectors must have the same length.  The recurrence for each phase is a chain of dependent
+# operations, so computing several together lets the processor overlap them.  It uses `map`
+# rather than `foreach` throughout, because `map` over tuples is unrolled, and the states of
+# the recurrences then stay in registers; `foreach` over several tuples goes through `zip`
+# and a call that is not inlined.
+@inline function phase_powers!(zpowers::Tuple, z::Tuple)
+    map(Base.require_one_based_indexing, zpowers)
+    M = length(first(zpowers))
+    all(v -> length(v) == M, zpowers) || throw(DimensionMismatch(
+        "The vectors of powers have lengths $(map(length, zpowers)), which must be equal."
+    ))
+    M == 0 && return zpowers
+    map((v, z) -> (@inbounds v[1] = one(z)), zpowers, z)
+    M == 1 && return zpowers
+    if M == 2
+        map((v, z) -> (@inbounds v[2] = z), zpowers, z)
+        return zpowers
     end
+    states = map(complex_powers_state, zpowers, z)
+    for m ∈ 2:M-1
+        states = map(@inline((v, s) -> complex_powers_step!(v, m, s)), zpowers, states)
+    end
+    map(@inline((v, s) -> complex_powers_store!(v, M, s)), zpowers, states)
     zpowers
 end
 

@@ -35,11 +35,11 @@ the ``m'=0`` axis, steps 3–5 run the ``m'`` ladders at fixed ``ℓ`` to
 fill the wedge ``m ≥ |m'|``, and step 6 uses the symmetries to fill
 the rest of the requested ``m'`` range.
 
-The steps documented below are what an `HCalculator` runs.  Each takes an
-[`HCalculator`](@ref) and works on its buffers for all `Nᵣ` rotors at
-once, with the rotor index innermost: steps 1 and 2 fill its two axis
-buffers, and steps 3–5 fill its batched quarter-wedge.  They handle
-half-integer as well as integer ``ℓ``; for half-integer ``ℓ``,
+The steps documented below are what an `HCalculator` runs.  Each takes
+an [`HCalculator`](@ref) and works on its buffers for all `Nᵣ` rotors
+at once, with the rotor index innermost: steps 1 and 2 fill its two
+axis buffers, and steps 3–5 fill its batched quarter-wedge.  They
+handle half-integer as well as integer ``ℓ``; for half-integer ``ℓ``,
 [`recurrence_seed!`](@ref) takes the place of step 3.  Step 6 is
 *never* applied to the wedge, because every element outside it is
 supplied by the symmetries, including the sign ``σ``, when a block is
@@ -47,7 +47,7 @@ assembled from the wedge, or when an element is read through
 [`wedge_value`](@ref).  The phases of step 7 — the ``ϵ`` signs and the
 Euler phases ``e^{-im'α}`` and ``e^{-imγ}`` — enter in the
 `materialize!` of each calculator, which writes every element of a
-block through the one `materialize_element!` of
+block through the one `materialize_run!` of
 `src/calculators/engine.jl`.  The test suite, in
 `test/wigner/recurrence.jl`, checks the `HCalculator` against a second
 implementation of the same recurrence, which holds one whole ``H^ℓ``

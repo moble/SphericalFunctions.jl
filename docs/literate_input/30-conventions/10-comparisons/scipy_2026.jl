@@ -21,8 +21,8 @@ Y_n^m(θ, φ)
 =
 \sqrt{\frac{2n+1}{4π} \frac{(n-m)!}{(n+m)!}}\; P_n^m(\cos θ)\, e^{imφ},
 ```
-"where ``P_n^m`` are the (unnormalized) associated Legendre polynomials.".  The
-documentation notes that
+"where ``P_n^m`` are the (unnormalized) associated Legendre polynomials."  The documentation
+notes that
 
 > In SciPy `theta` is the polar angle and `phi` is the azimuthal angle.  It is common to see
 > the opposite convention, that is, `theta` as the azimuthal angle and `phi` as the polar
@@ -51,10 +51,10 @@ The legacy function
 [`scipy.special.sph_harm`](https://docs.scipy.org/doc/scipy-1.15.0/reference/generated/scipy.special.sph_harm.html)
 had the signature `sph_harm(m, n, theta, phi)`, with `theta` the *azimuthal* angle and `phi`
 the *polar* angle — the definition there reads ``Y_n^m(θ, φ) = \sqrt{\ldots}\, e^{imθ}
-P_n^m(\cos φ)`` — and was deprecated in SciPy 1.15.0 ("This function is deprecated and will
-be removed in SciPy 1.17.0.  Please use `scipy.special.sph_harm_y` instead.").  Apart from
-the argument order and naming, the two functions agree.  SciPy does not provide Wigner's
-``D`` matrices.
+P_n^m(\cos φ)`` — and was deprecated in SciPy 1.15.0.  ("This function is deprecated and
+will be removed in SciPy 1.17.0.  Please use `scipy.special.sph_harm_y` instead.")  Apart
+from the argument order and naming, the two functions agree.  SciPy does not provide
+Wigner's ``D`` matrices.
 
 ## Implementing formulas
 
@@ -142,11 +142,13 @@ md"""
 ## Cross-check against the actual SciPy library
 
 The test above implements the *documented* formula.  To make sure the documentation matches
-the code, the following test calls `scipy.special.sph_harm_y` itself, via `PythonCall`.  It
-is tagged `:python` (and `:skipci`), so that `Pkg.test` and `scripts/test.jl` run it only
-when that tag is requested — e.g., with `julia --project=. scripts/test.jl :python`, as the
-scheduled CI workflow does, installing SciPy through `CondaPkg`.  Other test-item runners
-run it unless it is filtered out, e.g., with `juliati --filter '!(:python in tags)'`.
+the code, the following test calls `scipy.special.sph_harm_y` itself, via `PythonCall`.[^1]
+
+[^1]: It is tagged `:python` (and `:skipci`), so that `Pkg.test` and `scripts/test.jl` run
+    it only when that tag is requested — e.g., with `julia --project=. scripts/test.jl
+    :python`, as the scheduled CI workflow does, installing SciPy through `CondaPkg`.  Other
+    test-item runners run it unless it is filtered out, e.g., with `juliati --filter
+    '!(:python in tags)'`.
 """
 
 @testitem "SciPy cross-check" tags=[:python, :skipci] setup=[ConventionsUtilities, ConventionsSetup, Utilities] begin  #hide

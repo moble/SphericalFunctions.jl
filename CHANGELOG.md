@@ -325,20 +325,24 @@ started at ``ℓ = |s|``.)  A calculator of integer indices starts at
 * **Automatic differentiation with respect to the rotor.**  Package
   extensions for `ChainRulesCore`, `EnzymeCore`, `ForwardDiff`,
   `Mooncake`, and `ReverseDiff` supply rules that give the derivatives
-  of ``𝔇`` and of the harmonics from the angular-momentum operators,
-  as combinations of the values themselves, rather than by
-  differentiating the recurrence, so the derivatives are as accurate
-  as the values at every rotor, the poles included.  `ForwardDiff`,
-  `Enzyme`, `Mooncake`, and `ReverseDiff` apply them to every step of
-  a `DCalculator` or `sYlmCalculator`, batched or not, so that a loop
-  over a calculator's blocks is differentiated one block at a time, as
-  efficiently as it is evaluated; a calculator of dual numbers
-  allocates nothing when stepped, and gives derivatives of every order
-  exactly under nested differentiation.  `D`, `sYlm`, `Ylm`, and
-  `sYlm_matrix` are computed by calculators, so the same rules serve
-  them; `Zygote` uses rules for their arrays instead, and
-  `ReverseDiff` uses those too.  The note on automatic differentiation
-  in the documentation describes all of this.
+  of ``𝔇`` and of the harmonics with respect to the rotor, and those
+  of ``d`` and of ``{}_sλ_{ℓ,m}`` with respect to their angle, from
+  the angular-momentum operators, as combinations of the values
+  themselves, rather than by differentiating the recurrence; the
+  derivatives of ``𝔇`` and the harmonics are as accurate as the
+  values at every rotor, the poles included, and those of ``d`` and
+  ``{}_sλ_{ℓ,m}`` at every angle.  `ForwardDiff`, `Enzyme`,
+  `Mooncake`, and `ReverseDiff` apply them to every step of a
+  `DCalculator`, `dCalculator`, `sYlmCalculator`, or `sλlmCalculator`,
+  batched or not, so that a loop over a calculator's blocks is
+  differentiated one block at a time, as efficiently as it is
+  evaluated; a calculator of dual numbers allocates nothing when
+  stepped, and gives derivatives of every order exactly under nested
+  differentiation.  `D`, `d`, `sYlm`, `Ylm`, and `sYlm_matrix` are
+  computed by calculators, so the same rules serve them; `Zygote` uses
+  rules for their arrays instead, and `ReverseDiff` uses those too.
+  The note on automatic differentiation in the documentation describes
+  all of this.
 * **Restricted ranges.**  The keywords `m′ₘₐₓ`, `m′ₘᵢₙ`, `mₘₐₓ` and
   `mₘᵢₙ` of `D`, `d` and their calculators limit the part of each
   matrix that is computed, and restricting either index makes the

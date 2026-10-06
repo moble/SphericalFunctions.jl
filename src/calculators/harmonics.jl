@@ -42,8 +42,9 @@ struct HarmonicCalculator{
     # `UnitRange` of it when it was built for several, which is what decides whether a block
     # has a spin axis at all.
     engine::SphericalFunctionsEngine{IT, FT, ST}  # the recurrence and the power tables
-    Yˡ::Array{NT, 3}  # [iᵣ, s, m] block for the current ℓ, using the leading m entries
+    Yˡ::Vector{NT}  # the block for the current ℓ, dense as [iᵣ, s, m], in its leading entries
     rotors::Vector{Quaternion{RT}}  # the rotors, or those of the points (θ, 0); empty for ₛλₗₘ
+    angles::Vector{RT}  # the angles θ; empty for ₛYₗₘ, unused for floats
     s::S
     ℓ::Base.RefValue{IT}  # ℓ of the block currently in Yˡ; ℓₘᵢₙ-1 if none
     phases::Base.RefValue{Bool}  # false when the rotor data are angles θ (ϕ = γ = 0)
@@ -53,25 +54,27 @@ struct HarmonicCalculator{
     # must be large enough for those; as for `HCalculator`, this checks them once, as they
     # are brought together.
     function HarmonicCalculator{IT, RT, NT, ST, S, B, FT, L}(
-        engine, Yˡ, rotors, s, ℓ, phases, lift
+        engine, Yˡ, rotors, angles, s, ℓ, phases, lift
     ) where {IT, RT<:Real, NT<:Union{RT, Complex{RT}}, ST, S, B, FT<:Real, L}
-        let n = Nᵣ(engine), M = 2ℓₘₐₓ(engine) + 1, K = NT <: Complex ? 2ℓₘₐₓ(engine) + 1 : 0,
+        let n = Nᵣ(engine), M = 2ℓₘₐₓ(engine) + 1,
+                K = NT <: Complex ? 2power_extent(ℓₘₐₓ(engine), m′ₘₐₓ(engine.H)) + 1 : 0,
                 Z₊ = engine.Z₊, Z₋ = engine.Z₋
             if !(
-                size(Yˡ, 1) ≥ n && size(Yˡ, 2) ≥ nspins(s) && size(Yˡ, 3) ≥ M
+                length(Yˡ) ≥ n * nspins(s) * M
                 && size(Z₊, 1) ≥ n && size(Z₊, 2) ≥ K && size(Z₋, 1) ≥ n && size(Z₋, 2) ≥ K
                 && length(rotors) == (NT <: Complex ? n : 0)
+                && length(angles) == (NT <: Complex ? 0 : n)
             )
                 throw(DimensionMismatch(
                     "The buffers of a $(flavor_name(NT)) for Nᵣ=$n rotors, the spin weights "
-                    * "$s and ℓₘₐₓ=$(ℓₘₐₓ(engine)) are too small: the block has size "
-                    * "$(size(Yˡ)), the power tables $(size(Z₊)) and $(size(Z₋)), which need "
+                    * "$s and ℓₘₐₓ=$(ℓₘₐₓ(engine)) are too small: the block has length "
+                    * "$(length(Yˡ)), the power tables $(size(Z₊)) and $(size(Z₋)), which need "
                     * "a row for each rotor and at least $K columns, and there are "
-                    * "$(length(rotors)) rotors."
+                    * "$(length(rotors)) rotors and $(length(angles)) angles."
                 ))
             end
         end
-        new{IT, RT, NT, ST, S, B, FT, L}(engine, Yˡ, rotors, s, ℓ, phases, lift)
+        new{IT, RT, NT, ST, S, B, FT, L}(engine, Yˡ, rotors, angles, s, ℓ, phases, lift)
     end
 end
 
@@ -198,10 +201,7 @@ angles ``α`` and ``γ``, whose phases a real calculator cannot represent.  Use 
 See also [`dCalculator`](@ref), which stands in the same relation to [`DCalculator`](@ref).
 """
 const sλlmCalculator{IT, RT, ST, S, B} =
-    HarmonicCalculator{IT, RT, RT, ST, S, B, RT, Nothing} where {IT, RT<:Real, ST, S, B}
-# A calculator of the real harmonics never lifts the blocks of another, since it is given
-# angles, whose recurrence is differentiated as it runs (see `src/derivatives/kernels.jl`),
-# so the last two parameters above are fixed, and the type is concrete once the others are.
+    HarmonicCalculator{IT, RT, RT, ST, S, B} where {IT, RT<:Real, ST, S, B}
 
 # The spin-weight argument is typed `IndexOrRange` rather than left open, so that a call
 # whose arguments are in the wrong order — `sYlmCalculator(3, 1, Float64)`, say — is still
@@ -274,24 +274,28 @@ function allocate_Y(
     # according to the sign of m; where |m| ≤ |s| the symmetries offer only the row ±m, and
     # m runs over both signs.  So a single spin weight touches every row of -|s|:|s| just as
     # the full range would, and |s| is the smallest wedge that can serve it.
-    Yˡ = Array{NT, 3}(undef, Nᵣ, nspins(s), 2ℓₘₐₓ + 1)
+    Yˡ = Vector{NT}(undef, Nᵣ * nspins(s) * (2ℓₘₐₓ + 1))
     rotors = Vector{Quaternion{RT}}(undef, NT <: Complex ? Nᵣ : 0)
+    angles = Vector{RT}(undef, NT <: Complex ? 0 : Nᵣ)
     # The field is a `RefValue{IT}`, so the type is given explicitly.
     ℓ = Ref{IT}(lowest_index(IT) - 1)
-    # A calculator of ₛYₗₘ whose real type holds derivatives lifts the blocks of a
-    # calculator of its rotors' values, whose engine and `phases` flag it holds as its own,
-    # as a `WignerCalculator` does; see `allocate_W`.
-    if NT <: Complex && value_type(RT) !== RT
-        let inner = allocate_Y(IT, value_type(RT), Complex{value_type(RT)}, ℓₘₐₓ, s, Nᵣ, Val(B))
-            lift = allocate_lift(RT, inner, Nᵣ)
+    # A calculator whose real type holds derivatives lifts the blocks of a calculator of its
+    # rotors' values, whose engine and `phases` flag it holds as its own, as a
+    # `WignerCalculator` does; see `allocate_W`.
+    if value_type(RT) !== RT
+        let inner = allocate_Y(
+            IT, value_type(RT), NT <: Complex ? Complex{value_type(RT)} : value_type(RT),
+            ℓₘₐₓ, s, Nᵣ, Val(B)
+        )
+            lift = allocate_lift(RT, NT, inner, Nᵣ)
             HarmonicCalculator{IT, RT, NT, typeof(parent(inner.engine.H.Hˡ)), S, B, recurrence_type(RT), typeof(lift)}(
-                inner.engine, Yˡ, rotors, s, ℓ, inner.phases, lift
+                inner.engine, Yˡ, rotors, angles, s, ℓ, inner.phases, lift
             )
         end
     else
         engine = allocate_engine(IT, RT, ℓₘₐₓ, sₕ, Nᵣ, NT <: Complex)
         HarmonicCalculator{IT, RT, NT, typeof(parent(engine.H.Hˡ)), S, B, RT, Nothing}(
-            engine, Yˡ, rotors, s, ℓ, Ref(NT <: Complex), nothing
+            engine, Yˡ, rotors, angles, s, ℓ, Ref(NT <: Complex), nothing
         )
     end
 end
@@ -373,19 +377,19 @@ end
 # The `HCalculator` validates everything before it replaces anything, so if it refuses the
 # angles this calculator is left exactly as it was, and its own state is reset only once the
 # new data are in place.  A calculator of ₛYₗₘ also keeps the rotors of the points (θ, 0),
-# which are what the rules for automatic differentiation read (see
-# `src/derivatives/kernels.jl`).
+# and one of ₛλₗₘ its angles (see `store_angles!`), which are what the rules for automatic
+# differentiation read (see `src/derivatives/kernels.jl`).
 #
-# As for a `WignerCalculator`, setting the rotor data is two steps: the rotors are copied by
-# `store_rotors!` or `store_point_rotors!`, and everything else is computed by
-# `set_rotor_data!`, which the extensions for Enzyme and Mooncake declare, for ₛYₗₘ, to have
-# no derivatives.  A calculator that lifts the blocks of another gives it the values of its
-# rotor data, and computes its own generators.
+# As for a `WignerCalculator`, setting the rotor data is two steps: the rotors or angles are
+# copied by `store_rotors!`, `store_point_rotors!`, or `store_angles!`, and everything else
+# is computed by `set_rotor_data!`, which the extensions for Enzyme and Mooncake declare,
+# for ₛYₗₘ and ₛλₗₘ, to have no derivatives.  A calculator that lifts the blocks of another
+# gives it the values of its rotor data, and computes its own generators.
 function set_rotors!(
     c::HarmonicCalculator{IT, RT, NT, ST, S, B, FT, Nothing}, θ::Union{Real, AbstractVector{<:Real}}
 ) where {IT, RT<:Real, NT, ST, S, B, FT<:Real}
     set_rotor_data!(c, θ)
-    NT <: Complex && store_point_rotors!(c.rotors, θ)
+    NT <: Complex ? store_point_rotors!(c.rotors, θ) : store_angles!(c.angles, θ)
     c
 end
 function set_rotor_data!(c::HarmonicCalculator{IT}, θ::Union{Real, AbstractVector{<:Real}}) where {IT}
@@ -398,8 +402,13 @@ function set_rotors!(
     c::HarmonicCalculator{IT, RT, NT, ST, S, B, FT, <:Lift}, θ::AbstractVector{<:Real}
 ) where {IT, RT<:Real, NT, ST, S, B, FT<:Real}
     set_rotors!(c.lift.inner, LiftedValues(θ))
-    store_point_rotors!(c.rotors, θ)
-    set_generators!(c.lift, true, c.rotors)
+    if NT <: Complex
+        store_point_rotors!(c.rotors, θ)
+        set_generators!(c.lift, true, c.rotors)
+    else
+        store_angles!(c.angles, θ)
+        set_generators!(c.lift, true, c.angles)
+    end
     c.ℓ[] = lowest_index(IT) - 1
     c
 end
@@ -505,31 +514,37 @@ function recurrence!(c::HarmonicCalculator{IT}, ℓ) where {IT}
     end
 end
 
-# Compute the spin rows `is` of the block of degree ℓ into `Y[:, :, j₀ .+ (1:2ℓ+1)]`, where
-# `Y` is the calculator's own block `Yˡ` with `j₀ = 0`, or another array of the same layout,
-# as `sYlm_matrix` gives it; otherwise as for the `WignerCalculator` method, which describes
-# the role of this function.  The destination is an array and an offset, rather than a view,
-# so that the rules for it see an ordinary array.
+# Compute the spin rows `is` of the block of degree ℓ into `A`, dense as [iᵣ, s ∈ is, m]
+# after its first `o` entries; otherwise as for the `WignerCalculator` method, which
+# describes the role of this function.  `A` is the calculator's own block `Yˡ` with `o = 0`,
+# or another array with linear indexing, such as the result of `sYlm` or `sYlm_matrix`,
+# whose modes of one ℓ have that layout.  The calculator holds the block of ℓ afterwards
+# only when every row was written into its own buffer.
 compute_block!(c::HarmonicCalculator, ℓ) = compute_block!(c, ℓ, Base.OneTo(nspins(c.s)), c.Yˡ, 0)
 function compute_block!(
-    c::HarmonicCalculator{IT, RT, NT, ST, S, B, FT, Nothing}, ℓ::IT, is, Y, j₀::Int
+    c::HarmonicCalculator{IT, RT, NT, ST, S, B, FT, Nothing}, ℓ::IT, is, A, o::Int
 ) where {IT, RT, NT, ST, S, B, FT<:Real}
     recurrence!(c.engine.H, ℓ)
-    if Y === c.Yˡ && j₀ == 0
-        materialize!(c, ℓ, is, c.Yˡ)
-    else
-        materialize!(c, ℓ, is, view(Y, :, :, (j₀ + 1):(j₀ + Int(2ℓ) + 1)))
-    end
+    materialize!(c, ℓ, is, A, o)
+    c.ℓ[] = holds_block(c, is, A, o) ? ℓ : lowest_index(IT) - 1
     c
 end
 function compute_block!(
-    c::HarmonicCalculator{IT, RT, NT, ST, S, B, FT, <:Lift}, ℓ::IT, is, Y, j₀::Int
+    c::HarmonicCalculator{IT, RT, NT, ST, S, B, FT, <:Lift}, ℓ::IT, is, A, o::Int
 ) where {IT, RT, NT, ST, S, B, FT<:Real}
     inner = c.lift.inner
     compute_block!(inner, ℓ, is, inner.Yˡ, 0)
-    lift!(c, ℓ, is, Y, j₀)
-    c.ℓ[] = Y === c.Yˡ && j₀ == 0 && length(is) == nspins(c.s) ? ℓ : lowest_index(IT) - 1
+    lift!(c, ℓ, is, A, o)
+    c.ℓ[] = holds_block(c, is, A, o) ? ℓ : lowest_index(IT) - 1
     c
+end
+holds_block(c::HarmonicCalculator, is, A, o) = A === c.Yˡ && o == 0 && length(is) == nspins(c.s)
+
+# The spin rows `is` of the block of degree ℓ after the first `o` entries of the destination
+# `A` of `compute_block!`, as a 3-dimensional array [iᵣ, s ∈ is, m], batched or not.
+function block_array(c::HarmonicCalculator, A::AbstractArray, ℓ, is, o::Int=0)
+    dims = (Nᵣ(c), length(is), Int(2ℓ) + 1)
+    reshape(view(A, (o + 1):(o + prod(dims))), dims)
 end
 
 # The block for the ``ℓ`` just computed: one spin weight's row when the calculator serves a
@@ -539,7 +554,7 @@ end
 function current_block(
     c::HarmonicCalculator{IT, RT, NT, ST, S}, ℓ::IT
 ) where {IT, RT, NT, ST, S<:IntegerHalf}
-    spin_row(c, ℓ, 1)
+    spin_row(c, ℓ)
 end
 function current_block(
     c::HarmonicCalculator{IT, RT, NT, ST, S}, ℓ::IT
@@ -559,8 +574,8 @@ minus_one_to_the(s::Integer) = ifelse(iseven(s), 1, -1)
     end
 end
 
-# Index of spin weight s along the second dimension of c.Yˡ.  For a calculator built for a
-# single spin weight this is 1, whatever that weight is.
+# Position of spin weight s in `spins(c)`, which is its row in a block of every spin weight.
+# For a calculator built for a single spin weight this is 1, whatever that weight is.
 @inline spin_index(c::HarmonicCalculator, s) = Int(s - first(spins(c))) + 1
 
 # The coefficient (-1)^s ϵ(m) ϵ(s) σ √((2ℓ+1)/4π) of Hₘ,₋ₛ in ₛYₗₘ, in whichever number type
@@ -592,175 +607,196 @@ end
     convert(RT, σ * ϵ(m) * ϵ(s)) * prefactor
 end
 
-# Write ₛYₗₘ for the spin weights at the positions `is` of `spins(c)` — by default all of
-# them — and every m ∈ -ℓ:ℓ into c.Yˡ[iᵣ, s, m].  From the definition ₛYₗₘ = (-1)^s
-# √((2ℓ+1)/4π) conj(𝔇ₘ,₋ₛ), with 𝔇ₘ,₋ₛ = ϵ(m) ϵ(s) Hₘ,₋ₛ e^{-i(mα - sγ)}, and e^{i(mα -
-# sγ)} = z₊^(m-s) z₋^(m+s).  As in the Wigner `materialize!`, nothing here depends on
-# whether the indices are integers or half-odd-integers.
+# Write ₛYₗₘ for the spin weights at the positions `is` of `spins(c)` and every m ∈ -ℓ:ℓ
+# into `A`, dense as [iᵣ, s ∈ is, m] with m from -ℓ, after its first `o` entries.  From the
+# definition ₛYₗₘ = (-1)^s √((2ℓ+1)/4π) conj(𝔇ₘ,₋ₛ), with 𝔇ₘ,₋ₛ = ϵ(m) ϵ(s) Hₘ,₋ₛ e^{-i(mα
+# - sγ)}, and e^{i(mα - sγ)} = z₊^(m-s) z₋^(m+s).  As in the Wigner `materialize!`, nothing
+# here depends on whether the indices are integers or half-odd-integers.
 #
-# The element H[m, -s] is read, as `wedge_source` would read it, from one of three places:
+# The row of each spin weight is written in turn, as two runs along the rows ±s of the wedge
+# and, between them, the 2|s|+1 elements that `wedge_source` reads down a column, one at a
+# time (see `materialize_spin_row!`).  With many rotors and several spin weights, the
+# successive elements of one row are far apart in the block, and it is written in the order
+# of its storage instead, a mode at a time (see `materialize_by_mode!`).  Both orders
+# compute every element from the same source by the same expression.  Wherever ℓ < |s| the
+# values are zero.
 #
-#     m < -|s|    H[s, -m]                        along the row s
-#     |m| ≤ |s|   through `wedge_source`
-#     m > |s|     σ H[-s, m], σ = transpose_sign(m, -s)   along the row -s
-#
-# For one rotor, or one spin weight, each spin weight is written in turn, and the two outer
-# parts are runs along a row of the wedge at a fixed stride, which is the cheapest order
-# when the index arithmetic is what costs most.  With several of each the block is written
-# in the order of its storage instead, a mode at a time, since the arithmetic is then spread
-# over the rotors and it is the traffic to memory that costs most.  Both orders compute
-# every element from the same source by the same expression.
-#
-# Only the rows `is` are written, and the block is marked as held only when every row was: a
-# block with some rows left from another ℓ, or never written, must not be handed out as the
-# block of this one.  `recurrence!` writes every row, and `spin_row!`, which reads one spin
-# weight out of a calculator built for several, writes only that one.  The values may also
-# be written into another array `Yˡ` of the same layout, [iᵣ, s, m] with m from -ℓ, as
-# `sYlm_matrix` does; the calculator's own block is then not written at all.
+# The rows s and -s are not written together, as partners in one run (see
+# `materialize_run!`): that was measured to be no faster here (0.98–1.01 times the time).
 function materialize!(
-    c::HarmonicCalculator{IT, RT, NT}, ℓ::IT,
-    is::AbstractUnitRange{Int}=Base.OneTo(nspins(c.s)), Yˡ::AbstractArray{NT, 3}=c.Yˡ
+    c::HarmonicCalculator{IT, RT, NT}, ℓ::IT, is::AbstractUnitRange{Int}, A::AbstractArray,
+    o::Int
 ) where {IT, RT, NT}
-    let H = c.engine.H.Hˡ, Z₊ = c.engine.Z₊, Z₋ = c.engine.Z₋, Nᵣ = Nᵣ(c), Hp = parent(H),
-            conjugate = Val(false)
+    let H = c.engine.H.Hˡ, n = Nᵣ(c)
         if H.ℓ != ℓ
             error("The H wedge holds ℓ=$(H.ℓ), but ℓ=$ℓ was requested.")
         end
-        if !(
-            1 ≤ first(is) && last(is) ≤ nspins(c.s) && size(Yˡ, 1) ≥ Nᵣ
-            && size(Yˡ, 2) ≥ last(is) && size(Yˡ, 3) ≥ 2ℓ + 1
-        )
+        Base.require_one_based_indexing(A)
+        if !(1 ≤ first(is) && last(is) ≤ nspins(c.s) && o ≥ 0 && o + n * length(is) * (2ℓ + 1) ≤ length(A))
             error(
-                "Spin positions $is requested of a calculator holding $(nspins(c.s)), into "
-                * "an array of size $(size(Yˡ)) for ℓ=$ℓ and Nᵣ=$Nᵣ."
+                "Spin positions $is requested of a calculator holding $(nspins(c.s)), after "
+                * "$o entries of an array of length $(length(A)) for ℓ=$ℓ and Nᵣ=$n."
             )
         end
         prefactor = √((2ℓ + 1) / (4 * RT(π)))
-        srange = spins(c)
-        W = m′ₘₐₓ(H)
-        m′ₘᵢₙw = m′ₘᵢₙ(H)
-        ri = row_index(H)
+        zero_rows!(A, o, n, is, spins(c), ℓ)
         # `NT <: Complex` is a compile-time constant, so a real calculator never compiles
-        # the phase branch at all — which is what lets `Z₊` and `Z₋` be empty rather than
-        # merely unread.
-        phases = NT <: Complex && c.phases[]
-        # Wherever ℓ < |s| the values are zero.
-        @inbounds for i ∈ is
-            if abs(srange[i]) > ℓ
-                for j ∈ 1:2ℓ+1
-                    for iᵣ ∈ 1:Nᵣ
-                        Yˡ[iᵣ, i, j] = 0
-                    end
-                end
-            end
+        # the phases at all — which is what lets `Z₊` and `Z₋` be empty rather than merely
+        # unread.
+        phases = NT <: Complex && c.phases[] ? Val(true) : Val(false)
+        if n == 1
+            materialize!(c, ℓ, is, A, o, prefactor, phases, Val(1))
+        else
+            materialize!(c, ℓ, is, A, o, prefactor, phases, n)
         end
-        if Nᵣ == 1 || length(is) == 1
-            @inbounds for i ∈ is
-                s = srange[i]
-                a = abs(s)
-                a > ℓ && continue
-                # m < -|s|: H[m, -s] = H[s, -m]
-                r = ri[(s - m′ₘᵢₙw) + 1] - 1
-                for m ∈ -ℓ:(-a - 1)
-                    coefficient = sYlm_coefficient(NT, RT, 1, m, s, prefactor)
-                    materialize_element!(
-                        Yˡ, Hp, Z₊, Z₋, Nᵣ, i, Int(m + ℓ) + 1, r + Nᵣ * Int(-m - a),
-                        coefficient, m - s, m + s, phases, conjugate
-                    )
-                end
-                # |m| ≤ |s|
-                for m ∈ -a:a
-                    a′, b′, σ = wedge_source(m, -s, W)
-                    coefficient = sYlm_coefficient(NT, RT, σ, m, s, prefactor)
-                    materialize_element!(
-                        Yˡ, Hp, Z₊, Z₋, Nᵣ, i, Int(m + ℓ) + 1, wedge_offset(H, a′, b′, m′ₘᵢₙw),
-                        coefficient, m - s, m + s, phases, conjugate
-                    )
-                end
-                # m > |s|: H[m, -s] = σ H[-s, m]
-                r = ri[(-s - m′ₘᵢₙw) + 1] - 1
-                for m ∈ (a + 1):ℓ
-                    σ = transpose_sign(m, -s)
-                    coefficient = sYlm_coefficient(NT, RT, σ, m, s, prefactor)
-                    materialize_element!(
-                        Yˡ, Hp, Z₊, Z₋, Nᵣ, i, Int(m + ℓ) + 1, r + Nᵣ * Int(m - a),
-                        coefficient, m - s, m + s, phases, conjugate
-                    )
-                end
+    end
+    nothing
+end
+function materialize!(
+    c::HarmonicCalculator{IT, RT, NT}, ℓ::IT, is::AbstractUnitRange{Int}, A::AbstractArray,
+    o::Int, prefactor, phases::Val, Nᵣ::Union{Val{1}, Int}
+) where {IT, RT, NT}
+    let n = rotor_count(Nᵣ), srange = spins(c)
+        # Writing each spin row in turn was measured to be the faster order for fewer than
+        # 32 rotors when the phases are computed, and for up to 64 when they are not.
+        # Without them an element costs so little that the work of setting up a run, which
+        # `materialize_by_mode!` repeats for every element, counts for more than the order
+        # of the writes.
+        if length(is) == 1 || (phases === Val(true) ? n < 32 : n ≤ 64)
+            for i ∈ is
+                abs(srange[i]) > ℓ && continue
+                materialize_spin_row!(
+                    A, o + n * (i - first(is)), n * length(is), c, ℓ, srange[i], prefactor,
+                    phases, Nᵣ
+                )
             end
         else
-            @inbounds for m ∈ -ℓ:ℓ
-                j = Int(m + ℓ) + 1
-                for i ∈ is
-                    s = srange[i]
-                    a = abs(s)
-                    a > ℓ && continue
-                    if m < -a
-                        σ = 1
-                        offset = ri[(s - m′ₘᵢₙw) + 1] - 1 + Nᵣ * Int(-m - a)
-                    elseif m > a
-                        σ = transpose_sign(m, -s)
-                        offset = ri[(-s - m′ₘᵢₙw) + 1] - 1 + Nᵣ * Int(m - a)
-                    else
-                        a′, b′, σ = wedge_source(m, -s, W)
-                        offset = wedge_offset(H, a′, b′, m′ₘᵢₙw)
-                    end
-                    coefficient = sYlm_coefficient(NT, RT, σ, m, s, prefactor)
-                    materialize_element!(
-                        Yˡ, Hp, Z₊, Z₋, Nᵣ, i, j, offset, coefficient, m - s, m + s,
-                        phases, conjugate
-                    )
+            materialize_by_mode!(A, o, is, c, ℓ, prefactor, phases, n)
+        end
+    end
+    nothing
+end
+
+# The row of spin weight s, for every rotor, into `A` from the offset `y`, at the step `Δa`
+# from one m to the next: a run along the row s of the wedge (m < -|s|), in which the powers
+# of z₊ and z₋ are all negative, the 2|s|+1 elements that `wedge_source` reads down a column
+# (|m| ≤ |s|), and a run along the row -s (m > |s|), in which they are all positive.
+@inline function materialize_spin_row!(
+    A, y, Δa, c::HarmonicCalculator{IT, RT, NT}, ℓ::IT, s::IT, prefactor, phases::Val, Nᵣ
+) where {IT, RT, NT}
+    let H = c.engine.H.Hˡ, Hp = parent(H), Z₊ = c.engine.Z₊, Z₋ = c.engine.Z₋,
+            n = rotor_count(Nᵣ), W = m′ₘₐₓ(H), m′ₘᵢₙw = m′ₘᵢₙ(H), a = abs(s),
+            len = Int(ℓ - a), conjugate = Val(false)
+        # m < -|s|, from H[s, ℓ] down to H[s, |s|+1]; ϵ(m) = σ = 1
+        cₗ = sYlm_coefficient(NT, RT, 1, -ℓ, s, prefactor)
+        materialize_run!(
+            A, Hp, Z₊, Z₋, Nᵣ, len, (y, Δa), nothing, (wedge_offset(H, s, ℓ, m′ₘᵢₙw), -n),
+            (power_offset(Z₊, -ℓ - s, n), n), (power_offset(Z₋, -ℓ + s, n), n), (cₗ, cₗ),
+            phases, conjugate
+        )
+        # |m| ≤ |s|
+        for m ∈ -a:a
+            b₁, b₂, σ = wedge_source(m, -s, W)
+            cₘ = sYlm_coefficient(NT, RT, σ, m, s, prefactor)
+            materialize_run!(
+                A, Hp, Z₊, Z₋, Nᵣ, 1, (y + Int(m + ℓ) * Δa, 0), nothing,
+                (wedge_offset(H, b₁, b₂, m′ₘᵢₙw), 0),
+                (power_offset(Z₊, m - s, n), 0), (power_offset(Z₋, m + s, n), 0), (cₘ, cₘ),
+                phases, conjugate
+            )
+        end
+        # m > |s|, from H[-s, |s|+1] up to H[-s, ℓ]; σ is constant and ϵ(m) alternates
+        m₀ = a + 1
+        σ = transpose_sign(m₀, -s)
+        materialize_run!(
+            A, Hp, Z₊, Z₋, Nᵣ, len, (y + Int(m₀ + ℓ) * Δa, Δa), nothing,
+            (wedge_offset(H, -s, m₀, m′ₘᵢₙw), n),
+            (power_offset(Z₊, m₀ - s, n), n), (power_offset(Z₋, m₀ + s, n), n),
+            (sYlm_coefficient(NT, RT, σ, m₀, s, prefactor),
+             sYlm_coefficient(NT, RT, σ, m₀ + 1, s, prefactor)),
+            phases, conjugate
+        )
+    end
+    nothing
+end
+
+# The block in the order of its storage, a mode at a time, and each element for every
+# rotor.  For many rotors and several spin weights this is cheaper than writing each spin
+# row in turn, whose elements are then far apart in memory.
+function materialize_by_mode!(
+    A, o, is, c::HarmonicCalculator{IT, RT, NT}, ℓ::IT, prefactor, phases::Val, Nᵣ::Int
+) where {IT, RT, NT}
+    let H = c.engine.H.Hˡ, Hp = parent(H), Z₊ = c.engine.Z₊, Z₋ = c.engine.Z₋,
+            W = m′ₘₐₓ(H), m′ₘᵢₙw = m′ₘᵢₙ(H), srange = spins(c), Δa = Nᵣ * length(is)
+        for m ∈ -ℓ:ℓ, i ∈ is
+            s = srange[i]
+            abs(s) > ℓ && continue
+            b₁, b₂, σ = wedge_source(m, -s, W)
+            cₘ = sYlm_coefficient(NT, RT, σ, m, s, prefactor)
+            materialize_run!(
+                A, Hp, Z₊, Z₋, Nᵣ, 1, (o + Nᵣ * (i - first(is)) + Int(m + ℓ) * Δa, 0),
+                nothing, (wedge_offset(H, b₁, b₂, m′ₘᵢₙw), 0),
+                (power_offset(Z₊, m - s, Nᵣ), 0), (power_offset(Z₋, m + s, Nᵣ), 0),
+                (cₘ, cₘ), phases, Val(false)
+            )
+        end
+    end
+    nothing
+end
+
+# The rows `is` of `spins(c)` for which ℓ < |s|, set to zero in the layout of
+# `materialize!`.  This is a function of its own, rather than a loop in `materialize!`,
+# whose runs are compiled less well with it there.
+@noinline function zero_rows!(A, o, Nᵣ, is, srange, ℓ)
+    nᵢ = length(is)
+    @inbounds for i ∈ is
+        if abs(srange[i]) > ℓ
+            dᵢ = o + Nᵣ * (i - first(is))
+            for j ∈ 1:2ℓ+1
+                for iᵣ ∈ 1:Nᵣ
+                    A[dᵢ + Nᵣ * nᵢ * (j - 1) + iᵣ] = 0
                 end
             end
         end
     end
-    c.ℓ[] = Yˡ === c.Yˡ && length(is) == nspins(c.s) ? ℓ : lowest_index(IT) - 1
-    c
+    nothing
 end
 
 # Step the calculator to ℓ and return the row of the block for the spin weight at position
 # `iₛ` of `spins(c)`, writing that row alone.  This is for callers that read one spin weight
 # out of a calculator built for several, which would otherwise assemble every row at every ℓ
 # only to use one of them.  Since the rest of the block is not written, the calculator does
-# not count the block as held (see `materialize!`), and only the row returned may be read.
+# not count the block as held (see `compute_block!`), and only the row returned may be read.
 function spin_row!(c::HarmonicCalculator{IT}, ℓ, iₛ::Int) where {IT}
     let ℓ = checked_index(IT, ℓ, c, "ℓ")
         compute_block!(c, ℓ, iₛ:iₛ, c.Yˡ, 0)
-        spin_row(c, ℓ, iₛ)
+        spin_row(c, ℓ)
     end
 end
 
-# One spin weight's row, selected by its position `i` in the calculator's storage, and the
-# whole block of every spin weight.  `isbatched(c)` reads a type parameter, so every branch
-# is resolved at compile time.  The same containers are returned for both kinds of index.
-# As for the blocks of a `WignerCalculator`, they are built with the inner constructors,
-# since the limits are the calculator's.
-function spin_row(c::HarmonicCalculator{IT, RT, NT}, ℓ::IT, i::Int) where {IT<:IntegerHalf, RT, NT}
-    let mr = -ℓ:ℓ
-        if isbatched(c)
-            let p = view(c.Yˡ, :, i, 1:length(mr))
-                DegreeBlockBatch{IT, NT, typeof(p)}(p, ℓ, last(mr), first(mr), size(p, 1))
-            end
-        else
-            let p = view(c.Yˡ, 1, i, 1:length(mr))
-                DegreeBlock{IT, NT, typeof(p)}(p, ℓ, last(mr), first(mr))
-            end
-        end
+# The block of one spin weight, as the leading entries of the calculator's buffer hold it
+# after a step for that spin weight alone — every step of a calculator built for one, and
+# `spin_row!` of one built for several — and the block of every spin weight, as they hold
+# it after a full step.  `isbatched(c)` reads a type parameter, so every branch is resolved
+# at compile time.  The same containers are returned for both kinds of index.  As for the
+# blocks of a `WignerCalculator`, they are built with the inner constructors, since the
+# limits are the calculator's.
+function spin_row(c::HarmonicCalculator{IT, RT, NT}, ℓ::IT) where {IT<:IntegerHalf, RT, NT}
+    if isbatched(c)
+        DegreeBlockBatch{IT, NT, Vector{NT}}(c.Yˡ, ℓ, ℓ, -ℓ, Nᵣ(c))
+    else
+        DegreeBlock{IT, NT, Vector{NT}}(c.Yˡ, ℓ, ℓ, -ℓ)
     end
 end
 
 function spin_block(c::HarmonicCalculator{IT, RT, NT}, ℓ::IT) where {IT<:IntegerHalf, RT, NT}
-    let mr = -ℓ:ℓ, sr = spins(c), n = length(spins(c))
+    let sr = spins(c)
         if isbatched(c)
-            let p = view(c.Yˡ, :, 1:n, 1:length(mr))
-                SpinMatrixBatch{IT, NT, typeof(p)}(
-                    p, ℓ, last(sr), first(sr), last(mr), first(mr), size(p, 1)
-                )
-            end
+            SpinMatrixBatch{IT, NT, Vector{NT}}(
+                c.Yˡ, ℓ, last(sr), first(sr), ℓ, -ℓ, Nᵣ(c)
+            )
         else
-            let p = view(c.Yˡ, 1, 1:n, 1:length(mr))
-                SpinMatrix{IT, NT, typeof(p)}(p, ℓ, last(sr), first(sr), last(mr), first(mr))
-            end
+            SpinMatrix{IT, NT, Vector{NT}}(c.Yˡ, ℓ, last(sr), first(sr), ℓ, -ℓ)
         end
     end
 end
@@ -849,7 +885,7 @@ function harmonic_array(R, ℓₘₐₓ::IT, s, ℓₘᵢₙ::IT) where {IT<:Int
     # there is exactly one place where that decision is made.
     calc = sYlmCalculator(R, ℓₘₐₓ, s)
     Y = allocate_sYlm(number_type(calc), s, ℓₘᵢₙ, ℓₘₐₓ)
-    fill_sYlm!(Y, calc, s, ℓₘᵢₙ)
+    fill_sYlm!(Y, calc, ℓₘᵢₙ)
     Y
 end
 
@@ -881,40 +917,15 @@ function allocate_sYlm(::Type{T}, s::AbstractUnitRange, ℓₘᵢₙ, ℓₘₐ�
 end
 
 # Fill `Y` from the calculator, whose rotor data are already in place, in the canonical
-# ordering from `ℓₘᵢₙ`.  `Y` is the output of `allocate_sYlm` for exactly these modes, which
-# the loops rely on under `@inbounds`.  Only the rows of the spin weights `s` are assembled
-# at each ℓ; for the calculator that `harmonic_array` builds, those are all the spin weights
-# it serves.
-function fill_sYlm!(
-    Y::AbstractVector, calc::HarmonicCalculator, s::IntegerHalf, ℓₘᵢₙ::IntegerHalf
-)
-    ℓₘₐₓ = SphericalFunctions.ℓₘₐₓ(calc)
-    iₛ = spin_index(calc, s)
-    Yˡ = calc.Yˡ
-    @inbounds for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ
-        compute_block!(calc, ℓ, iₛ:iₛ, calc.Yˡ, 0)
-        i₀ = Yindex(ℓ, -ℓ, ℓₘᵢₙ) - 1
-        for j ∈ 1:2ℓ+1
-            Y[i₀ + j] = Yˡ[1, iₛ, j]
-        end
-    end
-    Y
-end
-function fill_sYlm!(
-    Y::AbstractMatrix, calc::HarmonicCalculator, s::AbstractUnitRange, ℓₘᵢₙ::IntegerHalf
-)
-    ℓₘₐₓ = SphericalFunctions.ℓₘₐₓ(calc)
-    n = length(s)
-    i₁ = spin_index(calc, first(s))
-    Yˡ = calc.Yˡ
-    @inbounds for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ
-        compute_block!(calc, ℓ, i₁:(i₁ + n - 1), calc.Yˡ, 0)
-        i₀ = Yindex(ℓ, -ℓ, ℓₘᵢₙ) - 1
-        for j ∈ 1:2ℓ+1
-            for i ∈ 1:n
-                Y[i, i₀ + j] = Yˡ[1, i₁ + (i - 1), j]
-            end
-        end
+# ordering from `ℓₘᵢₙ`.  `Y` is laid out as [iᵣ, s, mode], with either leading axis absent
+# where there is one rotor or one spin weight, for exactly the rotors and spin weights of
+# `calc`, so that the modes of each ℓ are a block in the layout of `compute_block!`, into
+# which the calculator writes them directly.  This serves `sYlm` and `sYlm_matrix` alike.
+function fill_sYlm!(Y::AbstractArray, calc::HarmonicCalculator, ℓₘᵢₙ::IntegerHalf)
+    is = Base.OneTo(nspins(calc.s))
+    n = Nᵣ(calc) * length(is)
+    for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ(calc)
+        compute_block!(calc, ℓ, is, Y, n * (Yindex(ℓ, -ℓ, ℓₘᵢₙ) - 1))
     end
     Y
 end
@@ -1065,16 +1076,6 @@ function sYlm_matrix_array(
     # the layout of the block; for one spin weight the spin axis has length 1, and the
     # `Matrix` returned shares its storage.
     Y = Array{number_type(calc), 3}(undef, length(R⃗), nspins(s), Ysize(ℓₘᵢₙ, ℓₘₐₓ))
-    fill_sYlm_matrix!(Y, calc, ℓₘᵢₙ, ℓₘₐₓ)
+    fill_sYlm!(Y, calc, ℓₘᵢₙ)
     s isa AbstractUnitRange ? Y : reshape(Y, size(Y, 1), size(Y, 3))
-end
-
-# `calc` is a fresh calculator built for exactly the spin weights of `Y`, and `Y` has one
-# row per rotor, so the columns of each ℓ are a block of the calculator's own shape.
-function fill_sYlm_matrix!(Y::Array{<:Any, 3}, calc::HarmonicCalculator, ℓₘᵢₙ, ℓₘₐₓ)
-    for ℓ ∈ ℓₘᵢₙ:ℓₘₐₓ
-        i₀ = Yindex(ℓ, -ℓ, ℓₘᵢₙ) - 1
-        compute_block!(calc, ℓ, Base.OneTo(nspins(calc.s)), Y, i₀)
-    end
-    Y
 end
