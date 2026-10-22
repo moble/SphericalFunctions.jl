@@ -38,10 +38,10 @@ import ..ConventionsUtilities: 𝒾, ❗
 
 # The ``s=-2`` spin-weighted spherical harmonics are defined in Eq. (184a) as
 # ```math
-#   Y^{l,m}_{-2} = \sqrt{\frac{2l+1}{4π}} d^{ℓ m}(θ) e^{imϕ}.
+#   Y^{ℓ,m}_{-2} = \sqrt{\frac{2ℓ+1}{4π}} d^{ℓ m}(θ) e^{imϕ}.
 # ```
-function Yˡᵐ₋₂(l, m, θ::T, ϕ::T) where {T<:Real}
-    √((2l + 1) / (4T(π))) * d(l, m, θ) * exp(𝒾 * m * ϕ)
+function Yˡᵐ₋₂(ℓ, m, θ::T, ϕ::T) where {T<:Real}
+    √((2ℓ + 1) / (4T(π))) * d(ℓ, m, θ) * exp(𝒾 * m * ϕ)
 end
 #+
 
@@ -55,13 +55,13 @@ end
 #   \left(\cos\frac{θ}{2}\right)^{2ℓ+m-2k-2}
 #   \left(\sin\frac{θ}{2}\right)^{2k-m+2},
 # ```
-# with ``k_1 = \textrm{max}(0, m-2)`` and ``k_2=\textrm{min}(l+m, l-2)``.
-function d(l, m, θ::T) where {T<:Real}
+# with ``k_1 = \textrm{max}(0, m-2)`` and ``k_2=\textrm{min}(ℓ+m, ℓ-2)``.
+function d(ℓ, m, θ::T) where {T<:Real}
     k₁ = max(0, m - 2)
-    k₂ = min(l + m, l - 2)
+    k₂ = min(ℓ + m, ℓ - 2)
     sum(
-        T((-1)^k / (k)❗ * eₖˡᵐ(k, l, m))
-         * cos(θ / 2) ^ (2l + m - 2k - 2)
+        T((-1)^k / (k)❗ * eₖˡᵐ(k, ℓ, m))
+         * cos(θ / 2) ^ (2ℓ + m - 2k - 2)
          * sin(θ / 2) ^ (2k - m + 2)
         for k in k₁:k₂;
         init=zero(T)
@@ -77,10 +77,10 @@ end
 #     (k-m+2)!(ℓ+m-k)!(ℓ-k-2)!
 #   }.
 # ```
-function eₖˡᵐ(k, l, m)
+function eₖˡᵐ(k, ℓ, m)
     (
-        √((l + m)❗ * (l - m)❗ * (l + 2)❗ * (l - 2)❗)
-        / ((k - m + 2)❗ * (l + m - k)❗ * (l - k - 2)❗)
+        √((ℓ + m)❗ * (ℓ - m)❗ * (ℓ + 2)❗ * (ℓ - 2)❗)
+        / ((k - m + 2)❗ * (ℓ + m - k)❗ * (ℓ - k - 2)❗)
     )
 end
 #+
