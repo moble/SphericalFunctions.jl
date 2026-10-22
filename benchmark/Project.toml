@@ -13,5 +13,4 @@ SphericalFunctions = {path = ".."}
 BenchmarkTools = "1"
 PkgBenchmark = "0.2"
 Printf = "1"
-Quaternionic = "3, 4"
 Random = "1"
