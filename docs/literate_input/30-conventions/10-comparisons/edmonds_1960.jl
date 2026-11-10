@@ -19,8 +19,12 @@ is the edition cited in the bibliography.)
 ## Euler angles and spherical coordinates
 
 In Sec. 1.3 he actually does a fair job of defining the Euler angles.  The upshot is that
-his definition agrees with ours, though he uses the "active" definition style.  That is, the
-rotations are to be performed successively in order:
+his definition agrees with ours, though he uses the "active" definition style — where
+"active" is one of those many unfortunate ambiguous terms used in the Euler literature,
+having nothing to do with the distinction between physical and coordinate transformations,
+but with whether the axes being rotated about are the original fixed axes or the ones that
+have been rotated to that point in the sequence.  That is, the rotations are to be performed
+successively in order:
 
 > 1. A rotation ``α(0 \leq α < 2π)`` about the ``z``-axis, bringing the frame of axes from
 >    the initial position ``S`` into the position ``S'``.  The axis of this rotation is
@@ -35,9 +39,10 @@ rotations are to be performed successively in order:
 >    called the *figure axis*; the position of this axis depends on the previous rotations
 >    ``α`` and ``β``.  The final position of the frame is symbolized by ``S'''``.
 
-I would simply write the "``y``-axis of the frame ``S'``" as ``y'``, and so on.  In
-quaternionic language, I would write these rotations as ``\exp[γ 𝐤''/2]\, \exp[β 𝐣'/2]\,
-\exp[α 𝐤/2]``.  But we also have
+It is that specification of the ``S'`` frame in the second step and the ``S''`` frame in the
+third step that makes this an "active" definition.  I would simply write the "``y``-axis of
+the frame ``S'``" as ``y'``, and so on.  In quaternionic language, I would write these
+rotations as ``\exp[γ 𝐤''/2]\, \exp[β 𝐣'/2]\, \exp[α 𝐤/2]``.  But we also have
 ```math
 \exp[β 𝐣'/2] = \exp[α 𝐤/2]\, \exp[β 𝐣/2]\, \exp[-α 𝐤/2]
 ```
