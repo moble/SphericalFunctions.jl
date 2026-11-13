@@ -652,18 +652,18 @@ f(e^{-𝔤} 𝐐) &= \sin θ \sin(ϕ - α) &&&
 f(𝐐 e^{-𝔤}) &= \sin θ \sin ϕ.
 \end{aligned}
 ```
-Thus, we see that left-multiplication by ``e^{-𝔤}``
-corresponds to rotation of the field while leaving the coordinates
-fixed; left-multiplication by ``e^𝔤`` corresponds to
-rotation of the coordinates while leaving the field fixed; and
+Thus, we see that left-multiplication by ``e^{-𝔤}`` corresponds to
+rotation of the field while leaving the coordinate axes fixed;
+left-multiplication by ``e^𝔤`` corresponds to rotation of the
+coordinate axes while leaving the field fixed; and
 right-multiplication by either doesn't affect this function at all.
 
-Of course, right-multiplication using other choices for
-``𝔤`` could certainly have some effect on this function,
-and this choice of ``𝔤`` could have an effect on other
-functions.  Note that right-multiplication can also be interpreted as
-left-multiplication, where the generator itself is rotated by the
-argument to the function.  That is,
+Of course, right-multiplication using other choices for ``𝔤`` could
+certainly have some effect on this function, and this choice of ``𝔤``
+could have an effect on other functions.  Note that
+right-multiplication can also be interpreted as left-multiplication,
+where the generator itself is rotated by the argument to the function.
+That is,
 ```math
 \begin{aligned}
 f(𝐐 e^𝔤)
