@@ -77,9 +77,15 @@
     @test_throws ArgumentError check_rotor_type(calc, Rotor{Float32}(1, 0, 0, 0))
     @test_throws "This calculator works in Float64, but the given data would give Float32" check_rotor_type(calc, Float32(0.3))
 
-    # The element type is known from the type of the data alone
+    # The element type is known from the type of the data alone.  The inferred return type is
+    # tested as a subtype of `Type{T}` rather than for equality, because from Julia 1.14 on
+    # inference often reports `Core.TypeEgal{T}`, the type of `T` itself, which is a strict
+    # subtype of `Type{T}`.
     for data ∈ (Rotor(1.0), [Rotor(1.0f0)], 0.3, Double64[0.3], cis(0.3), [cis(big(0.3))])
-        @test Base.return_types(floattype, (typeof(data),)) == [Type{floattype(data)}]
-        @test Base.return_types(floattype, (Type{typeof(data)},)) == [Type{floattype(data)}]
+        for argument_type ∈ (typeof(data), Type{typeof(data)})
+            @test let R = only(Base.return_types(floattype, (argument_type,)))
+                R !== Union{} && R <: Type{floattype(data)}
+            end
+        end
     end
 end
