@@ -1,5 +1,18 @@
 # Changelog
 
+## 3.0.2
+
+### Fixed
+
+* ForwardDiff and ReverseDiff work through ``d`` of a `Rotor` whose
+  components hold derivatives, both through `d` itself and through a
+  `dCalculator` of one rotor or several, whether the rotors are given
+  when the calculator is made, by `set_β!`, or by `recurrence!`.  This
+  used to fail with a `MethodError` for `rotor_value`, although the
+  same unit quaternion given as a `Quaternion` worked, as did ``𝔇``
+  and the harmonics of a `Rotor`.  ReverseDiff was affected only
+  through `dCalculator`, since `d` itself has a rule of its own there.
+
 ## 3.0.1
 
 ### Fixed
