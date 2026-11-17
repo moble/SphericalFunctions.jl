@@ -29,10 +29,13 @@ SphericalFunctions.angle_tangents(β::Dual{T, V, N}) where {T, V, N} =
     ntuple(k -> partials(β, k), Val(N))
 
 # A dual number with tag `T`, complex or real, from its value `x` and the tuple `ẋ` of its
-# partial derivatives.
+# partial derivatives.  The parts of complex partials are taken by `ntuple` with the length
+# as a `Val`, which is unrolled for tuples of any length, rather than by `map`, which Base
+# unrolls only for tuples of at most 31 elements and otherwise runs through a `Vector{Any}`.
 struct DualCombine{T} end
-(::DualCombine{T})(x::Complex, ẋ) where {T} = Complex(
-    Dual{T}(real(x), Partials(map(real, ẋ))), Dual{T}(imag(x), Partials(map(imag, ẋ)))
+(::DualCombine{T})(x::Complex, ẋ::NTuple{N, Any}) where {T, N} = Complex(
+    Dual{T}(real(x), Partials(ntuple(k -> real(ẋ[k]), Val(N)))),
+    Dual{T}(imag(x), Partials(ntuple(k -> imag(ẋ[k]), Val(N)))),
 )
 (::DualCombine{T})(x::Real, ẋ) where {T} = Dual{T}(x, Partials(ẋ))
 SphericalFunctions.lift_combine(::Type{Dual{T, V, N}}) where {T, V, N} = DualCombine{T}()
