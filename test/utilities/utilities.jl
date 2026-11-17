@@ -201,8 +201,14 @@ end  # @testmodule Utilities
         Core.Compiler.return_type(f, Tuple{types...})
     end
 
+    # The function of a `:call` appears as a `GlobalRef` naming it or, from Julia 1.14 on, as
+    # the `Core.BindingPartition` of that name, whose `restriction` is the function itself
     builtin(f::GlobalRef) =
         isdefined(f.mod, f.name) && getglobal(f.mod, f.name) isa Core.Builtin
+    @static if isdefined(Core, :BindingPartition)
+        builtin(f::Core.BindingPartition) =
+            isdefined(f, :restriction) && f.restriction isa Core.Builtin
+    end
     builtin(f) = f isa Core.Builtin
     # Calls that only construct an exception, on a branch that throws it.  Julia 1.10, under
     # `Pkg.test` with bounds checking forced on, leaves the `BoundsError(A, i)` of each
