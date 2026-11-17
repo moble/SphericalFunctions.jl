@@ -1,5 +1,23 @@
 # Changelog
 
+## 3.0.1
+
+### Fixed
+
+* ForwardDiff through the calculators of ``𝔇`` and of the
+  spin-weighted spherical harmonics, and so through `D`, `sYlm`, and
+  `sYlm_matrix`, no longer slows down for dual numbers with 32 or more
+  partials.  Each element of each block allocated and lost its type
+  there, because Base unrolls `map` over a tuple of at most 31
+  elements, so that a step of a calculator took about 25 times as long
+  with 32 partials as with 31, and a whole gradient in Scri.jl about
+  four times as long.  The values and derivatives are bitwise
+  unchanged.
+* Enzyme's batched reverse mode works through ``d`` and the real
+  harmonics ``ₛλₗₘ`` with 32 or more lanes, as in `Enzyme.jacobian`
+  with `chunk=Val(32)`, where it used to fail because one of the
+  extension's rules returned a tuple of unknown length.
+
 ## 3.0.0
 
 Version 3 is a major rewrite of the code, with a new interface, new

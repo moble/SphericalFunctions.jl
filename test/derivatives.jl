@@ -525,6 +525,66 @@ end
 end
 
 
+@testitem "Derivatives: calculators of dual numbers with 40 partials" setup=[DerivativeTools] begin
+    import SphericalFunctions: set_R!, set_β!, set_θ!
+    # Base unrolls `map` and similar functions over a tuple of at most 31 elements, and over
+    # a longer one collects into a `Vector{Any}`, so code that handles the partials of a dual
+    # number can allocate, and lose its types, from 32 partials on.  A calculator of dual
+    # numbers with 40 partials allocates nothing when stepped, as one with 4 does, and its
+    # values and partials are exactly those of five calculators with 8 partials each, in the
+    # same directions, since each direction is differentiated alone.
+    T = ForwardDiff.Tag{Nothing, Float64}
+    N = 40
+    pieces = [(8k - 7):8k for k ∈ 1:5]
+    q = 1.7 .* [0.3, -0.5, 0.7, 0.2, -0.4, 0.1, 0.8, 0.6]
+    Ṙ = [sin(3i + 7d) for i ∈ 1:8, d ∈ 1:N]  # the tangents of the rotors' components
+    β̇ = [cos(5d) for d ∈ 1:N]
+    dual(x, ẋ) = ForwardDiff.Dual{T}(x, ẋ...)
+    rotor(k, ds) = Rotor{ForwardDiff.Dual{T, Float64, length(ds)}}(
+        (dual(q[i], Ṙ[i, ds]) for i ∈ (4k - 3):4k)...
+    )
+    angle(k, ds) = dual(0.7 * k, β̇[ds])
+    function sweep(c)
+        s = 0.0
+        for b ∈ values(c)
+            s += ForwardDiff.value(real(first(b)))
+        end
+        s
+    end
+    reset!(c::SphericalFunctions.dCalculator, β) = (set_β!(c, β); nothing)
+    reset!(c::SphericalFunctions.sλlmCalculator, θ) = (set_θ!(c, θ); nothing)
+    reset!(c, R) = (set_R!(c, R); nothing)
+    sweep_allocations(c) = @allocated sweep(c)
+    blocks(c) = [vec(Array(b)) for b ∈ values(c)]
+    # The value and the partials in the directions `ds` of each part of an element
+    parts(z::Complex, ds) = (parts(real(z), ds), parts(imag(z), ds))
+    parts(x::ForwardDiff.Dual, ds) =
+        (ForwardDiff.value(x), [ForwardDiff.partials(x, d) for d ∈ ds])
+    for (make, data) ∈ (
+        (R -> DCalculator(R, 8), ds -> rotor(1, ds)),
+        (R -> DCalculator(R, 8; m′ₘₐₓ=2, m′ₘᵢₙ=-1, mₘₐₓ=3, mₘᵢₙ=-2), ds -> rotor(1, ds)),
+        (R -> DCalculator(R, 8), ds -> [rotor(1, ds), rotor(2, ds)]),
+        (R -> sYlmCalculator(R, 8, -1), ds -> rotor(1, ds)),
+        (R -> sYlmCalculator(R, 8, -2:2), ds -> [rotor(1, ds), rotor(2, ds)]),
+        (β -> dCalculator(β, 8), ds -> angle(1, ds)),
+        (θ -> sλlmCalculator(θ, 8, -2), ds -> [angle(1, ds), angle(2, ds)]),
+    )
+        x = data(1:N)
+        c = make(x)
+        sweep(c); reset!(c, x)
+        @test sweep_allocations(c) == 0
+        @test @allocated(reset!(c, x)) == 0
+        wide = blocks(c)
+        for ds ∈ pieces
+            narrow = blocks(make(data(ds)))
+            @test isequal(
+                [parts.(b, Ref(ds)) for b ∈ wide], [parts.(b, Ref(1:length(ds))) for b ∈ narrow]
+            )
+        end
+    end
+end
+
+
 @testitem "Derivatives: ReverseDiff's angles give one calculator type" setup=[DerivativeTools] begin
     import ReverseDiff
     import SphericalFunctions: floattype, set_θ!, set_β!
@@ -901,6 +961,26 @@ end
     for f ∈ (ViewReads(4, 1), ViewReads(7//2, 1//2))
         J = jacobian(f, AutoEnzyme(mode=Enzyme.Reverse), v)
         @test within(J, jacobian(f, AutoForwardDiff(), v); rtol=16eps())
+    end
+end
+
+
+@testitem "Derivatives: Enzyme's batched reverse mode with 40 lanes" setup=[DerivativeTools] tags=[:derivatives] begin
+    import Enzyme
+    # A rule for Enzyme's batched modes returns a tuple with one entry for each lane, whose
+    # length the compiler must know.  Base unrolls `map` and similar functions over a tuple
+    # of at most 31 elements, so code that builds such a tuple can lose its length from 32
+    # lanes on.  The rule that gives the cotangents of the rotor data of a calculator of `d`
+    # or of ₛλₗₘ from those of its angles is run here with 40 lanes, for an angle, a phase,
+    # and a quaternion, and the Jacobians agree with those computed 8 lanes at a time.  The
+    # agreement is only to rounding, because the order of the arithmetic through a phase
+    # depends on the number of lanes.
+    for (f, x) ∈ (
+        (dValues(4), [0.7]), (dPhaseValues(4), [0.7]), (dRotorValues(4), [0.3, 0.4, -0.5, 0.6]),
+        (λCalcValues(4, -1:1, 1), [0.7]),
+    )
+        J = Enzyme.jacobian(Enzyme.Reverse, f, x; chunk=Val(40))[1]
+        @test J ≈ Enzyme.jacobian(Enzyme.Reverse, f, x; chunk=Val(8))[1] rtol=4eps()
     end
 end
 

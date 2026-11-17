@@ -144,10 +144,15 @@ function EnzymeRules.reverse(
     x::Annotation{<:Base.IEEEFloat}...
 )
     g = angle_component_gradient(map(a -> a.val, x)...)
+    # The tuples of the batch are built by `ntuple` with their length as a `Val`, which is
+    # unrolled for any width, rather than by `map`, which Base unrolls only for tuples of at
+    # most 31 elements; Enzyme needs the length of each tuple that a rule returns.
+    W = Val(width(config))
     β̄ = if shadows(angles) === nothing
-        ntuple(_ -> zero(eltype(angles.val)), Val(width(config)))
+        ntuple(_ -> zero(eltype(angles.val)), W)
     else
-        map(shadows(angles)) do dangles
+        ntuple(W) do k
+            dangles = shadows(angles)[k]
             b = dangles[i.val]
             dangles[i.val] = zero(b)
             b
@@ -155,7 +160,9 @@ function EnzymeRules.reverse(
     end
     x̄ = ntuple(Val(length(x))) do j
         if x[j] isa Active
-            c = map(b -> iszero(b) ? zero(x[j].val) : oftype(x[j].val, g[j] * b), β̄)
+            c = ntuple(W) do k
+                iszero(β̄[k]) ? zero(x[j].val) : oftype(x[j].val, g[j] * β̄[k])
+            end
             width(config) == 1 ? only(c) : c
         else
             nothing
