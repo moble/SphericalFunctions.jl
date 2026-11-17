@@ -50,3 +50,6 @@ __pycache__/
 # generated files, so a hand-written page must not be placed in either of them.
 docs/src/30-conventions/10-comparisons/
 docs/src/30-conventions/20-calculations/
+
+# The vocabulary of the narrated reviewer (diff_reviewer), which is kept out of the history
+.diffreview/

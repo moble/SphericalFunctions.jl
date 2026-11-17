@@ -898,6 +898,58 @@ end
 end
 
 
+@testitem "Derivatives: d of a Rotor that holds derivatives" setup=[DerivativeTools] tags=[:derivatives] begin
+    import ReverseDiff
+    import SphericalFunctions: recurrence!, set_β!
+
+    # The derivatives of `d` of a `Rotor` whose components hold derivatives are those of `d`
+    # of the same unit quaternion given as a `Quaternion`, through `d` itself and through a
+    # `dCalculator` of one rotor or a batch of them, whether the rotors are given when the
+    # calculator is made, by `set_β!`, or by `recurrence!`.  ReverseDiff is tested on the
+    # calculators, which its tracked rotors reach as ForwardDiff's dual rotors do; on `d` it
+    # has a rule of its own.
+    blocks(S) = reduce(vcat, [vec(Array(b)) for b ∈ values(S)])
+    looped(c) = reduce(vcat, [vec(Array(b)) for (_, b) ∈ c])
+    # The rotor data of `v`: one rotor, or a vector of them, each from four components
+    data(rotor, v) = length(v) == 4 ? rotor(v) : [rotor(v, k) for k ∈ 1:(length(v) ÷ 4)]
+    # Other rotor data of the same type, from which a calculator is made before `v` is set
+    other(rotor, v) = data(rotor, v[mod1.(eachindex(v) .+ 1, length(v))])
+    function made_then_set(rotor, v, n)
+        c = dCalculator(other(rotor, v), n)
+        set_β!(c, data(rotor, v))
+        looped(c)
+    end
+    entry_points = [
+        "d" => (rotor, v, n) -> blocks(d(rotor(v), n)),
+        "dCalculator" => (rotor, v, n) -> looped(dCalculator(data(rotor, v), n)),
+        "set_β!" => made_then_set,
+        "recurrence!" => (rotor, v, n) ->
+            vec(Array(recurrence!(dCalculator(other(rotor, v), n), data(rotor, v), n))),
+    ]
+    unit(v) = v ./ sqrt(sum(abs2, v))
+    one_rotor = unit([0.3, 0.4, -0.5, 0.6])
+    two_rotors = [one_rotor; unit([0.5, -0.2, 0.7, 0.1])]
+    for n ∈ (4, 7//2), (name, f) ∈ entry_points, v ∈ (one_rotor, two_rotors)
+        name == "d" && length(v) > 4 && continue
+        J = ForwardDiff.jacobian(w -> f(quaternionof, w, n), v)
+        @test ForwardDiff.jacobian(w -> f(rotorof, w, n), v) == J
+        name == "d" && continue
+        @test within(ReverseDiff.jacobian(w -> f(rotorof, w, n), v), J; rtol=16eps())
+    end
+
+    # The normalizing constructor `Rotor(v...)`, applied to components that are not those
+    # of a unit quaternion
+    v = [0.3, 0.4, -0.5, 0.6]
+    for n ∈ (4, 7//2)
+        @test within(
+            ForwardDiff.jacobian(w -> blocks(d(Rotor(w...), n)), v),
+            ForwardDiff.jacobian(w -> blocks(d(Quaternion(unit(w)...), n)), v);
+            rtol=16eps()
+        )
+    end
+end
+
+
 @testitem "Derivatives: first order, through calculators" setup=[ExplicitWignerMatrices, DerivativeTools] tags=[:derivatives] begin
     using DifferentiationInterface: AutoForwardDiff, AutoReverseDiff, AutoEnzyme,
         AutoMooncake, AutoMooncakeForward

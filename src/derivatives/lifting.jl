@@ -17,13 +17,14 @@ value_type(::Type{T}) where {T<:Real} = T
 recurrence_type(::Type{T}) where {T<:Real} = value_type(T) === T ? T : recurrence_type(value_type(T))
 
 # The value of a number that holds derivatives, and the number itself otherwise; the
-# rotation of those values; the number of directions in which a number of type `T` holds
+# rotation of those values, as a `Quaternion` whether the rotation is given as a `Rotor` or
+# as a `Quaternion`; the number of directions in which a number of type `T` holds
 # derivatives; the tangents of a quaternion in each of those directions, as a tuple of
 # tuples of four components, and those of an angle, as a tuple of numbers; and the function
 # that assembles an element of type `Complex{T}` or `T` from a value and the tuple of its
 # derivatives in those directions.  An extension defines all of these for its number type.
 real_value(x::Real) = x
-rotor_value(q::Quaternion{T}) where {T} =
+rotor_value(q::Union{Rotor{T}, Quaternion{T}}) where {T} =
     Quaternion{value_type(T)}(real_value(q[1]), real_value(q[2]), real_value(q[3]), real_value(q[4]))
 function ndirections end
 function rotor_tangents end
