@@ -1,0 +1,27 @@
+\documentclass[tikz]{standalone}
+\usepackage{tikz-cd}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{xcolor}
+%\usepackage{fontspec} % For custom fonts
+
+% Run with `pdflatex "\def\invertcolors{} \input{$(TEX)}"` to invert colors
+\ifdefined\invertcolors
+    \color{white}
+\else
+    \color{black}
+\fi
+
+\begin{document}
+% https://q.uiver.app/#q=WzAsMyxbMCwwLCJBIl0sWzIsMywiXFxtYXRoYmJ7Q30iXSxbNCwwLCJCIl0sWzAsMSwiZiIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImRhc2hlZCJ9fX1dLFswLDIsIm0iXSxbMiwxLCJGIl1d
+\begin{tikzcd}[every label/.append style = {font = \normalsize}]
+	A &&&& B \\
+	\\
+	\\
+	&& {\mathbb{C}}
+	\arrow["m", from=1-1, to=1-5]
+	\arrow["f"', dashed, from=1-1, to=4-3]
+	\arrow["F", from=1-5, to=4-3]
+\end{tikzcd}
+\end{document}
